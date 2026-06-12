@@ -1,0 +1,10 @@
+services:
+  backend:
+    build:
+      context: .
+    environment:
+      PORT: ${PORT:-8080}
+      DATABASE_URL: ${DATABASE_URL}
+    ports:
+      - '${PORT:-8080}:8080'
+    restart: unless-stopped

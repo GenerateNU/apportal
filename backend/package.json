@@ -1,0 +1,13 @@
+{
+  "name": "apportal-backend-dev",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "format": "prettier --write \"*.md\" \"*.yml\" \"*.yaml\" \"*.json\"",
+    "format:check": "prettier --check \"*.md\" \"*.yml\" \"*.yaml\" \"*.json\""
+  },
+  "devDependencies": {
+    "prettier": "^3.5.3"
+  }
+}
