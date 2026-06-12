@@ -5,7 +5,7 @@ MAIN_PACKAGE := ./cmd/server
 BIN_DIR := bin
 BIN_PATH := $(BIN_DIR)/$(APP_NAME)
 
-.PHONY: help fmt fmt-check lint test test-cover vet tidy run build clean docker-build docker-up docker-down docker-logs prettier prettier-check
+.PHONY: help fmt fmt-check lint test test-cover vet tidy run dev build clean docker-build docker-up docker-down docker-logs prettier prettier-check
 
 help:
 	@printf '%s\n' \
@@ -17,6 +17,7 @@ help:
 		'  make test-cover    Run tests with coverage output' \
 		'  make tidy         Tidy Go modules' \
 		'  make run          Run the backend locally' \
+		'  make dev          Run with hot reload (rebuilds on file save)' \
 		'  make build        Build the backend binary' \
 		'  make docker-build Build the backend Docker image' \
 		'  make docker-up    Start the backend with Docker Compose' \
@@ -56,7 +57,16 @@ tidy:
 	@go mod tidy
 
 run:
-	@go run $(MAIN_PACKAGE)
+	@if [ -f .env ]; then set -a; . ./.env; set +a; fi; go run $(MAIN_PACKAGE)
+
+AIR := $(shell command -v air 2>/dev/null || echo "$$(go env GOPATH)/bin/air")
+
+dev:
+	@if [ ! -x "$(AIR)" ]; then \
+		printf '%s\n' 'air not found; installing...'; \
+		go install github.com/air-verse/air@latest; \
+	fi
+	@if [ -f .env ]; then set -a; . ./.env; set +a; fi; "$(AIR)"
 
 build:
 	@mkdir -p $(BIN_DIR)

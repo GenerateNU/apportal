@@ -17,6 +17,7 @@ func NewRouter(database *sql.DB) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", router.root)
 	mux.HandleFunc("/healthz", router.health)
+	mux.HandleFunc("/readyz", router.ready)
 	return mux
 }
 
@@ -37,7 +38,18 @@ func (router *Router) health(writer http.ResponseWriter, request *http.Request) 
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(request.Context(), 2*time.Second)
+	writeJSON(writer, http.StatusOK, map[string]string{
+		"status": "ok",
+	})
+}
+
+func (router *Router) ready(writer http.ResponseWriter, request *http.Request) {
+	if request.Method != http.MethodGet {
+		http.Error(writer, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(request.Context(), 10*time.Second)
 	defer cancel()
 
 	status := http.StatusOK

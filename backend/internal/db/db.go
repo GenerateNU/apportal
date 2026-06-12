@@ -18,13 +18,5 @@ func Open(ctx context.Context, databaseURL string) (*sql.DB, error) {
 	database.SetMaxIdleConns(5)
 	database.SetConnMaxLifetime(30 * time.Minute)
 
-	pingCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-
-	if err := database.PingContext(pingCtx); err != nil {
-		_ = database.Close()
-		return nil, err
-	}
-
 	return database, nil
 }

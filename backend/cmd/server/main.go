@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -15,18 +15,23 @@ import (
 )
 
 func main() {
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	slog.SetDefault(logger)
+
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("failed to load config", "error", err)
+		os.Exit(1)
 	}
 
 	database, err := appdb.Open(context.Background(), cfg.DatabaseURL)
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("failed to open database", "error", err)
+		os.Exit(1)
 	}
 	defer func() {
 		if err := database.Close(); err != nil {
-			log.Printf("error closing database: %v", err)
+			slog.Error("error closing database", "error", err)
 		}
 	}()
 
@@ -38,7 +43,7 @@ func main() {
 
 	serverErrors := make(chan error, 1)
 	go func() {
-		log.Printf("backend listening on http://localhost:%s", cfg.Port)
+		slog.Info("backend listening", "addr", "http://localhost:"+cfg.Port)
 		serverErrors <- server.ListenAndServe()
 	}()
 
@@ -48,16 +53,18 @@ func main() {
 	select {
 	case err := <-serverErrors:
 		if err != nil && err != http.ErrServerClosed {
-			log.Fatal(err)
+			slog.Error("server error", "error", err)
+			os.Exit(1)
 		}
 	case sig := <-shutdownSignals:
-		log.Printf("received %s, shutting down", sig)
+		slog.Info("shutting down", "signal", sig.String())
 	}
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	if err := server.Shutdown(shutdownCtx); err != nil {
-		log.Fatal(err)
+		slog.Error("graceful shutdown failed", "error", err)
+		os.Exit(1)
 	}
 }
