@@ -1,0 +1,23 @@
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  # Build the server binary into tmp/ on every change.
+  cmd = "go build -o ./tmp/apportal-backend ./cmd/server"
+  bin = "./tmp/apportal-backend"
+  # Watch these file extensions.
+  include_ext = ["go"]
+  # Ignore generated/build output and infra dirs.
+  exclude_dir = ["bin", "tmp", "vendor", ".git", ".agents", "node_modules"]
+  exclude_regex = ["_test\\.go"]
+  # Don't trigger on a missing build; show errors instead.
+  stop_on_error = true
+  # Brief debounce so a multi-file save rebuilds once.
+  delay = 200
+
+[log]
+  time = true
+
+[misc]
+  # Remove tmp/ on exit.
+  clean_on_exit = true
