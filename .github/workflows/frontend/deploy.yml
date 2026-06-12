@@ -29,5 +29,5 @@ jobs:
 
       - run: npm run build
 
-      # TODO: replace with your deployment step
+      # TODO: replace with deployment step
       # e.g. Vercel, AWS, Fly.io, etc.
