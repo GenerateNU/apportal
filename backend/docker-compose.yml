@@ -1,0 +1,22 @@
+services:
+  backend:
+    build:
+      context: .
+    env_file:
+      - .env
+    environment:
+      PORT: ${PORT:-8080}
+    command:
+      - sh
+      - -ec
+      - |
+        if [ -z "$$DATABASE_URL_DOCKER" ]; then
+          echo "Set DATABASE_URL_DOCKER to your Supabase Session Pooler URL before running docker compose"
+          exit 1
+        fi
+
+        export DATABASE_URL="$$DATABASE_URL_DOCKER"
+        exec /app/apportal-backend
+    ports:
+      - '${PORT:-8080}:8080'
+    restart: unless-stopped
