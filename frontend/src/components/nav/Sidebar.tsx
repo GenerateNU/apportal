@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import {
   LayoutDashboard,
   Users,
@@ -87,11 +88,15 @@ export default function Sidebar({ roles, firstName, lastName }: SidebarProps) {
   return (
     <aside className="flex h-screen w-60 flex-col border-r border-gray-100 bg-white">
       {/* Logo */}
-      <div className="flex h-11 items-center gap-2 border-b border-gray-100 px-4">
-        <div className="bg-brand-blue flex h-7 w-7 items-center justify-center rounded-md">
-          <span className="text-xs font-bold text-white">G</span>
-        </div>
-        <span className="text-sm font-semibold text-gray-900">Generate</span>
+      <div className="flex h-14 items-center gap-2 border-b border-gray-100 px-5">
+        <Image
+          src="/GenerateNU Logo.png"
+          alt="GenerateNU"
+          width={28}
+          height={28}
+          className="object-contain"
+        />
+        <span className="text-xl font-semibold text-brand-blue">Generate</span>
       </div>
 
       {/* Nav sections */}
