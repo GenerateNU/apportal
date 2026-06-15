@@ -96,7 +96,7 @@ export default function Sidebar({ roles, firstName, lastName }: SidebarProps) {
           height={28}
           className="object-contain"
         />
-        <span className="text-xl font-semibold text-brand-blue">Generate</span>
+        <span className="text-brand-blue text-xl font-semibold">Generate</span>
       </div>
 
       {/* Nav sections */}
