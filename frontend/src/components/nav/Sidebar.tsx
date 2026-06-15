@@ -57,6 +57,28 @@ const sectionsByRole: Record<Role, NavSection> = {
 // Display order: reviewer sections before applicant, admin last
 const roleOrder: Role[] = ['reviewer', 'applicant', 'admin']
 
+function SidebarUser({
+  firstName,
+  lastName,
+}: {
+  firstName: string
+  lastName: string
+}) {
+  return (
+    <div className="border-t border-gray-100 px-4 py-3">
+      <div className="flex items-center gap-2.5">
+        <div className="bg-brand-blue flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold text-white">
+          {firstName[0]}
+          {lastName[0]}
+        </div>
+        <span className="text-sm font-medium text-gray-700">
+          {firstName} {lastName}
+        </span>
+      </div>
+    </div>
+  )
+}
+
 export default function Sidebar({ roles, firstName, lastName }: SidebarProps) {
   const sections = roleOrder
     .filter((role) => roles.includes(role))
@@ -89,17 +111,9 @@ export default function Sidebar({ roles, firstName, lastName }: SidebarProps) {
       </nav>
 
       {/* User */}
-      <div className="border-t border-gray-100 px-4 py-3">
-        <div className="flex items-center gap-2.5">
-          <div className="bg-brand-blue flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold text-white">
-            {firstName?.[0] ?? 'F'}
-            {lastName?.[0] ?? 'L'}
-          </div>
-          <span className="text-sm font-medium text-gray-700">
-            {firstName && lastName ? `${firstName} ${lastName}` : 'Unknown'}
-          </span>
-        </div>
-      </div>
+      {firstName && lastName && (
+        <SidebarUser firstName={firstName} lastName={lastName} />
+      )}
     </aside>
   )
 }
