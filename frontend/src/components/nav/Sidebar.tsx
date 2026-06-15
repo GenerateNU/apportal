@@ -13,7 +13,8 @@ import type { Role } from '@/types/roles'
 
 interface SidebarProps {
   roles: Role[]
-  nuid?: string
+  firstName?: string
+  lastName?: string
 }
 
 type NavSection = {
@@ -56,7 +57,7 @@ const sectionsByRole: Record<Role, NavSection> = {
 // Display order: reviewer sections before applicant, admin last
 const roleOrder: Role[] = ['reviewer', 'applicant', 'admin']
 
-export default function Sidebar({ roles, nuid }: SidebarProps) {
+export default function Sidebar({ roles, firstName, lastName }: SidebarProps) {
   const sections = roleOrder
     .filter((role) => roles.includes(role))
     .map((role) => sectionsByRole[role])
@@ -91,10 +92,11 @@ export default function Sidebar({ roles, nuid }: SidebarProps) {
       <div className="border-t border-gray-100 px-4 py-3">
         <div className="flex items-center gap-2.5">
           <div className="bg-brand-blue flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold text-white">
-            {nuid ? nuid.slice(-2) : 'NU'}
+            {firstName?.[0] ?? 'F'}
+            {lastName?.[0] ?? 'L'}
           </div>
           <span className="text-sm font-medium text-gray-700">
-            {nuid ?? 'NUID'}
+            {firstName && lastName ? `${firstName} ${lastName}` : 'Unknown'}
           </span>
         </div>
       </div>

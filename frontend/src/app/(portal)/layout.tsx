@@ -12,7 +12,11 @@ export default function PortalLayout({
 
   return (
     <div className="flex h-screen">
-      <Sidebar roles={roles} nuid={mockUser.nuid} />
+      <Sidebar
+        roles={roles}
+        firstName={mockUser.first_name}
+        lastName={mockUser.last_name}
+      />
       <main className="flex flex-1 flex-col overflow-y-auto bg-gray-50">
         {children}
       </main>
