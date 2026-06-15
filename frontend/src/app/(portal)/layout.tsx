@@ -1,14 +1,14 @@
-import Sidebar from "@/components/nav/Sidebar";
-import { mockUser } from "@/lib/mock-user";
-import { getRoles } from "@/types/roles";
+import Sidebar from '@/components/nav/Sidebar'
+import { mockUser } from '@/lib/mock-user'
+import { getRoles } from '@/types/roles'
 
 export default function PortalLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: React.ReactNode
 }) {
   // TODO: replace mockUser with session user from auth
-  const roles = getRoles(mockUser);
+  const roles = getRoles(mockUser)
 
   return (
     <div className="flex h-screen">
@@ -17,5 +17,5 @@ export default function PortalLayout({
         {children}
       </main>
     </div>
-  );
+  )
 }

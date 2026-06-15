@@ -3,5 +3,5 @@ export default function ApplicationsPage() {
     <div className="p-8">
       <h1 className="text-2xl font-semibold text-gray-900">My Applications</h1>
     </div>
-  );
+  )
 }
