@@ -1,0 +1,94 @@
+package models
+
+import (
+	"encoding/json"
+	"time"
+)
+
+// Structs map to the tables in the init migration. Nullable columns use
+// pointers; JSONB columns use json.RawMessage so they pass through untouched.
+
+type User struct {
+	NUID           string        `json:"nuid"`
+	Email          string        `json:"email"`
+	FullName       string        `json:"full_name"`
+	ReviewerRole   *ReviewerRole `json:"reviewer_role,omitempty"`
+	GithubUsername *string       `json:"github_username,omitempty"`
+	CreatedAt      time.Time     `json:"created_at"`
+	UpdatedAt      time.Time     `json:"updated_at"`
+}
+
+type Cycle struct {
+	ID        string      `json:"id"`
+	Name      string      `json:"name"`
+	Status    CycleStatus `json:"status"`
+	OpensAt   *time.Time  `json:"opens_at,omitempty"`
+	ClosesAt  *time.Time  `json:"closes_at,omitempty"`
+	CreatedAt time.Time   `json:"created_at"`
+}
+
+type Question struct {
+	ID           string          `json:"id"`
+	CycleID      string          `json:"cycle_id"`
+	Role         *Role           `json:"role,omitempty"`
+	QuestionText string          `json:"question_text"`
+	QuestionType QuestionType    `json:"question_type"`
+	IsRequired   bool            `json:"is_required"`
+	DisplayOrder int             `json:"display_order"`
+	Options      json.RawMessage `json:"options,omitempty"`
+	CreatedAt    time.Time       `json:"created_at"`
+}
+
+type CodeChallenge struct {
+	ID            string     `json:"id"`
+	CycleID       string     `json:"cycle_id"`
+	Role          Role       `json:"role"`
+	Name          string     `json:"name"`
+	GithubRepoURL *string    `json:"github_repo_url,omitempty"`
+	Instructions  *string    `json:"instructions,omitempty"`
+	DueAt         *time.Time `json:"due_at,omitempty"`
+	CreatedAt     time.Time  `json:"created_at"`
+}
+
+type Applicant struct {
+	NUID           string    `json:"nuid"`
+	Email          string    `json:"email"`
+	FullName       string    `json:"full_name"`
+	GithubUsername *string   `json:"github_username,omitempty"`
+	GraduationYear *int      `json:"graduation_year,omitempty"`
+	Major          *string   `json:"major,omitempty"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
+}
+
+type Application struct {
+	ID            string           `json:"id"`
+	CycleID       string           `json:"cycle_id"`
+	ApplicantNUID string           `json:"applicant_nuid"`
+	Role          Role             `json:"role"`
+	Stage         ApplicationStage `json:"stage"`
+	Availability  json.RawMessage  `json:"availability,omitempty"`
+	ResumeURL     *string          `json:"resume_url,omitempty"`
+	SubmittedAt   time.Time        `json:"submitted_at"`
+	UpdatedAt     time.Time        `json:"updated_at"`
+}
+
+type WrittenAnswer struct {
+	ID            string          `json:"id"`
+	ApplicationID string          `json:"application_id"`
+	QuestionID    string          `json:"question_id"`
+	AnswerText    *string         `json:"answer_text,omitempty"`
+	AnswerOptions json.RawMessage `json:"answer_options,omitempty"`
+	SubmittedAt   time.Time       `json:"submitted_at"`
+}
+
+type CodeSubmission struct {
+	ID             string          `json:"id"`
+	ApplicationID  string          `json:"application_id"`
+	ChallengeID    string          `json:"challenge_id"`
+	GithubRepoURL  string          `json:"github_repo_url"`
+	SubmittedAt    time.Time       `json:"submitted_at"`
+	RawScore       *float64        `json:"raw_score,omitempty"`
+	ScoreDetails   json.RawMessage `json:"score_details,omitempty"`
+	ScoreUpdatedAt *time.Time      `json:"score_updated_at,omitempty"`
+}
