@@ -47,17 +47,17 @@ export default function ApplicantsPage() {
   return (
     <div className="flex flex-col gap-6 p-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-text-default">Applicants</h1>
+        <h1 className="text-text-default text-2xl font-semibold">Applicants</h1>
 
         <div className="flex items-center gap-3">
           <div className="relative w-60">
-            <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-text-subtle" />
+            <Search className="text-text-subtle absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
             <input
               type="text"
               placeholder="Search name, NUID, email..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="focus:border-brand-blue w-full rounded-md border border-gray-200 py-1.5 pr-3 pl-9 text-sm text-text-default placeholder:text-text-subtle focus:outline-none"
+              className="focus:border-brand-blue text-text-default placeholder:text-text-subtle w-full rounded-md border border-gray-200 py-1.5 pr-3 pl-9 text-sm focus:outline-none"
             />
           </div>
 
@@ -66,7 +66,7 @@ export default function ApplicantsPage() {
               onClick={() => setView('table')}
               className={`rounded-l-md p-1.5 transition-colors ${
                 view === 'table'
-                  ? 'bg-gray-100 text-text-default'
+                  ? 'text-text-default bg-gray-100'
                   : 'text-text-subtle hover:text-text-secondary'
               }`}
               aria-label="Table view"
@@ -77,7 +77,7 @@ export default function ApplicantsPage() {
               onClick={() => setView('kanban')}
               className={`rounded-r-md p-1.5 transition-colors ${
                 view === 'kanban'
-                  ? 'bg-gray-100 text-text-default'
+                  ? 'text-text-default bg-gray-100'
                   : 'text-text-subtle hover:text-text-secondary'
               }`}
               aria-label="Kanban view"

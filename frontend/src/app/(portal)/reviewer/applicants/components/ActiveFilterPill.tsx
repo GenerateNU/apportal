@@ -34,19 +34,21 @@ export function ActiveFilterPill<T extends string | number>({
   return (
     <div ref={ref} className="relative flex items-center">
       <div className="flex items-center rounded-md border border-gray-200 bg-white text-xs shadow-sm">
-        <span className="px-2.5 py-1.5 font-medium text-text-secondary">{label}</span>
-        <span className="border-l border-gray-100 px-2 py-1.5 text-text-subtle">
+        <span className="text-text-secondary px-2.5 py-1.5 font-medium">
+          {label}
+        </span>
+        <span className="text-text-subtle border-l border-gray-100 px-2 py-1.5">
           is
         </span>
         <button
           onClick={() => setOpen((o) => !o)}
-          className="border-l border-gray-100 px-2.5 py-1.5 font-medium text-text-secondary hover:bg-gray-50"
+          className="text-text-secondary border-l border-gray-100 px-2.5 py-1.5 font-medium hover:bg-gray-50"
         >
           {valueLabel}
         </button>
         <button
           onClick={onClear}
-          className="rounded-r-md border-l border-gray-100 px-2 py-1.5 text-text-subtle hover:bg-gray-50 hover:text-text-secondary"
+          className="text-text-subtle hover:text-text-secondary rounded-r-md border-l border-gray-100 px-2 py-1.5 hover:bg-gray-50"
         >
           <X className="h-3 w-3" />
         </button>
@@ -57,7 +59,7 @@ export function ActiveFilterPill<T extends string | number>({
           {options.map((opt) => (
             <label
               key={String(opt)}
-              className="flex cursor-pointer items-center gap-2.5 px-3 py-1.5 text-sm text-text-secondary hover:bg-gray-50"
+              className="text-text-secondary flex cursor-pointer items-center gap-2.5 px-3 py-1.5 text-sm hover:bg-gray-50"
             >
               <input
                 type="checkbox"

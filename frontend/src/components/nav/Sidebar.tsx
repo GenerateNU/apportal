@@ -72,7 +72,7 @@ function SidebarUser({
           {firstName[0]}
           {lastName[0]}
         </div>
-        <span className="text-sm font-medium text-text-secondary">
+        <span className="text-text-secondary text-sm font-medium">
           {firstName} {lastName}
         </span>
       </div>
@@ -103,13 +103,13 @@ export default function Sidebar({ roles, firstName, lastName }: SidebarProps) {
       <nav className="flex flex-1 flex-col gap-4 overflow-y-auto px-3 py-4">
         {sections.map((section) => (
           <div key={section.label}>
-            <p className="mb-1 px-3 text-xs font-medium tracking-wider text-text-subtle uppercase">
+            <p className="text-text-subtle mb-1 px-3 text-xs font-medium tracking-wider uppercase">
               {section.label}
             </p>
             <div className="flex flex-col gap-0.5">
               {section.items.map((item) => (
                 <NavItem key={item.href} {...item} />
-              ))} 
+              ))}
             </div>
           </div>
         ))}
