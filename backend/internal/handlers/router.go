@@ -39,6 +39,7 @@ func NewRouter(database *pgxpool.Pool) http.Handler {
 	config.Info.Description = "Generate application portal — applications, reviews, and the hiring pipeline."
 	api := humago.New(mux, config)
 
+	// Foundation + submission.
 	(&cycleHandler{store: st}).register(api)
 	(&questionHandler{store: st}).register(api)
 	(&challengeHandler{store: st}).register(api)
@@ -47,6 +48,15 @@ func NewRouter(database *pgxpool.Pool) http.Handler {
 	(&applicationHandler{store: st}).register(api)
 	(&answerHandler{store: st}).register(api)
 	(&codeSubmissionHandler{store: st}).register(api)
+
+	// Review → interview → selection pipeline.
+	(&tlAssignmentHandler{store: st}).register(api)
+	(&writtenReviewHandler{store: st}).register(api)
+	(&chiefReviewHandler{store: st}).register(api)
+	(&interviewAssignmentHandler{store: st}).register(api)
+	(&interviewHandler{store: st}).register(api)
+	(&recordingReviewHandler{store: st}).register(api)
+	(&selectionHandler{store: st}).register(api)
 
 	// Middleware applies outermost-first.
 	return middleware.Recovery(middleware.Logging(middleware.WithActor(mux)))

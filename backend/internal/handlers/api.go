@@ -40,6 +40,13 @@ func storeErr(err error) error {
 	}
 }
 
+// currentActor returns the authenticated actor. Callers should already have
+// passed requireReviewer/requireChief, so the actor is guaranteed populated.
+func currentActor(ctx context.Context) middleware.Actor {
+	a, _ := middleware.ActorFrom(ctx)
+	return a
+}
+
 // requireReviewer rejects calls lacking a valid reviewer identity. The actor is
 // populated by middleware.WithActor from request headers (auth stub).
 func requireReviewer(ctx context.Context) error {

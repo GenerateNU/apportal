@@ -38,14 +38,17 @@ type AnswersOutput struct {
 	Body []models.WrittenAnswer
 }
 
+// AnswerSubmission is one answer in a bulk upsert.
+type AnswerSubmission struct {
+	QuestionID    string          `json:"question_id"`
+	AnswerText    *string         `json:"answer_text,omitempty"`
+	AnswerOptions json.RawMessage `json:"answer_options,omitempty"`
+}
+
 type UpsertAnswersInput struct {
 	ID   string `path:"id" doc:"Application ID"`
 	Body struct {
-		Answers []struct {
-			QuestionID    string          `json:"question_id"`
-			AnswerText    *string         `json:"answer_text,omitempty"`
-			AnswerOptions json.RawMessage `json:"answer_options,omitempty"`
-		} `json:"answers" minItems:"1"`
+		Answers []AnswerSubmission `json:"answers" minItems:"1"`
 	}
 }
 

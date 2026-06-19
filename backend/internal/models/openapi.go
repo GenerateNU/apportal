@@ -31,6 +31,12 @@ func (ReviewerRole) Schema(huma.Registry) *huma.Schema {
 	return enumSchema(string(ReviewerRoleTL), string(ReviewerRoleChief))
 }
 
+func (InterviewRating) Schema(huma.Registry) *huma.Schema {
+	return enumSchema(
+		string(RatingDoNotHire), string(RatingGood), string(RatingGreat), string(RatingMustHire),
+	)
+}
+
 func (QuestionType) Schema(huma.Registry) *huma.Schema {
 	return enumSchema(
 		string(QuestionShortAnswer), string(QuestionLongAnswer),
