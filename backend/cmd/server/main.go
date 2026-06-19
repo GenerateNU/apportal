@@ -29,11 +29,7 @@ func main() {
 		slog.Error("failed to open database", "error", err)
 		os.Exit(1)
 	}
-	defer func() {
-		if err := database.Close(); err != nil {
-			slog.Error("error closing database", "error", err)
-		}
-	}()
+	defer database.Close()
 
 	server := &http.Server{
 		Addr:              ":" + cfg.Port,

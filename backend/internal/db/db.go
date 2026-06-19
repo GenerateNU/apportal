@@ -2,21 +2,31 @@ package db
 
 import (
 	"context"
-	"database/sql"
 	"time"
 
-	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func Open(ctx context.Context, databaseURL string) (*sql.DB, error) {
-	database, err := sql.Open("pgx", databaseURL)
+// Open creates a native pgx connection pool. The native pgx interface (rather
+// than database/sql) is used so the store can rely on pgx helpers like
+// pgx.CollectRows.
+func Open(ctx context.Context, databaseURL string) (*pgxpool.Pool, error) {
+	config, err := pgxpool.ParseConfig(databaseURL)
 	if err != nil {
 		return nil, err
 	}
 
-	database.SetMaxOpenConns(5)
-	database.SetMaxIdleConns(5)
-	database.SetConnMaxLifetime(30 * time.Minute)
+	config.MaxConns = 5
+	config.MaxConnLifetime = 30 * time.Minute
 
-	return database, nil
+	// Supabase's connection poolers (PgBouncer/Supavisor in transaction mode,
+	// e.g. port 6543) do not support the server-side named prepared-statement
+	// cache that pgx uses by default — reused pooled connections collide with
+	// "prepared statement already exists" (42P05). QueryExecModeExec uses an
+	// unnamed prepared statement per query, which is connection-local and
+	// pooler-safe while keeping proper server-side parameter typing.
+	config.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeExec
+
+	return pgxpool.NewWithConfig(ctx, config)
 }
