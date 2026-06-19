@@ -24,7 +24,7 @@ export function AddFilterButton({
     <div ref={ref} className="relative">
       <button
         onClick={() => setPanel(panel ? null : 'fields')}
-        className="flex items-center gap-1 rounded-md border border-dashed border-gray-300 px-2.5 py-1.5 text-xs text-gray-400 transition-colors hover:border-gray-400 hover:text-gray-600"
+        className="text-text-subtle hover:text-text-secondary flex items-center gap-1 rounded-md border border-dashed border-gray-300 px-2.5 py-1.5 text-xs transition-colors hover:border-gray-400"
       >
         <Plus className="h-3 w-3" />
         Filter
@@ -32,7 +32,7 @@ export function AddFilterButton({
 
       {panel === 'fields' && (
         <div className="absolute top-full left-0 z-20 mt-1 w-52 rounded-lg border border-gray-200 bg-white shadow-lg">
-          <div className="border-b border-gray-100 px-3 py-2 text-xs font-medium tracking-wider text-gray-400 uppercase">
+          <div className="text-text-subtle border-b border-gray-100 px-3 py-2 text-xs font-medium tracking-wider uppercase">
             Filter by
           </div>
           <div className="py-1">
@@ -43,9 +43,9 @@ export function AddFilterButton({
                   onAdd(key)
                   setPanel(null)
                 }}
-                className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                className="text-text-secondary flex w-full items-center gap-2.5 px-3 py-2 text-sm hover:bg-gray-50"
               >
-                <Icon className="h-4 w-4 text-gray-400" />
+                <Icon className="text-text-subtle h-4 w-4" />
                 {label}
               </button>
             ))}
