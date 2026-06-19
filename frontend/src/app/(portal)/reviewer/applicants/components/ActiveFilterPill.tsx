@@ -24,15 +24,20 @@ export function ActiveFilterPill<T extends string | number>({
   useClickOutside(ref, () => setOpen(false), open)
 
   const toggle = (v: T) =>
-    onChange(values.includes(v) ? values.filter((x) => x !== v) : [...values, v])
+    onChange(
+      values.includes(v) ? values.filter((x) => x !== v) : [...values, v]
+    )
 
-  const valueLabel = values.length === 1 ? renderValue(values[0]) : `${values.length} values`
+  const valueLabel =
+    values.length === 1 ? renderValue(values[0]) : `${values.length} values`
 
   return (
     <div ref={ref} className="relative flex items-center">
       <div className="flex items-center rounded-md border border-gray-200 bg-white text-xs shadow-sm">
         <span className="px-2.5 py-1.5 font-medium text-gray-600">{label}</span>
-        <span className="border-l border-gray-100 px-2 py-1.5 text-gray-400">is</span>
+        <span className="border-l border-gray-100 px-2 py-1.5 text-gray-400">
+          is
+        </span>
         <button
           onClick={() => setOpen((o) => !o)}
           className="border-l border-gray-100 px-2.5 py-1.5 font-medium text-gray-700 hover:bg-gray-50"

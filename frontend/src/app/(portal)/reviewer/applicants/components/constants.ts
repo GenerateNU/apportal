@@ -5,9 +5,17 @@ import type { ApplicationStage, Rating } from '@/types/applicant'
 
 export type FilterKey = 'major' | 'year' | 'rating'
 
-export const ORDERED_STAGES: ApplicationStage[] = ['application', 'interview', 'offered', 'rejected']
+export const ORDERED_STAGES: ApplicationStage[] = [
+  'application',
+  'interview',
+  'offered',
+  'rejected',
+]
 
-export const FILTER_STAGES: { label: string; value: ApplicationStage | 'all' }[] = [
+export const FILTER_STAGES: {
+  label: string
+  value: ApplicationStage | 'all'
+}[] = [
   { label: 'All', value: 'all' },
   { label: 'Application', value: 'application' },
   { label: 'Interview', value: 'interview' },
@@ -50,13 +58,30 @@ export const ratingLabel: Record<Rating, string> = {
   must_hire: 'Must Hire',
 }
 
-export const ratedStages: ApplicationStage[] = ['interview', 'offered', 'rejected']
+export const ratedStages: ApplicationStage[] = [
+  'interview',
+  'offered',
+  'rejected',
+]
 
-export const ALL_RATINGS: Rating[] = ['no_hire', 'good_hire', 'great_hire', 'must_hire']
-export const ALL_MAJORS = [...new Set(mockApplicants.map((a) => a.major))].sort()
-export const ALL_YEARS = [...new Set(mockApplicants.map((a) => a.year))].sort((a, b) => a - b)
+export const ALL_RATINGS: Rating[] = [
+  'no_hire',
+  'good_hire',
+  'great_hire',
+  'must_hire',
+]
+export const ALL_MAJORS = [
+  ...new Set(mockApplicants.map((a) => a.major)),
+].sort()
+export const ALL_YEARS = [...new Set(mockApplicants.map((a) => a.year))].sort(
+  (a, b) => a - b
+)
 
-export const FILTER_FIELDS: { key: FilterKey; label: string; Icon: ElementType }[] = [
+export const FILTER_FIELDS: {
+  key: FilterKey
+  label: string
+  Icon: ElementType
+}[] = [
   { key: 'major', label: 'Major', Icon: GraduationCap },
   { key: 'year', label: 'Year', Icon: Hash },
   { key: 'rating', label: 'Rating', Icon: Star },

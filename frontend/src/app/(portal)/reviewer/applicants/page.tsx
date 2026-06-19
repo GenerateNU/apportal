@@ -11,7 +11,9 @@ type View = 'table' | 'kanban'
 
 export default function ApplicantsPage() {
   const [view, setView] = useState<View>('table')
-  const [activeStage, setActiveStage] = useState<ApplicationStage | 'all'>('all')
+  const [activeStage, setActiveStage] = useState<ApplicationStage | 'all'>(
+    'all'
+  )
   const [search, setSearch] = useState('')
   const [selectedMajors, setSelectedMajors] = useState<string[]>([])
   const [selectedYears, setSelectedYears] = useState<number[]>([])
@@ -26,12 +28,20 @@ export default function ApplicantsPage() {
       `${a.firstName} ${a.lastName}`.toLowerCase().includes(query) ||
       a.nuid.includes(query) ||
       a.email.toLowerCase().includes(query)
-    const matchesMajor = selectedMajors.length === 0 || selectedMajors.includes(a.major)
-    const matchesYear = selectedYears.length === 0 || selectedYears.includes(a.year)
+    const matchesMajor =
+      selectedMajors.length === 0 || selectedMajors.includes(a.major)
+    const matchesYear =
+      selectedYears.length === 0 || selectedYears.includes(a.year)
     const matchesRating =
       selectedRatings.length === 0 ||
       (a.rating !== undefined && selectedRatings.includes(a.rating))
-    return matchesStage && matchesSearch && matchesMajor && matchesYear && matchesRating
+    return (
+      matchesStage &&
+      matchesSearch &&
+      matchesMajor &&
+      matchesYear &&
+      matchesRating
+    )
   })
 
   return (
@@ -47,7 +57,7 @@ export default function ApplicantsPage() {
               placeholder="Search name, NUID, email..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full rounded-md border border-gray-200 py-1.5 pr-3 pl-9 text-sm text-gray-900 placeholder-gray-400 focus:border-brand-blue focus:outline-none"
+              className="focus:border-brand-blue w-full rounded-md border border-gray-200 py-1.5 pr-3 pl-9 text-sm text-gray-900 placeholder-gray-400 focus:outline-none"
             />
           </div>
 
@@ -55,7 +65,9 @@ export default function ApplicantsPage() {
             <button
               onClick={() => setView('table')}
               className={`rounded-l-md p-1.5 transition-colors ${
-                view === 'table' ? 'bg-gray-100 text-gray-900' : 'text-gray-400 hover:text-gray-600'
+                view === 'table'
+                  ? 'bg-gray-100 text-gray-900'
+                  : 'text-gray-400 hover:text-gray-600'
               }`}
               aria-label="Table view"
             >

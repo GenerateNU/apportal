@@ -23,7 +23,9 @@ export function ApplicantRow({ applicant }: { applicant: Applicant }) {
       <td className="px-4 py-3">
         <RatingBadge applicant={applicant} />
       </td>
-      <td className="px-4 py-3 text-sm text-gray-500">{formatDate(applicant.submittedAt)}</td>
+      <td className="px-4 py-3 text-sm text-gray-500">
+        {formatDate(applicant.submittedAt)}
+      </td>
     </tr>
   )
 }

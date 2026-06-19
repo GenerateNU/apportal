@@ -1,5 +1,11 @@
 import type { Rating } from '@/types/applicant'
-import { ALL_MAJORS, ALL_RATINGS, ALL_YEARS, ratingLabel, type FilterKey } from './constants'
+import {
+  ALL_MAJORS,
+  ALL_RATINGS,
+  ALL_YEARS,
+  ratingLabel,
+  type FilterKey,
+} from './constants'
 import { ActiveFilterPill } from './ActiveFilterPill'
 import { AddFilterButton } from './AddFilterButton'
 
