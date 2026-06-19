@@ -3,7 +3,7 @@ import { ratedStages, ratingBadge, ratingLabel } from './constants'
 
 export function RatingBadge({ applicant }: { applicant: Applicant }) {
   if (!ratedStages.includes(applicant.stage) || !applicant.rating) {
-    return <span className="text-sm text-gray-300">—</span>
+    return <span className="text-sm text-text-faint">—</span>
   }
   return (
     <span

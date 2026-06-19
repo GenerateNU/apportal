@@ -20,12 +20,12 @@ export default function NavItem({ href, label, icon: Icon }: NavItemProps) {
       className={`flex items-center gap-2.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
         isActive
           ? 'text-brand-blue bg-blue-50'
-          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+          : 'text-text-secondary hover:bg-gray-100 hover:text-text-default'
       }`}
     >
       <Icon
         size={16}
-        className={isActive ? 'text-brand-blue' : 'text-gray-400'}
+        className={isActive ? 'text-brand-blue' : 'text-text-subtle'}
       />
       {label}
     </Link>

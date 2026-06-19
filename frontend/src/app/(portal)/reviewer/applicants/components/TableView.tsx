@@ -40,11 +40,11 @@ export function TableView({
             className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
               activeStage === value
                 ? 'text-brand-blue bg-blue-50'
-                : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
+                : 'text-text-muted hover:bg-gray-100 hover:text-text-secondary'
             }`}
           >
             {label}
-            <span className="ml-1.5 text-xs text-gray-400">
+            <span className="ml-1.5 text-xs text-text-subtle">
               {countByStage(value)}
             </span>
           </button>
@@ -75,7 +75,7 @@ export function TableView({
             ].map((col) => (
               <th
                 key={col}
-                className="px-4 py-2.5 text-left text-xs font-medium tracking-wider text-gray-400 uppercase"
+                className="px-4 py-2.5 text-left text-xs font-medium tracking-wider text-text-subtle uppercase"
               >
                 {col}
               </th>
@@ -89,7 +89,7 @@ export function TableView({
             <tr>
               <td
                 colSpan={8}
-                className="px-4 py-10 text-center text-sm text-gray-400"
+                className="px-4 py-10 text-center text-sm text-text-subtle"
               >
                 No applicants found.
               </td>
