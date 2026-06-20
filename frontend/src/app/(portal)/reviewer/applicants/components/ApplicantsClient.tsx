@@ -15,21 +15,23 @@ export function ApplicantsClient({
   initialData: ApplicantApplication[]
 }) {
   const [view, setView] = useState<View>('table')
-  const [activeStage, setActiveStage] = useState<ApplicationStage | 'all'>('all')
+  const [activeStage, setActiveStage] = useState<ApplicationStage | 'all'>(
+    'all'
+  )
   const [search, setSearch] = useState('')
   const [selectedMajors, setSelectedMajors] = useState<string[]>([])
   const [selectedYears, setSelectedYears] = useState<number[]>([])
 
   const allMajors = [
     ...new Set(
-      initialData.map((a) => a.major).filter((m): m is string => m !== null),
+      initialData.map((a) => a.major).filter((m): m is string => m !== null)
     ),
   ].sort()
   const allYears = [
     ...new Set(
       initialData
         .map((a) => a.graduationYear)
-        .filter((y): y is number => y !== null),
+        .filter((y): y is number => y !== null)
     ),
   ].sort((a, b) => a - b)
 

@@ -17,7 +17,10 @@ export const ORDERED_STAGES: ApplicationStage[] = [
   'withdrawn',
 ]
 
-export const FILTER_STAGES: { label: string; value: ApplicationStage | 'all' }[] = [
+export const FILTER_STAGES: {
+  label: string
+  value: ApplicationStage | 'all'
+}[] = [
   { label: 'All', value: 'all' },
   { label: 'Submitted', value: 'submitted' },
   { label: 'TL Review', value: 'tl_review' },
@@ -70,7 +73,11 @@ export const stageDot: Record<ApplicationStage, string> = {
   withdrawn: 'bg-gray-300',
 }
 
-export const FILTER_FIELDS: { key: FilterKey; label: string; Icon: ElementType }[] = [
+export const FILTER_FIELDS: {
+  key: FilterKey
+  label: string
+  Icon: ElementType
+}[] = [
   { key: 'major', label: 'Major', Icon: GraduationCap },
   { key: 'year', label: 'Year', Icon: Hash },
 ]

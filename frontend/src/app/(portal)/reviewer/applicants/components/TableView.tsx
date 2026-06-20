@@ -64,16 +64,23 @@ export function TableView({
       <table className="w-full">
         <thead>
           <tr className="border-b border-gray-100 bg-gray-50">
-            {['Name', 'NUID', 'Email', 'Major', 'Year', 'Role', 'Stage', 'Submitted'].map(
-              (col) => (
-                <th
-                  key={col}
-                  className="text-text-subtle px-4 py-2.5 text-left text-xs font-medium tracking-wider uppercase"
-                >
-                  {col}
-                </th>
-              ),
-            )}
+            {[
+              'Name',
+              'NUID',
+              'Email',
+              'Major',
+              'Year',
+              'Role',
+              'Stage',
+              'Submitted',
+            ].map((col) => (
+              <th
+                key={col}
+                className="text-text-subtle px-4 py-2.5 text-left text-xs font-medium tracking-wider uppercase"
+              >
+                {col}
+              </th>
+            ))}
           </tr>
         </thead>
         <tbody>

@@ -1,7 +1,10 @@
 import { apiFetch, type FetchOptions } from './client'
 import type { Applicant } from './types'
 
-export function getApplicant(nuid: string, opts?: FetchOptions): Promise<Applicant> {
+export function getApplicant(
+  nuid: string,
+  opts?: FetchOptions
+): Promise<Applicant> {
   return apiFetch(`/applicants/${nuid}`, opts)
 }
 
@@ -15,7 +18,7 @@ export function upsertApplicant(
     graduation_year?: number
     major?: string
   },
-  opts?: FetchOptions,
+  opts?: FetchOptions
 ): Promise<Applicant> {
   return apiFetch('/applicants', { ...opts, method: 'POST', body })
 }

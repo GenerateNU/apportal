@@ -19,7 +19,12 @@ export type ReviewerRole = 'tl' | 'chief'
 
 export type InterviewRating = 'do_not_hire' | 'good' | 'great' | 'must_hire'
 
-export type QuestionType = 'short_answer' | 'long_answer' | 'multiple_choice' | 'checkbox' | 'url'
+export type QuestionType =
+  | 'short_answer'
+  | 'long_answer'
+  | 'multiple_choice'
+  | 'checkbox'
+  | 'url'
 
 export type CycleStatus = 'draft' | 'open' | 'closed' | 'archived'
 

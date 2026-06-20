@@ -9,12 +9,12 @@ const REVIEWER_ACTOR = { nuid: '002199001', role: 'chief' as const }
 export default async function ApplicantsPage() {
   const applications = await getApplications(
     {},
-    { actor: REVIEWER_ACTOR, next: { revalidate: 30 } },
+    { actor: REVIEWER_ACTOR, next: { revalidate: 30 } }
   )
 
   const uniqueNUIDs = [...new Set(applications.map((a) => a.applicant_nuid))]
   const applicantList = await Promise.all(
-    uniqueNUIDs.map((nuid) => getApplicant(nuid)),
+    uniqueNUIDs.map((nuid) => getApplicant(nuid))
   )
   const byNUID = Object.fromEntries(applicantList.map((a) => [a.nuid, a]))
 

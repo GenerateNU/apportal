@@ -3,7 +3,7 @@ const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080'
 export class APIError extends Error {
   constructor(
     public status: number,
-    message: string,
+    message: string
   ) {
     super(message)
     this.name = 'APIError'
@@ -17,7 +17,10 @@ export type FetchOptions = Omit<RequestInit, 'body'> & {
   next?: NextFetchRequestConfig
 }
 
-export async function apiFetch<T>(path: string, options: FetchOptions = {}): Promise<T> {
+export async function apiFetch<T>(
+  path: string,
+  options: FetchOptions = {}
+): Promise<T> {
   const { body, actor, next, headers: extraHeaders, ...rest } = options
 
   const headers: HeadersInit = {

@@ -1,7 +1,10 @@
 import { apiFetch, type FetchOptions } from './client'
 import type { CodeSubmission } from './types'
 
-export function getSubmission(applicationId: string, opts?: FetchOptions): Promise<CodeSubmission> {
+export function getSubmission(
+  applicationId: string,
+  opts?: FetchOptions
+): Promise<CodeSubmission> {
   return apiFetch(`/applications/${applicationId}/code-submission`, opts)
 }
 
@@ -13,7 +16,11 @@ export function putSubmission(
     score?: number
     feedback?: string
   },
-  opts?: FetchOptions,
+  opts?: FetchOptions
 ): Promise<CodeSubmission> {
-  return apiFetch(`/applications/${applicationId}/code-submission`, { ...opts, method: 'PUT', body })
+  return apiFetch(`/applications/${applicationId}/code-submission`, {
+    ...opts,
+    method: 'PUT',
+    body,
+  })
 }

@@ -1,7 +1,11 @@
 import { apiFetch, type FetchOptions } from './client'
 import type { Question, QuestionType, Role } from './types'
 
-export function getQuestions(cycleId: string, role?: Role, opts?: FetchOptions): Promise<Question[]> {
+export function getQuestions(
+  cycleId: string,
+  role?: Role,
+  opts?: FetchOptions
+): Promise<Question[]> {
   const params = role ? `?role=${role}` : ''
   return apiFetch(`/cycles/${cycleId}/questions${params}`, opts)
 }
@@ -16,9 +20,13 @@ export function createQuestion(
     display_order?: number
     options?: string[]
   },
-  opts?: FetchOptions,
+  opts?: FetchOptions
 ): Promise<Question> {
-  return apiFetch(`/cycles/${cycleId}/questions`, { ...opts, method: 'POST', body })
+  return apiFetch(`/cycles/${cycleId}/questions`, {
+    ...opts,
+    method: 'POST',
+    body,
+  })
 }
 
 export function updateQuestion(
@@ -30,7 +38,7 @@ export function updateQuestion(
     display_order?: number
     options?: string[]
   },
-  opts?: FetchOptions,
+  opts?: FetchOptions
 ): Promise<Question> {
   return apiFetch(`/questions/${id}`, { ...opts, method: 'PATCH', body })
 }
