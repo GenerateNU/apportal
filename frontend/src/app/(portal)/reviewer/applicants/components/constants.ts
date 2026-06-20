@@ -1,15 +1,20 @@
 import type { ElementType } from 'react'
-import { GraduationCap, Hash, Star } from 'lucide-react'
-import { mockApplicants } from '@/lib/mock-applicants'
-import type { ApplicationStage, Rating } from '@/types/applicant'
+import { GraduationCap, Hash } from 'lucide-react'
+import type { ApplicationStage } from '@/lib/api/types'
 
-export type FilterKey = 'major' | 'year' | 'rating'
+export type FilterKey = 'major' | 'year'
 
 export const ORDERED_STAGES: ApplicationStage[] = [
-  'application',
-  'interview',
-  'offered',
+  'submitted',
+  'tl_review',
+  'chief_review',
+  'interview_scheduled',
+  'interview_conducted',
+  'interview_review',
+  'selection',
+  'accepted',
   'rejected',
+  'withdrawn',
 ]
 
 export const FILTER_STAGES: {
@@ -17,65 +22,56 @@ export const FILTER_STAGES: {
   value: ApplicationStage | 'all'
 }[] = [
   { label: 'All', value: 'all' },
-  { label: 'Application', value: 'application' },
-  { label: 'Interview', value: 'interview' },
-  { label: 'Offered', value: 'offered' },
+  { label: 'Submitted', value: 'submitted' },
+  { label: 'TL Review', value: 'tl_review' },
+  { label: 'Chief Review', value: 'chief_review' },
+  { label: 'Interview Scheduled', value: 'interview_scheduled' },
+  { label: 'Interview Conducted', value: 'interview_conducted' },
+  { label: 'Interview Review', value: 'interview_review' },
+  { label: 'Selection', value: 'selection' },
+  { label: 'Accepted', value: 'accepted' },
   { label: 'Rejected', value: 'rejected' },
+  { label: 'Withdrawn', value: 'withdrawn' },
 ]
 
 export const stageBadge: Record<ApplicationStage, string> = {
-  application: 'bg-blue-50 text-blue-700',
-  interview: 'bg-yellow-50 text-yellow-700',
-  offered: 'bg-green-50 text-green-700',
+  submitted: 'bg-blue-50 text-blue-700',
+  tl_review: 'bg-purple-50 text-purple-700',
+  chief_review: 'bg-indigo-50 text-indigo-700',
+  interview_scheduled: 'bg-yellow-50 text-yellow-700',
+  interview_conducted: 'bg-orange-50 text-orange-700',
+  interview_review: 'bg-amber-50 text-amber-700',
+  selection: 'bg-cyan-50 text-cyan-700',
+  accepted: 'bg-green-50 text-green-700',
   rejected: 'bg-red-50 text-red-700',
+  withdrawn: 'bg-gray-100 text-gray-500',
 }
 
 export const stageLabel: Record<ApplicationStage, string> = {
-  application: 'Application',
-  interview: 'Interview',
-  offered: 'Offered',
+  submitted: 'Submitted',
+  tl_review: 'TL Review',
+  chief_review: 'Chief Review',
+  interview_scheduled: 'Interview Scheduled',
+  interview_conducted: 'Interview Conducted',
+  interview_review: 'Interview Review',
+  selection: 'Selection',
+  accepted: 'Accepted',
   rejected: 'Rejected',
+  withdrawn: 'Withdrawn',
 }
 
 export const stageDot: Record<ApplicationStage, string> = {
-  application: 'bg-blue-500',
-  interview: 'bg-amber-400',
-  offered: 'bg-green-500',
+  submitted: 'bg-blue-500',
+  tl_review: 'bg-purple-500',
+  chief_review: 'bg-indigo-500',
+  interview_scheduled: 'bg-yellow-400',
+  interview_conducted: 'bg-orange-400',
+  interview_review: 'bg-amber-400',
+  selection: 'bg-cyan-500',
+  accepted: 'bg-green-500',
   rejected: 'bg-red-400',
+  withdrawn: 'bg-gray-300',
 }
-
-export const ratingBadge: Record<Rating, string> = {
-  no_hire: 'bg-red-50 text-red-700',
-  good_hire: 'bg-yellow-50 text-yellow-700',
-  great_hire: 'bg-blue-50 text-blue-700',
-  must_hire: 'bg-green-50 text-green-700',
-}
-
-export const ratingLabel: Record<Rating, string> = {
-  no_hire: 'No Hire',
-  good_hire: 'Good Hire',
-  great_hire: 'Great Hire',
-  must_hire: 'Must Hire',
-}
-
-export const ratedStages: ApplicationStage[] = [
-  'interview',
-  'offered',
-  'rejected',
-]
-
-export const ALL_RATINGS: Rating[] = [
-  'no_hire',
-  'good_hire',
-  'great_hire',
-  'must_hire',
-]
-export const ALL_MAJORS = [
-  ...new Set(mockApplicants.map((a) => a.major)),
-].sort()
-export const ALL_YEARS = [...new Set(mockApplicants.map((a) => a.year))].sort(
-  (a, b) => a - b
-)
 
 export const FILTER_FIELDS: {
   key: FilterKey
@@ -84,5 +80,4 @@ export const FILTER_FIELDS: {
 }[] = [
   { key: 'major', label: 'Major', Icon: GraduationCap },
   { key: 'year', label: 'Year', Icon: Hash },
-  { key: 'rating', label: 'Rating', Icon: Star },
 ]

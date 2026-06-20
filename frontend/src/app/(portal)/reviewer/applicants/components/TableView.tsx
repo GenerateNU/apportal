@@ -1,43 +1,44 @@
-import type { Applicant, ApplicationStage, Rating } from '@/types/applicant'
-import { mockApplicants } from '@/lib/mock-applicants'
+import type { ApplicantApplication, ApplicationStage } from './types'
 import { FILTER_STAGES } from './constants'
 import { FilterBar } from './FilterBar'
 import { ApplicantRow } from './ApplicantRow'
 
 export function TableView({
   applicants,
+  allApplicants,
   activeStage,
   onStageChange,
+  allMajors,
   selectedMajors,
   onChangeMajors,
+  allYears,
   selectedYears,
   onChangeYears,
-  selectedRatings,
-  onChangeRatings,
 }: {
-  applicants: Applicant[]
+  applicants: ApplicantApplication[]
+  allApplicants: ApplicantApplication[]
   activeStage: ApplicationStage | 'all'
   onStageChange: (s: ApplicationStage | 'all') => void
+  allMajors: string[]
   selectedMajors: string[]
   onChangeMajors: (v: string[]) => void
+  allYears: number[]
   selectedYears: number[]
   onChangeYears: (v: number[]) => void
-  selectedRatings: Rating[]
-  onChangeRatings: (v: Rating[]) => void
 }) {
   const countByStage = (stage: ApplicationStage | 'all') =>
     stage === 'all'
-      ? mockApplicants.length
-      : mockApplicants.filter((a) => a.stage === stage).length
+      ? allApplicants.length
+      : allApplicants.filter((a) => a.stage === stage).length
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white">
-      <div className="flex items-center gap-1 border-b border-gray-100 px-4 py-3">
+      <div className="flex items-center gap-1 overflow-x-auto border-b border-gray-100 px-4 py-3">
         {FILTER_STAGES.map(({ label, value }) => (
           <button
             key={value}
             onClick={() => onStageChange(value)}
-            className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+            className={`shrink-0 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
               activeStage === value
                 ? 'text-brand-blue bg-blue-50'
                 : 'text-text-muted hover:text-text-secondary hover:bg-gray-100'
@@ -52,12 +53,12 @@ export function TableView({
       </div>
 
       <FilterBar
+        allMajors={allMajors}
         selectedMajors={selectedMajors}
         onChangeMajors={onChangeMajors}
+        allYears={allYears}
         selectedYears={selectedYears}
         onChangeYears={onChangeYears}
-        selectedRatings={selectedRatings}
-        onChangeRatings={onChangeRatings}
       />
 
       <table className="w-full">
@@ -69,8 +70,8 @@ export function TableView({
               'Email',
               'Major',
               'Year',
+              'Role',
               'Stage',
-              'Rating',
               'Submitted',
             ].map((col) => (
               <th
