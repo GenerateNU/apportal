@@ -1,4 +1,5 @@
-import type { Applicant, ApplicationStage } from '@/types/applicant'
+import type { ApplicationStage } from './types'
+import type { ApplicantApplication } from './types'
 import { stageDot, stageLabel } from './constants'
 import { KanbanCard } from './KanbanCard'
 
@@ -7,7 +8,7 @@ export function KanbanColumn({
   applicants,
 }: {
   stage: ApplicationStage
-  applicants: Applicant[]
+  applicants: ApplicantApplication[]
 }) {
   return (
     <div className="flex w-72 shrink-0 flex-col">

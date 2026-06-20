@@ -5,7 +5,7 @@ MAIN_PACKAGE := ./cmd/server
 BIN_DIR := bin
 BIN_PATH := $(BIN_DIR)/$(APP_NAME)
 
-.PHONY: help fmt fmt-check lint test test-cover vet tidy run dev build clean docker-build docker-up docker-down docker-logs prettier prettier-check
+.PHONY: help fmt fmt-check lint test test-cover vet tidy run dev build clean docker-build docker-up docker-down docker-logs prettier prettier-check seed
 
 help:
 	@printf '%s\n' \
@@ -16,6 +16,7 @@ help:
 		'  make test         Run Go tests' \
 		'  make test-cover    Run tests with coverage output' \
 		'  make tidy         Tidy Go modules' \
+		'  make seed         Seed the database with development data' \
 		'  make run          Run the backend locally' \
 		'  make dev          Run with hot reload (rebuilds on file save)' \
 		'  make build        Build the backend binary' \
@@ -55,6 +56,10 @@ test-cover:
 
 tidy:
 	@go mod tidy
+
+seed:
+	@if [ -f .env ]; then set -a; . ./.env; set +a; fi; \
+	psql "$$DATABASE_URL" -f internal/supabase/seed.sql
 
 run:
 	@if [ -f .env ]; then set -a; . ./.env; set +a; fi; go run $(MAIN_PACKAGE)

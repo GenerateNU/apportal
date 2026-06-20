@@ -1,39 +1,30 @@
-import type { Rating } from '@/types/applicant'
-import {
-  ALL_MAJORS,
-  ALL_RATINGS,
-  ALL_YEARS,
-  ratingLabel,
-  type FilterKey,
-} from './constants'
+import { type FilterKey } from './constants'
 import { ActiveFilterPill } from './ActiveFilterPill'
 import { AddFilterButton } from './AddFilterButton'
 
 export function FilterBar({
+  allMajors,
   selectedMajors,
   onChangeMajors,
+  allYears,
   selectedYears,
   onChangeYears,
-  selectedRatings,
-  onChangeRatings,
 }: {
+  allMajors: string[]
   selectedMajors: string[]
   onChangeMajors: (v: string[]) => void
+  allYears: number[]
   selectedYears: number[]
   onChangeYears: (v: number[]) => void
-  selectedRatings: Rating[]
-  onChangeRatings: (v: Rating[]) => void
 }) {
   const activeKeys: FilterKey[] = [
     ...(selectedMajors.length > 0 ? (['major'] as FilterKey[]) : []),
     ...(selectedYears.length > 0 ? (['year'] as FilterKey[]) : []),
-    ...(selectedRatings.length > 0 ? (['rating'] as FilterKey[]) : []),
   ]
 
   function handleAdd(key: FilterKey) {
-    if (key === 'major') onChangeMajors(ALL_MAJORS)
-    if (key === 'year') onChangeYears(ALL_YEARS)
-    if (key === 'rating') onChangeRatings(ALL_RATINGS)
+    if (key === 'major') onChangeMajors(allMajors)
+    if (key === 'year') onChangeYears(allYears)
   }
 
   return (
@@ -43,7 +34,7 @@ export function FilterBar({
           label="Major"
           values={selectedMajors}
           renderValue={(v) => v}
-          options={ALL_MAJORS}
+          options={allMajors}
           onChange={onChangeMajors}
           onClear={() => onChangeMajors([])}
         />
@@ -53,19 +44,9 @@ export function FilterBar({
           label="Year"
           values={selectedYears}
           renderValue={(v) => `Year ${v}`}
-          options={ALL_YEARS}
+          options={allYears}
           onChange={onChangeYears}
           onClear={() => onChangeYears([])}
-        />
-      )}
-      {selectedRatings.length > 0 && (
-        <ActiveFilterPill
-          label="Rating"
-          values={selectedRatings}
-          renderValue={(v) => ratingLabel[v]}
-          options={ALL_RATINGS}
-          onChange={onChangeRatings}
-          onClear={() => onChangeRatings([])}
         />
       )}
       <AddFilterButton activeKeys={activeKeys} onAdd={handleAdd} />
