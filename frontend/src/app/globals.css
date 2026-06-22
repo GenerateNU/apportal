@@ -4,6 +4,10 @@
   --background: #ffffff;
   --foreground: #171717;
   --text-default: #111111;
+  --text-secondary: #374151;
+  --text-muted: #6b7280;
+  --text-subtle: #9ca3af;
+  --text-faint: #d1d5db;
 }
 
 @theme inline {
@@ -11,7 +15,11 @@
   --color-foreground: var(--foreground);
   --color-brand-blue: #1477f8;
   --color-brand-white: #ffffff;
-  --color-text-default: var(--text-default);
+  --color-text-default: #111111;
+  --color-text-secondary: #374151;
+  --color-text-muted: #6b7280;
+  --color-text-subtle: #9ca3af;
+  --color-text-faint: #d1d5db;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
