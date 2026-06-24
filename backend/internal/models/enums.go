@@ -43,6 +43,23 @@ func (s ApplicationStage) Valid() bool {
 	return false
 }
 
+type InterviewRating string
+
+const (
+	RatingDoNotHire InterviewRating = "do_not_hire"
+	RatingGood      InterviewRating = "good"
+	RatingGreat     InterviewRating = "great"
+	RatingMustHire  InterviewRating = "must_hire"
+)
+
+func (r InterviewRating) Valid() bool {
+	switch r {
+	case RatingDoNotHire, RatingGood, RatingGreat, RatingMustHire:
+		return true
+	}
+	return false
+}
+
 type ReviewerRole string
 
 const (
