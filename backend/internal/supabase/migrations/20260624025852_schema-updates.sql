@@ -22,8 +22,9 @@ CREATE TYPE user_role AS ENUM (
 
 -- 1b. Add application_type enum
 CREATE TYPE application_type AS ENUM (
-  'new_member',
-  'lead'
+  'member',
+  'lead',
+  'chief',
 );
 
 -- 1c. Rename application_stage values: tl_review → lead_review
@@ -147,7 +148,7 @@ CREATE TRIGGER trg_lead_selections_updated_at
 -- ============================================================
 
 ALTER TABLE cycles
-  ADD COLUMN application_type application_type NOT NULL DEFAULT 'new_member';
+  ADD COLUMN application_type application_type NOT NULL DEFAULT 'member';
 
 
 -- ============================================================
@@ -183,3 +184,18 @@ CREATE INDEX idx_users_roles ON users USING GIN (roles);
 -- Update questions index to use renamed column
 DROP INDEX idx_questions_cycle_role;
 CREATE INDEX idx_questions_cycle_role ON questions(cycle_id, application_role);
+
+
+-- ============================================================
+--  9. GENERALIZE code challenge → challenge
+--     Drop the GitHub-specific naming so these tables can serve
+--     non-code roles too (e.g. design/written challenges).
+-- ============================================================
+
+-- 9a. code_challenges: the template/challenge link
+ALTER TABLE code_challenges
+  RENAME COLUMN github_repo_url TO challenge_url;
+
+-- 9b. code_submissions: the applicant's submission link
+ALTER TABLE code_submissions
+  RENAME COLUMN github_repo_url TO submission_url;
