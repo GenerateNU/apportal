@@ -28,11 +28,11 @@ type QuestionUpdate struct {
 	Options      json.RawMessage
 }
 
-const questionColumns = `id, cycle_id, role, question_text, question_type, is_required, display_order, options, created_at`
+const questionColumns = `id, cycle_id, application_role, question_text, question_type, is_required, display_order, options, created_at`
 
 func (s *Store) CreateQuestion(ctx context.Context, in QuestionCreate) (models.Question, error) {
 	const q = `
-		INSERT INTO questions (cycle_id, role, question_text, question_type, is_required, display_order, options)
+		INSERT INTO questions (cycle_id, application_role, question_text, question_type, is_required, display_order, options)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING ` + questionColumns
 	rows, err := s.db.Query(ctx, q, in.CycleID, in.Role, in.QuestionText,
@@ -49,7 +49,7 @@ func (s *Store) ListQuestions(ctx context.Context, cycleID string, role *models.
 	query := `SELECT ` + questionColumns + ` FROM questions WHERE cycle_id = $1`
 	args := []any{cycleID}
 	if role != nil {
-		query += ` AND (role = $2 OR role IS NULL)`
+		query += ` AND (application_role = $2 OR application_role IS NULL)`
 		args = append(args, *role)
 	}
 	query += ` ORDER BY display_order, created_at`

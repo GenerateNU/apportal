@@ -67,11 +67,11 @@ type ApplicationsOutput struct {
 
 type CreateApplicationInput struct {
 	Body struct {
-		CycleID       string          `json:"cycle_id"`
-		ApplicantNUID string          `json:"applicant_nuid"`
-		Role          models.Role     `json:"role"`
-		Availability  json.RawMessage `json:"availability,omitempty"`
-		ResumeURL     *string         `json:"resume_url,omitempty"`
+		CycleID      string          `json:"cycle_id"`
+		UserNUID     string          `json:"user_nuid"`
+		Role         models.Role     `json:"role"`
+		Availability json.RawMessage `json:"availability,omitempty"`
+		ResumeURL    *string         `json:"resume_url,omitempty"`
 	}
 }
 
@@ -81,11 +81,11 @@ func (h *applicationHandler) create(ctx context.Context, in *CreateApplicationIn
 	}
 
 	app, err := h.store.CreateApplication(ctx, store.ApplicationCreate{
-		CycleID:       in.Body.CycleID,
-		ApplicantNUID: in.Body.ApplicantNUID,
-		Role:          in.Body.Role,
-		Availability:  in.Body.Availability,
-		ResumeURL:     in.Body.ResumeURL,
+		CycleID:      in.Body.CycleID,
+		UserNUID:     in.Body.UserNUID,
+		Role:         in.Body.Role,
+		Availability: in.Body.Availability,
+		ResumeURL:    in.Body.ResumeURL,
 	})
 	if err != nil {
 		return nil, storeErr(err)

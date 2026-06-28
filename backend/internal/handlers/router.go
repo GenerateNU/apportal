@@ -40,6 +40,7 @@ func NewRouter(database *pgxpool.Pool) http.Handler {
 	api := humago.New(mux, config)
 
 	(&cycleHandler{store: st}).register(api)
+	(&cycleStageHandler{store: st}).register(api)
 	(&questionHandler{store: st}).register(api)
 	(&challengeHandler{store: st}).register(api)
 	(&userHandler{store: st}).register(api)

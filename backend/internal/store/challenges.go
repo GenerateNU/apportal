@@ -10,23 +10,23 @@ import (
 )
 
 type ChallengeCreate struct {
-	CycleID       string
-	Role          models.Role
-	Name          string
-	GithubRepoURL *string
-	Instructions  *string
-	DueAt         *time.Time
+	CycleID      string
+	Role         models.Role
+	Name         string
+	ChallengeURL *string
+	Instructions *string
+	DueAt        *time.Time
 }
 
-const challengeColumns = `id, cycle_id, role, name, github_repo_url, instructions, due_at, created_at`
+const challengeColumns = `id, cycle_id, application_role, name, challenge_url, instructions, due_at, created_at`
 
 func (s *Store) CreateChallenge(ctx context.Context, in ChallengeCreate) (models.CodeChallenge, error) {
 	const q = `
-		INSERT INTO code_challenges (cycle_id, role, name, github_repo_url, instructions, due_at)
+		INSERT INTO code_challenges (cycle_id, application_role, name, challenge_url, instructions, due_at)
 		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING ` + challengeColumns
 	rows, err := s.db.Query(ctx, q, in.CycleID, in.Role, in.Name,
-		in.GithubRepoURL, in.Instructions, in.DueAt)
+		in.ChallengeURL, in.Instructions, in.DueAt)
 	if err != nil {
 		return models.CodeChallenge{}, err
 	}
@@ -38,7 +38,7 @@ func (s *Store) ListChallenges(ctx context.Context, cycleID string, role *models
 	query := `SELECT ` + challengeColumns + ` FROM code_challenges WHERE cycle_id = $1`
 	args := []any{cycleID}
 	if role != nil {
-		query += ` AND role = $2`
+		query += ` AND application_role = $2`
 		args = append(args, *role)
 	}
 	query += ` ORDER BY created_at`

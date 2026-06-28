@@ -12,11 +12,11 @@ import (
 )
 
 type ApplicationCreate struct {
-	CycleID       string
-	ApplicantNUID string
-	Role          models.Role
-	Availability  json.RawMessage
-	ResumeURL     *string
+	CycleID      string
+	UserNUID     string
+	Role         models.Role
+	Availability json.RawMessage
+	ResumeURL    *string
 }
 
 type ApplicationUpdate struct {
@@ -32,14 +32,14 @@ type ApplicationFilter struct {
 	Stage   *models.ApplicationStage
 }
 
-const applicationColumns = `id, cycle_id, applicant_nuid, role, stage, availability, resume_url, submitted_at, updated_at`
+const applicationColumns = `id, cycle_id, user_nuid, application_role, stage, availability, resume_url, submitted_at, updated_at`
 
 func (s *Store) CreateApplication(ctx context.Context, in ApplicationCreate) (models.Application, error) {
 	const q = `
-		INSERT INTO applications (cycle_id, applicant_nuid, role, availability, resume_url)
+		INSERT INTO applications (cycle_id, user_nuid, application_role, availability, resume_url)
 		VALUES ($1, $2, $3, $4, $5)
 		RETURNING ` + applicationColumns
-	rows, err := s.db.Query(ctx, q, in.CycleID, in.ApplicantNUID, in.Role,
+	rows, err := s.db.Query(ctx, q, in.CycleID, in.UserNUID, in.Role,
 		jsonArg(in.Availability), in.ResumeURL)
 	if err != nil {
 		return models.Application{}, err
@@ -73,7 +73,7 @@ func (s *Store) ListApplications(ctx context.Context, f ApplicationFilter) ([]mo
 	}
 	if f.Role != nil {
 		args = append(args, *f.Role)
-		query += ` AND role = $` + strconv.Itoa(len(args))
+		query += ` AND application_role = $` + strconv.Itoa(len(args))
 	}
 	if f.Stage != nil {
 		args = append(args, *f.Stage)

@@ -13,26 +13,45 @@ type UserCreate struct {
 	NUID           string
 	Email          string
 	FullName       string
-	ReviewerRole   *models.ReviewerRole
+	Roles          []models.UserRole
+	GraduationYear *int
+	Major          *string
 	GithubUsername *string
 }
 
 type UserUpdate struct {
 	Email          *string
 	FullName       *string
-	ReviewerRole   *models.ReviewerRole
+	Roles          []models.UserRole
+	GraduationYear *int
+	Major          *string
 	GithubUsername *string
 }
 
-const userColumns = `nuid, email, full_name, reviewer_role, github_username, created_at, updated_at`
+// roles is selected as text[] so pgx scans the custom user_role[] reliably; on
+// write the parameter is cast back to user_role[].
+const userColumns = `nuid, email, full_name, roles::text[] AS roles, graduation_year, major, github_username, created_at, updated_at`
+
+// rolesText converts typed roles to the []string pgx encodes as a text array.
+// A nil slice stays nil so COALESCE leaves the existing value untouched.
+func rolesText(roles []models.UserRole) []string {
+	if roles == nil {
+		return nil
+	}
+	out := make([]string, len(roles))
+	for i, r := range roles {
+		out[i] = string(r)
+	}
+	return out
+}
 
 func (s *Store) CreateUser(ctx context.Context, in UserCreate) (models.User, error) {
 	const q = `
-		INSERT INTO users (nuid, email, full_name, reviewer_role, github_username)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO users (nuid, email, full_name, roles, graduation_year, major, github_username)
+		VALUES ($1, $2, $3, COALESCE($4::user_role[], '{applicant}'), $5, $6, $7)
 		RETURNING ` + userColumns
 	rows, err := s.db.Query(ctx, q, in.NUID, in.Email, in.FullName,
-		in.ReviewerRole, in.GithubUsername)
+		rolesText(in.Roles), in.GraduationYear, in.Major, in.GithubUsername)
 	if err != nil {
 		return models.User{}, err
 	}
@@ -43,12 +62,13 @@ func (s *Store) CreateUser(ctx context.Context, in UserCreate) (models.User, err
 	return u, err
 }
 
-func (s *Store) ListUsers(ctx context.Context, reviewerRole *models.ReviewerRole) ([]models.User, error) {
+// ListUsers returns all users, optionally filtered to those holding a role.
+func (s *Store) ListUsers(ctx context.Context, role *models.UserRole) ([]models.User, error) {
 	query := `SELECT ` + userColumns + ` FROM users`
 	args := []any{}
-	if reviewerRole != nil {
-		query += ` WHERE reviewer_role = $1`
-		args = append(args, *reviewerRole)
+	if role != nil {
+		query += ` WHERE $1::user_role = ANY(roles)`
+		args = append(args, string(*role))
 	}
 	query += ` ORDER BY full_name`
 
@@ -77,12 +97,14 @@ func (s *Store) UpdateUser(ctx context.Context, nuid string, in UserUpdate) (mod
 		UPDATE users SET
 			email           = COALESCE($2, email),
 			full_name       = COALESCE($3, full_name),
-			reviewer_role   = COALESCE($4, reviewer_role),
-			github_username = COALESCE($5, github_username)
+			roles           = COALESCE($4::user_role[], roles),
+			graduation_year = COALESCE($5, graduation_year),
+			major           = COALESCE($6, major),
+			github_username = COALESCE($7, github_username)
 		WHERE nuid = $1
 		RETURNING ` + userColumns
 	rows, err := s.db.Query(ctx, q, nuid, in.Email, in.FullName,
-		in.ReviewerRole, in.GithubUsername)
+		rolesText(in.Roles), in.GraduationYear, in.Major, in.GithubUsername)
 	if err != nil {
 		return models.User{}, err
 	}
