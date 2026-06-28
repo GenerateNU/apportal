@@ -24,7 +24,7 @@ CREATE TYPE user_role AS ENUM (
 CREATE TYPE application_type AS ENUM (
   'member',
   'lead',
-  'chief',
+  'chief'
 );
 
 -- 1c. Rename application_stage values: tl_review → lead_review
@@ -81,19 +81,18 @@ ALTER TABLE applications
   ADD CONSTRAINT applications_user_nuid_fkey
   FOREIGN KEY (user_nuid) REFERENCES users(nuid);
 
--- Update the unique constraint to use the new column name
+-- Update the unique constraint to use the new column name. The role column is
+-- still named `role` here (it's renamed to application_role in step 4, which
+-- carries the constraint's column reference along automatically).
 ALTER TABLE applications
   DROP CONSTRAINT applications_cycle_id_applicant_nuid_role_key;
 
 ALTER TABLE applications
   ADD CONSTRAINT applications_cycle_id_user_nuid_role_key
-  UNIQUE (cycle_id, user_nuid, application_role);
+  UNIQUE (cycle_id, user_nuid, role);
 
--- Drop applicants table
+-- Drop applicants table (its updated_at trigger is dropped along with it)
 DROP TABLE applicants;
-
--- Drop now-stale trigger
-DROP TRIGGER IF EXISTS trg_applicants_updated_at ON applicants;
 
 
 -- ============================================================
@@ -135,8 +134,10 @@ ALTER TABLE lead_selections RENAME COLUMN tl_nuid TO lead_nuid;
 ALTER INDEX idx_tl_selections_cycle_tl RENAME TO idx_lead_selections_cycle_lead;
 ALTER INDEX idx_tl_selections_app      RENAME TO idx_lead_selections_app;
 
--- 5d. Drop old trigger on tl_selections, add for lead_selections
-DROP TRIGGER IF EXISTS trg_tl_selections_updated_at ON tl_selections;
+-- 5d. Drop old trigger, add for lead_selections. The table was renamed above,
+--     so the old trigger now lives on lead_selections (renaming a table carries
+--     its triggers along).
+DROP TRIGGER IF EXISTS trg_tl_selections_updated_at ON lead_selections;
 
 CREATE TRIGGER trg_lead_selections_updated_at
   BEFORE UPDATE ON lead_selections

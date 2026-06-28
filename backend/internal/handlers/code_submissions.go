@@ -19,8 +19,8 @@ func (h *codeSubmissionHandler) register(api huma.API) {
 		OperationID: "upsert-code-submission",
 		Method:      http.MethodPut,
 		Path:        "/applications/{id}/code-submission",
-		Summary:     "Submit or update the code challenge link",
-		Description: "Records the GitHub repo URL. Scores are populated externally (deferred).",
+		Summary:     "Submit or update the challenge link",
+		Description: "Records the submission URL. Scores are populated externally (deferred).",
 		Tags:        []string{"Code submissions"},
 	}, h.upsert)
 
@@ -45,12 +45,12 @@ type UpsertCodeSubmissionInput struct {
 	ID   string `path:"id" doc:"Application ID"`
 	Body struct {
 		ChallengeID   string `json:"challenge_id"`
-		GithubRepoURL string `json:"github_repo_url"`
+		SubmissionURL string `json:"submission_url"`
 	}
 }
 
 func (h *codeSubmissionHandler) upsert(ctx context.Context, in *UpsertCodeSubmissionInput) (*CodeSubmissionOutput, error) {
-	sub, err := h.store.UpsertCodeSubmission(ctx, in.ID, in.Body.ChallengeID, in.Body.GithubRepoURL)
+	sub, err := h.store.UpsertCodeSubmission(ctx, in.ID, in.Body.ChallengeID, in.Body.SubmissionURL)
 	if err != nil {
 		return nil, storeErr(err)
 	}

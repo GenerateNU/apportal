@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -59,8 +60,8 @@ func TestStoreErr(t *testing.T) {
 }
 
 func TestRequireChief(t *testing.T) {
-	chief := middleware.Actor{NUID: "c1", Role: models.ReviewerRoleChief}
-	tl := middleware.Actor{NUID: "t1", Role: models.ReviewerRoleTL}
+	chief := middleware.Actor{NUID: "c1", Roles: []models.UserRole{models.UserRoleChief}}
+	tl := middleware.Actor{NUID: "t1", Roles: []models.UserRole{models.UserRoleLead}}
 
 	cases := []struct {
 		name     string
@@ -92,7 +93,11 @@ func TestRequireChief(t *testing.T) {
 func withActor(a middleware.Actor) context.Context {
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	r.Header.Set("X-NUID", a.NUID)
-	r.Header.Set("X-Role", string(a.Role))
+	roles := make([]string, len(a.Roles))
+	for i, role := range a.Roles {
+		roles[i] = string(role)
+	}
+	r.Header.Set("X-Role", strings.Join(roles, ","))
 	captured := r.Context()
 	middleware.WithActor(http.HandlerFunc(func(_ http.ResponseWriter, req *http.Request) {
 		captured = req.Context()

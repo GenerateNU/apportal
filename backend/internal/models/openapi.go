@@ -20,15 +20,24 @@ func (Role) Schema(huma.Registry) *huma.Schema {
 
 func (ApplicationStage) Schema(huma.Registry) *huma.Schema {
 	return enumSchema(
-		string(StageSubmitted), string(StageTLReview), string(StageChiefReview),
+		string(StageSubmitted), string(StageLeadReview), string(StageChiefReview),
 		string(StageInterviewScheduled), string(StageInterviewConducted),
 		string(StageInterviewReview), string(StageSelection),
 		string(StageAccepted), string(StageRejected), string(StageWithdrawn),
 	)
 }
 
-func (ReviewerRole) Schema(huma.Registry) *huma.Schema {
-	return enumSchema(string(ReviewerRoleTL), string(ReviewerRoleChief))
+func (UserRole) Schema(huma.Registry) *huma.Schema {
+	return enumSchema(
+		string(UserRoleApplicant), string(UserRoleMember), string(UserRoleLead),
+		string(UserRoleChief), string(UserRoleAdmin),
+	)
+}
+
+func (ApplicationType) Schema(huma.Registry) *huma.Schema {
+	return enumSchema(
+		string(ApplicationTypeMember), string(ApplicationTypeLead), string(ApplicationTypeChief),
+	)
 }
 
 func (QuestionType) Schema(huma.Registry) *huma.Schema {

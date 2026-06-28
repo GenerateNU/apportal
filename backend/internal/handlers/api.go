@@ -40,23 +40,24 @@ func storeErr(err error) error {
 	}
 }
 
-// requireReviewer rejects calls lacking a valid reviewer identity. The actor is
-// populated by middleware.WithActor from request headers (auth stub).
+// requireReviewer rejects calls lacking a reviewer identity. Leads, chiefs, and
+// admins can review. The actor is populated by middleware.WithActor from request
+// headers (auth stub).
 func requireReviewer(ctx context.Context) error {
 	actor, ok := middleware.ActorFrom(ctx)
-	if !ok || !actor.Role.Valid() {
+	if !ok || !actor.HasAnyRole(models.UserRoleLead, models.UserRoleChief, models.UserRoleAdmin) {
 		return huma.Error401Unauthorized("reviewer identity required")
 	}
 	return nil
 }
 
-// requireChief rejects calls that are not made by a chief.
+// requireChief rejects calls that are not made by a chief (or admin).
 func requireChief(ctx context.Context) error {
 	actor, ok := middleware.ActorFrom(ctx)
 	if !ok || actor.NUID == "" {
 		return huma.Error401Unauthorized("reviewer identity required")
 	}
-	if actor.Role != models.ReviewerRoleChief {
+	if !actor.HasAnyRole(models.UserRoleChief, models.UserRoleAdmin) {
 		return huma.Error403Forbidden("chief role required")
 	}
 	return nil

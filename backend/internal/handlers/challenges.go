@@ -47,11 +47,11 @@ type ChallengesOutput struct {
 type CreateChallengeInput struct {
 	ID   string `path:"id" doc:"Cycle ID"`
 	Body struct {
-		Role          models.Role `json:"role"`
-		Name          string      `json:"name"`
-		GithubRepoURL *string     `json:"github_repo_url,omitempty"`
-		Instructions  *string     `json:"instructions,omitempty"`
-		DueAt         *time.Time  `json:"due_at,omitempty"`
+		Role         models.Role `json:"role"`
+		Name         string      `json:"name"`
+		ChallengeURL *string     `json:"challenge_url,omitempty"`
+		Instructions *string     `json:"instructions,omitempty"`
+		DueAt        *time.Time  `json:"due_at,omitempty"`
 	}
 }
 
@@ -64,12 +64,12 @@ func (h *challengeHandler) create(ctx context.Context, in *CreateChallengeInput)
 	}
 
 	challenge, err := h.store.CreateChallenge(ctx, store.ChallengeCreate{
-		CycleID:       in.ID,
-		Role:          in.Body.Role,
-		Name:          in.Body.Name,
-		GithubRepoURL: in.Body.GithubRepoURL,
-		Instructions:  in.Body.Instructions,
-		DueAt:         in.Body.DueAt,
+		CycleID:      in.ID,
+		Role:         in.Body.Role,
+		Name:         in.Body.Name,
+		ChallengeURL: in.Body.ChallengeURL,
+		Instructions: in.Body.Instructions,
+		DueAt:        in.Body.DueAt,
 	})
 	if err != nil {
 		return nil, storeErr(err)

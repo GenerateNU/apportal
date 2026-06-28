@@ -18,13 +18,17 @@ type ApplicantUpsert struct {
 	Major          *string
 }
 
+// Applicants were merged into the users table; these methods expose the
+// applicant-facing profile subset of a user. The "applicant" role is applied by
+// the users table default on insert and left untouched on update.
 const applicantColumns = `nuid, email, full_name, github_username, graduation_year, major, created_at, updated_at`
 
-// UpsertApplicant inserts a new applicant or updates the existing one keyed by
-// NUID. A clash on the unique email (belonging to a different NUID) is a conflict.
+// UpsertApplicant inserts a new applicant user or updates the existing one keyed
+// by NUID. A clash on the unique email (belonging to a different NUID) is a
+// conflict. Existing roles are preserved.
 func (s *Store) UpsertApplicant(ctx context.Context, in ApplicantUpsert) (models.Applicant, error) {
 	const q = `
-		INSERT INTO applicants (nuid, email, full_name, github_username, graduation_year, major)
+		INSERT INTO users (nuid, email, full_name, github_username, graduation_year, major)
 		VALUES ($1, $2, $3, $4, $5, $6)
 		ON CONFLICT (nuid) DO UPDATE SET
 			email           = EXCLUDED.email,
@@ -46,7 +50,7 @@ func (s *Store) UpsertApplicant(ctx context.Context, in ApplicantUpsert) (models
 }
 
 func (s *Store) GetApplicant(ctx context.Context, nuid string) (models.Applicant, error) {
-	const q = `SELECT ` + applicantColumns + ` FROM applicants WHERE nuid = $1`
+	const q = `SELECT ` + applicantColumns + ` FROM users WHERE nuid = $1`
 	rows, err := s.db.Query(ctx, q, nuid)
 	if err != nil {
 		return models.Applicant{}, err
