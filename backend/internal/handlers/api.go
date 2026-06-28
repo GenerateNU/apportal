@@ -2,10 +2,8 @@ package handlers
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"log/slog"
-	"net/http"
 
 	"github.com/danielgtaylor/huma/v2"
 
@@ -13,18 +11,6 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/store"
 )
-
-// writeJSON / writeError back the plain net/http health & root routes that are
-// not Huma operations.
-func writeJSON(w http.ResponseWriter, status int, payload any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(payload)
-}
-
-func writeError(w http.ResponseWriter, status int, msg string) {
-	writeJSON(w, status, map[string]string{"error": msg})
-}
 
 // storeErr maps store sentinel errors to the matching Huma HTTP error so the
 // operation returns the right status code (and it appears in the OpenAPI spec).

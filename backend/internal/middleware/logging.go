@@ -2,33 +2,23 @@ package middleware
 
 import (
 	"log/slog"
-	"net/http"
 	"time"
+
+	"github.com/gofiber/fiber/v3"
 )
-
-// statusRecorder captures the status code written by downstream handlers.
-type statusRecorder struct {
-	http.ResponseWriter
-	status int
-}
-
-func (s *statusRecorder) WriteHeader(code int) {
-	s.status = code
-	s.ResponseWriter.WriteHeader(code)
-}
 
 // Logging emits one structured log line per request with method, path,
 // status, and duration.
-func Logging(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func Logging() fiber.Handler {
+	return func(c fiber.Ctx) error {
 		start := time.Now()
-		rec := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
-		next.ServeHTTP(rec, r)
+		err := c.Next()
 		slog.Info("request",
-			"method", r.Method,
-			"path", r.URL.Path,
-			"status", rec.status,
+			"method", c.Method(),
+			"path", c.Path(),
+			"status", c.Response().StatusCode(),
 			"duration_ms", time.Since(start).Milliseconds(),
 		)
-	})
+		return err
+	}
 }

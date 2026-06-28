@@ -1,11 +1,12 @@
-// Package middleware holds net/http middleware: the auth-stub actor extractor,
+// Package middleware holds Fiber middleware: the auth-stub actor extractor,
 // request logging, and panic recovery.
 package middleware
 
 import (
 	"context"
-	"net/http"
 	"strings"
+
+	"github.com/gofiber/fiber/v3"
 
 	"github.com/GenerateNU/apportal/backend/internal/models"
 )
@@ -43,21 +44,26 @@ type contextKey struct{}
 var actorKey contextKey
 
 // WithActor reads X-NUID and X-Role headers and, when present, stores an Actor
-// in the request context. X-Role is a comma-separated list of roles. Absent
+// on the request's user context (which Huma surfaces to operation handlers as
+// their context.Context). X-Role is a comma-separated list of roles. Absent
 // headers leave the context empty so applicant-facing (unauthenticated) routes
 // still work.
-func WithActor(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		nuid := r.Header.Get("X-NUID")
-		if nuid != "" {
-			actor := Actor{
-				NUID:  nuid,
-				Roles: parseRoles(r.Header.Get("X-Role")),
-			}
-			r = r.WithContext(context.WithValue(r.Context(), actorKey, actor))
-		}
-		next.ServeHTTP(w, r)
-	})
+func WithActor() fiber.Handler {
+	return func(c fiber.Ctx) error {
+		ctx := ContextWithActor(c.Context(), c.Get("X-NUID"), c.Get("X-Role"))
+		c.SetContext(ctx)
+		return c.Next()
+	}
+}
+
+// ContextWithActor returns ctx carrying an Actor built from the given NUID and
+// comma-separated role header. When nuid is empty it returns ctx unchanged.
+func ContextWithActor(ctx context.Context, nuid, roleHeader string) context.Context {
+	if nuid == "" {
+		return ctx
+	}
+	actor := Actor{NUID: nuid, Roles: parseRoles(roleHeader)}
+	return context.WithValue(ctx, actorKey, actor)
 }
 
 // parseRoles splits a comma-separated X-Role header into roles, ignoring blanks.

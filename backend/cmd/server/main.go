@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"log/slog"
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -31,16 +30,12 @@ func main() {
 	}
 	defer database.Close()
 
-	server := &http.Server{
-		Addr:              ":" + cfg.Port,
-		Handler:           handlers.NewRouter(database),
-		ReadHeaderTimeout: 5 * time.Second,
-	}
+	app := handlers.NewRouter(database)
 
 	serverErrors := make(chan error, 1)
 	go func() {
 		slog.Info("backend listening", "addr", "http://localhost:"+cfg.Port)
-		serverErrors <- server.ListenAndServe()
+		serverErrors <- app.Listen(":" + cfg.Port)
 	}()
 
 	shutdownSignals := make(chan os.Signal, 1)
@@ -48,7 +43,7 @@ func main() {
 
 	select {
 	case err := <-serverErrors:
-		if err != nil && err != http.ErrServerClosed {
+		if err != nil {
 			slog.Error("server error", "error", err)
 			os.Exit(1)
 		}
@@ -59,7 +54,7 @@ func main() {
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	if err := server.Shutdown(shutdownCtx); err != nil {
+	if err := app.ShutdownWithContext(shutdownCtx); err != nil {
 		slog.Error("graceful shutdown failed", "error", err)
 		os.Exit(1)
 	}
