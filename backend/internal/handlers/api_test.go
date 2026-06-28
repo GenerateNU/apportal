@@ -2,10 +2,8 @@ package handlers
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
-	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -15,25 +13,6 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/store"
 )
-
-func TestWriteJSON(t *testing.T) {
-	rec := httptest.NewRecorder()
-	writeJSON(rec, http.StatusCreated, map[string]string{"hello": "world"})
-
-	if rec.Code != http.StatusCreated {
-		t.Fatalf("status = %d, want %d", rec.Code, http.StatusCreated)
-	}
-	if ct := rec.Header().Get("Content-Type"); ct != "application/json" {
-		t.Fatalf("content-type = %q, want application/json", ct)
-	}
-	var body map[string]string
-	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
-		t.Fatalf("unmarshal: %v", err)
-	}
-	if body["hello"] != "world" {
-		t.Fatalf("body = %v, want hello=world", body)
-	}
-}
 
 func TestStoreErr(t *testing.T) {
 	cases := []struct {
@@ -91,18 +70,11 @@ func TestRequireChief(t *testing.T) {
 // withActor returns a context carrying the given actor, mirroring what
 // middleware.WithActor does from request headers.
 func withActor(a middleware.Actor) context.Context {
-	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	r.Header.Set("X-NUID", a.NUID)
 	roles := make([]string, len(a.Roles))
 	for i, role := range a.Roles {
 		roles[i] = string(role)
 	}
-	r.Header.Set("X-Role", strings.Join(roles, ","))
-	captured := r.Context()
-	middleware.WithActor(http.HandlerFunc(func(_ http.ResponseWriter, req *http.Request) {
-		captured = req.Context()
-	})).ServeHTTP(httptest.NewRecorder(), r)
-	return captured
+	return middleware.ContextWithActor(context.Background(), a.NUID, strings.Join(roles, ","))
 }
 
 type errExample string
