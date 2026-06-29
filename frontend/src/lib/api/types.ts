@@ -84,7 +84,7 @@ export interface Applicant {
 export interface Application {
   id: string
   cycle_id: string
-  applicant_nuid: string
+  user_nuid: string
   role: Role
   stage: ApplicationStage
   availability: Record<string, boolean> | null
