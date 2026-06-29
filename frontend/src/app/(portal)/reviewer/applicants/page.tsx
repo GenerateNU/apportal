@@ -12,18 +12,18 @@ export default async function ApplicantsPage() {
     { actor: REVIEWER_ACTOR, next: { revalidate: 30 } }
   )
 
-  const uniqueNUIDs = [...new Set(applications.map((a) => a.applicant_nuid))]
+  const uniqueNUIDs = [...new Set(applications.map((a) => a.user_nuid))]
   const applicantList = await Promise.all(
     uniqueNUIDs.map((nuid) => getApplicant(nuid))
   )
   const byNUID = Object.fromEntries(applicantList.map((a) => [a.nuid, a]))
 
   const rows: ApplicantApplication[] = applications.map((app) => {
-    const person = byNUID[app.applicant_nuid]
+    const person = byNUID[app.user_nuid]
     return {
       id: app.id,
-      fullName: person?.full_name ?? app.applicant_nuid,
-      nuid: app.applicant_nuid,
+      fullName: person?.full_name ?? app.user_nuid,
+      nuid: app.user_nuid,
       email: person?.email ?? '',
       major: person?.major ?? null,
       graduationYear: person?.graduation_year ?? null,

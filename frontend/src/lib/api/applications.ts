@@ -21,7 +21,7 @@ export function getApplication(
 }
 
 export function createApplication(
-  body: { applicant_nuid: string; cycle_id: string; role: Role },
+  body: { user_nuid: string; cycle_id: string; role: Role },
   opts?: FetchOptions
 ): Promise<Application> {
   return apiFetch('/applications', { ...opts, method: 'POST', body })
