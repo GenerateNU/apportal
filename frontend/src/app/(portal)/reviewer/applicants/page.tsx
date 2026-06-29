@@ -9,7 +9,7 @@ const REVIEWER_ACTOR = { nuid: '002199001', role: 'chief' as const }
 export default async function ApplicantsPage() {
   const applications = await getApplications(
     {},
-    { actor: REVIEWER_ACTOR, next: { revalidate: 30 } }
+    { actor: REVIEWER_ACTOR, cache: 'no-store' }
   )
 
   const uniqueNUIDs = [...new Set(applications.map((a) => a.user_nuid))]
