@@ -2,19 +2,21 @@ package middleware
 
 import (
 	"log/slog"
-	"net/http"
+
+	"github.com/gofiber/fiber/v3"
 )
 
 // Recovery converts a panic in a downstream handler into a 500 response
 // instead of crashing the server.
-func Recovery(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func Recovery() fiber.Handler {
+	return func(c fiber.Ctx) (err error) {
 		defer func() {
 			if rec := recover(); rec != nil {
-				slog.Error("panic recovered", "error", rec, "path", r.URL.Path)
-				http.Error(w, `{"error":"internal server error"}`, http.StatusInternalServerError)
+				slog.Error("panic recovered", "error", rec, "path", c.Path())
+				err = c.Status(fiber.StatusInternalServerError).
+					JSON(fiber.Map{"error": "internal server error"})
 			}
 		}()
-		next.ServeHTTP(w, r)
-	})
+		return c.Next()
+	}
 }

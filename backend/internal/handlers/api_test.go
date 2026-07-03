@@ -2,10 +2,9 @@ package handlers
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
-	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -14,25 +13,6 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/store"
 )
-
-func TestWriteJSON(t *testing.T) {
-	rec := httptest.NewRecorder()
-	writeJSON(rec, http.StatusCreated, map[string]string{"hello": "world"})
-
-	if rec.Code != http.StatusCreated {
-		t.Fatalf("status = %d, want %d", rec.Code, http.StatusCreated)
-	}
-	if ct := rec.Header().Get("Content-Type"); ct != "application/json" {
-		t.Fatalf("content-type = %q, want application/json", ct)
-	}
-	var body map[string]string
-	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
-		t.Fatalf("unmarshal: %v", err)
-	}
-	if body["hello"] != "world" {
-		t.Fatalf("body = %v, want hello=world", body)
-	}
-}
 
 func TestStoreErr(t *testing.T) {
 	cases := []struct {
@@ -59,8 +39,8 @@ func TestStoreErr(t *testing.T) {
 }
 
 func TestRequireChief(t *testing.T) {
-	chief := middleware.Actor{NUID: "c1", Role: models.ReviewerRoleChief}
-	tl := middleware.Actor{NUID: "t1", Role: models.ReviewerRoleTL}
+	chief := middleware.Actor{NUID: "c1", Roles: []models.UserRole{models.UserRoleChief}}
+	tl := middleware.Actor{NUID: "t1", Roles: []models.UserRole{models.UserRoleLead}}
 
 	cases := []struct {
 		name     string
@@ -90,14 +70,11 @@ func TestRequireChief(t *testing.T) {
 // withActor returns a context carrying the given actor, mirroring what
 // middleware.WithActor does from request headers.
 func withActor(a middleware.Actor) context.Context {
-	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	r.Header.Set("X-NUID", a.NUID)
-	r.Header.Set("X-Role", string(a.Role))
-	captured := r.Context()
-	middleware.WithActor(http.HandlerFunc(func(_ http.ResponseWriter, req *http.Request) {
-		captured = req.Context()
-	})).ServeHTTP(httptest.NewRecorder(), r)
-	return captured
+	roles := make([]string, len(a.Roles))
+	for i, role := range a.Roles {
+		roles[i] = string(role)
+	}
+	return middleware.ContextWithActor(context.Background(), a.NUID, strings.Join(roles, ","))
 }
 
 type errExample string

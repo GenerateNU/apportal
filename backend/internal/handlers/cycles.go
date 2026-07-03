@@ -67,10 +67,11 @@ type CyclesOutput struct {
 
 type CreateCycleInput struct {
 	Body struct {
-		Name     string             `json:"name"`
-		Status   models.CycleStatus `json:"status,omitempty"`
-		OpensAt  *time.Time         `json:"opens_at,omitempty"`
-		ClosesAt *time.Time         `json:"closes_at,omitempty"`
+		Name            string                 `json:"name"`
+		Status          models.CycleStatus     `json:"status,omitempty"`
+		ApplicationType models.ApplicationType `json:"application_type,omitempty"`
+		OpensAt         *time.Time             `json:"opens_at,omitempty"`
+		ClosesAt        *time.Time             `json:"closes_at,omitempty"`
 	}
 }
 
@@ -85,12 +86,20 @@ func (h *cycleHandler) create(ctx context.Context, in *CreateCycleInput) (*Cycle
 	if !status.Valid() {
 		return nil, huma.Error422UnprocessableEntity("invalid status")
 	}
+	appType := in.Body.ApplicationType
+	if appType == "" {
+		appType = models.ApplicationTypeMember
+	}
+	if !appType.Valid() {
+		return nil, huma.Error422UnprocessableEntity("invalid application_type")
+	}
 
 	cycle, err := h.store.CreateCycle(ctx, store.CycleCreate{
-		Name:     in.Body.Name,
-		Status:   status,
-		OpensAt:  in.Body.OpensAt,
-		ClosesAt: in.Body.ClosesAt,
+		Name:            in.Body.Name,
+		Status:          status,
+		ApplicationType: appType,
+		OpensAt:         in.Body.OpensAt,
+		ClosesAt:        in.Body.ClosesAt,
 	})
 	if err != nil {
 		return nil, storeErr(err)
@@ -121,10 +130,11 @@ func (h *cycleHandler) get(ctx context.Context, in *CycleIDInput) (*CycleOutput,
 type UpdateCycleInput struct {
 	ID   string `path:"id"`
 	Body struct {
-		Name     *string             `json:"name,omitempty"`
-		Status   *models.CycleStatus `json:"status,omitempty"`
-		OpensAt  *time.Time          `json:"opens_at,omitempty"`
-		ClosesAt *time.Time          `json:"closes_at,omitempty"`
+		Name            *string                 `json:"name,omitempty"`
+		Status          *models.CycleStatus     `json:"status,omitempty"`
+		ApplicationType *models.ApplicationType `json:"application_type,omitempty"`
+		OpensAt         *time.Time              `json:"opens_at,omitempty"`
+		ClosesAt        *time.Time              `json:"closes_at,omitempty"`
 	}
 }
 
@@ -135,12 +145,16 @@ func (h *cycleHandler) update(ctx context.Context, in *UpdateCycleInput) (*Cycle
 	if in.Body.Status != nil && !in.Body.Status.Valid() {
 		return nil, huma.Error422UnprocessableEntity("invalid status")
 	}
+	if in.Body.ApplicationType != nil && !in.Body.ApplicationType.Valid() {
+		return nil, huma.Error422UnprocessableEntity("invalid application_type")
+	}
 
 	cycle, err := h.store.UpdateCycle(ctx, in.ID, store.CycleUpdate{
-		Name:     in.Body.Name,
-		Status:   in.Body.Status,
-		OpensAt:  in.Body.OpensAt,
-		ClosesAt: in.Body.ClosesAt,
+		Name:            in.Body.Name,
+		Status:          in.Body.Status,
+		ApplicationType: in.Body.ApplicationType,
+		OpensAt:         in.Body.OpensAt,
+		ClosesAt:        in.Body.ClosesAt,
 	})
 	if err != nil {
 		return nil, storeErr(err)

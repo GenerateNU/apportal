@@ -22,7 +22,7 @@ type ApplicationStage string
 
 const (
 	StageSubmitted          ApplicationStage = "submitted"
-	StageTLReview           ApplicationStage = "tl_review"
+	StageLeadReview         ApplicationStage = "lead_review"
 	StageChiefReview        ApplicationStage = "chief_review"
 	StageInterviewScheduled ApplicationStage = "interview_scheduled"
 	StageInterviewConducted ApplicationStage = "interview_conducted"
@@ -35,7 +35,7 @@ const (
 
 func (s ApplicationStage) Valid() bool {
 	switch s {
-	case StageSubmitted, StageTLReview, StageChiefReview, StageInterviewScheduled,
+	case StageSubmitted, StageLeadReview, StageChiefReview, StageInterviewScheduled,
 		StageInterviewConducted, StageInterviewReview, StageSelection,
 		StageAccepted, StageRejected, StageWithdrawn:
 		return true
@@ -43,33 +43,38 @@ func (s ApplicationStage) Valid() bool {
 	return false
 }
 
-type InterviewRating string
+// UserRole is a role a user can hold. Users carry an array of these (a user can
+// be both an applicant and a reviewer), replacing the old scalar reviewer_role.
+type UserRole string
 
 const (
-	RatingDoNotHire InterviewRating = "do_not_hire"
-	RatingGood      InterviewRating = "good"
-	RatingGreat     InterviewRating = "great"
-	RatingMustHire  InterviewRating = "must_hire"
+	UserRoleApplicant UserRole = "applicant"
+	UserRoleMember    UserRole = "member"
+	UserRoleLead      UserRole = "lead"
+	UserRoleChief     UserRole = "chief"
+	UserRoleAdmin     UserRole = "admin"
 )
 
-func (r InterviewRating) Valid() bool {
+func (r UserRole) Valid() bool {
 	switch r {
-	case RatingDoNotHire, RatingGood, RatingGreat, RatingMustHire:
+	case UserRoleApplicant, UserRoleMember, UserRoleLead, UserRoleChief, UserRoleAdmin:
 		return true
 	}
 	return false
 }
 
-type ReviewerRole string
+// ApplicationType is what a cycle is recruiting for.
+type ApplicationType string
 
 const (
-	ReviewerRoleTL    ReviewerRole = "tl"
-	ReviewerRoleChief ReviewerRole = "chief"
+	ApplicationTypeMember ApplicationType = "member"
+	ApplicationTypeLead   ApplicationType = "lead"
+	ApplicationTypeChief  ApplicationType = "chief"
 )
 
-func (r ReviewerRole) Valid() bool {
-	switch r {
-	case ReviewerRoleTL, ReviewerRoleChief:
+func (t ApplicationType) Valid() bool {
+	switch t {
+	case ApplicationTypeMember, ApplicationTypeLead, ApplicationTypeChief:
 		return true
 	}
 	return false

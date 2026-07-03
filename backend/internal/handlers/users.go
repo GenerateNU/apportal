@@ -67,11 +67,13 @@ type UsersOutput struct {
 
 type CreateUserInput struct {
 	Body struct {
-		NUID           string               `json:"nuid"`
-		Email          string               `json:"email"`
-		FullName       string               `json:"full_name"`
-		ReviewerRole   *models.ReviewerRole `json:"reviewer_role,omitempty"`
-		GithubUsername *string              `json:"github_username,omitempty"`
+		NUID           string            `json:"nuid"`
+		Email          string            `json:"email"`
+		FullName       string            `json:"full_name"`
+		Roles          []models.UserRole `json:"roles,omitempty" doc:"Omit to default to applicant"`
+		GraduationYear *int              `json:"graduation_year,omitempty"`
+		Major          *string           `json:"major,omitempty"`
+		GithubUsername *string           `json:"github_username,omitempty"`
 	}
 }
 
@@ -79,15 +81,19 @@ func (h *userHandler) create(ctx context.Context, in *CreateUserInput) (*UserOut
 	if err := requireChief(ctx); err != nil {
 		return nil, err
 	}
-	if in.Body.ReviewerRole != nil && !in.Body.ReviewerRole.Valid() {
-		return nil, huma.Error422UnprocessableEntity("invalid reviewer_role")
+	for _, role := range in.Body.Roles {
+		if !role.Valid() {
+			return nil, huma.Error422UnprocessableEntity("invalid role")
+		}
 	}
 
 	user, err := h.store.CreateUser(ctx, store.UserCreate{
 		NUID:           in.Body.NUID,
 		Email:          in.Body.Email,
 		FullName:       in.Body.FullName,
-		ReviewerRole:   in.Body.ReviewerRole,
+		Roles:          in.Body.Roles,
+		GraduationYear: in.Body.GraduationYear,
+		Major:          in.Body.Major,
 		GithubUsername: in.Body.GithubUsername,
 	})
 	if err != nil {
@@ -97,23 +103,23 @@ func (h *userHandler) create(ctx context.Context, in *CreateUserInput) (*UserOut
 }
 
 type ListUsersInput struct {
-	ReviewerRole string `query:"reviewer_role" doc:"Optional reviewer role filter"`
+	Role string `query:"role" doc:"Optional role filter"`
 }
 
 func (h *userHandler) list(ctx context.Context, in *ListUsersInput) (*UsersOutput, error) {
 	if err := requireChief(ctx); err != nil {
 		return nil, err
 	}
-	var reviewerRole *models.ReviewerRole
-	if in.ReviewerRole != "" {
-		parsed := models.ReviewerRole(in.ReviewerRole)
+	var role *models.UserRole
+	if in.Role != "" {
+		parsed := models.UserRole(in.Role)
 		if !parsed.Valid() {
-			return nil, huma.Error422UnprocessableEntity("invalid reviewer_role")
+			return nil, huma.Error422UnprocessableEntity("invalid role")
 		}
-		reviewerRole = &parsed
+		role = &parsed
 	}
 
-	users, err := h.store.ListUsers(ctx, reviewerRole)
+	users, err := h.store.ListUsers(ctx, role)
 	if err != nil {
 		return nil, storeErr(err)
 	}
@@ -138,10 +144,12 @@ func (h *userHandler) get(ctx context.Context, in *UserNUIDInput) (*UserOutput, 
 type UpdateUserInput struct {
 	NUID string `path:"nuid"`
 	Body struct {
-		Email          *string              `json:"email,omitempty"`
-		FullName       *string              `json:"full_name,omitempty"`
-		ReviewerRole   *models.ReviewerRole `json:"reviewer_role,omitempty"`
-		GithubUsername *string              `json:"github_username,omitempty"`
+		Email          *string           `json:"email,omitempty"`
+		FullName       *string           `json:"full_name,omitempty"`
+		Roles          []models.UserRole `json:"roles,omitempty"`
+		GraduationYear *int              `json:"graduation_year,omitempty"`
+		Major          *string           `json:"major,omitempty"`
+		GithubUsername *string           `json:"github_username,omitempty"`
 	}
 }
 
@@ -149,14 +157,18 @@ func (h *userHandler) update(ctx context.Context, in *UpdateUserInput) (*UserOut
 	if err := requireChief(ctx); err != nil {
 		return nil, err
 	}
-	if in.Body.ReviewerRole != nil && !in.Body.ReviewerRole.Valid() {
-		return nil, huma.Error422UnprocessableEntity("invalid reviewer_role")
+	for _, role := range in.Body.Roles {
+		if !role.Valid() {
+			return nil, huma.Error422UnprocessableEntity("invalid role")
+		}
 	}
 
 	user, err := h.store.UpdateUser(ctx, in.NUID, store.UserUpdate{
 		Email:          in.Body.Email,
 		FullName:       in.Body.FullName,
-		ReviewerRole:   in.Body.ReviewerRole,
+		Roles:          in.Body.Roles,
+		GraduationYear: in.Body.GraduationYear,
+		Major:          in.Body.Major,
 		GithubUsername: in.Body.GithubUsername,
 	})
 	if err != nil {

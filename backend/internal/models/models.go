@@ -9,22 +9,36 @@ import (
 // pointers; JSONB columns use json.RawMessage so they pass through untouched.
 
 type User struct {
-	NUID           string        `json:"nuid"`
-	Email          string        `json:"email"`
-	FullName       string        `json:"full_name"`
-	ReviewerRole   *ReviewerRole `json:"reviewer_role,omitempty"`
-	GithubUsername *string       `json:"github_username,omitempty"`
-	CreatedAt      time.Time     `json:"created_at"`
-	UpdatedAt      time.Time     `json:"updated_at"`
+	NUID           string     `json:"nuid"`
+	Email          string     `json:"email"`
+	FullName       string     `json:"full_name"`
+	Roles          []UserRole `json:"roles"`
+	GraduationYear *int       `json:"graduation_year,omitempty"`
+	Major          *string    `json:"major,omitempty"`
+	GithubUsername *string    `json:"github_username,omitempty"`
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
 }
 
 type Cycle struct {
-	ID        string      `json:"id"`
-	Name      string      `json:"name"`
-	Status    CycleStatus `json:"status"`
-	OpensAt   *time.Time  `json:"opens_at,omitempty"`
-	ClosesAt  *time.Time  `json:"closes_at,omitempty"`
-	CreatedAt time.Time   `json:"created_at"`
+	ID              string          `json:"id"`
+	Name            string          `json:"name"`
+	Status          CycleStatus     `json:"status"`
+	ApplicationType ApplicationType `json:"application_type"`
+	OpensAt         *time.Time      `json:"opens_at,omitempty"`
+	ClosesAt        *time.Time      `json:"closes_at,omitempty"`
+	CreatedAt       time.Time       `json:"created_at"`
+}
+
+type CycleStage struct {
+	ID                  string           `json:"id"`
+	CycleID             string           `json:"cycle_id"`
+	Stage               ApplicationStage `json:"stage"`
+	DisplayOrder        int              `json:"display_order"`
+	IsActive            bool             `json:"is_active"`
+	RequiredAssignments int              `json:"required_assignments"`
+	Label               *string          `json:"label,omitempty"`
+	CreatedAt           time.Time        `json:"created_at"`
 }
 
 type Question struct {
@@ -40,14 +54,14 @@ type Question struct {
 }
 
 type CodeChallenge struct {
-	ID            string     `json:"id"`
-	CycleID       string     `json:"cycle_id"`
-	Role          Role       `json:"role"`
-	Name          string     `json:"name"`
-	GithubRepoURL *string    `json:"github_repo_url,omitempty"`
-	Instructions  *string    `json:"instructions,omitempty"`
-	DueAt         *time.Time `json:"due_at,omitempty"`
-	CreatedAt     time.Time  `json:"created_at"`
+	ID           string     `json:"id"`
+	CycleID      string     `json:"cycle_id"`
+	Role         Role       `json:"role"`
+	Name         string     `json:"name"`
+	ChallengeURL *string    `json:"challenge_url,omitempty"`
+	Instructions *string    `json:"instructions,omitempty"`
+	DueAt        *time.Time `json:"due_at,omitempty"`
+	CreatedAt    time.Time  `json:"created_at"`
 }
 
 type Applicant struct {
@@ -62,15 +76,15 @@ type Applicant struct {
 }
 
 type Application struct {
-	ID            string           `json:"id"`
-	CycleID       string           `json:"cycle_id"`
-	ApplicantNUID string           `json:"applicant_nuid"`
-	Role          Role             `json:"role"`
-	Stage         ApplicationStage `json:"stage"`
-	Availability  json.RawMessage  `json:"availability,omitempty"`
-	ResumeURL     *string          `json:"resume_url,omitempty"`
-	SubmittedAt   time.Time        `json:"submitted_at"`
-	UpdatedAt     time.Time        `json:"updated_at"`
+	ID           string           `json:"id"`
+	CycleID      string           `json:"cycle_id"`
+	UserNUID     string           `json:"user_nuid"`
+	Role         Role             `json:"role"`
+	Stage        ApplicationStage `json:"stage"`
+	Availability json.RawMessage  `json:"availability,omitempty"`
+	ResumeURL    *string          `json:"resume_url,omitempty"`
+	SubmittedAt  time.Time        `json:"submitted_at"`
+	UpdatedAt    time.Time        `json:"updated_at"`
 }
 
 type WrittenAnswer struct {
@@ -86,7 +100,7 @@ type CodeSubmission struct {
 	ID             string          `json:"id"`
 	ApplicationID  string          `json:"application_id"`
 	ChallengeID    string          `json:"challenge_id"`
-	GithubRepoURL  string          `json:"github_repo_url"`
+	SubmissionURL  string          `json:"submission_url"`
 	SubmittedAt    time.Time       `json:"submitted_at"`
 	RawScore       *float64        `json:"raw_score,omitempty"`
 	ScoreDetails   json.RawMessage `json:"score_details,omitempty"`

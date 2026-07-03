@@ -8,20 +8,20 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/models"
 )
 
-const codeSubmissionColumns = `id, application_id, challenge_id, github_repo_url, submitted_at, raw_score, score_details, score_updated_at`
+const codeSubmissionColumns = `id, application_id, challenge_id, submission_url, submitted_at, raw_score, score_details, score_updated_at`
 
-// UpsertCodeSubmission records (or replaces) the GitHub repo link for an
+// UpsertCodeSubmission records (or replaces) the submission link for an
 // application's challenge. Score fields are deferred and left untouched here —
 // they are populated externally.
-func (s *Store) UpsertCodeSubmission(ctx context.Context, applicationID, challengeID, githubRepoURL string) (models.CodeSubmission, error) {
+func (s *Store) UpsertCodeSubmission(ctx context.Context, applicationID, challengeID, submissionURL string) (models.CodeSubmission, error) {
 	const q = `
-		INSERT INTO code_submissions (application_id, challenge_id, github_repo_url)
+		INSERT INTO code_submissions (application_id, challenge_id, submission_url)
 		VALUES ($1, $2, $3)
 		ON CONFLICT (application_id, challenge_id) DO UPDATE SET
-			github_repo_url = EXCLUDED.github_repo_url,
-			submitted_at    = NOW()
+			submission_url = EXCLUDED.submission_url,
+			submitted_at   = NOW()
 		RETURNING ` + codeSubmissionColumns
-	rows, err := s.db.Query(ctx, q, applicationID, challengeID, githubRepoURL)
+	rows, err := s.db.Query(ctx, q, applicationID, challengeID, submissionURL)
 	if err != nil {
 		return models.CodeSubmission{}, err
 	}
