@@ -56,6 +56,15 @@ func NewRouter(database *pgxpool.Pool) *fiber.App {
 	(&answerHandler{store: st}).register(api)
 	(&codeSubmissionHandler{store: st}).register(api)
 
+	// Review → interview → selection pipeline.
+	(&leadAssignmentHandler{store: st}).register(api)
+	(&writtenReviewHandler{store: st}).register(api)
+	(&chiefReviewHandler{store: st}).register(api)
+	(&interviewAssignmentHandler{store: st}).register(api)
+	(&interviewHandler{store: st}).register(api)
+	(&recordingReviewHandler{store: st}).register(api)
+	(&selectionHandler{store: st}).register(api)
+
 	return app
 }
 

@@ -63,6 +63,25 @@ func (r UserRole) Valid() bool {
 	return false
 }
 
+// InterviewRating is the qualitative verdict interviewers and recording
+// reviewers give. Written reviews use a numeric 1–10 score instead.
+type InterviewRating string
+
+const (
+	RatingDoNotHire InterviewRating = "do_not_hire"
+	RatingGood      InterviewRating = "good"
+	RatingGreat     InterviewRating = "great"
+	RatingMustHire  InterviewRating = "must_hire"
+)
+
+func (r InterviewRating) Valid() bool {
+	switch r {
+	case RatingDoNotHire, RatingGood, RatingGreat, RatingMustHire:
+		return true
+	}
+	return false
+}
+
 // ApplicationType is what a cycle is recruiting for.
 type ApplicationType string
 

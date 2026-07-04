@@ -26,6 +26,14 @@ func storeErr(err error) error {
 	}
 }
 
+// currentActor returns the authenticated caller from the context. Handlers call
+// it after a require* check has confirmed an identity is present, so a missing
+// actor safely yields a zero-value Actor (empty NUID).
+func currentActor(ctx context.Context) middleware.Actor {
+	actor, _ := middleware.ActorFrom(ctx)
+	return actor
+}
+
 // requireReviewer rejects calls lacking a reviewer identity. Leads, chiefs, and
 // admins can review. The actor is populated by middleware.WithActor from request
 // headers (auth stub).
