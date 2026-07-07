@@ -1,19 +1,18 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Search, List, Columns } from 'lucide-react'
 import type { ApplicationStage } from '@/lib/api/types'
+import { useApplications } from '@/lib/queries/applications'
+import { useApplicantsByNuids } from '@/lib/queries/applicants'
+import { REVIEWER_ACTOR } from '@/lib/stub-actor'
 import type { ApplicantApplication } from './types'
 import { TableView } from './TableView'
 import { KanbanView } from './KanbanView'
 
 type View = 'table' | 'kanban'
 
-export function ApplicantsClient({
-  initialData,
-}: {
-  initialData: ApplicantApplication[]
-}) {
+export function ApplicantsClient() {
   const [view, setView] = useState<View>('table')
   const [activeStage, setActiveStage] = useState<ApplicationStage | 'all'>(
     'all'
@@ -22,20 +21,53 @@ export function ApplicantsClient({
   const [selectedMajors, setSelectedMajors] = useState<string[]>([])
   const [selectedYears, setSelectedYears] = useState<number[]>([])
 
+  const { data: applications = [] } = useApplications(
+    {},
+    { actor: REVIEWER_ACTOR }
+  )
+
+  const uniqueNUIDs = useMemo(
+    () => [...new Set(applications.map((a) => a.user_nuid))],
+    [applications]
+  )
+  const applicantQueries = useApplicantsByNuids(uniqueNUIDs)
+  const byNUID = useMemo(() => {
+    const map: Record<string, (typeof applicantQueries)[number]['data']> = {}
+    for (const q of applicantQueries) {
+      if (q.data) map[q.data.nuid] = q.data
+    }
+    return map
+  }, [applicantQueries])
+
+  const rows: ApplicantApplication[] = useMemo(
+    () =>
+      applications.map((app) => {
+        const person = byNUID[app.user_nuid]
+        return {
+          id: app.id,
+          fullName: person?.full_name ?? app.user_nuid,
+          nuid: app.user_nuid,
+          email: person?.email ?? '',
+          major: person?.major ?? null,
+          graduationYear: person?.graduation_year ?? null,
+          role: app.role,
+          stage: app.stage,
+          submittedAt: app.submitted_at,
+        }
+      }),
+    [applications, byNUID]
+  )
+
   const allMajors = [
-    ...new Set(
-      initialData.map((a) => a.major).filter((m): m is string => m !== null)
-    ),
+    ...new Set(rows.map((a) => a.major).filter((m): m is string => m !== null)),
   ].sort()
   const allYears = [
     ...new Set(
-      initialData
-        .map((a) => a.graduationYear)
-        .filter((y): y is number => y !== null)
+      rows.map((a) => a.graduationYear).filter((y): y is number => y !== null)
     ),
   ].sort((a, b) => a - b)
 
-  const filtered = initialData.filter((a) => {
+  const filtered = rows.filter((a) => {
     const matchesStage =
       view === 'kanban' || activeStage === 'all' || a.stage === activeStage
     const query = search.toLowerCase()
@@ -100,7 +132,7 @@ export function ApplicantsClient({
       {view === 'table' ? (
         <TableView
           applicants={filtered}
-          allApplicants={initialData}
+          allApplicants={rows}
           activeStage={activeStage}
           onStageChange={setActiveStage}
           allMajors={allMajors}
