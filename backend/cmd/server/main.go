@@ -30,7 +30,7 @@ func main() {
 	}
 	defer database.Close()
 
-	app := handlers.NewRouter(database, cfg.FrontendURL)
+	app := handlers.NewRouter(database, cfg.CORSOrigins)
 
 	serverErrors := make(chan error, 1)
 	go func() {
