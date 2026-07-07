@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState } from 'react'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
 export default function LoginForm() {
@@ -52,7 +53,7 @@ export default function LoginForm() {
           autoComplete="email"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
-          className="focus:border-brand-blue focus:ring-brand-blue rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-1"
+          className="text-text-default focus:border-brand-blue focus:ring-brand-blue rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-1"
         />
       </div>
 
@@ -71,7 +72,7 @@ export default function LoginForm() {
           autoComplete="current-password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
-          className="focus:border-brand-blue focus:ring-brand-blue rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-1"
+          className="text-text-default focus:border-brand-blue focus:ring-brand-blue rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-1"
         />
       </div>
 
@@ -80,10 +81,17 @@ export default function LoginForm() {
       <button
         type="submit"
         disabled={isSubmitting}
-        className="bg-brand-blue mt-2 rounded-md px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
+        className="bg-brand-blue text-brand-white mt-2 rounded-md px-3 py-2 text-sm font-semibold disabled:opacity-60"
       >
         {isSubmitting ? 'Signing in…' : 'Sign in'}
       </button>
+
+      <p className="text-text-secondary text-center text-sm">
+        Don&apos;t have an account?{' '}
+        <Link href="/signup" className="text-brand-blue font-medium">
+          Sign up
+        </Link>
+      </p>
     </form>
   )
 }

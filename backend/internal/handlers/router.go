@@ -22,7 +22,7 @@ type Router struct {
 // plain health checks, creates a Huma API over the same app (which auto-serves
 // the OpenAPI spec at /openapi.json|yaml and Scalar docs at /docs), then
 // registers every domain's typed operations.
-func NewRouter(database *pgxpool.Pool) *fiber.App {
+func NewRouter(database *pgxpool.Pool, frontendURL string) *fiber.App {
 	st := store.New(database)
 	app := fiber.New(fiber.Config{
 		ReadTimeout: 5 * time.Second,
@@ -30,6 +30,7 @@ func NewRouter(database *pgxpool.Pool) *fiber.App {
 
 	// Middleware applies outermost-first.
 	app.Use(middleware.Recovery())
+	app.Use(middleware.CORS(frontendURL))
 	app.Use(middleware.Logging())
 	app.Use(middleware.WithActor())
 
