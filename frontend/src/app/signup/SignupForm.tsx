@@ -45,7 +45,9 @@ export default function SignupForm() {
     try {
       await upsertApplicant({ nuid, email, full_name: fullName })
     } catch {
-      setError('Account created, but saving your profile failed. Try again from your dashboard.')
+      setError(
+        'Account created, but saving your profile failed. Try again from your dashboard.'
+      )
       setIsSubmitting(false)
       return
     }
@@ -76,7 +78,10 @@ export default function SignupForm() {
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="nuid" className="text-text-secondary text-sm font-medium">
+        <label
+          htmlFor="nuid"
+          className="text-text-secondary text-sm font-medium"
+        >
           NUID
         </label>
         <input
