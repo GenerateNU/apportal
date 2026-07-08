@@ -1,6 +1,7 @@
 'use client'
 
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 import {
   LayoutDashboard,
   Users,
@@ -8,8 +9,10 @@ import {
   RefreshCw,
   Settings,
   Layers,
+  LogOut,
 } from 'lucide-react'
 import NavItem from './NavItem'
+import { useAuth } from '@/lib/auth/auth-context'
 import type { Role } from '@/types/roles'
 
 interface SidebarProps {
@@ -65,16 +68,35 @@ function SidebarUser({
   firstName: string
   lastName: string
 }) {
+  const router = useRouter()
+  const { signOut } = useAuth()
+
+  async function handleSignOut() {
+    await signOut()
+    router.push('/login')
+    router.refresh()
+  }
+
   return (
     <div className="border-t border-gray-100 px-4 py-3">
-      <div className="flex items-center gap-2.5">
-        <div className="bg-brand-blue flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold text-white">
-          {firstName[0]}
-          {lastName[0]}
+      <div className="flex items-center justify-between gap-2.5">
+        <div className="flex items-center gap-2.5">
+          <div className="bg-brand-blue flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold text-white">
+            {firstName[0]}
+            {lastName[0]}
+          </div>
+          <span className="text-text-secondary text-sm font-medium">
+            {firstName} {lastName}
+          </span>
         </div>
-        <span className="text-text-secondary text-sm font-medium">
-          {firstName} {lastName}
-        </span>
+        <button
+          type="button"
+          onClick={handleSignOut}
+          aria-label="Sign out"
+          className="text-text-subtle hover:text-text-default rounded-md p-1.5 hover:bg-gray-100"
+        >
+          <LogOut size={16} />
+        </button>
       </div>
     </div>
   )
