@@ -17,6 +17,8 @@ export type ApplicationStage =
 
 export type ReviewerRole = 'tl' | 'chief'
 
+export type UserRole = 'applicant' | 'member' | 'lead' | 'chief' | 'admin'
+
 export type InterviewRating = 'do_not_hire' | 'good' | 'great' | 'must_hire'
 
 export type QuestionType =
@@ -32,7 +34,9 @@ export interface User {
   nuid: string
   email: string
   full_name: string
-  reviewer_role: ReviewerRole | null
+  roles: UserRole[]
+  graduation_year: number | null
+  major: string | null
   github_username: string | null
   created_at: string
   updated_at: string

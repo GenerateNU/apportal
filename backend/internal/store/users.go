@@ -92,6 +92,22 @@ func (s *Store) GetUser(ctx context.Context, nuid string) (models.User, error) {
 	return u, err
 }
 
+// GetUserByEmail looks up a user by email. This backs the self-serve "current
+// user" lookup a client makes right after authenticating, since Supabase
+// sessions only carry an email — not a NUID.
+func (s *Store) GetUserByEmail(ctx context.Context, email string) (models.User, error) {
+	const q = `SELECT ` + userColumns + ` FROM users WHERE email = $1`
+	rows, err := s.db.Query(ctx, q, email)
+	if err != nil {
+		return models.User{}, err
+	}
+	u, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByPos[models.User])
+	if errors.Is(err, pgx.ErrNoRows) {
+		return u, ErrNotFound
+	}
+	return u, err
+}
+
 func (s *Store) UpdateUser(ctx context.Context, nuid string, in UserUpdate) (models.User, error) {
 	const q = `
 		UPDATE users SET

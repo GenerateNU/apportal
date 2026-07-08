@@ -17,8 +17,7 @@ import type { Role } from '@/types/roles'
 
 interface SidebarProps {
   roles: Role[]
-  firstName?: string
-  lastName?: string
+  fullName?: string
 }
 
 type NavSection = {
@@ -61,13 +60,16 @@ const sectionsByRole: Record<Role, NavSection> = {
 // Display order: reviewer sections before applicant, admin last
 const roleOrder: Role[] = ['reviewer', 'applicant', 'admin']
 
-function SidebarUser({
-  firstName,
-  lastName,
-}: {
-  firstName: string
-  lastName: string
-}) {
+function initials(fullName: string) {
+  return fullName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]!.toUpperCase())
+    .join('')
+}
+
+function SidebarUser({ fullName }: { fullName: string }) {
   const router = useRouter()
   const { signOut } = useAuth()
 
@@ -82,11 +84,10 @@ function SidebarUser({
       <div className="flex items-center justify-between gap-2.5">
         <div className="flex items-center gap-2.5">
           <div className="bg-brand-blue flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold text-white">
-            {firstName[0]}
-            {lastName[0]}
+            {initials(fullName)}
           </div>
           <span className="text-text-secondary text-sm font-medium">
-            {firstName} {lastName}
+            {fullName}
           </span>
         </div>
         <button
@@ -102,7 +103,7 @@ function SidebarUser({
   )
 }
 
-export default function Sidebar({ roles, firstName, lastName }: SidebarProps) {
+export default function Sidebar({ roles, fullName }: SidebarProps) {
   const sections = roleOrder
     .filter((role) => roles.includes(role))
     .map((role) => sectionsByRole[role])
@@ -138,9 +139,7 @@ export default function Sidebar({ roles, firstName, lastName }: SidebarProps) {
       </nav>
 
       {/* User */}
-      {firstName && lastName && (
-        <SidebarUser firstName={firstName} lastName={lastName} />
-      )}
+      {fullName && <SidebarUser fullName={fullName} />}
     </aside>
   )
 }
