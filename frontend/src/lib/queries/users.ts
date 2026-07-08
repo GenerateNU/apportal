@@ -1,7 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { createUser, getUser, getUsers, updateUser } from '@/lib/api/users'
+import {
+  createUser,
+  getUser,
+  getUserByEmail,
+  getUsers,
+  updateUser,
+} from '@/lib/api/users'
 import type { FetchOptions } from '@/lib/api/client'
 import type { ReviewerRole } from '@/lib/api/types'
+import { useAuth } from '@/lib/auth/auth-context'
 import { queryKeys } from './keys'
 
 export function useUsers(reviewerRole?: ReviewerRole, opts?: FetchOptions) {
@@ -17,6 +24,21 @@ export function useUser(nuid: string, opts?: FetchOptions) {
     queryFn: () => getUser(nuid, opts),
     enabled: !!nuid,
   })
+}
+
+// Resolves the logged-in Supabase session to its backend user record. Sessions
+// only carry an email, so this is the bridge to nuid/full_name/roles.
+export function useCurrentUser(opts?: FetchOptions) {
+  const { user, isLoading: isAuthLoading } = useAuth()
+  const email = user?.email
+
+  const query = useQuery({
+    queryKey: queryKeys.users.byEmail(email ?? ''),
+    queryFn: () => getUserByEmail(email!, opts),
+    enabled: !!email,
+  })
+
+  return { ...query, isLoading: isAuthLoading || query.isLoading }
 }
 
 export function useCreateUser() {

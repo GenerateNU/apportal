@@ -26,6 +26,16 @@ func (h *userHandler) register(api huma.API) {
 	}, h.list)
 
 	huma.Register(api, huma.Operation{
+		OperationID: "get-user-by-email",
+		Method:      http.MethodGet,
+		Path:        "/users/by-email",
+		Summary:     "Get the current user by email",
+		Description: "Self-serve; resolves the caller's own profile from their authenticated email.",
+		Tags:        []string{"Users"},
+		Errors:      []int{http.StatusNotFound},
+	}, h.getByEmail)
+
+	huma.Register(api, huma.Operation{
 		OperationID: "get-user",
 		Method:      http.MethodGet,
 		Path:        "/users/{nuid}",
@@ -135,6 +145,18 @@ func (h *userHandler) get(ctx context.Context, in *UserNUIDInput) (*UserOutput, 
 		return nil, err
 	}
 	user, err := h.store.GetUser(ctx, in.NUID)
+	if err != nil {
+		return nil, storeErr(err)
+	}
+	return &UserOutput{Body: user}, nil
+}
+
+type UserEmailInput struct {
+	Email string `query:"email" required:"true"`
+}
+
+func (h *userHandler) getByEmail(ctx context.Context, in *UserEmailInput) (*UserOutput, error) {
+	user, err := h.store.GetUserByEmail(ctx, in.Email)
 	if err != nil {
 		return nil, storeErr(err)
 	}

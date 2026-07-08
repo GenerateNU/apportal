@@ -13,6 +13,13 @@ export function getUser(nuid: string, opts?: FetchOptions): Promise<User> {
   return apiFetch(`/users/${nuid}`, opts)
 }
 
+export function getUserByEmail(
+  email: string,
+  opts?: FetchOptions
+): Promise<User> {
+  return apiFetch(`/users/by-email?email=${encodeURIComponent(email)}`, opts)
+}
+
 export function createUser(
   body: {
     nuid: string
