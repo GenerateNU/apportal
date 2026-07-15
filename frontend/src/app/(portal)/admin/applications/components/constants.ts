@@ -8,15 +8,15 @@ export const roleLabel: Record<Role, string> = {
 }
 
 export const roleDot: Record<Role, string> = {
-  software_engineer: 'bg-blue-500',
-  software_designer: 'bg-purple-500',
+  software_engineer: 'bg-role-engineer',
+  software_designer: 'bg-role-designer',
 }
 
 export const cycleStatusBadge: Record<CycleStatus, string> = {
-  draft: 'bg-gray-100 text-gray-500',
-  open: 'bg-green-50 text-green-700',
-  closed: 'bg-red-50 text-red-700',
-  archived: 'bg-gray-100 text-gray-400',
+  draft: 'bg-status-draft-bg text-status-draft-text',
+  open: 'bg-status-open-bg text-status-open-text',
+  closed: 'bg-status-closed-bg text-status-closed-text',
+  archived: 'bg-status-archived-bg text-status-archived-text',
 }
 
 export const cycleStatusLabel: Record<CycleStatus, string> = {

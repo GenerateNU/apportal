@@ -22,6 +22,20 @@
   --color-text-faint: #d1d5db;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  /* Application role indicators (admin > applications board) */
+  --color-role-engineer: #3b82f6;
+  --color-role-designer: #a855f7;
+
+  /* Cycle status badges (admin > applications board) */
+  --color-status-draft-bg: #f3f4f6;
+  --color-status-draft-text: #6b7280;
+  --color-status-open-bg: #f0fdf4;
+  --color-status-open-text: #15803d;
+  --color-status-closed-bg: #fef2f2;
+  --color-status-closed-text: #b91c1c;
+  --color-status-archived-bg: #f3f4f6;
+  --color-status-archived-text: #9ca3af;
 }
 
 @media (prefers-color-scheme: dark) {
