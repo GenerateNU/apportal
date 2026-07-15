@@ -8,7 +8,6 @@ import {
   FileText,
   RefreshCw,
   Settings,
-  Layers,
   LogOut,
 } from 'lucide-react'
 import NavItem from './NavItem'
@@ -51,7 +50,7 @@ const sectionsByRole: Record<Role, NavSection> = {
     label: 'Admin',
     items: [
       { href: '/admin/cycles', label: 'Cycles', icon: RefreshCw },
-      { href: '/admin/builder', label: 'App Builder', icon: Layers },
+      { href: '/admin/applications', label: 'Applications', icon: FileText },
       { href: '/admin/roles', label: 'Roles', icon: Settings },
     ],
   },

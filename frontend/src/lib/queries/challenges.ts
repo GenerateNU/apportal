@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query'
 import { createChallenge, getChallenges } from '@/lib/api/challenges'
 import type { FetchOptions } from '@/lib/api/client'
 import type { Role } from '@/lib/api/types'
@@ -13,6 +18,18 @@ export function useChallenges(
     queryKey: queryKeys.challenges.list(cycleId, role),
     queryFn: () => getChallenges(cycleId, role, opts),
     enabled: !!cycleId,
+  })
+}
+
+// Fetches all challenges for each cycle, e.g. to build per-cycle template
+// summaries. Each cycle gets its own cache entry, shared with useChallenges.
+export function useChallengesByCycles(cycleIds: string[], opts?: FetchOptions) {
+  return useQueries({
+    queries: cycleIds.map((cycleId) => ({
+      queryKey: queryKeys.challenges.list(cycleId),
+      queryFn: () => getChallenges(cycleId, undefined, opts),
+      enabled: !!cycleId,
+    })),
   })
 }
 
