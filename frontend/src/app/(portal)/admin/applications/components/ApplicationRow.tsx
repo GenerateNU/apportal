@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { Clock, Code2, FileQuestion, Users } from 'lucide-react'
 import { Tooltip } from '@/components/Tooltip'
 import type { ApplicationTemplateCard } from './types'
@@ -25,7 +26,10 @@ export function ApplicationRow({
   const closes = formatDate(template.closesAt)
 
   return (
-    <div className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2 shadow-sm transition-shadow hover:shadow-md">
+    <Link
+      href={`/admin/applications/${template.cycleId}/${template.role}/builder`}
+      className="block w-full rounded-xl border border-gray-200 bg-white px-4 py-2 shadow-sm transition-shadow hover:shadow-md"
+    >
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5">
           <span
@@ -72,6 +76,6 @@ export function ApplicationRow({
           </span>
         </Tooltip>
       </div>
-    </div>
+    </Link>
   )
 }
