@@ -1,5 +1,5 @@
+import { ROLE_COLUMNS } from '@/lib/roles'
 import type { ApplicationTemplateCard } from './types'
-import { ROLE_COLUMNS } from './constants'
 import { RoleColumn } from './RoleColumn'
 
 export function ApplicationBoard({

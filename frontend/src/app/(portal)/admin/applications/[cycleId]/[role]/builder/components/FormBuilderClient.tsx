@@ -21,11 +21,11 @@ import {
 } from '@dnd-kit/sortable'
 import type { Question, Role } from '@/lib/api/types'
 import { useQuestions, useUpdateQuestion } from '@/lib/queries/questions'
+import { ROLE_CHIP_CLASS, ROLE_LABEL } from '@/lib/roles'
 import { REVIEWER_ACTOR } from '@/lib/stub-actor'
 import { BlockPalette } from './BlockPalette'
 import { QuestionCard } from './QuestionCard'
 import { LivePreview } from './LivePreview'
-import { ROLE_CHIP_CLASS, ROLE_LABEL } from './constants'
 
 export function FormBuilderClient({
   cycleId,
@@ -84,16 +84,16 @@ export function FormBuilderClient({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-start justify-between gap-3 border-b border-gray-100 px-8 py-6">
+      <div className="flex items-start justify-between gap-3 border-b-2 border-gray-100 px-8 py-6">
         <div className="flex flex-col gap-2">
           <Link
             href="/admin/applications"
-            className="text-text-subtle hover:text-text-default flex items-center gap-1 text-xs font-medium"
+            className="text-text-subtle hover:text-text-default flex items-center gap-1.5 text-sm font-medium"
           >
-            <ArrowLeft className="h-3.5 w-3.5" />
+            <ArrowLeft className="h-4 w-4" />
             Back to Applications
           </Link>
-          <h1 className="text-text-default text-2xl font-semibold">
+          <h1 className="text-text-default text-xl font-semibold">
             {cycleName}
           </h1>
           <span
@@ -109,16 +109,16 @@ export function FormBuilderClient({
         <button
           type="button"
           onClick={() => setShowPreview((prev) => !prev)}
-          className="text-text-secondary flex items-center gap-1.5 rounded-md border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium shadow-sm hover:bg-gray-50"
+          className="text-text-secondary flex items-center gap-2 rounded-md border border-gray-200 bg-white px-4 py-2 text-base font-medium shadow-sm hover:bg-gray-50"
         >
           {showPreview ? (
             <>
-              <Pencil className="h-4 w-4" />
+              <Pencil className="h-5 w-5" />
               Edit
             </>
           ) : (
             <>
-              <Eye className="h-4 w-4" />
+              <Eye className="h-5 w-5" />
               Preview
             </>
           )}
@@ -126,14 +126,14 @@ export function FormBuilderClient({
       </div>
 
       {showPreview ? (
-        <div className="flex-1 overflow-y-auto bg-gray-50 p-8">
-          <div className="mx-auto max-w-xl">
+        <div className="flex-1 overflow-y-auto bg-gray-50 p-10">
+          <div className="mx-auto max-w-2xl">
             <LivePreview cycleName={cycleName} role={role} questions={order} />
           </div>
         </div>
       ) : (
-        <div className="grid flex-1 grid-cols-[260px_1fr] overflow-hidden">
-          <div className="overflow-y-auto border-r border-gray-200 bg-gray-50 p-4">
+        <div className="grid flex-1 grid-cols-[280px_1fr] overflow-hidden">
+          <div className="overflow-y-auto bg-gray-50 p-4">
             <BlockPalette
               cycleId={cycleId}
               role={role}
@@ -141,7 +141,7 @@ export function FormBuilderClient({
             />
           </div>
 
-          <div className="overflow-y-auto bg-gray-50 p-8">
+          <div className="overflow-y-auto bg-gray-50 p-10">
             <DndContext
               sensors={sensors}
               collisionDetection={closestCenter}
@@ -151,7 +151,7 @@ export function FormBuilderClient({
                 items={order.map((q) => q.id)}
                 strategy={verticalListSortingStrategy}
               >
-                <div className="mx-auto flex max-w-xl flex-col gap-3">
+                <div className="mx-auto flex max-w-2xl flex-col gap-4">
                   {order.map((question) => (
                     <QuestionCard key={question.id} question={question} />
                   ))}

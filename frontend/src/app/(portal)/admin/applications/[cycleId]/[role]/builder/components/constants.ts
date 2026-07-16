@@ -1,18 +1,6 @@
 import { AlignLeft, CircleDot, Link2, ListChecks, Type } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import type { QuestionType, Role } from '@/lib/api/types'
-
-export const ROLE_LABEL: Record<Role, string> = {
-  software_engineer: 'Software Engineer',
-  software_designer: 'Software Designer',
-}
-
-// Matches the chip colors assigned to each role column on the
-// admin/applications board (paletteClass(ROLE_COLUMNS.indexOf(role))).
-export const ROLE_CHIP_CLASS: Record<Role, string> = {
-  software_engineer: 'bg-chip-1-bg text-chip-1-text',
-  software_designer: 'bg-chip-2-bg text-chip-2-text',
-}
+import type { QuestionType } from '@/lib/api/types'
 
 export const QUESTION_TYPES: QuestionType[] = [
   'short_answer',

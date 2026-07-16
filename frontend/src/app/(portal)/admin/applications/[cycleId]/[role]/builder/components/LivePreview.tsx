@@ -1,12 +1,12 @@
 import type { Question, Role } from '@/lib/api/types'
-import { ROLE_LABEL } from './constants'
+import { ROLE_LABEL } from '@/lib/roles'
 
 function PreviewField({ question }: { question: Question }) {
   const options = question.options ?? []
 
   return (
-    <div className="flex flex-col gap-1.5">
-      <label className="text-text-secondary text-sm font-medium">
+    <div className="flex flex-col gap-2">
+      <label className="text-text-secondary text-base font-medium">
         {question.question_text || 'Untitled question'}
         {question.is_required && <span className="text-red-500"> *</span>}
       </label>
@@ -19,7 +19,7 @@ function PreviewField({ question }: { question: Question }) {
               ? 'https://example.com'
               : 'Your answer'
           }
-          className="text-text-default focus:border-brand-blue focus:ring-brand-blue rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-1"
+          className="text-text-default focus:border-brand-blue focus:ring-brand-blue rounded-md border border-gray-300 px-4 py-2.5 text-base outline-none focus:ring-1"
         />
       )}
 
@@ -27,21 +27,21 @@ function PreviewField({ question }: { question: Question }) {
         <textarea
           placeholder="Your answer"
           rows={3}
-          className="text-text-default focus:border-brand-blue focus:ring-brand-blue rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-1"
+          className="text-text-default focus:border-brand-blue focus:ring-brand-blue rounded-md border border-gray-300 px-4 py-2.5 text-base outline-none focus:ring-1"
         />
       )}
 
       {question.question_type === 'multiple_choice' && (
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-2">
           {options.map((option, index) => (
             <label
               key={index}
-              className="text-text-secondary flex items-center gap-2 text-sm"
+              className="text-text-secondary flex items-center gap-2.5 text-base"
             >
               <input
                 type="radio"
                 name={question.id}
-                className="accent-brand-blue"
+                className="accent-brand-blue h-4 w-4"
               />
               {option}
             </label>
@@ -50,13 +50,13 @@ function PreviewField({ question }: { question: Question }) {
       )}
 
       {question.question_type === 'checkbox' && (
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-2">
           {options.map((option, index) => (
             <label
               key={index}
-              className="text-text-secondary flex items-center gap-2 text-sm"
+              className="text-text-secondary flex items-center gap-2.5 text-base"
             >
-              <input type="checkbox" className="accent-brand-blue" />
+              <input type="checkbox" className="accent-brand-blue h-4 w-4" />
               {option}
             </label>
           ))}
@@ -76,13 +76,13 @@ export function LivePreview({
   questions: Question[]
 }) {
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-      <p className="text-text-subtle text-xs">{ROLE_LABEL[role]}</p>
-      <h2 className="text-text-default mb-6 text-lg font-semibold">
+    <div className="rounded-xl border border-gray-200 bg-white p-8 shadow-sm">
+      <p className="text-text-subtle text-sm">{ROLE_LABEL[role]}</p>
+      <h2 className="text-text-default mb-8 text-xl font-semibold">
         {cycleName} Application
       </h2>
 
-      <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-6">
         {questions.map((question) => (
           <PreviewField key={question.id} question={question} />
         ))}

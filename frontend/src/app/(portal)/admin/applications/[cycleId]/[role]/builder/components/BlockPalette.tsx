@@ -37,11 +37,11 @@ export function BlockPalette({
   }
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
-      <p className="text-text-default mb-2 border-b border-gray-200 px-1 pb-2 text-xs font-semibold tracking-wider uppercase">
+    <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+      <p className="text-text-default -mx-4 mb-3 border-b border-gray-200 px-4 pb-3 text-base font-semibold tracking-wider">
         Add a block
       </p>
-      <div className="flex flex-col gap-0.5">
+      <div className="flex flex-col gap-1">
         {QUESTION_TYPES.map((type) => {
           const meta = QUESTION_TYPE_META[type]
           const Icon = meta.icon
@@ -51,9 +51,9 @@ export function BlockPalette({
               type="button"
               onClick={() => handleAdd(type)}
               disabled={createQuestion.isPending}
-              className="text-text-secondary hover:text-text-default flex items-center gap-2.5 rounded-md px-3 py-1.5 text-left text-sm font-medium transition-colors hover:bg-gray-100 disabled:opacity-60"
+              className="text-text-secondary hover:text-text-default flex items-center gap-3 rounded-md px-3 py-2.5 text-left text-base font-medium transition-colors hover:bg-gray-100 disabled:opacity-60"
             >
-              <Icon className="text-text-subtle h-4 w-4 shrink-0" />
+              <Icon className="text-text-subtle h-5 w-5 shrink-0" />
               {meta.label}
             </button>
           )
