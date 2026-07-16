@@ -84,7 +84,7 @@ export function FormBuilderClient({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between gap-3 border-b border-gray-100 px-8 py-6">
+      <div className="flex items-start justify-between gap-3 border-b border-gray-100 px-8 py-6">
         <div className="flex flex-col gap-2">
           <Link
             href="/admin/applications"
@@ -126,7 +126,7 @@ export function FormBuilderClient({
       </div>
 
       {showPreview ? (
-        <div className="flex-1 overflow-y-auto bg-gray-50 p-10">
+        <div className="flex-1 overflow-y-auto bg-gray-50 p-8">
           <div className="mx-auto max-w-xl">
             <LivePreview cycleName={cycleName} role={role} questions={order} />
           </div>

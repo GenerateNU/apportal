@@ -78,15 +78,10 @@ export function ApplicationsClient() {
         <h1 className="text-text-default text-2xl font-semibold">
           Applications
         </h1>
-        <div className="flex flex-col items-end gap-1">
-          <Button onClick={() => setShowAddCycle(true)}>
-            <Plus className="h-4 w-4" />
-            Add cycle
-          </Button>
-          <span className="text-text-subtle text-sm">
-            {cycles.length} cycle{cycles.length === 1 ? '' : 's'}
-          </span>
-        </div>
+        <Button variant="outline" onClick={() => setShowAddCycle(true)}>
+          <Plus className="h-4 w-4" />
+          Add cycle
+        </Button>
       </div>
 
       <ApplicationBoard templates={templates} />
