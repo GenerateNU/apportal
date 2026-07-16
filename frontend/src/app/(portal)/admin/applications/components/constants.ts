@@ -10,7 +10,7 @@ export const roleLabel: Record<Role, string> = {
 // Rotating chip palette defined in globals.css (--color-chip-1..6). Colors
 // are assigned by hashing the role name so new roles get one automatically,
 // without needing an explicit color mapping per role.
-const CHIP_PALETTE = [
+const CHIP_DOT = [
   'bg-chip-1',
   'bg-chip-2',
   'bg-chip-3',
@@ -29,14 +29,15 @@ function hashString(value: string): number {
 }
 
 export function roleDot(role: Role): string {
-  return CHIP_PALETTE[hashString(role) % CHIP_PALETTE.length]
+  return CHIP_DOT[hashString(role) % CHIP_DOT.length]
 }
 
-export const cycleStatusBadge: Record<CycleStatus, string> = {
-  draft: 'bg-status-draft-bg text-status-draft-text',
-  open: 'bg-status-open-bg text-status-open-text',
-  closed: 'bg-status-closed-bg text-status-closed-text',
-  archived: 'bg-status-archived-bg text-status-archived-text',
+// Solid dot colors, reusing the darker tone already defined for status text.
+export const cycleStatusDot: Record<CycleStatus, string> = {
+  draft: 'bg-status-draft-text',
+  open: 'bg-status-open-text',
+  closed: 'bg-status-closed-text',
+  archived: 'bg-status-archived-text',
 }
 
 export const cycleStatusLabel: Record<CycleStatus, string> = {

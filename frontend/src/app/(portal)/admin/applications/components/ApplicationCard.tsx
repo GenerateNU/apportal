@@ -1,9 +1,14 @@
+import { Clock, Code2, FileQuestion, Users } from 'lucide-react'
 import type { ApplicationTemplateCard } from './types'
-import { cycleStatusBadge, cycleStatusLabel } from './constants'
+import { cycleStatusDot, cycleStatusLabel, roleLabel } from './constants'
 
 function formatDate(value: string | null) {
   if (!value) return null
-  return new Date(value).toLocaleDateString()
+  return new Date(value).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
 }
 
 export function ApplicationCard({
@@ -11,43 +16,39 @@ export function ApplicationCard({
 }: {
   template: ApplicationTemplateCard
 }) {
-  const opens = formatDate(template.opensAt)
   const closes = formatDate(template.closesAt)
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-3 shadow-sm transition-shadow hover:shadow-md">
+    <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
       <div className="flex items-start justify-between gap-2">
-        <p className="text-text-default text-sm font-medium">
-          {template.cycleName}
+        <p className="text-text-default text-base font-semibold">
+          {roleLabel[template.role]} Application
         </p>
         <span
-          className={`shrink-0 rounded px-1.5 py-0.5 text-xs font-medium ${cycleStatusBadge[template.cycleStatus]}`}
-        >
-          {cycleStatusLabel[template.cycleStatus]}
+          className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${cycleStatusDot[template.cycleStatus]}`}
+          title={cycleStatusLabel[template.cycleStatus]}
+        />
+      </div>
+      <p className="text-text-subtle mt-1 text-sm">{template.cycleName}</p>
+
+      <div className="text-text-subtle mt-3 flex flex-wrap items-center gap-3 text-xs">
+        <span className="flex items-center gap-1">
+          <FileQuestion className="h-3.5 w-3.5" />
+          {template.questionCount}
+        </span>
+        <span className="flex items-center gap-1">
+          <Code2 className="h-3.5 w-3.5" />
+          {template.challengeCount}
+        </span>
+        <span className="flex items-center gap-1">
+          <Users className="h-3.5 w-3.5" />
+          {template.submissionCount}
+        </span>
+        <span className="flex items-center gap-1">
+          <Clock className="h-3.5 w-3.5" />
+          {closes ?? 'No deadline'}
         </span>
       </div>
-
-      {(opens || closes) && (
-        <p className="text-text-subtle mt-0.5 text-xs">
-          {opens ?? '—'} – {closes ?? '—'}
-        </p>
-      )}
-
-      <div className="mt-2.5 flex flex-wrap gap-1">
-        <span className="text-text-secondary rounded bg-gray-100 px-1.5 py-0.5 text-xs">
-          {template.questionCount} question
-          {template.questionCount === 1 ? '' : 's'}
-        </span>
-        <span className="text-text-secondary rounded bg-gray-100 px-1.5 py-0.5 text-xs">
-          {template.challengeCount} challenge
-          {template.challengeCount === 1 ? '' : 's'}
-        </span>
-      </div>
-
-      <p className="text-text-faint mt-2 text-xs">
-        {template.submissionCount} submitted application
-        {template.submissionCount === 1 ? '' : 's'}
-      </p>
     </div>
   )
 }
