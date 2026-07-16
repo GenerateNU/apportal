@@ -1,4 +1,5 @@
 import { Clock, Code2, FileQuestion, Users } from 'lucide-react'
+import { Tooltip } from '@/components/Tooltip'
 import type { ApplicationTemplateCard } from './types'
 import {
   cycleStatusDot,
@@ -34,10 +35,12 @@ export function ApplicationRow({
             {cycleStatusLabel[template.cycleStatus]}
           </span>
         </div>
-        <span className="text-text-subtle flex items-center gap-1 text-xs">
-          <Users className="h-3.5 w-3.5" />
-          {template.submissionCount} applicants
-        </span>
+        <Tooltip label="Applicants">
+          <span className="text-text-subtle flex items-center gap-1 text-xs">
+            <Users className="h-3.5 w-3.5" />
+            {template.submissionCount} applicants
+          </span>
+        </Tooltip>
       </div>
 
       <p className="text-text-secondary mt-2 text-base font-medium">
@@ -49,19 +52,25 @@ export function ApplicationRow({
         {template.cycleName}
       </span>
 
-      <div className="text-text-subtle -mx-4 flex mt-3 flex-wrap items-center gap-3 border-t border-gray-200 px-4 pt-2 text-xs">
-        <span className="flex items-center gap-1">
-          <FileQuestion className="h-3.5 w-3.5" />
-          {template.questionCount}
-        </span>
-        <span className="flex items-center gap-1">
-          <Code2 className="h-3.5 w-3.5" />
-          {template.challengeCount}
-        </span>
-        <span className="flex items-center gap-1">
-          <Clock className="h-3.5 w-3.5" />
-          {closes ?? 'No deadline'}
-        </span>
+      <div className="text-text-subtle -mx-4 mt-3 flex flex-wrap items-center gap-3 border-t border-gray-200 px-4 pt-2 text-xs">
+        <Tooltip label="Questions">
+          <span className="flex items-center gap-1">
+            <FileQuestion className="h-3.5 w-3.5" />
+            {template.questionCount}
+          </span>
+        </Tooltip>
+        <Tooltip label="Challenges">
+          <span className="flex items-center gap-1">
+            <Code2 className="h-3.5 w-3.5" />
+            {template.challengeCount}
+          </span>
+        </Tooltip>
+        <Tooltip label="Closing date">
+          <span className="flex items-center gap-1">
+            <Clock className="h-3.5 w-3.5" />
+            {closes ?? 'No deadline'}
+          </span>
+        </Tooltip>
       </div>
     </div>
   )
