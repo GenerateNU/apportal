@@ -12,6 +12,7 @@ import {
   LogOut,
 } from 'lucide-react'
 import NavItem from './NavItem'
+import { Avatar } from '@/components/ui/avatar'
 import { useAuth } from '@/lib/auth/auth-context'
 import type { Role } from '@/types/roles'
 
@@ -60,15 +61,6 @@ const sectionsByRole: Record<Role, NavSection> = {
 // Display order: reviewer sections before applicant, admin last
 const roleOrder: Role[] = ['reviewer', 'applicant', 'admin']
 
-function initials(fullName: string) {
-  return fullName
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]!.toUpperCase())
-    .join('')
-}
-
 function SidebarUser({ fullName }: { fullName: string }) {
   const router = useRouter()
   const { signOut } = useAuth()
@@ -83,9 +75,7 @@ function SidebarUser({ fullName }: { fullName: string }) {
     <div className="border-t border-gray-100 px-4 py-3">
       <div className="flex items-center justify-between gap-2.5">
         <div className="flex items-center gap-2.5">
-          <div className="bg-brand-blue flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold text-white">
-            {initials(fullName)}
-          </div>
+          <Avatar name={fullName} size="sm" />
           <span className="text-text-secondary text-sm font-medium">
             {fullName}
           </span>
