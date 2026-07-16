@@ -16,6 +16,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: 'Generate Portal',
   description: 'Application portal for Generate NU',
+  icons: {
+    icon: '/GenerateNU Logo.png',
+  },
 }
 
 export default function RootLayout({
