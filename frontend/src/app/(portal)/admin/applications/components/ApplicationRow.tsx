@@ -24,7 +24,7 @@ export function ApplicationRow({
   const closes = formatDate(template.closesAt)
 
   return (
-    <div className="w-full rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
+    <div className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2 shadow-sm transition-shadow hover:shadow-md">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5">
           <span
@@ -49,7 +49,7 @@ export function ApplicationRow({
         {template.cycleName}
       </span>
 
-      <div className="text-text-subtle mt-3 flex flex-wrap items-center gap-3 text-xs">
+      <div className="text-text-subtle -mx-4 flex mt-3 flex-wrap items-center gap-3 border-t border-gray-200 px-4 pt-2 text-xs">
         <span className="flex items-center gap-1">
           <FileQuestion className="h-3.5 w-3.5" />
           {template.questionCount}
