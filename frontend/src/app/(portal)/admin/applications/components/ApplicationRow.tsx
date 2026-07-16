@@ -47,12 +47,12 @@ export function ApplicationRow({
         {roleLabel[template.role]} Application
       </p>
       <span
-        className={`mt-1 inline-block rounded-md px-2 py-0.5 text-xs font-medium ${paletteClass(template.cycleColorIndex)}`}
+        className={`mt-2 inline-block rounded-md px-2 py-0.5 text-xs font-medium ${paletteClass(template.cycleColorIndex)}`}
       >
         {template.cycleName}
       </span>
 
-      <div className="text-text-subtle -mx-4 mt-3 flex flex-wrap items-center gap-3 border-t border-gray-200 px-4 pt-2 text-xs">
+      <div className="text-text-subtle -mx-4 mt-2 flex flex-wrap items-center gap-3 border-t border-gray-200 px-4 pt-2 text-xs">
         <Tooltip label="Questions">
           <span className="flex items-center gap-1">
             <FileQuestion className="h-3.5 w-3.5" />
