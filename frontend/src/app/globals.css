@@ -23,9 +23,14 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 
-  /* Application role indicators (admin > applications board) */
-  --color-role-engineer: #3b82f6;
-  --color-role-designer: #a855f7;
+  /* Rotating chip palette — assign by hashing a label (e.g. admin >
+     applications board role dots) so new values get a color automatically. */
+  --color-chip-1: #3b82f6;
+  --color-chip-2: #a855f7;
+  --color-chip-3: #10b981;
+  --color-chip-4: #f97316;
+  --color-chip-5: #ec4899;
+  --color-chip-6: #14b8a6;
 
   /* Cycle status badges (admin > applications board) */
   --color-status-draft-bg: #f3f4f6;

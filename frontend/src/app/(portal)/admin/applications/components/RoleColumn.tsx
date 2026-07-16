@@ -13,7 +13,7 @@ export function RoleColumn({
   return (
     <div className="flex w-80 shrink-0 flex-col">
       <div className="mb-3 flex items-center gap-2 px-1">
-        <div className={`h-2.5 w-2.5 rounded-full ${roleDot[role]}`} />
+        <div className={`h-2.5 w-2.5 rounded-full ${roleDot(role)}`} />
         <span className="text-text-default text-sm font-semibold">
           {roleLabel[role]}
         </span>

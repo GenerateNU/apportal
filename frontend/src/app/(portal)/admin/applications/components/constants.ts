@@ -7,9 +7,29 @@ export const roleLabel: Record<Role, string> = {
   software_designer: 'Software Designer',
 }
 
-export const roleDot: Record<Role, string> = {
-  software_engineer: 'bg-role-engineer',
-  software_designer: 'bg-role-designer',
+// Rotating chip palette defined in globals.css (--color-chip-1..6). Colors
+// are assigned by hashing the role name so new roles get one automatically,
+// without needing an explicit color mapping per role.
+const CHIP_PALETTE = [
+  'bg-chip-1',
+  'bg-chip-2',
+  'bg-chip-3',
+  'bg-chip-4',
+  'bg-chip-5',
+  'bg-chip-6',
+]
+
+function hashString(value: string): number {
+  let hash = 0
+  for (let i = 0; i < value.length; i++) {
+    hash = (hash << 5) - hash + value.charCodeAt(i)
+    hash |= 0
+  }
+  return Math.abs(hash)
+}
+
+export function roleDot(role: Role): string {
+  return CHIP_PALETTE[hashString(role) % CHIP_PALETTE.length]
 }
 
 export const cycleStatusBadge: Record<CycleStatus, string> = {
