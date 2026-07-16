@@ -1,16 +1,20 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
+import { Plus } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { useApplications } from '@/lib/queries/applications'
 import { useChallengesByCycles } from '@/lib/queries/challenges'
 import { useCycles } from '@/lib/queries/cycles'
 import { useQuestionsByCycles } from '@/lib/queries/questions'
+import { ROLE_COLUMNS } from '@/lib/roles'
 import { REVIEWER_ACTOR } from '@/lib/stub-actor'
 import type { ApplicationTemplateCard } from './types'
-import { ROLE_COLUMNS } from './constants'
 import { ApplicationBoard } from './ApplicationBoard'
+import { AddCycleDialog } from './AddCycleDialog'
 
 export function ApplicationsClient() {
+  const [showAddCycle, setShowAddCycle] = useState(false)
   const { data: cycles = [] } = useCycles({ actor: REVIEWER_ACTOR })
   const { data: applications = [] } = useApplications(
     {},
@@ -70,16 +74,19 @@ export function ApplicationsClient() {
 
   return (
     <div className="flex flex-col gap-6 p-8">
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between">
         <h1 className="text-text-default text-2xl font-semibold">
           Applications
         </h1>
-        <span className="text-text-subtle text-sm">
-          {cycles.length} cycle{cycles.length === 1 ? '' : 's'}
-        </span>
+        <Button variant="outline" onClick={() => setShowAddCycle(true)}>
+          <Plus className="h-4 w-4" />
+          Add cycle
+        </Button>
       </div>
 
       <ApplicationBoard templates={templates} />
+
+      <AddCycleDialog open={showAddCycle} onOpenChange={setShowAddCycle} />
     </div>
   )
 }

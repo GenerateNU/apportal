@@ -1,12 +1,9 @@
+import Link from 'next/link'
 import { Clock, Code2, FileQuestion, Users } from 'lucide-react'
 import { Tooltip } from '@/components/Tooltip'
+import { ROLE_LABEL } from '@/lib/roles'
 import type { ApplicationTemplateCard } from './types'
-import {
-  cycleStatusDot,
-  cycleStatusLabel,
-  paletteClass,
-  roleLabel,
-} from './constants'
+import { cycleStatusDot, cycleStatusLabel, paletteClass } from './constants'
 
 function formatDate(value: string | null) {
   if (!value) return null
@@ -25,7 +22,10 @@ export function ApplicationRow({
   const closes = formatDate(template.closesAt)
 
   return (
-    <div className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2 shadow-sm transition-shadow hover:shadow-md">
+    <Link
+      href={`/admin/applications/${template.cycleId}/${template.role}/builder`}
+      className="block w-full rounded-xl border border-gray-200 bg-white px-4 py-2 shadow-sm transition-shadow hover:shadow-md"
+    >
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5">
           <span
@@ -44,7 +44,7 @@ export function ApplicationRow({
       </div>
 
       <p className="text-text-secondary mt-2 text-base font-medium">
-        {roleLabel[template.role]} Application
+        {ROLE_LABEL[template.role]} Application
       </p>
       <span
         className={`mt-2 inline-block rounded-md px-2 py-0.5 text-xs font-medium ${paletteClass(template.cycleColorIndex)}`}
@@ -72,6 +72,6 @@ export function ApplicationRow({
           </span>
         </Tooltip>
       </div>
-    </div>
+    </Link>
   )
 }

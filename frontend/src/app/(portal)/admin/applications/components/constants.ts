@@ -1,11 +1,4 @@
-import type { CycleStatus, Role } from '@/lib/api/types'
-
-export const ROLE_COLUMNS: Role[] = ['software_engineer', 'software_designer']
-
-export const roleLabel: Record<Role, string> = {
-  software_engineer: 'Software Engineer',
-  software_designer: 'Software Designer',
-}
+import type { CycleStatus } from '@/lib/api/types'
 
 // Tag palette defined in globals.css (--color-chip-1..10-bg/-text). Colors
 // are assigned by position, not by hashing a label — a hash can only pick
