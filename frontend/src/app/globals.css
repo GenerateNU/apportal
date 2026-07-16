@@ -23,24 +23,36 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 
-  /* Rotating chip palette — assign by hashing a label (e.g. admin >
-     applications board role dots) so new values get a color automatically. */
-  --color-chip-1: #3b82f6;
-  --color-chip-2: #a855f7;
-  --color-chip-3: #10b981;
-  --color-chip-4: #f97316;
-  --color-chip-5: #ec4899;
-  --color-chip-6: #14b8a6;
+  /* Rotating tag palette (role/cycle tags) — light pastel background paired
+     with a readable dark text tone of the same hue. Assigned by position
+     (not hashing) so a fixed set of distinct labels never collides until
+     the set exceeds the palette size. 10 well-separated Tailwind hues. */
+  --color-chip-1-bg: #eff6ff;
+  --color-chip-1-text: #1d4ed8;
+  --color-chip-2-bg: #faf5ff;
+  --color-chip-2-text: #7e22ce;
+  --color-chip-3-bg: #f0fdf4;
+  --color-chip-3-text: #15803d;
+  --color-chip-4-bg: #fff7ed;
+  --color-chip-4-text: #c2410c;
+  --color-chip-5-bg: #fdf2f8;
+  --color-chip-5-text: #be185d;
+  --color-chip-6-bg: #f0fdfa;
+  --color-chip-6-text: #0f766e;
+  --color-chip-7-bg: #fef2f2;
+  --color-chip-7-text: #b91c1c;
+  --color-chip-8-bg: #eef2ff;
+  --color-chip-8-text: #4338ca;
+  --color-chip-9-bg: #fffbeb;
+  --color-chip-9-text: #b45309;
+  --color-chip-10-bg: #ecfeff;
+  --color-chip-10-text: #0e7490;
 
-  /* Cycle status badges (admin > applications board) */
-  --color-status-draft-bg: #f3f4f6;
-  --color-status-draft-text: #6b7280;
-  --color-status-open-bg: #f0fdf4;
-  --color-status-open-text: #15803d;
-  --color-status-closed-bg: #fef2f2;
-  --color-status-closed-text: #b91c1c;
-  --color-status-archived-bg: #f3f4f6;
-  --color-status-archived-text: #9ca3af;
+  /* Cycle status dot (admin > applications list) */
+  --color-status-draft: #9ca3af;
+  --color-status-open: #22c55e;
+  --color-status-closed: #f87171;
+  --color-status-archived: #d1d5db;
 }
 
 @media (prefers-color-scheme: dark) {

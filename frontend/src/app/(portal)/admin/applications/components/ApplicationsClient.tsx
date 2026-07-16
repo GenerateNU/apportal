@@ -43,7 +43,7 @@ export function ApplicationsClient() {
 
   const templates: ApplicationTemplateCard[] = useMemo(() => {
     const result: ApplicationTemplateCard[] = []
-    for (const cycle of cycles) {
+    cycles.forEach((cycle, cycleColorIndex) => {
       const questions = questionsByCycle[cycle.id] ?? []
       const challenges = challengesByCycle[cycle.id] ?? []
       for (const role of ROLE_COLUMNS) {
@@ -51,6 +51,7 @@ export function ApplicationsClient() {
           cycleId: cycle.id,
           cycleName: cycle.name,
           cycleStatus: cycle.status,
+          cycleColorIndex,
           opensAt: cycle.opens_at,
           closesAt: cycle.closes_at,
           role,
@@ -63,7 +64,7 @@ export function ApplicationsClient() {
           ).length,
         })
       }
-    }
+    })
     return result
   }, [cycles, questionsByCycle, challengesByCycle, applications])
 
