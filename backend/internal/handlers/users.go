@@ -77,9 +77,9 @@ type UsersOutput struct {
 
 type CreateUserInput struct {
 	Body struct {
-		NUID           string            `json:"nuid"`
-		Email          string            `json:"email"`
-		FullName       string            `json:"full_name"`
+		NUID           string            `json:"nuid" minLength:"1"`
+		Email          string            `json:"email" format:"email"`
+		FullName       string            `json:"full_name" minLength:"1"`
 		Roles          []models.UserRole `json:"roles,omitempty" doc:"Omit to default to applicant"`
 		GraduationYear *int              `json:"graduation_year,omitempty"`
 		Major          *string           `json:"major,omitempty"`
@@ -166,8 +166,8 @@ func (h *userHandler) getByEmail(ctx context.Context, in *UserEmailInput) (*User
 type UpdateUserInput struct {
 	NUID string `path:"nuid"`
 	Body struct {
-		Email          *string           `json:"email,omitempty"`
-		FullName       *string           `json:"full_name,omitempty"`
+		Email          *string           `json:"email,omitempty" format:"email"`
+		FullName       *string           `json:"full_name,omitempty" minLength:"1"`
 		Roles          []models.UserRole `json:"roles,omitempty"`
 		GraduationYear *int              `json:"graduation_year,omitempty"`
 		Major          *string           `json:"major,omitempty"`

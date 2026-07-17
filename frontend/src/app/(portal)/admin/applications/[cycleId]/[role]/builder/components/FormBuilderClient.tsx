@@ -20,7 +20,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import type { Question, Role } from '@/lib/api/types'
-import { useQuestions, useUpdateQuestion } from '@/lib/queries/questions'
+import { useQuestions, useReorderQuestions } from '@/lib/queries/questions'
 import { ROLE_CHIP_CLASS, ROLE_LABEL } from '@/lib/roles'
 import { REVIEWER_ACTOR } from '@/lib/stub-actor'
 import { BlockPalette } from './BlockPalette'
@@ -39,7 +39,7 @@ export function FormBuilderClient({
   const { data: questions = [] } = useQuestions(cycleId, role, {
     actor: REVIEWER_ACTOR,
   })
-  const updateQuestion = useUpdateQuestion()
+  const reorderQuestions = useReorderQuestions(cycleId, role)
 
   // Mirrors the fetched list locally so drag reordering feels instant.
   // Resyncs during render (not an effect) whenever the query data changes
@@ -68,18 +68,18 @@ export function FormBuilderClient({
     const newIndex = order.findIndex((q) => q.id === over.id)
     if (oldIndex === -1 || newIndex === -1) return
 
+    const previous = order
     const reordered = arrayMove(order, oldIndex, newIndex)
     setOrder(reordered)
 
-    reordered.forEach((question, index) => {
-      if (question.display_order !== index) {
-        updateQuestion.mutate({
-          id: question.id,
-          body: { display_order: index },
-          opts: { actor: REVIEWER_ACTOR },
-        })
+    reorderQuestions.mutate(
+      { ordered: reordered, opts: { actor: REVIEWER_ACTOR } },
+      {
+        // Roll the visible order back if persistence fails; the query cache is
+        // rolled back by the mutation itself.
+        onError: () => setOrder(previous),
       }
-    })
+    )
   }
 
   return (

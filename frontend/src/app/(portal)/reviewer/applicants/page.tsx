@@ -23,7 +23,8 @@ export default async function ApplicantsPage() {
     uniqueNUIDs.map((nuid) =>
       queryClient.prefetchQuery({
         queryKey: queryKeys.applicants.detail(nuid),
-        queryFn: () => getApplicant(nuid),
+        queryFn: () =>
+          getApplicant(nuid, { actor: REVIEWER_ACTOR, cache: 'no-store' }),
       })
     )
   )

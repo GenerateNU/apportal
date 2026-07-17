@@ -13,6 +13,16 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/store"
 )
 
+// Server timeouts. requestTimeout bounds the request context (and therefore DB
+// query execution) and sits under writeTimeout so a timed-out request can still
+// write its error response.
+const (
+	readTimeout    = 5 * time.Second
+	writeTimeout   = 15 * time.Second
+	idleTimeout    = 60 * time.Second
+	requestTimeout = 10 * time.Second
+)
+
 // Router holds shared dependencies for the plain (non-Huma) health endpoints.
 type Router struct {
 	database *pgxpool.Pool
@@ -25,13 +35,16 @@ type Router struct {
 func NewRouter(database *pgxpool.Pool, corsOrigins []string) *fiber.App {
 	st := store.New(database)
 	app := fiber.New(fiber.Config{
-		ReadTimeout: 5 * time.Second,
+		ReadTimeout:  readTimeout,
+		WriteTimeout: writeTimeout,
+		IdleTimeout:  idleTimeout,
 	})
 
 	// Middleware applies outermost-first.
 	app.Use(middleware.Recovery())
 	app.Use(middleware.CORS(corsOrigins))
 	app.Use(middleware.Logging())
+	app.Use(middleware.WithTimeout(requestTimeout))
 	app.Use(middleware.WithActor())
 
 	// Plain liveness/readiness routes (not part of the documented API surface).
