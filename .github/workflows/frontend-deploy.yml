@@ -1,3 +1,8 @@
+# NOTE: This workflow currently only builds the frontend — no deploy step is
+# wired yet. It verifies `main` produces a deployable production build. When a
+# hosting target is chosen (Vercel, Fly.io, AWS, etc.), add the deploy step in
+# the placeholder at the bottom of the `deploy` job and store any credentials as
+# repository secrets on the `production` environment.
 name: Frontend Deploy
 
 on:
@@ -21,7 +26,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
@@ -32,5 +37,9 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
 
-      # TODO: replace with deployment step
-      # e.g. Vercel, AWS, Fly.io, etc.
+      # TODO(deploy): no hosting target chosen yet — this job stops after a
+      # successful production build. Add the deploy step here once decided:
+      #   - Vercel:  `npx vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }}`
+      #   - Fly.io:  `flyctl deploy` (with FLY_API_TOKEN)
+      #   - AWS:     upload/build via the relevant AWS action
+      # Store credentials as secrets on the `production` environment above.

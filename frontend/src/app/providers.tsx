@@ -8,6 +8,9 @@ import {
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { AuthProvider } from '@/lib/auth/auth-context'
 
+// Ship the devtools only in development so they aren't bundled into production.
+const showDevtools = process.env.NODE_ENV !== 'production'
+
 function makeQueryClient() {
   return new QueryClient({
     defaultOptions: {
@@ -38,7 +41,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <AuthProvider>
       <QueryClientProvider client={queryClient}>
         {children}
-        <ReactQueryDevtools initialIsOpen={false} />
+        {showDevtools && <ReactQueryDevtools initialIsOpen={false} />}
       </QueryClientProvider>
     </AuthProvider>
   )
