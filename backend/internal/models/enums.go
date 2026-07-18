@@ -118,6 +118,24 @@ func (q QuestionType) Valid() bool {
 	return false
 }
 
+// ReviewKind identifies which stage's reviews a chief releases/hides. It is the
+// discriminator on the review_releases table (not a Postgres ENUM; the table
+// uses a CHECK constraint).
+type ReviewKind string
+
+const (
+	ReviewKindWritten   ReviewKind = "written"   // lead written reviews
+	ReviewKindRecording ReviewKind = "recording" // interview recording reviews
+)
+
+func (k ReviewKind) Valid() bool {
+	switch k {
+	case ReviewKindWritten, ReviewKindRecording:
+		return true
+	}
+	return false
+}
+
 type CycleStatus string
 
 const (

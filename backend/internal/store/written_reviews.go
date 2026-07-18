@@ -86,11 +86,19 @@ func (s *Store) UpsertWrittenReview(ctx context.Context, in WrittenReviewUpsert)
 	return detail, nil
 }
 
-// ListWrittenReviews returns every reviewer's review for an application, each
-// with its per-answer scores nested in.
-func (s *Store) ListWrittenReviews(ctx context.Context, applicationID string) ([]models.WrittenReviewDetail, error) {
-	const q = `SELECT ` + writtenReviewColumns + ` FROM written_reviews WHERE application_id = $1 ORDER BY created_at`
-	rows, err := s.db.Query(ctx, q, applicationID)
+// ListWrittenReviews returns written reviews for an application, each with its
+// per-answer scores nested in. When onlyReviewer is non-empty, it returns just
+// that reviewer's review (used to enforce blind review before a chief releases
+// the application); when empty, it returns every reviewer's review.
+func (s *Store) ListWrittenReviews(ctx context.Context, applicationID, onlyReviewer string) ([]models.WrittenReviewDetail, error) {
+	q := `SELECT ` + writtenReviewColumns + ` FROM written_reviews WHERE application_id = $1`
+	args := []any{applicationID}
+	if onlyReviewer != "" {
+		q += ` AND reviewer_nuid = $2`
+		args = append(args, onlyReviewer)
+	}
+	q += ` ORDER BY created_at`
+	rows, err := s.db.Query(ctx, q, args...)
 	if err != nil {
 		return nil, err
 	}

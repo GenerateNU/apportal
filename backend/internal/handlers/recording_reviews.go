@@ -30,6 +30,7 @@ func (h *recordingReviewHandler) register(api huma.API) {
 		Method:      http.MethodGet,
 		Path:        "/interviews/{id}/recording-reviews",
 		Summary:     "List an interview's recording reviews",
+		Description: "Leads see only their own review until a chief releases the cycle's recording reviews; chiefs and admins always see every review.",
 		Tags:        []string{"Recording reviews"},
 		Errors:      []int{http.StatusUnauthorized},
 	}, h.list)
@@ -83,6 +84,25 @@ func (h *recordingReviewHandler) list(ctx context.Context, in *InterviewScopedIn
 	items, err := h.store.ListRecordingReviews(ctx, in.ID)
 	if err != nil {
 		return nil, storeErr(err)
+	}
+
+	// The recording itself (on the interview) is always visible. Only peers'
+	// written comments are blind: a plain lead sees other reviewers' comments
+	// redacted until a chief releases the cycle's recording reviews for that
+	// role. Chiefs and admins always see everything.
+	actor := currentActor(ctx)
+	if !actor.HasAnyRole(models.UserRoleChief, models.UserRoleAdmin) {
+		released, err := h.store.RecordingReviewsReleased(ctx, in.ID)
+		if err != nil {
+			return nil, storeErr(err)
+		}
+		if !released {
+			for i := range items {
+				if items[i].ReviewerNUID != actor.NUID {
+					items[i].Comments = nil
+				}
+			}
+		}
 	}
 	return &RecordingReviewsOutput{Body: items}, nil
 }

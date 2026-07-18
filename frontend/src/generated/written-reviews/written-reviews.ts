@@ -131,6 +131,7 @@ export const useUpsertWrittenReview = <TError = ErrorModel | ErrorModel | ErrorM
       return useMutation(mutationOptions, queryClient);
     }
     /**
+ * Leads see only their own review until a chief releases the cycle's written reviews; chiefs and admins always see every review.
  * @summary List an application's written reviews
  */
 export const listWrittenReviews = (
