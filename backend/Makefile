@@ -5,7 +5,7 @@ MAIN_PACKAGE := ./cmd/server
 BIN_DIR := bin
 BIN_PATH := $(BIN_DIR)/$(APP_NAME)
 
-.PHONY: help fmt fmt-check lint test test-cover vet tidy run dev build clean docker-build docker-up docker-down docker-logs prettier prettier-check
+.PHONY: help fmt fmt-check lint test test-cover vet tidy run dev build clean docker-build docker-up docker-down docker-logs prettier prettier-check openapi
 
 help:
 	@printf '%s\n' \
@@ -19,6 +19,7 @@ help:
 		'  make run          Run the backend locally' \
 		'  make dev          Run with hot reload (rebuilds on file save)' \
 		'  make build        Build the backend binary' \
+		'  make openapi      Write the OpenAPI spec to api/openapi.yaml' \
 		'  make docker-build Build the backend Docker image' \
 		'  make docker-up    Start the backend with Docker Compose' \
 		'  make docker-down  Stop the Docker Compose stack' \
@@ -71,6 +72,11 @@ dev:
 build:
 	@mkdir -p $(BIN_DIR)
 	@go build -o $(BIN_PATH) $(MAIN_PACKAGE)
+
+openapi:
+	@mkdir -p api
+	@go run ./cmd/openapi > api/openapi.yaml
+	@printf '%s\n' 'wrote api/openapi.yaml'
 
 clean:
 	@rm -rf $(BIN_DIR)

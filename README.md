@@ -75,6 +75,7 @@ From [backend/](backend/):
 - `make lint` — run `go vet` and `golangci-lint` (config in [backend/.golangci.yml](backend/.golangci.yml))
 - `make test` — run Go tests
 - `make build` — build the backend binary
+- `make openapi` — write the OpenAPI spec to `backend/api/openapi.yaml` (source for frontend codegen)
 - `make docker-down` — stop the Docker Compose stack
 
 ## Frontend
@@ -108,6 +109,12 @@ From [frontend/](frontend/):
 - `npm run lint` — run ESLint
 - `npm run format:check` — check formatting with Prettier
 - `npm test` — run unit tests (Vitest)
+- `npm run generate:api` — regenerate the typed API client from the OpenAPI spec
+
+The frontend's `src/generated/` API client is generated from the backend's
+OpenAPI spec with [Orval](https://orval.dev/). After changing the backend API,
+run `make openapi` (backend) then `npm run generate:api` (frontend). See
+[frontend/README.md](frontend/README.md#generated-api-client) for details.
 
 ## Continuous Integration
 

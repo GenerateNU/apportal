@@ -1,0 +1,5 @@
+# Orval-generated API client — Orval formats it on generation.
+src/generated/
+
+# Build output
+.next/
