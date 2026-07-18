@@ -1,0 +1,20 @@
+# golangci-lint v2 configuration.
+# Run locally with `make lint` (or `golangci-lint run ./...`).
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  # Default set (errcheck, govet, ineffassign, staticcheck, unused) plus a few
+  # high-signal additions. Keep this list conservative so lint stays meaningful.
+  enable:
+    - bodyclose # HTTP response bodies must be closed
+    - errorlint # correct errors.Is/As usage and %w wrapping
+    - misspell # common English misspellings in comments/strings
+    - unconvert # unnecessary type conversions
+
+formatters:
+  enable:
+    - gofmt
+    - goimports

@@ -1,0 +1,31 @@
+version: 2
+updates:
+  # Go modules (backend)
+  - package-ecosystem: gomod
+    directory: /backend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      go-dependencies:
+        patterns:
+          - '*'
+
+  # npm (frontend)
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      # Batch non-major updates into a single PR to cut review noise.
+      npm-minor-and-patch:
+        update-types:
+          - minor
+          - patch
+
+  # GitHub Actions used by the workflows
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
