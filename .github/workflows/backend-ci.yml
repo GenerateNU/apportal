@@ -52,7 +52,7 @@ jobs:
 
       - name: golangci-lint
         # v7+ is required for golangci-lint v2.
-        uses: golangci/golangci-lint-action@v7
+        uses: golangci/golangci-lint-action@v9
         with:
           version: v2.8.0
           working-directory: backend
