@@ -55,11 +55,23 @@ func NewRouter(database *pgxpool.Pool, corsOrigins []string) *fiber.App {
 
 	// Huma API: OpenAPI 3.1 generated from the typed operations below, rendered
 	// with Scalar (loaded from CDN) at /docs.
+	api := humafiber.New(app, humaConfig())
+	registerHandlers(api, st)
+
+	return app
+}
+
+// humaConfig builds the shared Huma configuration used both by the live server
+// and by OpenAPIYAML so the runtime API and the generated spec never drift.
+func humaConfig() huma.Config {
 	config := huma.DefaultConfig("apportal API", "0.1.0")
 	config.DocsRenderer = huma.DocsRendererScalar
 	config.Info.Description = "Generate application portal — applications, reviews, and the hiring pipeline."
-	api := humafiber.New(app, config)
+	return config
+}
 
+// registerHandlers wires every domain's typed operations onto the API.
+func registerHandlers(api huma.API, st *store.Store) {
 	(&cycleHandler{store: st}).register(api)
 	(&cycleStageHandler{store: st}).register(api)
 	(&questionHandler{store: st}).register(api)
@@ -78,8 +90,16 @@ func NewRouter(database *pgxpool.Pool, corsOrigins []string) *fiber.App {
 	(&interviewHandler{store: st}).register(api)
 	(&recordingReviewHandler{store: st}).register(api)
 	(&selectionHandler{store: st}).register(api)
+}
 
-	return app
+// OpenAPIYAML builds the same Huma API used at runtime and returns its OpenAPI
+// 3.1 document as YAML. Operations are only registered, not invoked, so it needs
+// no database — the store wraps a nil pool. This lets `make openapi` (see
+// cmd/openapi) dump the spec for frontend codegen without a running server.
+func OpenAPIYAML() ([]byte, error) {
+	api := humafiber.New(fiber.New(), humaConfig())
+	registerHandlers(api, store.New(nil))
+	return api.OpenAPI().YAML()
 }
 
 func (router *Router) root(c fiber.Ctx) error {

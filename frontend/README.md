@@ -39,6 +39,51 @@ running (see [../README.md](../README.md)) so data requests resolve.
 - `npm run lint` — run ESLint
 - `npm run format:check` — check formatting with Prettier
 - `npm test` — run unit tests (Vitest, watch mode with `npm run test:watch`)
+- `npm run generate:api` — regenerate the typed API client from the OpenAPI spec
+
+## Generated API Client
+
+The typed API client and TanStack Query hooks in `src/generated/` are generated
+from the backend's OpenAPI spec with [Orval](https://orval.dev/)
+(`orval.config.ts`). The generated files are committed but machine-generated —
+change the backend types and regenerate rather than editing them by hand
+(lint and Prettier skip `src/generated/`).
+
+To regenerate after a backend API change:
+
+```bash
+# 1. refresh the spec from the backend (no server/DB needed)
+cd ../backend && make openapi        # writes backend/api/openapi.yaml
+# 2. regenerate the client from the spec
+cd ../frontend && npm run generate:api
+```
+
+Every request routes through the mutator in
+[`src/lib/api/orval-mutator.ts`](src/lib/api/orval-mutator.ts), which applies the
+base URL (`NEXT_PUBLIC_API_URL`) and maps errors to `APIError`. It's a plain
+function (not a hook), so the generated client works in both client components
+and server-side prefetch.
+
+Reviewer auth (the `X-NUID` / `X-Role` headers) can be supplied two ways:
+
+- **Per request** — pass `actor` in the request options. Always works, and is
+  required for server-side prefetch:
+
+  ```ts
+  const { data } = useListApplications(params, { request: { actor } })
+  ```
+
+- **Client-side default** — call `setActorHeaders(actor)` once (e.g. from the
+  auth provider when the signed-in user changes) so browser requests are authed
+  without passing `actor` each time; `clearActorHeaders()` on sign-out:
+
+  ```ts
+  const { data } = useListApplications(params) // actor from the default headers
+  ```
+
+  This is client-only — server-side prefetch must always pass `actor` per
+  request (the shared axios instance is reused across users on the server). A
+  per-request `actor` overrides the client default.
 
 ## Project Structure
 
