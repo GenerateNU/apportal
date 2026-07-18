@@ -11,11 +11,11 @@
 -- ============================================================
 
 CREATE TABLE review_releases (
-  cycle_id     UUID         NOT NULL REFERENCES cycles(id) ON DELETE CASCADE,
-  role         role         NOT NULL,  -- gated independently per applicant role
-  review_kind  TEXT         NOT NULL CHECK (review_kind IN ('written', 'recording')),
-  released_by  TEXT         NOT NULL REFERENCES users(nuid),  -- chief who released
-  released_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  cycle_id          UUID              NOT NULL REFERENCES cycles(id) ON DELETE CASCADE,
+  application_role  application_role  NOT NULL,  -- gated independently per applicant role
+  review_kind       TEXT              NOT NULL CHECK (review_kind IN ('written', 'recording')),
+  released_by       TEXT              NOT NULL REFERENCES users(nuid),  -- chief who released
+  released_at       TIMESTAMPTZ       NOT NULL DEFAULT NOW(),
 
-  PRIMARY KEY (cycle_id, role, review_kind)
+  PRIMARY KEY (cycle_id, application_role, review_kind)
 );
