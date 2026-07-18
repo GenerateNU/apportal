@@ -131,6 +131,7 @@ export const useUpsertRecordingReview = <TError = ErrorModel | ErrorModel | Erro
       return useMutation(mutationOptions, queryClient);
     }
     /**
+ * Leads see only their own review until a chief releases the cycle's recording reviews; chiefs and admins always see every review.
  * @summary List an interview's recording reviews
  */
 export const listRecordingReviews = (

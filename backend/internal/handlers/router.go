@@ -86,6 +86,7 @@ func registerHandlers(api huma.API, st *store.Store) {
 	(&leadAssignmentHandler{store: st}).register(api)
 	(&writtenReviewHandler{store: st}).register(api)
 	(&chiefReviewHandler{store: st}).register(api)
+	(&reviewReleaseHandler{store: st}).register(api)
 	(&interviewAssignmentHandler{store: st}).register(api)
 	(&interviewHandler{store: st}).register(api)
 	(&recordingReviewHandler{store: st}).register(api)

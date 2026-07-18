@@ -42,6 +42,22 @@ type WrittenReviewDetail struct {
 	AnswerScores []WrittenReviewAnswerScore `json:"answer_scores"`
 }
 
+// ReviewGate reports the blind-review state of one review kind for one applicant
+// role across a whole cycle (not a table). AssignedCount/SubmittedCount let
+// chiefs track progress at any point; Released is true once a chief has ungated
+// everyone's reviews for all reviewers. Releasing/hiding is per cycle × role,
+// not per application.
+type ReviewGate struct {
+	CycleID        string     `json:"cycle_id"`
+	Role           Role       `json:"role"`
+	Kind           ReviewKind `json:"kind"`
+	AssignedCount  int        `json:"assigned_count"`
+	SubmittedCount int        `json:"submitted_count"`
+	Released       bool       `json:"released"`
+	ReleasedBy     *string    `json:"released_by,omitempty"`
+	ReleasedAt     *time.Time `json:"released_at,omitempty"`
+}
+
 // ChiefReview: a chief's advance/hold decision after the lead written reviews.
 type ChiefReview struct {
 	ID                 string     `json:"id"`

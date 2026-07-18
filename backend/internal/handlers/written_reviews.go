@@ -30,6 +30,7 @@ func (h *writtenReviewHandler) register(api huma.API) {
 		Method:      http.MethodGet,
 		Path:        "/applications/{id}/written-reviews",
 		Summary:     "List an application's written reviews",
+		Description: "Leads see only their own review until a chief releases the cycle's written reviews; chiefs and admins always see every review.",
 		Tags:        []string{"Written reviews"},
 		Errors:      []int{http.StatusUnauthorized},
 	}, h.list)
@@ -94,7 +95,22 @@ func (h *writtenReviewHandler) list(ctx context.Context, in *ApplicationScopedIn
 	if err := requireReviewer(ctx); err != nil {
 		return nil, err
 	}
-	items, err := h.store.ListWrittenReviews(ctx, in.ID)
+	actor := currentActor(ctx)
+
+	// Chiefs and admins always see every review. A plain lead sees only their
+	// own until a chief releases the cycle's written reviews (blind review).
+	onlyReviewer := ""
+	if !actor.HasAnyRole(models.UserRoleChief, models.UserRoleAdmin) {
+		released, err := h.store.WrittenReviewsReleased(ctx, in.ID)
+		if err != nil {
+			return nil, storeErr(err)
+		}
+		if !released {
+			onlyReviewer = actor.NUID
+		}
+	}
+
+	items, err := h.store.ListWrittenReviews(ctx, in.ID, onlyReviewer)
 	if err != nil {
 		return nil, storeErr(err)
 	}
