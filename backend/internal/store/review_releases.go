@@ -20,21 +20,21 @@ func assignedSubmittedSQL(kind models.ReviewKind) (assigned, submitted string) {
 		assigned = `
 			SELECT COUNT(*) FROM interview_review_assignments ira
 			JOIN applications a ON a.id = ira.application_id
-			WHERE a.cycle_id = $1 AND a.role = $2`
+			WHERE a.cycle_id = $1 AND a.application_role = $2`
 		submitted = `
 			SELECT COUNT(*) FROM interview_recording_reviews rr
 			JOIN interviews i   ON i.id = rr.interview_id
 			JOIN applications a ON a.id = i.application_id
-			WHERE a.cycle_id = $1 AND a.role = $2 AND rr.submitted_at IS NOT NULL`
+			WHERE a.cycle_id = $1 AND a.application_role = $2 AND rr.submitted_at IS NOT NULL`
 	default: // written
 		assigned = `
 			SELECT COUNT(*) FROM lead_assignments la
 			JOIN applications a ON a.id = la.application_id
-			WHERE a.cycle_id = $1 AND a.role = $2`
+			WHERE a.cycle_id = $1 AND a.application_role = $2`
 		submitted = `
 			SELECT COUNT(*) FROM written_reviews wr
 			JOIN applications a ON a.id = wr.application_id
-			WHERE a.cycle_id = $1 AND a.role = $2 AND wr.submitted_at IS NOT NULL`
+			WHERE a.cycle_id = $1 AND a.application_role = $2 AND wr.submitted_at IS NOT NULL`
 	}
 	return assigned, submitted
 }
@@ -53,7 +53,7 @@ func (s *Store) ReviewGate(ctx context.Context, cycleID string, role models.Role
 			r.released_at
 		FROM (SELECT $1::uuid AS cycle_id) c
 		LEFT JOIN review_releases r
-			ON r.cycle_id = c.cycle_id AND r.role = $2 AND r.review_kind = $3`
+			ON r.cycle_id = c.cycle_id AND r.application_role = $2 AND r.review_kind = $3`
 	err := s.db.QueryRow(ctx, q, cycleID, string(role), string(kind)).Scan(
 		&gate.AssignedCount, &gate.SubmittedCount, &gate.ReleasedBy, &gate.ReleasedAt)
 	if err != nil {
@@ -71,14 +71,14 @@ func (s *Store) ReviewGate(ctx context.Context, cycleID string, role models.Role
 func (s *Store) SetReviewRelease(ctx context.Context, cycleID string, role models.Role, kind models.ReviewKind, released bool, releasedBy string) (models.ReviewGate, error) {
 	if released {
 		const q = `
-			INSERT INTO review_releases (cycle_id, role, review_kind, released_by)
+			INSERT INTO review_releases (cycle_id, application_role, review_kind, released_by)
 			VALUES ($1, $2, $3, $4)
-			ON CONFLICT (cycle_id, role, review_kind) DO NOTHING`
+			ON CONFLICT (cycle_id, application_role, review_kind) DO NOTHING`
 		if _, err := s.db.Exec(ctx, q, cycleID, string(role), string(kind), releasedBy); err != nil {
 			return models.ReviewGate{}, err
 		}
 	} else {
-		const q = `DELETE FROM review_releases WHERE cycle_id = $1 AND role = $2 AND review_kind = $3`
+		const q = `DELETE FROM review_releases WHERE cycle_id = $1 AND application_role = $2 AND review_kind = $3`
 		if _, err := s.db.Exec(ctx, q, cycleID, string(role), string(kind)); err != nil {
 			return models.ReviewGate{}, err
 		}
@@ -92,7 +92,7 @@ func (s *Store) WrittenReviewsReleased(ctx context.Context, applicationID string
 	const q = `
 		SELECT EXISTS (
 			SELECT 1 FROM review_releases r
-			JOIN applications a ON a.cycle_id = r.cycle_id AND a.role = r.role
+			JOIN applications a ON a.cycle_id = r.cycle_id AND a.application_role = r.application_role
 			WHERE a.id = $1 AND r.review_kind = 'written'
 		)`
 	var released bool
@@ -106,7 +106,7 @@ func (s *Store) RecordingReviewsReleased(ctx context.Context, interviewID string
 	const q = `
 		SELECT EXISTS (
 			SELECT 1 FROM review_releases r
-			JOIN applications a ON a.cycle_id = r.cycle_id AND a.role = r.role
+			JOIN applications a ON a.cycle_id = r.cycle_id AND a.application_role = r.application_role
 			JOIN interviews i   ON i.application_id = a.id
 			WHERE i.id = $1 AND r.review_kind = 'recording'
 		)`
