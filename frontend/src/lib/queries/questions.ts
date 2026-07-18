@@ -11,7 +11,7 @@ import {
   updateQuestion,
 } from '@/lib/api/questions'
 import type { FetchOptions } from '@/lib/api/client'
-import type { Role } from '@/lib/api/types'
+import type { Question, Role } from '@/lib/api/types'
 import { queryKeys } from './keys'
 
 export function useQuestions(
@@ -64,6 +64,48 @@ export function useUpdateQuestion() {
     }) => updateQuestion(vars.id, vars.body, vars.opts),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.questions.lists() })
+    },
+  })
+}
+
+// Persists a full reorder of one cycle/role's questions in a single mutation.
+// Reordering by firing one useUpdateQuestion per moved card caused a storm of
+// list invalidations mid-drag (each refetch overwrote the in-progress local
+// order) with no way to recover if one PATCH failed. This instead optimistically
+// rewrites the cached list once, PATCHes only the cards whose position changed,
+// rolls the cache back on failure, and invalidates a single time on settle.
+export function useReorderQuestions(cycleId: string, role?: Role) {
+  const queryClient = useQueryClient()
+  const key = queryKeys.questions.list(cycleId, role)
+  return useMutation({
+    mutationFn: async (vars: { ordered: Question[]; opts?: FetchOptions }) => {
+      await Promise.all(
+        vars.ordered.map((question, index) =>
+          question.display_order === index
+            ? Promise.resolve()
+            : updateQuestion(question.id, { display_order: index }, vars.opts)
+        )
+      )
+    },
+    onMutate: async (vars) => {
+      await queryClient.cancelQueries({ queryKey: key })
+      const previous = queryClient.getQueryData<Question[]>(key)
+      queryClient.setQueryData<Question[]>(
+        key,
+        vars.ordered.map((question, index) => ({
+          ...question,
+          display_order: index,
+        }))
+      )
+      return { previous }
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(key, context.previous)
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: key })
     },
   })
 }

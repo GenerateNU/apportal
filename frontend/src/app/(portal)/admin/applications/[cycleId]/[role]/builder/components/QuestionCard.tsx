@@ -21,9 +21,31 @@ export function QuestionCard({ question }: { question: Question }) {
   const updateQuestion = useUpdateQuestion()
   const deleteQuestion = useDeleteQuestion()
 
-  const [text, setText] = useState(question.question_text)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
-  const [options, setOptions] = useState(question.options ?? [])
+
+  // Seed the editable fields from props, then resync during render whenever the
+  // persisted value changes (e.g. after an edit invalidates the list and it
+  // refetches) so the card never shows stale text/options. Comparing options by
+  // value — not array identity — avoids clobbering in-progress edits on refetches
+  // that returned the same content with a fresh array reference.
+  // https://react.dev/learn/you-might-not-need-an-effect
+  const persistedOptions = question.options ?? []
+  // Single-line inputs never contain a newline, so this is a collision-safe join.
+  const persistedOptionsKey = persistedOptions.join('\n')
+
+  const [prevText, setPrevText] = useState(question.question_text)
+  const [text, setText] = useState(question.question_text)
+  if (question.question_text !== prevText) {
+    setPrevText(question.question_text)
+    setText(question.question_text)
+  }
+
+  const [prevOptionsKey, setPrevOptionsKey] = useState(persistedOptionsKey)
+  const [options, setOptions] = useState(persistedOptions)
+  if (persistedOptionsKey !== prevOptionsKey) {
+    setPrevOptionsKey(persistedOptionsKey)
+    setOptions(persistedOptions)
+  }
 
   const meta = QUESTION_TYPE_META[question.question_type]
   const Icon = meta.icon

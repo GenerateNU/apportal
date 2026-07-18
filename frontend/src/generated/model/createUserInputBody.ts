@@ -11,10 +11,12 @@ export interface CreateUserInputBody {
   /** A URL to the JSON Schema for this object. */
   readonly $schema?: string;
   email: string;
+  /** @minLength 1 */
   full_name: string;
   github_username?: string;
   graduation_year?: number;
   major?: string;
+  /** @minLength 1 */
   nuid: string;
   /** Omit to default to applicant */
   roles?: CreateUserInputBodyRoles;

@@ -30,7 +30,9 @@ export function ApplicantsClient() {
     () => [...new Set(applications.map((a) => a.user_nuid))],
     [applications]
   )
-  const applicantQueries = useApplicantsByNuids(uniqueNUIDs)
+  const applicantQueries = useApplicantsByNuids(uniqueNUIDs, {
+    actor: REVIEWER_ACTOR,
+  })
   const byNUID = useMemo(() => {
     const map: Record<string, (typeof applicantQueries)[number]['data']> = {}
     for (const q of applicantQueries) {

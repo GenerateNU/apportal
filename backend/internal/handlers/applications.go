@@ -67,8 +67,8 @@ type ApplicationsOutput struct {
 
 type CreateApplicationInput struct {
 	Body struct {
-		CycleID      string          `json:"cycle_id"`
-		UserNUID     string          `json:"user_nuid"`
+		CycleID      string          `json:"cycle_id" minLength:"1"`
+		UserNUID     string          `json:"user_nuid" minLength:"1"`
 		Role         models.Role     `json:"role"`
 		Availability json.RawMessage `json:"availability,omitempty"`
 		ResumeURL    *string         `json:"resume_url,omitempty"`

@@ -239,6 +239,7 @@ components:
           type: string
         availability: {}
         cycle_id:
+          minLength: 1
           type: string
         resume_url:
           type: string
@@ -248,6 +249,7 @@ components:
             - software_designer
           type: string
         user_nuid:
+          minLength: 1
           type: string
       required:
         - cycle_id
@@ -414,8 +416,10 @@ components:
           readOnly: true
           type: string
         email:
+          format: email
           type: string
         full_name:
+          minLength: 1
           type: string
         github_username:
           type: string
@@ -425,6 +429,7 @@ components:
         major:
           type: string
         nuid:
+          minLength: 1
           type: string
         roles:
           description: Omit to default to applicant
@@ -996,8 +1001,10 @@ components:
           readOnly: true
           type: string
         email:
+          format: email
           type: string
         full_name:
+          minLength: 1
           type: string
         github_username:
           type: string
@@ -1050,8 +1057,10 @@ components:
           readOnly: true
           type: string
         email:
+          format: email
           type: string
         full_name:
+          minLength: 1
           type: string
         github_username:
           type: string
@@ -1061,6 +1070,7 @@ components:
         major:
           type: string
         nuid:
+          minLength: 1
           type: string
       required:
         - nuid

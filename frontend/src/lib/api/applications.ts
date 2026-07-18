@@ -1,5 +1,10 @@
 import { apiFetch, type FetchOptions } from './client'
-import type { Application, ApplicationStage, Role } from './types'
+import type {
+  Application,
+  ApplicationStage,
+  InterviewRating,
+  Role,
+} from './types'
 
 export function getApplications(
   params?: { cycle_id?: string; stage?: ApplicationStage; role?: Role },
@@ -31,7 +36,7 @@ export function updateApplication(
   id: string,
   body: {
     stage?: ApplicationStage
-    interview_rating?: string
+    interview_rating?: InterviewRating
     reviewer_notes?: string
   },
   opts?: FetchOptions

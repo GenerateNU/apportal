@@ -11,6 +11,7 @@ export interface UpdateUserInputBody {
   /** A URL to the JSON Schema for this object. */
   readonly $schema?: string;
   email?: string;
+  /** @minLength 1 */
   full_name?: string;
   github_username?: string;
   graduation_year?: number;

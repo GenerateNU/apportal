@@ -11,8 +11,10 @@ export interface CreateApplicationInputBody {
   /** A URL to the JSON Schema for this object. */
   readonly $schema?: string;
   availability?: unknown;
+  /** @minLength 1 */
   cycle_id: string;
   resume_url?: string;
   role: CreateApplicationInputBodyRole;
+  /** @minLength 1 */
   user_nuid: string;
 }

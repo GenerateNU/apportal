@@ -20,6 +20,8 @@ func storeErr(err error) error {
 		return huma.Error404NotFound("not found")
 	case errors.Is(err, store.ErrConflict):
 		return huma.Error409Conflict("already exists")
+	case store.InvalidInput(err):
+		return huma.Error422UnprocessableEntity("request references data that does not exist or violates a constraint")
 	default:
 		slog.Error("unexpected store error", "error", err)
 		return huma.Error500InternalServerError("internal server error")
