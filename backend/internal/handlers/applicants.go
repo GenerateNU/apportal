@@ -41,9 +41,9 @@ type ApplicantOutput struct {
 
 type UpsertApplicantInput struct {
 	Body struct {
-		NUID           string  `json:"nuid"`
-		Email          string  `json:"email"`
-		FullName       string  `json:"full_name"`
+		NUID           string  `json:"nuid" minLength:"1"`
+		Email          string  `json:"email" format:"email"`
+		FullName       string  `json:"full_name" minLength:"1"`
 		GithubUsername *string `json:"github_username,omitempty"`
 		GraduationYear *int    `json:"graduation_year,omitempty"`
 		Major          *string `json:"major,omitempty"`

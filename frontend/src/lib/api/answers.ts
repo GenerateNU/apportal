@@ -10,7 +10,15 @@ export function getAnswers(
 
 export function putAnswers(
   applicationId: string,
-  body: { answers: { question_id: string; answer_text: string }[] },
+  body: {
+    // Text questions send answer_text; multiple_choice/checkbox questions send
+    // answer_options. Both are optional per answer so either kind can be saved.
+    answers: {
+      question_id: string
+      answer_text?: string
+      answer_options?: string[]
+    }[]
+  },
   opts?: FetchOptions
 ): Promise<WrittenAnswer[]> {
   return apiFetch(`/applications/${applicationId}/answers`, {
