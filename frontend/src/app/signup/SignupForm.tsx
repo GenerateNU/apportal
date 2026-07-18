@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { upsertApplicant } from '@/lib/api/applicants'
+import { upsertApplicant } from '@/generated/applicants/applicants'
 
 export default function SignupForm() {
   const router = useRouter()

@@ -2,27 +2,28 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   createApplication,
   getApplication,
-  getApplications,
+  listApplications,
   updateApplication,
-} from '@/lib/api/applications'
-import type { FetchOptions } from '@/lib/api/client'
-import type { ApplicationStage, Role } from '@/lib/api/types'
+} from '@/generated/applications/applications'
+import type { RequestOptions } from '@/lib/api/orval-mutator'
+import type { Application, ApplicationStage, Role } from '@/lib/api/types'
 import { queryKeys } from './keys'
 
 export function useApplications(
   params?: { cycle_id?: string; stage?: ApplicationStage; role?: Role },
-  opts?: FetchOptions
+  opts?: RequestOptions
 ) {
   return useQuery({
     queryKey: queryKeys.applications.list(params),
-    queryFn: () => getApplications(params, opts),
+    queryFn: async () =>
+      ((await listApplications(params, opts)) ?? []) as Application[],
   })
 }
 
-export function useApplication(id: string, opts?: FetchOptions) {
+export function useApplication(id: string, opts?: RequestOptions) {
   return useQuery({
     queryKey: queryKeys.applications.detail(id),
-    queryFn: () => getApplication(id, opts),
+    queryFn: () => getApplication(id, opts) as Promise<Application>,
     enabled: !!id,
   })
 }
@@ -32,7 +33,7 @@ export function useCreateApplication() {
   return useMutation({
     mutationFn: (vars: {
       body: Parameters<typeof createApplication>[0]
-      opts?: FetchOptions
+      opts?: RequestOptions
     }) => createApplication(vars.body, vars.opts),
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -48,7 +49,7 @@ export function useUpdateApplication() {
     mutationFn: (vars: {
       id: string
       body: Parameters<typeof updateApplication>[1]
-      opts?: FetchOptions
+      opts?: RequestOptions
     }) => updateApplication(vars.id, vars.body, vars.opts),
     onSuccess: (data, vars) => {
       queryClient.setQueryData(queryKeys.applications.detail(vars.id), data)

@@ -6,7 +6,7 @@ export type FilterKey = 'major' | 'year'
 
 export const ORDERED_STAGES: ApplicationStage[] = [
   'submitted',
-  'tl_review',
+  'lead_review',
   'chief_review',
   'interview_scheduled',
   'interview_conducted',
@@ -23,7 +23,7 @@ export const FILTER_STAGES: {
 }[] = [
   { label: 'All', value: 'all' },
   { label: 'Submitted', value: 'submitted' },
-  { label: 'TL Review', value: 'tl_review' },
+  { label: 'Lead Review', value: 'lead_review' },
   { label: 'Chief Review', value: 'chief_review' },
   { label: 'Interview Scheduled', value: 'interview_scheduled' },
   { label: 'Interview Conducted', value: 'interview_conducted' },
@@ -36,7 +36,7 @@ export const FILTER_STAGES: {
 
 export const stageBadge: Record<ApplicationStage, string> = {
   submitted: 'bg-blue-50 text-blue-700',
-  tl_review: 'bg-purple-50 text-purple-700',
+  lead_review: 'bg-purple-50 text-purple-700',
   chief_review: 'bg-indigo-50 text-indigo-700',
   interview_scheduled: 'bg-yellow-50 text-yellow-700',
   interview_conducted: 'bg-orange-50 text-orange-700',
@@ -49,7 +49,7 @@ export const stageBadge: Record<ApplicationStage, string> = {
 
 export const stageLabel: Record<ApplicationStage, string> = {
   submitted: 'Submitted',
-  tl_review: 'TL Review',
+  lead_review: 'Lead Review',
   chief_review: 'Chief Review',
   interview_scheduled: 'Interview Scheduled',
   interview_conducted: 'Interview Conducted',
@@ -62,7 +62,7 @@ export const stageLabel: Record<ApplicationStage, string> = {
 
 export const stageDot: Record<ApplicationStage, string> = {
   submitted: 'bg-blue-500',
-  tl_review: 'bg-purple-500',
+  lead_review: 'bg-purple-500',
   chief_review: 'bg-indigo-500',
   interview_scheduled: 'bg-yellow-400',
   interview_conducted: 'bg-orange-400',
