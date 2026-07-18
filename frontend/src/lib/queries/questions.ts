@@ -7,32 +7,38 @@ import {
 import {
   createQuestion,
   deleteQuestion,
-  getQuestions,
+  listCycleQuestions,
   updateQuestion,
-} from '@/lib/api/questions'
-import type { FetchOptions } from '@/lib/api/client'
+} from '@/generated/questions/questions'
+import type { RequestOptions } from '@/lib/api/orval-mutator'
 import type { Question, Role } from '@/lib/api/types'
 import { queryKeys } from './keys'
 
 export function useQuestions(
   cycleId: string,
   role?: Role,
-  opts?: FetchOptions
+  opts?: RequestOptions
 ) {
   return useQuery({
     queryKey: queryKeys.questions.list(cycleId, role),
-    queryFn: () => getQuestions(cycleId, role, opts),
+    queryFn: async () =>
+      ((await listCycleQuestions(cycleId, { role }, opts)) ?? []) as Question[],
     enabled: !!cycleId,
   })
 }
 
 // Fetches all questions for each cycle, e.g. to build per-cycle template
 // summaries. Each cycle gets its own cache entry, shared with useQuestions.
-export function useQuestionsByCycles(cycleIds: string[], opts?: FetchOptions) {
+export function useQuestionsByCycles(
+  cycleIds: string[],
+  opts?: RequestOptions
+) {
   return useQueries({
     queries: cycleIds.map((cycleId) => ({
       queryKey: queryKeys.questions.list(cycleId),
-      queryFn: () => getQuestions(cycleId, undefined, opts),
+      queryFn: async () =>
+        ((await listCycleQuestions(cycleId, undefined, opts)) ??
+          []) as Question[],
       enabled: !!cycleId,
     })),
   })
@@ -44,7 +50,7 @@ export function useCreateQuestion() {
     mutationFn: (vars: {
       cycleId: string
       body: Parameters<typeof createQuestion>[1]
-      opts?: FetchOptions
+      opts?: RequestOptions
     }) => createQuestion(vars.cycleId, vars.body, vars.opts),
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -60,7 +66,7 @@ export function useUpdateQuestion() {
     mutationFn: (vars: {
       id: string
       body: Parameters<typeof updateQuestion>[1]
-      opts?: FetchOptions
+      opts?: RequestOptions
     }) => updateQuestion(vars.id, vars.body, vars.opts),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.questions.lists() })
@@ -78,7 +84,10 @@ export function useReorderQuestions(cycleId: string, role?: Role) {
   const queryClient = useQueryClient()
   const key = queryKeys.questions.list(cycleId, role)
   return useMutation({
-    mutationFn: async (vars: { ordered: Question[]; opts?: FetchOptions }) => {
+    mutationFn: async (vars: {
+      ordered: Question[]
+      opts?: RequestOptions
+    }) => {
       await Promise.all(
         vars.ordered.map((question, index) =>
           question.display_order === index
@@ -113,7 +122,7 @@ export function useReorderQuestions(cycleId: string, role?: Role) {
 export function useDeleteQuestion() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (vars: { id: string; opts?: FetchOptions }) =>
+    mutationFn: (vars: { id: string; opts?: RequestOptions }) =>
       deleteQuestion(vars.id, vars.opts),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.questions.lists() })

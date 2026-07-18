@@ -4,8 +4,8 @@ import {
   HydrationBoundary,
   QueryClient,
 } from '@tanstack/react-query'
-import { getCycle } from '@/lib/api/cycles'
-import { getQuestions } from '@/lib/api/questions'
+import { getCycle } from '@/generated/cycles/cycles'
+import { listCycleQuestions } from '@/generated/questions/questions'
 import type { Role } from '@/lib/api/types'
 import { queryKeys } from '@/lib/queries/keys'
 import { REVIEWER_ACTOR } from '@/lib/stub-actor'
@@ -28,17 +28,17 @@ export default async function FormBuilderPage({
 
   const cycle = await queryClient.fetchQuery({
     queryKey: queryKeys.cycles.detail(cycleId),
-    queryFn: () =>
-      getCycle(cycleId, { actor: REVIEWER_ACTOR, cache: 'no-store' }),
+    queryFn: () => getCycle(cycleId, { actor: REVIEWER_ACTOR }),
   })
 
   await queryClient.prefetchQuery({
     queryKey: queryKeys.questions.list(cycleId, validRole),
     queryFn: () =>
-      getQuestions(cycleId, validRole, {
-        actor: REVIEWER_ACTOR,
-        cache: 'no-store',
-      }),
+      listCycleQuestions(
+        cycleId,
+        { role: validRole },
+        { actor: REVIEWER_ACTOR }
+      ),
   })
 
   return (

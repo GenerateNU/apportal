@@ -1,118 +1,66 @@
-// Types matching the Go backend models exactly.
-// Keep in sync with backend/internal/models/models.go
+// App-facing domain types, derived from the Orval-generated models so they
+// track the backend spec automatically. We only override the parts the OpenAPI
+// spec can't express precisely:
+//   - JSONB fields the backend serializes as free-form JSON (Orval types these
+//     as `unknown`); we pin the real shapes the UI relies on.
+//   - A few nullable fields the app treats as `T | null`.
+// Everything else flows straight from `@/generated/model`.
+import type {
+  Applicant as GenApplicant,
+  Application as GenApplication,
+  Cycle as GenCycle,
+  CodeChallenge as GenCodeChallenge,
+  CodeSubmission as GenCodeSubmission,
+  Question as GenQuestion,
+  User as GenUser,
+  WrittenAnswer as GenWrittenAnswer,
+  ApplicationRole,
+  QuestionQuestionType,
+  UserRolesAnyOfItem,
+} from '@/generated/model'
 
-export type Role = 'software_engineer' | 'software_designer'
+// Enum aliases — same string values as the backend, friendlier names for the app.
+export type {
+  ApplicationStage,
+  InterviewRating,
+  CycleStatus,
+} from '@/generated/model'
+export type Role = ApplicationRole
+export type QuestionType = QuestionQuestionType
+export type UserRole = UserRolesAnyOfItem
 
-export type ApplicationStage =
-  | 'submitted'
-  | 'tl_review'
-  | 'chief_review'
-  | 'interview_scheduled'
-  | 'interview_conducted'
-  | 'interview_review'
-  | 'selection'
-  | 'accepted'
-  | 'rejected'
-  | 'withdrawn'
-
+// The reviewer role passed as the list-users filter. Not a standalone backend
+// enum (it's just a query param), so it stays hand-written.
 export type ReviewerRole = 'tl' | 'chief'
 
-export type UserRole = 'applicant' | 'member' | 'lead' | 'chief' | 'admin'
-
-export type InterviewRating = 'do_not_hire' | 'good' | 'great' | 'must_hire'
-
-export type QuestionType =
-  | 'short_answer'
-  | 'long_answer'
-  | 'multiple_choice'
-  | 'checkbox'
-  | 'url'
-
-export type CycleStatus = 'draft' | 'open' | 'closed' | 'archived'
-
-export interface User {
-  nuid: string
-  email: string
-  full_name: string
+export type User = Omit<GenUser, '$schema' | 'roles'> & {
   roles: UserRole[]
-  graduation_year: number | null
-  major: string | null
-  github_username: string | null
-  created_at: string
-  updated_at: string
 }
 
-export interface Cycle {
-  id: string
-  name: string
-  status: CycleStatus
-  opens_at: string | null
-  closes_at: string | null
-  created_at: string
-}
+export type Cycle = Omit<GenCycle, '$schema'>
 
-export interface Question {
-  id: string
-  cycle_id: string
-  role: Role | null
-  question_text: string
-  question_type: QuestionType
-  is_required: boolean
-  display_order: number
+export type Applicant = Omit<GenApplicant, '$schema'>
+
+export type Question = Omit<GenQuestion, '$schema' | 'options' | 'role'> & {
+  // JSONB array of choice labels (multiple_choice / checkbox questions).
   options: string[] | null
-  created_at: string
+  role: Role | null
 }
 
-export interface CodeChallenge {
-  id: string
-  cycle_id: string
-  role: Role
-  name: string
-  github_repo_url: string | null
-  instructions: string | null
-  due_at: string | null
-  created_at: string
-}
+export type CodeChallenge = Omit<GenCodeChallenge, '$schema'>
 
-export interface Applicant {
-  nuid: string
-  email: string
-  full_name: string
-  github_username: string | null
-  graduation_year: number | null
-  major: string | null
-  created_at: string
-  updated_at: string
-}
-
-export interface Application {
-  id: string
-  cycle_id: string
-  user_nuid: string
-  role: Role
-  stage: ApplicationStage
+export type Application = Omit<
+  GenApplication,
+  '$schema' | 'availability' | 'resume_url'
+> & {
+  // JSONB availability blob keyed by slot.
   availability: Record<string, boolean> | null
   resume_url: string | null
-  submitted_at: string
-  updated_at: string
 }
 
-export interface WrittenAnswer {
-  id: string
-  application_id: string
-  question_id: string
-  answer_text: string | null
+export type WrittenAnswer = Omit<GenWrittenAnswer, 'answer_options'> & {
+  // JSONB array of selected choice labels.
   answer_options: string[] | null
-  submitted_at: string
 }
 
-export interface CodeSubmission {
-  id: string
-  application_id: string
-  challenge_id: string
-  github_repo_url: string
-  submitted_at: string
-  raw_score: number | null
-  score_details: Record<string, unknown> | null
-  score_updated_at: string | null
-}
+export type CodeSubmission = Omit<GenCodeSubmission, '$schema'>

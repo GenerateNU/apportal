@@ -3,38 +3,39 @@ import {
   createUser,
   getUser,
   getUserByEmail,
-  getUsers,
+  listUsers,
   updateUser,
-} from '@/lib/api/users'
-import type { FetchOptions } from '@/lib/api/client'
-import type { ReviewerRole } from '@/lib/api/types'
+} from '@/generated/users/users'
+import type { RequestOptions } from '@/lib/api/orval-mutator'
+import type { ReviewerRole, User } from '@/lib/api/types'
 import { useAuth } from '@/lib/auth/auth-context'
 import { queryKeys } from './keys'
 
-export function useUsers(reviewerRole?: ReviewerRole, opts?: FetchOptions) {
+export function useUsers(reviewerRole?: ReviewerRole, opts?: RequestOptions) {
   return useQuery({
     queryKey: queryKeys.users.list(reviewerRole),
-    queryFn: () => getUsers(reviewerRole, opts),
+    queryFn: async () =>
+      ((await listUsers({ role: reviewerRole }, opts)) ?? []) as User[],
   })
 }
 
-export function useUser(nuid: string, opts?: FetchOptions) {
+export function useUser(nuid: string, opts?: RequestOptions) {
   return useQuery({
     queryKey: queryKeys.users.detail(nuid),
-    queryFn: () => getUser(nuid, opts),
+    queryFn: () => getUser(nuid, opts) as Promise<User>,
     enabled: !!nuid,
   })
 }
 
 // Resolves the logged-in Supabase session to its backend user record. Sessions
 // only carry an email, so this is the bridge to nuid/full_name/roles.
-export function useCurrentUser(opts?: FetchOptions) {
+export function useCurrentUser(opts?: RequestOptions) {
   const { user, isLoading: isAuthLoading } = useAuth()
   const email = user?.email
 
   const query = useQuery({
     queryKey: queryKeys.users.byEmail(email ?? ''),
-    queryFn: () => getUserByEmail(email!, opts),
+    queryFn: () => getUserByEmail({ email: email! }, opts) as Promise<User>,
     enabled: !!email,
   })
 
@@ -46,7 +47,7 @@ export function useCreateUser() {
   return useMutation({
     mutationFn: (vars: {
       body: Parameters<typeof createUser>[0]
-      opts?: FetchOptions
+      opts?: RequestOptions
     }) => createUser(vars.body, vars.opts),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.users.all })
@@ -60,7 +61,7 @@ export function useUpdateUser() {
     mutationFn: (vars: {
       nuid: string
       body: Parameters<typeof updateUser>[1]
-      opts?: FetchOptions
+      opts?: RequestOptions
     }) => updateUser(vars.nuid, vars.body, vars.opts),
     onSuccess: (data, vars) => {
       queryClient.setQueryData(queryKeys.users.detail(vars.nuid), data)

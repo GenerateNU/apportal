@@ -56,8 +56,8 @@ export function ApplicationsClient() {
           cycleName: cycle.name,
           cycleStatus: cycle.status,
           cycleColorIndex,
-          opensAt: cycle.opens_at,
-          closesAt: cycle.closes_at,
+          opensAt: cycle.opens_at ?? null,
+          closesAt: cycle.closes_at ?? null,
           role,
           questionCount: questions.filter(
             (q) => q.role === role || q.role === null

@@ -4,30 +4,40 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query'
-import { createChallenge, getChallenges } from '@/lib/api/challenges'
-import type { FetchOptions } from '@/lib/api/client'
-import type { Role } from '@/lib/api/types'
+import {
+  createChallenge,
+  listCycleChallenges,
+} from '@/generated/code-challenges/code-challenges'
+import type { RequestOptions } from '@/lib/api/orval-mutator'
+import type { CodeChallenge, Role } from '@/lib/api/types'
 import { queryKeys } from './keys'
 
 export function useChallenges(
   cycleId: string,
   role?: Role,
-  opts?: FetchOptions
+  opts?: RequestOptions
 ) {
   return useQuery({
     queryKey: queryKeys.challenges.list(cycleId, role),
-    queryFn: () => getChallenges(cycleId, role, opts),
+    queryFn: async () =>
+      ((await listCycleChallenges(cycleId, { role }, opts)) ??
+        []) as CodeChallenge[],
     enabled: !!cycleId,
   })
 }
 
 // Fetches all challenges for each cycle, e.g. to build per-cycle template
 // summaries. Each cycle gets its own cache entry, shared with useChallenges.
-export function useChallengesByCycles(cycleIds: string[], opts?: FetchOptions) {
+export function useChallengesByCycles(
+  cycleIds: string[],
+  opts?: RequestOptions
+) {
   return useQueries({
     queries: cycleIds.map((cycleId) => ({
       queryKey: queryKeys.challenges.list(cycleId),
-      queryFn: () => getChallenges(cycleId, undefined, opts),
+      queryFn: async () =>
+        ((await listCycleChallenges(cycleId, undefined, opts)) ??
+          []) as CodeChallenge[],
       enabled: !!cycleId,
     })),
   })
@@ -39,7 +49,7 @@ export function useCreateChallenge() {
     mutationFn: (vars: {
       cycleId: string
       body: Parameters<typeof createChallenge>[1]
-      opts?: FetchOptions
+      opts?: RequestOptions
     }) => createChallenge(vars.cycleId, vars.body, vars.opts),
     onSuccess: () => {
       queryClient.invalidateQueries({
