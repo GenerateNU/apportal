@@ -23,7 +23,7 @@ export const FILTER_STAGES: {
 }[] = [
   { label: 'All', value: 'all' },
   { label: 'Submitted', value: 'submitted' },
-  { label: 'TL Review', value: 'lead_review' },
+  { label: 'Lead Review', value: 'lead_review' },
   { label: 'Chief Review', value: 'chief_review' },
   { label: 'Interview Scheduled', value: 'interview_scheduled' },
   { label: 'Interview Conducted', value: 'interview_conducted' },
@@ -49,7 +49,7 @@ export const stageBadge: Record<ApplicationStage, string> = {
 
 export const stageLabel: Record<ApplicationStage, string> = {
   submitted: 'Submitted',
-  lead_review: 'TL Review',
+  lead_review: 'Lead Review',
   chief_review: 'Chief Review',
   interview_scheduled: 'Interview Scheduled',
   interview_conducted: 'Interview Conducted',
