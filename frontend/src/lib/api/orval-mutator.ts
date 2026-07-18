@@ -1,4 +1,4 @@
-import Axios, { type AxiosError, type AxiosRequestConfig } from 'axios'
+import Axios from 'axios'
 import { APIError } from './client'
 
 export const AXIOS_INSTANCE = Axios.create({
@@ -28,24 +28,38 @@ export function clearActorHeaders() {
   delete AXIOS_INSTANCE.defaults.headers.common['X-Role']
 }
 
+// The request shape Orval passes to the mutator. It's typed structurally rather
+// than with axios's `AxiosRequestConfig`, because axios ships its named types
+// only through a CJS `.d.cts` that this project's bundler module resolution
+// won't surface as named imports (only the default `Axios` value resolves).
+type RequestConfig = {
+  url?: string
+  method?: string
+  params?: unknown
+  data?: unknown
+  headers?: Record<string, string | undefined>
+  signal?: AbortSignal
+  responseType?: string
+}
+
 // Extra per-request options accepted by the generated hooks (via
 // SecondParameter). `actor` sets the reviewer auth headers for this one request
 // (required server-side; optional client-side once setActorHeaders has run);
-// standard AxiosRequestConfig fields pass through.
-export type RequestOptions = AxiosRequestConfig & {
+// standard request-config fields pass through.
+export type RequestOptions = RequestConfig & {
   actor?: Actor
 }
 
 // customInstance is the mutator Orval routes every generated request through.
 // It unwraps the axios response to the typed body and maps non-2xx responses to
 // APIError, matching the hand-written apiClient's contract.
-export const customInstance = <T>(
-  config: AxiosRequestConfig,
+export const customInstance = async <T>(
+  config: RequestConfig,
   options?: RequestOptions
 ): Promise<T> => {
   const { actor, headers, ...rest } = options ?? {}
 
-  return AXIOS_INSTANCE({
+  const merged = {
     ...config,
     ...rest,
     headers: {
@@ -53,17 +67,29 @@ export const customInstance = <T>(
       ...headers,
       ...(actor ? { 'X-NUID': actor.nuid, 'X-Role': actor.role } : {}),
     },
-  })
-    .then(({ data }) => data as T)
-    .catch((error: AxiosError) => {
-      if (error.response) {
-        const body = error.response.data
-        const message =
-          typeof body === 'string' ? body : JSON.stringify(body ?? '')
-        throw new APIError(error.response.status, message)
-      }
-      throw error
-    })
+  }
+
+  try {
+    const response = await AXIOS_INSTANCE.request(
+      merged as Parameters<typeof AXIOS_INSTANCE.request>[0]
+    )
+    return (response as { data: T }).data
+  } catch (error) {
+    // Duck-type the axios error rather than import its (unreliably exported)
+    // types: an HTTP error carries `isAxiosError` and a `response`; a network
+    // failure has no `response`, so it rethrows as-is.
+    const axiosError = error as {
+      isAxiosError?: boolean
+      response?: { status: number; data: unknown }
+    }
+    if (axiosError.isAxiosError && axiosError.response) {
+      const body = axiosError.response.data
+      const message =
+        typeof body === 'string' ? body : JSON.stringify(body ?? '')
+      throw new APIError(axiosError.response.status, message)
+    }
+    throw error
+  }
 }
 
 export default customInstance

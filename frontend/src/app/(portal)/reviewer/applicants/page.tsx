@@ -9,6 +9,10 @@ import { queryKeys } from '@/lib/queries/keys'
 import { REVIEWER_ACTOR } from '@/lib/stub-actor'
 import { ApplicantsClient } from './components/ApplicantsClient'
 
+// Auth-gated, live data fetched per request from the backend — never prerender
+// this at build time (the backend isn't running then).
+export const dynamic = 'force-dynamic'
+
 export default async function ApplicantsPage() {
   const queryClient = new QueryClient()
 

@@ -11,6 +11,10 @@ import { queryKeys } from '@/lib/queries/keys'
 import { REVIEWER_ACTOR } from '@/lib/stub-actor'
 import { FormBuilderClient } from './components/FormBuilderClient'
 
+// Auth-gated, live data fetched per request from the backend — never prerender
+// this at build time (the backend isn't running then).
+export const dynamic = 'force-dynamic'
+
 const VALID_ROLES: Role[] = ['software_engineer', 'software_designer']
 
 export default async function FormBuilderPage({
