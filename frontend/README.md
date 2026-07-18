@@ -60,12 +60,30 @@ cd ../frontend && npm run generate:api
 
 Every request routes through the mutator in
 [`src/lib/api/orval-mutator.ts`](src/lib/api/orval-mutator.ts), which applies the
-base URL (`NEXT_PUBLIC_API_URL`), maps errors to `APIError`, and accepts an
-`actor` in the per-request options to set the reviewer auth headers:
+base URL (`NEXT_PUBLIC_API_URL`) and maps errors to `APIError`. It's a plain
+function (not a hook), so the generated client works in both client components
+and server-side prefetch.
 
-```ts
-const { data } = useListApplications(params, { request: { actor } })
-```
+Reviewer auth (the `X-NUID` / `X-Role` headers) can be supplied two ways:
+
+- **Per request** — pass `actor` in the request options. Always works, and is
+  required for server-side prefetch:
+
+  ```ts
+  const { data } = useListApplications(params, { request: { actor } })
+  ```
+
+- **Client-side default** — call `setActorHeaders(actor)` once (e.g. from the
+  auth provider when the signed-in user changes) so browser requests are authed
+  without passing `actor` each time; `clearActorHeaders()` on sign-out:
+
+  ```ts
+  const { data } = useListApplications(params) // actor from the default headers
+  ```
+
+  This is client-only — server-side prefetch must always pass `actor` per
+  request (the shared axios instance is reused across users on the server). A
+  per-request `actor` overrides the client default.
 
 ## Project Structure
 
