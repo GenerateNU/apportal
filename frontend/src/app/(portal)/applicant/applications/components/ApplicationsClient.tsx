@@ -46,6 +46,12 @@ function Dashboard({ user }: { user: User }) {
     { actor }
   )
 
+  // Openness is driven purely by the manually-set cycle.status. opens_at /
+  // closes_at are currently just metadata — nothing auto-opens/closes.
+  // TODO: decide how to honor opens_at/closes_at. Two options: (1) derive
+  // "effective open" here as status === 'open' && now within [opens_at,
+  // closes_at]; or (2) add a scheduled job that flips cycle.status at those
+  // times (cleaner, but needs a scheduler the repo doesn't have yet).
   const openCycles = cycles.filter((cycle) => cycle.status === 'open')
 
   return (
