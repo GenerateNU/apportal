@@ -26,6 +26,7 @@ export const queryKeys = {
     lists: () => [...queryKeys.applications.all, 'list'] as const,
     list: (params?: {
       cycle_id?: string
+      user_nuid?: string
       stage?: ApplicationStage
       role?: Role
     }) => [...queryKeys.applications.lists(), params ?? {}] as const,

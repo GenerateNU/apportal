@@ -8,6 +8,7 @@
 
 export type ListApplicationsParams = {
 cycle_id?: string;
+user_nuid?: string;
 role?: string;
 stage?: string;
 };
