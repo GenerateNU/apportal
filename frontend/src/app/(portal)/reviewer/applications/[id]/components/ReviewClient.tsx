@@ -121,21 +121,23 @@ export function ReviewClient({
   }
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-8 py-10">
-      <Link
-        href="/reviewer/applications"
-        className="text-text-muted hover:text-text-default mb-6 inline-flex items-center gap-1 text-sm"
-      >
-        <ArrowLeft size={14} />
-        Review queue
-      </Link>
-
-      <header className="mb-8 flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-text-default text-2xl font-semibold">
-            {applicant?.full_name ?? 'Applicant'}
-          </h1>
-          <p className="text-text-muted mt-1 text-sm">{ROLE_LABEL[role]}</p>
+    <div className="flex h-full flex-col">
+      {/* Top bar */}
+      <div className="flex items-center justify-between gap-3 border-b border-gray-100 bg-white px-8 py-3">
+        <div className="flex items-center gap-4">
+          <Link
+            href="/reviewer/applications"
+            className="text-text-muted hover:text-text-default inline-flex items-center gap-1 text-sm"
+          >
+            <ArrowLeft size={14} />
+            Queue
+          </Link>
+          <div className="border-l border-gray-100 pl-4">
+            <h1 className="text-text-default text-base font-semibold">
+              {applicant?.full_name ?? 'Applicant'}
+            </h1>
+            <p className="text-text-muted text-xs">{ROLE_LABEL[role]}</p>
+          </div>
         </div>
         {submitted && (
           <span className="bg-status-open/15 text-status-open inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium">
@@ -143,148 +145,150 @@ export function ReviewClient({
             Review submitted
           </span>
         )}
-      </header>
+      </div>
 
-      <div className="flex flex-col gap-5">
-        {orderedAnswers.map((answer) => {
-          const question = questionById.get(answer.question_id)
-          const entry = scores[answer.id] ?? { score: '', comment: '' }
-          return (
-            <section
-              key={answer.id}
-              className="rounded-xl border border-gray-100 bg-white p-6"
-            >
-              <p className="text-text-default text-sm font-medium">
-                {question?.question_text ?? 'Question'}
-              </p>
-              <p className="text-text-muted mt-2 text-sm whitespace-pre-wrap">
-                {answerText(answer)}
-              </p>
+      {/* Split: application (left) · review (right) */}
+      <div className="grid min-h-0 flex-1 grid-cols-2 overflow-hidden">
+        {/* Application */}
+        <div className="overflow-y-auto border-r border-gray-100 px-8 py-6">
+          <h2 className="text-text-subtle mb-4 text-xs font-medium tracking-wider uppercase">
+            Application
+          </h2>
+          {orderedAnswers.length === 0 ? (
+            <p className="text-text-faint text-sm">No answers submitted.</p>
+          ) : (
+            <div className="flex flex-col gap-5">
+              {orderedAnswers.map((answer, i) => {
+                const question = questionById.get(answer.question_id)
+                return (
+                  <div key={answer.id}>
+                    <p className="text-text-default text-sm font-medium">
+                      {i + 1}. {question?.question_text ?? 'Question'}
+                    </p>
+                    <p className="text-text-muted mt-1.5 text-sm whitespace-pre-wrap">
+                      {answerText(answer)}
+                    </p>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
 
-              <div className="mt-4 flex items-end gap-3 border-t border-gray-100 pt-4">
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor={`score-${answer.id}`}>Score (1–10)</Label>
-                  <Input
-                    id={`score-${answer.id}`}
-                    type="number"
-                    min={1}
-                    max={10}
-                    className="w-20"
-                    value={entry.score}
-                    onChange={(e) =>
-                      setScore(answer.id, { score: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="flex flex-1 flex-col gap-1.5">
-                  <Label htmlFor={`comment-${answer.id}`}>Comment</Label>
-                  <Input
-                    id={`comment-${answer.id}`}
-                    value={entry.comment}
-                    onChange={(e) =>
-                      setScore(answer.id, { comment: e.target.value })
-                    }
-                    placeholder="Optional"
-                  />
+        {/* Review */}
+        <div className="flex min-h-0 flex-col">
+          <div className="flex-1 overflow-y-auto px-8 py-6">
+            <h2 className="text-text-subtle mb-4 text-xs font-medium tracking-wider uppercase">
+              Your review
+            </h2>
+            <div className="flex flex-col gap-4">
+              {orderedAnswers.map((answer, i) => {
+                const question = questionById.get(answer.question_id)
+                const entry = scores[answer.id] ?? { score: '', comment: '' }
+                return (
+                  <div
+                    key={answer.id}
+                    className="rounded-xl border border-gray-100 bg-white p-4"
+                  >
+                    <p className="text-text-muted line-clamp-2 text-xs font-medium">
+                      Q{i + 1}. {question?.question_text ?? 'Question'}
+                    </p>
+                    <div className="mt-3 flex items-end gap-3">
+                      <div className="flex flex-col gap-1.5">
+                        <Label htmlFor={`score-${answer.id}`}>Score</Label>
+                        <Input
+                          id={`score-${answer.id}`}
+                          type="number"
+                          min={1}
+                          max={10}
+                          className="w-20"
+                          value={entry.score}
+                          onChange={(e) =>
+                            setScore(answer.id, { score: e.target.value })
+                          }
+                        />
+                      </div>
+                      <div className="flex flex-1 flex-col gap-1.5">
+                        <Label htmlFor={`comment-${answer.id}`}>Comment</Label>
+                        <Input
+                          id={`comment-${answer.id}`}
+                          value={entry.comment}
+                          onChange={(e) =>
+                            setScore(answer.id, { comment: e.target.value })
+                          }
+                          placeholder="Optional"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+
+              <div className="rounded-xl border border-gray-100 bg-white p-4">
+                <h3 className="text-text-default mb-3 text-sm font-semibold">
+                  Overall
+                </h3>
+                <div className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="overall">Overall score (1–10)</Label>
+                    <Input
+                      id="overall"
+                      type="number"
+                      min={1}
+                      max={10}
+                      className="w-20"
+                      value={overall}
+                      onChange={(e) => setOverall(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="reasoning">Reasoning</Label>
+                    <textarea
+                      id="reasoning"
+                      className={TEXTAREA_CLASS}
+                      value={reasoning}
+                      onChange={(e) => setReasoning(e.target.value)}
+                      placeholder="Your overall assessment of this applicant"
+                    />
+                  </div>
                 </div>
               </div>
-            </section>
-          )
-        })}
-
-        <section className="rounded-xl border border-gray-100 bg-white p-6">
-          <h2 className="text-text-default mb-4 text-sm font-semibold">
-            Overall
-          </h2>
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="overall">Overall score (1–10)</Label>
-              <Input
-                id="overall"
-                type="number"
-                min={1}
-                max={10}
-                className="w-20"
-                value={overall}
-                onChange={(e) => setOverall(e.target.value)}
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="reasoning">Reasoning</Label>
-              <textarea
-                id="reasoning"
-                className={TEXTAREA_CLASS}
-                value={reasoning}
-                onChange={(e) => setReasoning(e.target.value)}
-                placeholder="Your overall assessment of this applicant"
-              />
             </div>
           </div>
-        </section>
-      </div>
 
-      <div className="mt-6 flex items-center justify-end gap-3 border-t border-gray-100 pt-6">
-        {saved && !upsert.isPending && (
-          <span className="text-status-open mr-auto inline-flex items-center gap-1 text-sm">
-            <Check size={14} />
-            Saved
-          </span>
-        )}
-        <Button
-          variant="outline"
-          onClick={() => save(false)}
-          disabled={upsert.isPending}
-        >
-          Save draft
-        </Button>
-        <Button
-          onClick={() => save(true)}
-          disabled={upsert.isPending || !overall}
-        >
-          {upsert.isPending ? (
-            <>
-              <Loader2 className="animate-spin" size={14} />
-              Saving…
-            </>
-          ) : submitted ? (
-            'Update review'
-          ) : (
-            'Submit review'
-          )}
-        </Button>
-      </div>
-
-      {others.length > 0 && (
-        <div className="mt-10">
-          <h2 className="text-text-default mb-3 text-sm font-semibold">
-            Other reviews
-          </h2>
-          <div className="flex flex-col gap-3">
-            {others.map((r) => (
-              <div
-                key={r.id}
-                className="rounded-xl border border-gray-100 bg-white p-4"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-text-muted text-xs">
-                    Reviewer {r.reviewer_nuid}
-                  </span>
-                  {r.overall_score != null && (
-                    <span className="text-text-default text-sm font-semibold">
-                      {r.overall_score}/10
-                    </span>
-                  )}
-                </div>
-                {r.reasoning && (
-                  <p className="text-text-muted mt-2 text-sm whitespace-pre-wrap">
-                    {r.reasoning}
-                  </p>
-                )}
-              </div>
-            ))}
+          {/* Action footer */}
+          <div className="flex items-center justify-end gap-3 border-t border-gray-100 bg-white px-8 py-4">
+            {saved && !upsert.isPending && (
+              <span className="text-status-open mr-auto inline-flex items-center gap-1 text-sm">
+                <Check size={14} />
+                Saved
+              </span>
+            )}
+            <Button
+              variant="outline"
+              onClick={() => save(false)}
+              disabled={upsert.isPending}
+            >
+              Save draft
+            </Button>
+            <Button
+              onClick={() => save(true)}
+              disabled={upsert.isPending || !overall}
+            >
+              {upsert.isPending ? (
+                <>
+                  <Loader2 className="animate-spin" size={14} />
+                  Saving…
+                </>
+              ) : submitted ? (
+                'Update review'
+              ) : (
+                'Submit review'
+              )}
+            </Button>
           </div>
         </div>
-      )}
+      </div>
     </div>
   )
 }
