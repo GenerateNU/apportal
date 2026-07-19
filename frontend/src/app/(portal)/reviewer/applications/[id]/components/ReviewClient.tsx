@@ -253,6 +253,38 @@ export function ReviewClient({
                   </div>
                 </div>
               </div>
+
+              {others.length > 0 && (
+                <div>
+                  <h3 className="text-text-default mt-2 mb-3 text-sm font-semibold">
+                    Other reviews
+                  </h3>
+                  <div className="flex flex-col gap-3">
+                    {others.map((r) => (
+                      <div
+                        key={r.id}
+                        className="rounded-xl border border-gray-100 bg-white p-4"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-text-muted text-xs">
+                            Reviewer {r.reviewer_nuid}
+                          </span>
+                          {r.overall_score != null && (
+                            <span className="text-text-default text-sm font-semibold">
+                              {r.overall_score}/10
+                            </span>
+                          )}
+                        </div>
+                        {r.reasoning && (
+                          <p className="text-text-muted mt-2 text-sm whitespace-pre-wrap">
+                            {r.reasoning}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
