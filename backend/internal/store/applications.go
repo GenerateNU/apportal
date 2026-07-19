@@ -27,9 +27,10 @@ type ApplicationUpdate struct {
 
 // ApplicationFilter holds optional list filters; empty fields are ignored.
 type ApplicationFilter struct {
-	CycleID string
-	Role    *models.Role
-	Stage   *models.ApplicationStage
+	CycleID  string
+	UserNUID string
+	Role     *models.Role
+	Stage    *models.ApplicationStage
 }
 
 const applicationColumns = `id, cycle_id, user_nuid, application_role, stage, availability, resume_url, submitted_at, updated_at`
@@ -70,6 +71,10 @@ func (s *Store) ListApplications(ctx context.Context, f ApplicationFilter) ([]mo
 	if f.CycleID != "" {
 		args = append(args, f.CycleID)
 		query += ` AND cycle_id = $` + strconv.Itoa(len(args))
+	}
+	if f.UserNUID != "" {
+		args = append(args, f.UserNUID)
+		query += ` AND user_nuid = $` + strconv.Itoa(len(args))
 	}
 	if f.Role != nil {
 		args = append(args, *f.Role)

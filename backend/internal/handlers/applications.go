@@ -41,7 +41,7 @@ func (h *applicationHandler) register(api huma.API) {
 		Method:      http.MethodGet,
 		Path:        "/applications",
 		Summary:     "List applications",
-		Description: "Reviewer queue; filter by cycle_id, role, and stage.",
+		Description: "Reviewer queue; filter by cycle_id, role, and stage. Applicants may list their own by passing user_nuid.",
 		Tags:        []string{"Applications"},
 		Errors:      []int{http.StatusUnauthorized},
 	}, h.list)
@@ -106,16 +106,21 @@ func (h *applicationHandler) get(ctx context.Context, in *ApplicationIDInput) (*
 }
 
 type ListApplicationsInput struct {
-	CycleID string `query:"cycle_id"`
-	Role    string `query:"role"`
-	Stage   string `query:"stage"`
+	CycleID  string `query:"cycle_id"`
+	UserNUID string `query:"user_nuid"`
+	Role     string `query:"role"`
+	Stage    string `query:"stage"`
 }
 
 func (h *applicationHandler) list(ctx context.Context, in *ListApplicationsInput) (*ApplicationsOutput, error) {
-	if err := requireReviewer(ctx); err != nil {
-		return nil, err
+	// Applicants may fetch their own applications by scoping to their user_nuid;
+	// the unscoped reviewer queue still requires a reviewer identity.
+	if in.UserNUID == "" {
+		if err := requireReviewer(ctx); err != nil {
+			return nil, err
+		}
 	}
-	filter := store.ApplicationFilter{CycleID: in.CycleID}
+	filter := store.ApplicationFilter{CycleID: in.CycleID, UserNUID: in.UserNUID}
 	if in.Role != "" {
 		parsed := models.Role(in.Role)
 		if !parsed.Valid() {

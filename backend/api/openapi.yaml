@@ -1489,12 +1489,17 @@ paths:
         - Applicants
   /applications:
     get:
-      description: Reviewer queue; filter by cycle_id, role, and stage.
+      description: Reviewer queue; filter by cycle_id, role, and stage. Applicants may list their own by passing user_nuid.
       operationId: list-applications
       parameters:
         - explode: false
           in: query
           name: cycle_id
+          schema:
+            type: string
+        - explode: false
+          in: query
+          name: user_nuid
           schema:
             type: string
         - explode: false

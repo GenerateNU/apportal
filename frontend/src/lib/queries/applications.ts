@@ -10,7 +10,12 @@ import type { Application, ApplicationStage, Role } from '@/lib/api/types'
 import { queryKeys } from './keys'
 
 export function useApplications(
-  params?: { cycle_id?: string; stage?: ApplicationStage; role?: Role },
+  params?: {
+    cycle_id?: string
+    user_nuid?: string
+    stage?: ApplicationStage
+    role?: Role
+  },
   opts?: RequestOptions
 ) {
   return useQuery({
