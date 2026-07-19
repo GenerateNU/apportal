@@ -124,6 +124,7 @@ export function QuestionCard({ question }: { question: Question }) {
 
   return (
     <div
+      id={`question-${question.id}`}
       ref={setNodeRef}
       style={style}
       className="rounded-xl border border-gray-200 bg-white px-6 py-5 shadow-sm transition-shadow hover:shadow-md"

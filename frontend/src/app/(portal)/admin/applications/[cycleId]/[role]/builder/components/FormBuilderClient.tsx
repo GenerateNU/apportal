@@ -25,6 +25,7 @@ import { ROLE_CHIP_CLASS, ROLE_LABEL } from '@/lib/roles'
 import { REVIEWER_ACTOR } from '@/lib/stub-actor'
 import { BlockPalette } from './BlockPalette'
 import { QuestionCard } from './QuestionCard'
+import { QuestionOutline } from './QuestionOutline'
 import { LivePreview } from './LivePreview'
 
 export function FormBuilderClient({
@@ -133,13 +134,18 @@ export function FormBuilderClient({
         </div>
       ) : (
         <div className="grid flex-1 grid-cols-[280px_1fr] overflow-hidden">
-          <div className="overflow-y-auto bg-gray-50 p-4">
-            <BlockPalette
-              cycleId={cycleId}
-              role={role}
-              nextOrder={order.length}
-            />
-          </div>
+          <aside className="flex flex-col overflow-y-auto border-r border-gray-100 bg-white">
+            <div className="p-4">
+              <BlockPalette
+                cycleId={cycleId}
+                role={role}
+                nextOrder={order.length}
+              />
+            </div>
+            <div className="flex-1 border-t border-gray-100 p-4">
+              <QuestionOutline questions={order} />
+            </div>
+          </aside>
 
           <div className="overflow-y-auto bg-gray-50 p-10">
             <DndContext
