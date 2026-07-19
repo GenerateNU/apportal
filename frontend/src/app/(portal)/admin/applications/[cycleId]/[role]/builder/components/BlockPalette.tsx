@@ -37,11 +37,11 @@ export function BlockPalette({
   }
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-      <p className="text-text-default -mx-4 mb-3 border-b border-gray-200 px-4 pb-3 text-base font-semibold tracking-wider">
+    <div>
+      <p className="text-text-subtle mb-2 px-3 text-xs font-medium tracking-wider uppercase">
         Add a block
       </p>
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-0.5">
         {QUESTION_TYPES.map((type) => {
           const meta = QUESTION_TYPE_META[type]
           const Icon = meta.icon
