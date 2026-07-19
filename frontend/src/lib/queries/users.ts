@@ -19,6 +19,15 @@ export function useUsers(reviewerRole?: ReviewerRole, opts?: RequestOptions) {
   })
 }
 
+// Users holding the lead role — e.g. to pick reviewers to assign.
+export function useLeads(opts?: RequestOptions) {
+  return useQuery({
+    queryKey: [...queryKeys.users.lists(), 'lead'],
+    queryFn: async () =>
+      ((await listUsers({ role: 'lead' }, opts)) ?? []) as User[],
+  })
+}
+
 export function useUser(nuid: string, opts?: RequestOptions) {
   return useQuery({
     queryKey: queryKeys.users.detail(nuid),

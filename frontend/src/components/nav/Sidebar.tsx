@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import {
   LayoutDashboard,
   Users,
+  UserPlus,
   FileText,
   RefreshCw,
   Settings,
@@ -18,11 +19,21 @@ import type { Role } from '@/types/roles'
 interface SidebarProps {
   roles: Role[]
   fullName?: string
+  // Whether the user can act as a chief (holds the chief or admin role). Some
+  // reviewer nav items are chief-only actions.
+  isChief?: boolean
+}
+
+type NavItemConfig = {
+  href: string
+  label: string
+  icon: typeof FileText
+  chiefOnly?: boolean
 }
 
 type NavSection = {
   label: string
-  items: { href: string; label: string; icon: typeof FileText }[]
+  items: NavItemConfig[]
 }
 
 const sectionsByRole: Record<Role, NavSection> = {
@@ -45,6 +56,13 @@ const sectionsByRole: Record<Role, NavSection> = {
         icon: LayoutDashboard,
       },
       { href: '/reviewer/applicants', label: 'Applicants', icon: Users },
+      { href: '/reviewer/applications', label: 'Review queue', icon: FileText },
+      {
+        href: '/reviewer/assignments',
+        label: 'Assign reviewers',
+        icon: UserPlus,
+        chiefOnly: true,
+      },
     ],
   },
   admin: {
@@ -92,10 +110,14 @@ function SidebarUser({ fullName }: { fullName: string }) {
   )
 }
 
-export default function Sidebar({ roles, fullName }: SidebarProps) {
+export default function Sidebar({ roles, fullName, isChief }: SidebarProps) {
   const sections = roleOrder
     .filter((role) => roles.includes(role))
     .map((role) => sectionsByRole[role])
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => !item.chiefOnly || isChief),
+    }))
 
   return (
     <aside className="flex h-screen w-60 flex-col border-r border-gray-100 bg-white">
@@ -119,8 +141,8 @@ export default function Sidebar({ roles, fullName }: SidebarProps) {
               {section.label}
             </p>
             <div className="flex flex-col gap-0.5">
-              {section.items.map((item) => (
-                <NavItem key={item.href} {...item} />
+              {section.items.map(({ href, label, icon }) => (
+                <NavItem key={href} href={href} label={label} icon={icon} />
               ))}
             </div>
           </div>

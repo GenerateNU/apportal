@@ -106,10 +106,11 @@ func (h *applicationHandler) get(ctx context.Context, in *ApplicationIDInput) (*
 }
 
 type ListApplicationsInput struct {
-	CycleID  string `query:"cycle_id"`
-	UserNUID string `query:"user_nuid"`
-	Role     string `query:"role"`
-	Stage    string `query:"stage"`
+	CycleID    string `query:"cycle_id"`
+	UserNUID   string `query:"user_nuid"`
+	AssignedTo string `query:"assigned_to" doc:"Limit to applications this lead is assigned to review"`
+	Role       string `query:"role"`
+	Stage      string `query:"stage"`
 }
 
 func (h *applicationHandler) list(ctx context.Context, in *ListApplicationsInput) (*ApplicationsOutput, error) {
@@ -120,7 +121,11 @@ func (h *applicationHandler) list(ctx context.Context, in *ListApplicationsInput
 			return nil, err
 		}
 	}
-	filter := store.ApplicationFilter{CycleID: in.CycleID, UserNUID: in.UserNUID}
+	filter := store.ApplicationFilter{
+		CycleID:    in.CycleID,
+		UserNUID:   in.UserNUID,
+		AssignedTo: in.AssignedTo,
+	}
 	if in.Role != "" {
 		parsed := models.Role(in.Role)
 		if !parsed.Valid() {

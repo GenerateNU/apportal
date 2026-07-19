@@ -27,6 +27,7 @@ export const queryKeys = {
     list: (params?: {
       cycle_id?: string
       user_nuid?: string
+      assigned_to?: string
       stage?: ApplicationStage
       role?: Role
     }) => [...queryKeys.applications.lists(), params ?? {}] as const,
@@ -67,5 +68,19 @@ export const queryKeys = {
     details: () => [...queryKeys.submissions.all, 'detail'] as const,
     detail: (applicationId: string) =>
       [...queryKeys.submissions.details(), applicationId] as const,
+  },
+
+  writtenReviews: {
+    all: ['written-reviews'] as const,
+    lists: () => [...queryKeys.writtenReviews.all, 'list'] as const,
+    list: (applicationId: string) =>
+      [...queryKeys.writtenReviews.lists(), applicationId] as const,
+  },
+
+  leadAssignments: {
+    all: ['lead-assignments'] as const,
+    lists: () => [...queryKeys.leadAssignments.all, 'list'] as const,
+    list: (applicationId: string) =>
+      [...queryKeys.leadAssignments.lists(), applicationId] as const,
   },
 } as const
