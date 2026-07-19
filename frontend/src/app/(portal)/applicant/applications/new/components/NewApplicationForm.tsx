@@ -1,10 +1,17 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-import Link from 'next/link'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import type { Role } from '@/lib/api/types'
 import { useCreateApplication } from '@/lib/queries/applications'
 import { usePutAnswers } from '@/lib/queries/answers'
@@ -80,16 +87,64 @@ function Form({
   const putAnswers = usePutAnswers()
   const putSubmission = usePutSubmission()
 
+  const router = useRouter()
+
   const [values, setValues] = useState<Record<string, AnswerValue>>({})
   const [resumeUrl, setResumeUrl] = useState('')
   const [availability, setAvailability] = useState<Record<string, boolean>>({})
   const [submissionUrl, setSubmissionUrl] = useState('')
   const [error, setError] = useState(false)
+  const [confirmLeave, setConfirmLeave] = useState(false)
 
   const submitting =
     createApplication.isPending ||
     putAnswers.isPending ||
     putSubmission.isPending
+
+  // The form holds no saved state until submit, so any entered content is lost
+  // on leave. Track whether there's anything to lose.
+  const dirty =
+    !submitting &&
+    (resumeUrl.trim() !== '' ||
+      submissionUrl.trim() !== '' ||
+      Object.values(availability).some(Boolean) ||
+      Object.values(values).some(
+        (v) => (v.text?.trim() ?? '') !== '' || (v.options?.length ?? 0) > 0
+      ))
+
+  // Warn on a full-page unload (refresh / tab close / hard nav) while dirty.
+  useEffect(() => {
+    if (!dirty) return
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [dirty])
+
+  // Intercept the browser Back button (App Router has no route-change guard):
+  // push a sentinel history entry so Back fires popstate on this page, then
+  // re-push it and prompt instead of leaving. "Leave and discard" navigates for
+  // real. This traps forward-Back too, which is the intended guard.
+  useEffect(() => {
+    if (!dirty) return
+    window.history.pushState(null, '', window.location.href)
+    const onPopState = () => {
+      window.history.pushState(null, '', window.location.href)
+      setConfirmLeave(true)
+    }
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
+  }, [dirty])
+
+  function handleBack() {
+    if (dirty) {
+      setConfirmLeave(true)
+    } else {
+      router.push('/applicant/applications')
+    }
+  }
 
   const missingRequired = useMemo(
     () =>
@@ -164,13 +219,14 @@ function Form({
 
   return (
     <div className="mx-auto w-full max-w-2xl px-8 py-10">
-      <Link
-        href="/applicant/applications"
+      <button
+        type="button"
+        onClick={handleBack}
         className="text-text-muted hover:text-text-default mb-6 inline-flex items-center gap-1 text-sm"
       >
         <ArrowLeft size={14} />
         My Applications
-      </Link>
+      </button>
 
       <header className="mb-8">
         <h1 className="text-text-default text-2xl font-semibold">
@@ -216,6 +272,29 @@ function Form({
           )}
         </Button>
       </div>
+
+      <Dialog open={confirmLeave} onOpenChange={setConfirmLeave}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Leave without submitting?</DialogTitle>
+            <DialogDescription>
+              Your application hasn&apos;t been submitted yet. If you leave now,
+              the answers you&apos;ve entered will be lost.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmLeave(false)}>
+              Keep editing
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => router.push('/applicant/applications')}
+            >
+              Leave and discard
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
