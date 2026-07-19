@@ -83,4 +83,11 @@ export const queryKeys = {
     list: (applicationId: string) =>
       [...queryKeys.leadAssignments.lists(), applicationId] as const,
   },
+
+  reviewGates: {
+    all: ['review-gates'] as const,
+    lists: () => [...queryKeys.reviewGates.all, 'list'] as const,
+    list: (cycleId: string) =>
+      [...queryKeys.reviewGates.lists(), cycleId] as const,
+  },
 } as const

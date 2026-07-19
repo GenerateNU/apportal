@@ -10,6 +10,7 @@ export type ApplicantApplication = {
   major: string | null
   graduationYear: number | null
   role: Role
+  cycleId: string
   stage: ApplicationStage
   submittedAt: string
 }

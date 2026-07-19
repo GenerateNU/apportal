@@ -6,7 +6,7 @@ import { ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useApplicantsByNuids } from '@/lib/queries/applicants'
 import { useApplications } from '@/lib/queries/applications'
-import { ROLE_CHIP_CLASS, ROLE_LABEL } from '@/lib/roles'
+import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 import { REVIEWER_ACTOR } from '@/lib/stub-actor'
 
 type Scope = 'mine' | 'all'
@@ -81,33 +81,45 @@ export function ReviewQueueClient() {
           </p>
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
-          {applications.map((application) => (
-            <div
-              key={application.id}
-              className="flex items-center justify-between gap-4 rounded-xl border border-gray-100 bg-white p-4"
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-text-default text-sm font-medium">
-                  {nameByNuid[application.user_nuid] ?? application.user_nuid}
-                </span>
-                <span
-                  className={`inline-flex rounded-md px-2 py-0.5 text-xs font-medium ${ROLE_CHIP_CLASS[application.role]}`}
-                >
-                  {ROLE_LABEL[application.role]}
-                </span>
-              </div>
-              <Button
-                variant="outline"
-                onClick={() =>
-                  router.push(`/reviewer/applications/${application.id}`)
-                }
-              >
-                Review
-                <ArrowRight data-icon="inline-end" size={14} />
-              </Button>
-            </div>
-          ))}
+        <div className="flex flex-col gap-8">
+          {ROLE_COLUMNS.map((role) => {
+            const roleApps = applications.filter((a) => a.role === role)
+            if (roleApps.length === 0) return null
+            return (
+              <section key={role}>
+                <h2 className="text-text-default mb-3 text-sm font-semibold">
+                  {ROLE_LABEL[role]}{' '}
+                  <span className="text-text-faint font-normal">
+                    ({roleApps.length})
+                  </span>
+                </h2>
+                <div className="flex flex-col gap-3">
+                  {roleApps.map((application) => (
+                    <div
+                      key={application.id}
+                      className="flex items-center justify-between gap-4 rounded-xl border border-gray-100 bg-white p-4"
+                    >
+                      <span className="text-text-default text-sm font-medium">
+                        {nameByNuid[application.user_nuid] ??
+                          application.user_nuid}
+                      </span>
+                      <Button
+                        variant="outline"
+                        onClick={() =>
+                          router.push(
+                            `/reviewer/applications/${application.id}`
+                          )
+                        }
+                      >
+                        Review
+                        <ArrowRight data-icon="inline-end" size={14} />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )
+          })}
         </div>
       )}
     </div>
