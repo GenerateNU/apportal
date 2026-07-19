@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import {
   LayoutDashboard,
   Users,
+  UserPlus,
   FileText,
   RefreshCw,
   Settings,
@@ -45,6 +46,12 @@ const sectionsByRole: Record<Role, NavSection> = {
         icon: LayoutDashboard,
       },
       { href: '/reviewer/applicants', label: 'Applicants', icon: Users },
+      { href: '/reviewer/applications', label: 'Review queue', icon: FileText },
+      {
+        href: '/reviewer/assignments',
+        label: 'Assign reviewers',
+        icon: UserPlus,
+      },
     ],
   },
   admin: {

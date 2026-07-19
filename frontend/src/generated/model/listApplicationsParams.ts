@@ -9,6 +9,10 @@
 export type ListApplicationsParams = {
 cycle_id?: string;
 user_nuid?: string;
+/**
+ * Limit to applications this lead is assigned to review
+ */
+assigned_to?: string;
 role?: string;
 stage?: string;
 };

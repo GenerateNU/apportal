@@ -13,6 +13,7 @@ export function useApplications(
   params?: {
     cycle_id?: string
     user_nuid?: string
+    assigned_to?: string
     stage?: ApplicationStage
     role?: Role
   },

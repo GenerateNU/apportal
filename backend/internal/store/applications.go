@@ -31,6 +31,9 @@ type ApplicationFilter struct {
 	UserNUID string
 	Role     *models.Role
 	Stage    *models.ApplicationStage
+	// AssignedTo limits results to applications the given lead is assigned to
+	// write-review (via lead_assignments).
+	AssignedTo string
 }
 
 const applicationColumns = `id, cycle_id, user_nuid, application_role, stage, availability, resume_url, submitted_at, updated_at`
@@ -83,6 +86,12 @@ func (s *Store) ListApplications(ctx context.Context, f ApplicationFilter) ([]mo
 	if f.Stage != nil {
 		args = append(args, *f.Stage)
 		query += ` AND stage = $` + strconv.Itoa(len(args))
+	}
+	if f.AssignedTo != "" {
+		args = append(args, f.AssignedTo)
+		query += ` AND EXISTS (SELECT 1 FROM lead_assignments la` +
+			` WHERE la.application_id = applications.id AND la.lead_nuid = $` +
+			strconv.Itoa(len(args)) + `)`
 	}
 	query += ` ORDER BY submitted_at DESC`
 

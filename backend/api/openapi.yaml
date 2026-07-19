@@ -1502,6 +1502,13 @@ paths:
           name: user_nuid
           schema:
             type: string
+        - description: Limit to applications this lead is assigned to review
+          explode: false
+          in: query
+          name: assigned_to
+          schema:
+            description: Limit to applications this lead is assigned to review
+            type: string
         - explode: false
           in: query
           name: role
