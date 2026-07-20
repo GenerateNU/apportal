@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"errors"
+	"strconv"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -42,9 +43,21 @@ func (s *Store) CreateCycle(ctx context.Context, in CycleCreate) (models.Cycle, 
 	return pgx.CollectExactlyOneRow(rows, pgx.RowToStructByPos[models.Cycle])
 }
 
-func (s *Store) ListCycles(ctx context.Context) ([]models.Cycle, error) {
-	const q = `SELECT ` + cycleColumns + ` FROM cycles ORDER BY created_at DESC`
-	rows, err := s.db.Query(ctx, q)
+// CycleFilter holds optional list filters; empty fields are ignored.
+type CycleFilter struct {
+	Status models.CycleStatus
+}
+
+func (s *Store) ListCycles(ctx context.Context, f CycleFilter) ([]models.Cycle, error) {
+	query := `SELECT ` + cycleColumns + ` FROM cycles WHERE 1 = 1`
+	args := []any{}
+	if f.Status != "" {
+		args = append(args, f.Status)
+		query += ` AND status = $` + strconv.Itoa(len(args))
+	}
+	query += ` ORDER BY created_at DESC`
+
+	rows, err := s.db.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -62,6 +75,24 @@ func (s *Store) GetCycle(ctx context.Context, id string) (models.Cycle, error) {
 		return c, ErrNotFound
 	}
 	return c, err
+}
+
+// CycleRoleSummary reports one applicant role's template counts within a
+// cycle via COUNT queries, rather than requiring the caller to fetch every
+// question/challenge/application row just to take its length.
+func (s *Store) CycleRoleSummary(ctx context.Context, cycleID string, role models.Role) (models.CycleRoleSummary, error) {
+	summary := models.CycleRoleSummary{Role: role}
+	const q = `
+		SELECT
+			(SELECT COUNT(*) FROM questions
+				WHERE cycle_id = $1 AND (application_role = $2 OR application_role IS NULL)),
+			(SELECT COUNT(*) FROM code_challenges
+				WHERE cycle_id = $1 AND application_role = $2),
+			(SELECT COUNT(*) FROM applications
+				WHERE cycle_id = $1 AND application_role = $2)`
+	err := s.db.QueryRow(ctx, q, cycleID, role).Scan(
+		&summary.QuestionCount, &summary.ChallengeCount, &summary.SubmissionCount)
+	return summary, err
 }
 
 func (s *Store) UpdateCycle(ctx context.Context, id string, in CycleUpdate) (models.Cycle, error) {

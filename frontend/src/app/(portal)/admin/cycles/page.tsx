@@ -16,8 +16,9 @@ export default async function CyclesPage() {
   const queryClient = new QueryClient()
 
   await queryClient.prefetchQuery({
-    queryKey: queryKeys.cycles.lists(),
-    queryFn: async () => (await listCycles({ actor: REVIEWER_ACTOR })) ?? [],
+    queryKey: queryKeys.cycles.list({}),
+    queryFn: async () =>
+      (await listCycles({}, { actor: REVIEWER_ACTOR })) ?? [],
   })
 
   return (

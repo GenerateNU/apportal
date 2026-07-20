@@ -24,7 +24,7 @@ const OPTS = { actor: REVIEWER_ACTOR }
 
 export function AssignmentsClient() {
   const { data: currentUser } = useCurrentUser()
-  const { data: cycles = [] } = useCycles(OPTS)
+  const { data: cycles = [] } = useCycles({}, OPTS)
   const { data: allApplications = [] } = useApplications({}, OPTS)
   const { data: leads = [] } = useLeads(OPTS)
 

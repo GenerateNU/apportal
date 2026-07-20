@@ -40,7 +40,7 @@ export function ApplicationsClient() {
 
 function Dashboard({ user }: { user: User }) {
   const actor = { nuid: user.nuid, role: 'applicant' }
-  const { data: cycles = [] } = useCycles({ actor })
+  const { data: cycles = [] } = useCycles({}, { actor })
   const { data: applications = [] } = useApplications(
     { user_nuid: user.nuid },
     { actor }

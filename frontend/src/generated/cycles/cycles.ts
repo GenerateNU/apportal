@@ -27,8 +27,10 @@ import type {
 import type {
   CreateCycleInputBody,
   Cycle,
+  CycleTemplateSummary200,
   ErrorModel,
   ListCycles200,
+  ListCyclesParams,
   UpdateCycleInputBody
 } from '.././model';
 
@@ -67,16 +69,18 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
 /**
+ * Optional ?status= filters to one status (draft, open, closed, archived).
  * @summary List cycles
  */
 export const listCycles = (
-    
+    params?: ListCyclesParams,
  options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
 ) => {
       
       
       return customInstance<ListCycles200>(
-      {url: `/cycles`, method: 'GET', signal
+      {url: `/cycles`, method: 'GET',
+        params, signal
     },
       options);
     }
@@ -84,23 +88,23 @@ export const listCycles = (
 
 
 
-export const getListCyclesQueryKey = () => {
+export const getListCyclesQueryKey = (params?: ListCyclesParams,) => {
     return [
-    `/cycles`
+    `/cycles`, ...(params ? [params]: [])
     ] as const;
     }
 
     
-export const getListCyclesQueryOptions = <TData = Awaited<ReturnType<typeof listCycles>>, TError = ErrorModel>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listCycles>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export const getListCyclesQueryOptions = <TData = Awaited<ReturnType<typeof listCycles>>, TError = ErrorModel>(params?: ListCyclesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listCycles>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListCyclesQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getListCyclesQueryKey(params);
 
   
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listCycles>>> = ({ signal }) => listCycles(requestOptions, signal);
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listCycles>>> = ({ signal }) => listCycles(params, requestOptions, signal);
 
       
 
@@ -114,7 +118,7 @@ export type ListCyclesQueryError = ErrorModel
 
 
 export function useListCycles<TData = Awaited<ReturnType<typeof listCycles>>, TError = ErrorModel>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listCycles>>, TError, TData>> & Pick<
+ params: undefined |  ListCyclesParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listCycles>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listCycles>>,
           TError,
@@ -124,7 +128,7 @@ export function useListCycles<TData = Awaited<ReturnType<typeof listCycles>>, TE
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useListCycles<TData = Awaited<ReturnType<typeof listCycles>>, TError = ErrorModel>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listCycles>>, TError, TData>> & Pick<
+ params?: ListCyclesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listCycles>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listCycles>>,
           TError,
@@ -134,7 +138,7 @@ export function useListCycles<TData = Awaited<ReturnType<typeof listCycles>>, TE
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useListCycles<TData = Awaited<ReturnType<typeof listCycles>>, TError = ErrorModel>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listCycles>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ params?: ListCyclesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listCycles>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
@@ -142,11 +146,11 @@ export function useListCycles<TData = Awaited<ReturnType<typeof listCycles>>, TE
  */
 
 export function useListCycles<TData = Awaited<ReturnType<typeof listCycles>>, TError = ErrorModel>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listCycles>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ params?: ListCyclesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listCycles>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getListCyclesQueryOptions(options)
+  const queryOptions = getListCyclesQueryOptions(params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
@@ -378,4 +382,95 @@ export const useUpdateCycle = <TError = ErrorModel | ErrorModel | ErrorModel | E
 
       return useMutation(mutationOptions, queryClient);
     }
+    /**
+ * One entry per applicant role: question count (role-specific plus global), code challenge count, and submitted application count — computed via COUNT queries instead of requiring the full row sets.
+ * @summary Per-role template counts for a cycle
+ */
+export const cycleTemplateSummary = (
+    id: string,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<CycleTemplateSummary200>(
+      {url: `/cycles/${id}/template-summary`, method: 'GET', signal
+    },
+      options);
+    }
+  
+
+
+
+export const getCycleTemplateSummaryQueryKey = (id?: string,) => {
+    return [
+    `/cycles/${id}/template-summary`
+    ] as const;
+    }
+
     
+export const getCycleTemplateSummaryQueryOptions = <TData = Awaited<ReturnType<typeof cycleTemplateSummary>>, TError = ErrorModel>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof cycleTemplateSummary>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getCycleTemplateSummaryQueryKey(id);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof cycleTemplateSummary>>> = ({ signal }) => cycleTemplateSummary(id, requestOptions, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof cycleTemplateSummary>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type CycleTemplateSummaryQueryResult = NonNullable<Awaited<ReturnType<typeof cycleTemplateSummary>>>
+export type CycleTemplateSummaryQueryError = ErrorModel
+
+
+export function useCycleTemplateSummary<TData = Awaited<ReturnType<typeof cycleTemplateSummary>>, TError = ErrorModel>(
+ id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof cycleTemplateSummary>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof cycleTemplateSummary>>,
+          TError,
+          Awaited<ReturnType<typeof cycleTemplateSummary>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCycleTemplateSummary<TData = Awaited<ReturnType<typeof cycleTemplateSummary>>, TError = ErrorModel>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof cycleTemplateSummary>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof cycleTemplateSummary>>,
+          TError,
+          Awaited<ReturnType<typeof cycleTemplateSummary>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCycleTemplateSummary<TData = Awaited<ReturnType<typeof cycleTemplateSummary>>, TError = ErrorModel>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof cycleTemplateSummary>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Per-role template counts for a cycle
+ */
+
+export function useCycleTemplateSummary<TData = Awaited<ReturnType<typeof cycleTemplateSummary>>, TError = ErrorModel>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof cycleTemplateSummary>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getCycleTemplateSummaryQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+

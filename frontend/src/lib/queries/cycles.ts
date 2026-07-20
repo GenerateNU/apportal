@@ -1,18 +1,60 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query'
 import {
   createCycle,
+  cycleTemplateSummary,
   getCycle,
   listCycles,
   updateCycle,
 } from '@/generated/cycles/cycles'
 import type { RequestOptions } from '@/lib/api/orval-mutator'
-import type { Cycle } from '@/lib/api/types'
+import type { Cycle, CycleRoleSummary, CycleStatus } from '@/lib/api/types'
 import { queryKeys } from './keys'
 
-export function useCycles(opts?: RequestOptions) {
+export function useCycles(
+  params?: { status?: CycleStatus },
+  opts?: RequestOptions
+) {
   return useQuery({
-    queryKey: queryKeys.cycles.lists(),
-    queryFn: async () => ((await listCycles(opts)) ?? []) as Cycle[],
+    queryKey: queryKeys.cycles.list(params),
+    queryFn: async () => ((await listCycles(params, opts)) ?? []) as Cycle[],
+  })
+}
+
+// Per-role question/challenge/submission counts for a cycle, computed
+// server-side (COUNT queries) so the caller never has to fetch full row sets
+// just to count them.
+export function useCycleTemplateSummary(
+  cycleId: string,
+  opts?: RequestOptions
+) {
+  return useQuery({
+    queryKey: queryKeys.cycles.templateSummary(cycleId),
+    queryFn: async () =>
+      ((await cycleTemplateSummary(cycleId, opts)) ?? []) as CycleRoleSummary[],
+    enabled: !!cycleId,
+  })
+}
+
+// Fetches the template summary for each cycle, e.g. to build a board of
+// per-cycle × role template cards without pulling every question/challenge/
+// application row across every cycle.
+export function useCycleTemplateSummariesByCycles(
+  cycleIds: string[],
+  opts?: RequestOptions
+) {
+  return useQueries({
+    queries: cycleIds.map((cycleId) => ({
+      queryKey: queryKeys.cycles.templateSummary(cycleId),
+      queryFn: async () =>
+        ((await cycleTemplateSummary(cycleId, opts)) ??
+          []) as CycleRoleSummary[],
+      enabled: !!cycleId,
+    })),
   })
 }
 

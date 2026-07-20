@@ -24,6 +24,7 @@ export type {
   ApplicationStage,
   InterviewRating,
   CycleStatus,
+  CycleRoleSummary,
 } from '@/generated/model'
 export type Role = ApplicationRole
 export type QuestionType = QuestionQuestionType
