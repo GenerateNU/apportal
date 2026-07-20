@@ -21,6 +21,7 @@ func (h *cycleHandler) register(api huma.API) {
 		Method:      http.MethodGet,
 		Path:        "/cycles",
 		Summary:     "List cycles",
+		Description: "Optional ?status= filters to one status (draft, open, closed, archived).",
 		Tags:        []string{"Cycles"},
 	}, h.list)
 
@@ -32,6 +33,15 @@ func (h *cycleHandler) register(api huma.API) {
 		Tags:        []string{"Cycles"},
 		Errors:      []int{http.StatusNotFound},
 	}, h.get)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "cycle-template-summary",
+		Method:      http.MethodGet,
+		Path:        "/cycles/{id}/template-summary",
+		Summary:     "Per-role template counts for a cycle",
+		Description: "One entry per applicant role: question count (role-specific plus global), code challenge count, and submitted application count — computed via COUNT queries instead of requiring the full row sets.",
+		Tags:        []string{"Cycles"},
+	}, h.templateSummary)
 
 	huma.Register(api, huma.Operation{
 		OperationID:   "create-cycle",
@@ -107,12 +117,43 @@ func (h *cycleHandler) create(ctx context.Context, in *CreateCycleInput) (*Cycle
 	return &CycleOutput{Body: cycle}, nil
 }
 
-func (h *cycleHandler) list(ctx context.Context, _ *struct{}) (*CyclesOutput, error) {
-	cycles, err := h.store.ListCycles(ctx)
+type ListCyclesInput struct {
+	Status string `query:"status" doc:"Optional status filter: draft, open, closed, archived"`
+}
+
+func (h *cycleHandler) list(ctx context.Context, in *ListCyclesInput) (*CyclesOutput, error) {
+	filter := store.CycleFilter{}
+	if in.Status != "" {
+		parsed := models.CycleStatus(in.Status)
+		if !parsed.Valid() {
+			return nil, huma.Error422UnprocessableEntity("invalid status")
+		}
+		filter.Status = parsed
+	}
+
+	cycles, err := h.store.ListCycles(ctx, filter)
 	if err != nil {
 		return nil, storeErr(err)
 	}
 	return &CyclesOutput{Body: cycles}, nil
+}
+
+// CycleTemplateSummaryOutput wraps a cycle's per-role template counts.
+type CycleTemplateSummaryOutput struct {
+	Body []models.CycleRoleSummary
+}
+
+func (h *cycleHandler) templateSummary(ctx context.Context, in *CycleIDInput) (*CycleTemplateSummaryOutput, error) {
+	roles := []models.Role{models.RoleSoftwareEngineer, models.RoleSoftwareDesigner}
+	summaries := make([]models.CycleRoleSummary, 0, len(roles))
+	for _, role := range roles {
+		summary, err := h.store.CycleRoleSummary(ctx, in.ID, role)
+		if err != nil {
+			return nil, storeErr(err)
+		}
+		summaries = append(summaries, summary)
+	}
+	return &CycleTemplateSummaryOutput{Body: summaries}, nil
 }
 
 type CycleIDInput struct {

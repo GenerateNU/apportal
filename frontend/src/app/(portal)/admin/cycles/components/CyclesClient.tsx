@@ -24,7 +24,7 @@ function formatDate(iso?: string | null): string | null {
 }
 
 export function CyclesClient() {
-  const { data: cycles = [] } = useCycles({ actor: REVIEWER_ACTOR })
+  const { data: cycles = [] } = useCycles({}, { actor: REVIEWER_ACTOR })
   const [showCreate, setShowCreate] = useState(false)
 
   return (

@@ -1,9 +1,4 @@
-import {
-  useMutation,
-  useQueries,
-  useQuery,
-  useQueryClient,
-} from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   createQuestion,
   deleteQuestion,
@@ -24,23 +19,6 @@ export function useQuestions(
     queryFn: async () =>
       ((await listCycleQuestions(cycleId, { role }, opts)) ?? []) as Question[],
     enabled: !!cycleId,
-  })
-}
-
-// Fetches all questions for each cycle, e.g. to build per-cycle template
-// summaries. Each cycle gets its own cache entry, shared with useQuestions.
-export function useQuestionsByCycles(
-  cycleIds: string[],
-  opts?: RequestOptions
-) {
-  return useQueries({
-    queries: cycleIds.map((cycleId) => ({
-      queryKey: queryKeys.questions.list(cycleId),
-      queryFn: async () =>
-        ((await listCycleQuestions(cycleId, undefined, opts)) ??
-          []) as Question[],
-      enabled: !!cycleId,
-    })),
   })
 }
 

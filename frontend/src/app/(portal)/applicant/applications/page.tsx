@@ -17,8 +17,8 @@ export default async function ApplicationsPage() {
   // Cycles are the same for everyone; the applicant's own applications are
   // fetched client-side once their signed-in identity resolves.
   await queryClient.prefetchQuery({
-    queryKey: queryKeys.cycles.lists(),
-    queryFn: async () => (await listCycles()) ?? [],
+    queryKey: queryKeys.cycles.list({}),
+    queryFn: async () => (await listCycles({})) ?? [],
   })
 
   return (

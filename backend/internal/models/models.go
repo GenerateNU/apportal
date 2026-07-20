@@ -64,6 +64,18 @@ type CodeChallenge struct {
 	CreatedAt    time.Time  `json:"created_at"`
 }
 
+// CycleRoleSummary reports one applicant role's template counts within a
+// cycle: how many questions apply to it (role-specific plus global,
+// role IS NULL), how many code challenges, and how many applications have
+// been submitted. Computed via COUNT queries rather than requiring callers to
+// fetch the full row sets just to take their length.
+type CycleRoleSummary struct {
+	Role            Role `json:"role"`
+	QuestionCount   int  `json:"question_count"`
+	ChallengeCount  int  `json:"challenge_count"`
+	SubmissionCount int  `json:"submission_count"`
+}
+
 type Applicant struct {
 	NUID           string    `json:"nuid"`
 	Email          string    `json:"email"`

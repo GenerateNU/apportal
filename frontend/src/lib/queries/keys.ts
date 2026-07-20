@@ -38,8 +38,12 @@ export const queryKeys = {
   cycles: {
     all: ['cycles'] as const,
     lists: () => [...queryKeys.cycles.all, 'list'] as const,
+    list: (params?: { status?: string }) =>
+      [...queryKeys.cycles.lists(), params ?? {}] as const,
     details: () => [...queryKeys.cycles.all, 'detail'] as const,
     detail: (id: string) => [...queryKeys.cycles.details(), id] as const,
+    templateSummary: (id: string) =>
+      [...queryKeys.cycles.all, 'template-summary', id] as const,
   },
 
   questions: {

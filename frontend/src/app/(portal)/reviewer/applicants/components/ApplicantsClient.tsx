@@ -32,7 +32,7 @@ export function ApplicantsClient() {
     {},
     { actor: REVIEWER_ACTOR }
   )
-  const { data: cycles = [] } = useCycles({ actor: REVIEWER_ACTOR })
+  const { data: cycles = [] } = useCycles({}, { actor: REVIEWER_ACTOR })
 
   const uniqueNUIDs = useMemo(
     () => [...new Set(applications.map((a) => a.user_nuid))],
