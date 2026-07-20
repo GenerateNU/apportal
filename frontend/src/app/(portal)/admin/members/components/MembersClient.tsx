@@ -10,14 +10,11 @@ import { MemberRow } from './MemberRow'
 
 const GRID_COLS = 'grid-cols-[1fr_140px_160px]'
 
-// Deliberately low so infinite scroll visibly kicks in for testing with
-// today's small member list — bump to something like 20-50 once confirmed
-// working.
-const TEST_PAGE_SIZE = 3
+const MEMBERS_PAGE_SIZE = 10
 
 export function MembersClient() {
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage } =
-    useMembersInfinite(TEST_PAGE_SIZE, { actor: REVIEWER_ACTOR })
+    useMembersInfinite(MEMBERS_PAGE_SIZE, { actor: REVIEWER_ACTOR })
   const [search, setSearch] = useState('')
 
   const users = useMemo(
