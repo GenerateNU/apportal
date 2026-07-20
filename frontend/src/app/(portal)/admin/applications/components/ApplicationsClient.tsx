@@ -10,22 +10,36 @@ import {
 import { ROLE_COLUMNS } from '@/lib/roles'
 import { REVIEWER_ACTOR } from '@/lib/stub-actor'
 import type { ApplicationTemplateCard } from './types'
+import { cycleStatusDot, cycleStatusLabel } from './constants'
 import { ApplicationRow } from './ApplicationRow'
 
 const OPTS = { actor: REVIEWER_ACTOR }
 
+function byRecency(a: Cycle, b: Cycle) {
+  return (b.opens_at ?? b.created_at).localeCompare(a.opens_at ?? a.created_at)
+}
+
 export function ApplicationsClient() {
   const { data: cycles = [] } = useCycles({}, OPTS)
 
-  // Default the board to the open cycle so it doesn't grow without bound as
-  // cycles pile up; older cycles collapse into a "Past cycles" folder.
-  const currentCycleId = useMemo(() => {
-    const open = cycles.find((c) => c.status === 'open')
-    if (open) return open.id
-    return [...cycles].sort((a, b) =>
-      (b.opens_at ?? b.created_at).localeCompare(a.opens_at ?? a.created_at)
-    )[0]?.id
-  }, [cycles])
+  // Open cycles stay expanded as a flat grid up top. Draft and past
+  // (closed/archived) cycles each collapse into their own folder so the
+  // board doesn't grow without bound as cycles pile up.
+  const openCycles = useMemo(
+    () => [...cycles].filter((c) => c.status === 'open').sort(byRecency),
+    [cycles]
+  )
+  const draftCycles = useMemo(
+    () => [...cycles].filter((c) => c.status === 'draft').sort(byRecency),
+    [cycles]
+  )
+  const pastCycles = useMemo(
+    () =>
+      [...cycles]
+        .filter((c) => c.status === 'closed' || c.status === 'archived')
+        .sort(byRecency),
+    [cycles]
+  )
 
   const cycleIds = useMemo(() => cycles.map((c) => c.id), [cycles])
   const summaryQueries = useCycleTemplateSummariesByCycles(cycleIds, OPTS)
@@ -60,17 +74,9 @@ export function ApplicationsClient() {
     return map
   }, [cycles, summaryByCycle])
 
-  const currentTemplates = currentCycleId
-    ? (templatesByCycle[currentCycleId] ?? [])
-    : []
-  const pastCycles = useMemo(
-    () =>
-      [...cycles]
-        .filter((c) => c.id !== currentCycleId)
-        .sort((a, b) =>
-          (b.opens_at ?? b.created_at).localeCompare(a.opens_at ?? a.created_at)
-        ),
-    [cycles, currentCycleId]
+  const openTemplates = useMemo(
+    () => openCycles.flatMap((cycle) => templatesByCycle[cycle.id] ?? []),
+    [openCycles, templatesByCycle]
   )
 
   return (
@@ -81,12 +87,40 @@ export function ApplicationsClient() {
         <p className="text-text-faint px-1 text-sm">
           No cycles yet — create one from the Cycles page.
         </p>
+      ) : openCycles.length === 0 && draftCycles.length === 0 ? (
+        <p className="text-text-faint px-1 text-sm">
+          No open or draft cycles right now.
+        </p>
       ) : (
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4">
-          {currentTemplates.map((t) => (
-            <ApplicationRow key={`${t.cycleId}-${t.role}`} template={t} />
-          ))}
-        </div>
+        <>
+          {openCycles.length > 0 && (
+            <div className="flex flex-col gap-2">
+              <h2 className="text-text-faint text-xs font-semibold tracking-wide uppercase">
+                Open cycles
+              </h2>
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4">
+                {openTemplates.map((t) => (
+                  <ApplicationRow key={`${t.cycleId}-${t.role}`} template={t} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {draftCycles.length > 0 && (
+            <div className="flex flex-col gap-2">
+              <h2 className="text-text-faint text-xs font-semibold tracking-wide uppercase">
+                Draft cycles
+              </h2>
+              {draftCycles.map((cycle) => (
+                <CycleFolder
+                  key={cycle.id}
+                  cycle={cycle}
+                  templates={templatesByCycle[cycle.id] ?? []}
+                />
+              ))}
+            </div>
+          )}
+        </>
       )}
 
       {pastCycles.length > 0 && (
@@ -95,7 +129,7 @@ export function ApplicationsClient() {
             Past cycles
           </h2>
           {pastCycles.map((cycle) => (
-            <PastCycleFolder
+            <CycleFolder
               key={cycle.id}
               cycle={cycle}
               templates={templatesByCycle[cycle.id] ?? []}
@@ -107,7 +141,7 @@ export function ApplicationsClient() {
   )
 }
 
-function PastCycleFolder({
+function CycleFolder({
   cycle,
   templates,
 }: {
@@ -132,6 +166,12 @@ function PastCycleFolder({
         <Folder size={16} className="text-text-faint shrink-0" />
         <span className="text-text-default text-sm font-medium">
           {cycle.name}
+        </span>
+        <span className="text-text-subtle flex items-center gap-1.5 text-xs">
+          <span
+            className={`h-2 w-2 shrink-0 rounded-full ${cycleStatusDot[cycle.status]}`}
+          />
+          {cycleStatusLabel[cycle.status]}
         </span>
       </button>
       {open && (
