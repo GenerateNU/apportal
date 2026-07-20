@@ -6,18 +6,23 @@
  * OpenAPI spec version: 0.1.0
  */
 import {
+  useInfiniteQuery,
   useMutation,
   useQuery
 } from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
+  DefinedUseInfiniteQueryResult,
   DefinedUseQueryResult,
+  InfiniteData,
   MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
+  UseInfiniteQueryOptions,
+  UseInfiniteQueryResult,
   UseMutationOptions,
   UseMutationResult,
   UseQueryOptions,
@@ -28,10 +33,10 @@ import type {
   CreateUserInputBody,
   ErrorModel,
   GetUserByEmailParams,
-  ListUsers200,
   ListUsersParams,
   UpdateUserInputBody,
-  User
+  User,
+  UsersOutputBody
 } from '.././model';
 
 import { customInstance } from '../../lib/api/orval-mutator';
@@ -78,7 +83,7 @@ export const listUsers = (
 ) => {
       
       
-      return customInstance<ListUsers200>(
+      return customInstance<UsersOutputBody>(
       {url: `/users`, method: 'GET',
         params, signal
     },
@@ -88,6 +93,12 @@ export const listUsers = (
 
 
 
+export const getListUsersInfiniteQueryKey = (params?: ListUsersParams,) => {
+    return [
+    'infinate', `/users`, ...(params ? [params]: [])
+    ] as const;
+    }
+
 export const getListUsersQueryKey = (params?: ListUsersParams,) => {
     return [
     `/users`, ...(params ? [params]: [])
@@ -95,6 +106,72 @@ export const getListUsersQueryKey = (params?: ListUsersParams,) => {
     }
 
     
+export const getListUsersInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof listUsers>>, ListUsersParams['offset']>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(params?: ListUsersParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData, QueryKey, ListUsersParams['offset']>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListUsersInfiniteQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listUsers>>, QueryKey, ListUsersParams['offset']> = ({ signal, pageParam }) => listUsers({...params, 'offset': pageParam || params?.['offset']}, requestOptions, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseInfiniteQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData, QueryKey, ListUsersParams['offset']> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListUsersInfiniteQueryResult = NonNullable<Awaited<ReturnType<typeof listUsers>>>
+export type ListUsersInfiniteQueryError = ErrorModel | ErrorModel | ErrorModel | ErrorModel
+
+
+export function useListUsersInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listUsers>>, ListUsersParams['offset']>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
+ params: undefined |  ListUsersParams, options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData, QueryKey, ListUsersParams['offset']>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listUsers>>,
+          TError,
+          Awaited<ReturnType<typeof listUsers>>, QueryKey
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListUsersInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listUsers>>, ListUsersParams['offset']>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
+ params?: ListUsersParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData, QueryKey, ListUsersParams['offset']>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listUsers>>,
+          TError,
+          Awaited<ReturnType<typeof listUsers>>, QueryKey
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListUsersInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listUsers>>, ListUsersParams['offset']>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
+ params?: ListUsersParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData, QueryKey, ListUsersParams['offset']>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List reviewers
+ */
+
+export function useListUsersInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listUsers>>, ListUsersParams['offset']>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
+ params?: ListUsersParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData, QueryKey, ListUsersParams['offset']>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient 
+ ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListUsersInfiniteQueryOptions(params,options)
+
+  const query = useInfiniteQuery(queryOptions, queryClient) as  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
 export const getListUsersQueryOptions = <TData = Awaited<ReturnType<typeof listUsers>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(params?: ListUsersParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 

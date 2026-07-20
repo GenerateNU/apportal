@@ -1,17 +1,29 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Search } from 'lucide-react'
-import { useUsers } from '@/lib/queries/users'
+import type { User } from '@/lib/api/types'
+import { useMembersInfinite } from '@/lib/queries/users'
 import { REVIEWER_ACTOR } from '@/lib/stub-actor'
 import { isMember } from '../lib/role-meta'
 import { MemberRow } from './MemberRow'
 
 const GRID_COLS = 'grid-cols-[1fr_140px_160px]'
 
+// Deliberately low so infinite scroll visibly kicks in for testing with
+// today's small member list — bump to something like 20-50 once confirmed
+// working.
+const TEST_PAGE_SIZE = 3
+
 export function MembersClient() {
-  const { data: users = [] } = useUsers(undefined, { actor: REVIEWER_ACTOR })
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage } =
+    useMembersInfinite(TEST_PAGE_SIZE, { actor: REVIEWER_ACTOR })
   const [search, setSearch] = useState('')
+
+  const users = useMemo(
+    () => (data?.pages.flatMap((page) => page?.users ?? []) ?? []) as User[],
+    [data]
+  )
 
   const members = useMemo(() => {
     const query = search.trim().toLowerCase()
@@ -25,6 +37,25 @@ export function MembersClient() {
       )
       .sort((a, b) => a.full_name.localeCompare(b.full_name))
   }, [users, search])
+
+  // Auto-loads the next page once the sentinel row scrolls into view —
+  // classic infinite-scroll trigger, no extra dependency needed.
+  const sentinelRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const sentinel = sentinelRef.current
+    if (!sentinel) return
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage()
+        }
+      },
+      { rootMargin: '200px' }
+    )
+    observer.observe(sentinel)
+    return () => observer.disconnect()
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage])
 
   return (
     <div className="flex flex-col gap-6 p-8">
@@ -65,6 +96,13 @@ export function MembersClient() {
               <MemberRow key={user.nuid} user={user} gridCols={GRID_COLS} />
             ))}
           </div>
+          {hasNextPage && (
+            <div ref={sentinelRef} className="p-3 text-center">
+              <p className="text-text-faint text-xs">
+                {isFetchingNextPage ? 'Loading more…' : ''}
+              </p>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -31,6 +31,14 @@ export default defineConfig({
           signal: true,
           version: 5,
         },
+        operations: {
+          'list-users': {
+            query: {
+              useInfinite: true,
+              useInfiniteQueryParam: 'offset',
+            },
+          },
+        },
       },
     },
   },

@@ -5,17 +5,21 @@ import {
   getUserByEmail,
   listUsers,
   updateUser,
+  useListUsersInfinite,
 } from '@/generated/users/users'
 import type { RequestOptions } from '@/lib/api/orval-mutator'
 import type { ReviewerRole, User } from '@/lib/api/types'
 import { useAuth } from '@/lib/auth/auth-context'
 import { queryKeys } from './keys'
 
+// Omitting `limit` (as both hooks below do) returns every matching user in
+// one unpaginated response — e.g. useLeads backs the reviewer-assignment
+// dropdown, which needs every lead, never just a page of them.
 export function useUsers(reviewerRole?: ReviewerRole, opts?: RequestOptions) {
   return useQuery({
     queryKey: queryKeys.users.list(reviewerRole),
     queryFn: async () =>
-      ((await listUsers({ role: reviewerRole }, opts)) ?? []) as User[],
+      ((await listUsers({ role: reviewerRole }, opts))?.users ?? []) as User[],
   })
 }
 
@@ -24,8 +28,25 @@ export function useLeads(opts?: RequestOptions) {
   return useQuery({
     queryKey: [...queryKeys.users.lists(), 'lead'],
     queryFn: async () =>
-      ((await listUsers({ role: 'lead' }, opts)) ?? []) as User[],
+      ((await listUsers({ role: 'lead' }, opts))?.users ?? []) as User[],
   })
+}
+
+// Paginated member list for admin/members' infinite scroll. `limit` is a
+// fixed page size chosen by the caller — pass a low value to test scrolling,
+// a real one (20-50) once that's confirmed working.
+export function useMembersInfinite(limit: number, opts?: RequestOptions) {
+  return useListUsersInfinite(
+    { limit },
+    {
+      query: {
+        initialPageParam: 0,
+        getNextPageParam: (lastPage, allPages) =>
+          lastPage?.has_more ? allPages.length * limit : undefined,
+      },
+      request: opts,
+    }
+  )
 }
 
 export function useUser(nuid: string, opts?: RequestOptions) {

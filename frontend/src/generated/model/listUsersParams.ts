@@ -11,4 +11,12 @@ export type ListUsersParams = {
  * Optional role filter
  */
 role?: string;
+/**
+ * Max results per page; omit (or 0) to return all matching users
+ */
+limit?: number;
+/**
+ * Number of results to skip
+ */
+offset?: number;
 };
