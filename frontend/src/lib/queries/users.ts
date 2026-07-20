@@ -33,8 +33,7 @@ export function useLeads(opts?: RequestOptions) {
 }
 
 // Paginated member list for admin/members' infinite scroll. `limit` is a
-// fixed page size chosen by the caller — pass a low value to test scrolling,
-// a real one (20-50) once that's confirmed working.
+// fixed page size chosen by the caller.
 export function useMembersInfinite(limit: number, opts?: RequestOptions) {
   return useListUsersInfinite(
     { limit },
