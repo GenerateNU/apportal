@@ -70,7 +70,7 @@ const sectionsByRole: Record<Role, NavSection> = {
     items: [
       { href: '/admin/cycles', label: 'Cycles', icon: RefreshCw },
       { href: '/admin/applications', label: 'Applications', icon: FileText },
-      { href: '/admin/roles', label: 'Roles', icon: Settings },
+      { href: '/admin/members', label: 'Members', icon: Settings },
     ],
   },
 }

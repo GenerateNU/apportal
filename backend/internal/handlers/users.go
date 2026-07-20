@@ -72,7 +72,10 @@ type UserOutput struct {
 }
 
 type UsersOutput struct {
-	Body []models.User
+	Body struct {
+		Users   []models.User `json:"users"`
+		HasMore bool          `json:"has_more" doc:"True if more results exist beyond this page"`
+	}
 }
 
 type CreateUserInput struct {
@@ -113,7 +116,9 @@ func (h *userHandler) create(ctx context.Context, in *CreateUserInput) (*UserOut
 }
 
 type ListUsersInput struct {
-	Role string `query:"role" doc:"Optional role filter"`
+	Role   string `query:"role" doc:"Optional role filter"`
+	Limit  int    `query:"limit" doc:"Max results per page; omit (or 0) to return all matching users"`
+	Offset int    `query:"offset" doc:"Number of results to skip"`
 }
 
 func (h *userHandler) list(ctx context.Context, in *ListUsersInput) (*UsersOutput, error) {
@@ -129,11 +134,19 @@ func (h *userHandler) list(ctx context.Context, in *ListUsersInput) (*UsersOutpu
 		role = &parsed
 	}
 
-	users, err := h.store.ListUsers(ctx, role)
+	var limit *int
+	if in.Limit > 0 {
+		limit = &in.Limit
+	}
+
+	users, hasMore, err := h.store.ListUsers(ctx, role, limit, in.Offset)
 	if err != nil {
 		return nil, storeErr(err)
 	}
-	return &UsersOutput{Body: users}, nil
+	out := &UsersOutput{}
+	out.Body.Users = users
+	out.Body.HasMore = hasMore
+	return out, nil
 }
 
 type UserNUIDInput struct {

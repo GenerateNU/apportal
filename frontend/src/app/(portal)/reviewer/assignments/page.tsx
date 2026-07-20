@@ -27,7 +27,9 @@ export default async function AssignmentsPage() {
   await Promise.all([
     queryClient.prefetchQuery({
       queryKey: [...queryKeys.users.lists(), 'lead'],
-      queryFn: () => listUsers({ role: 'lead' }, { actor: REVIEWER_ACTOR }),
+      queryFn: async () =>
+        (await listUsers({ role: 'lead' }, { actor: REVIEWER_ACTOR }))?.users ??
+        [],
     }),
     ...uniqueNUIDs.map((nuid) =>
       queryClient.prefetchQuery({

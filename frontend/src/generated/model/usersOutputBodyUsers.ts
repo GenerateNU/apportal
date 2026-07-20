@@ -7,4 +7,4 @@
  */
 import type { User } from './user';
 
-export type ListUsers200 = User[] | null;
+export type UsersOutputBodyUsers = User[] | null;

@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
@@ -62,21 +63,40 @@ func (s *Store) CreateUser(ctx context.Context, in UserCreate) (models.User, err
 	return u, err
 }
 
-// ListUsers returns all users, optionally filtered to those holding a role.
-func (s *Store) ListUsers(ctx context.Context, role *models.UserRole) ([]models.User, error) {
+// ListUsers returns users, optionally filtered to those holding a role. When
+// limit is nil, all matching rows are returned (unpaginated — e.g. the
+// reviewer-assignment lead dropdown needs every lead, never just a page of
+// them). When limit is set, it fetches one extra row to detect whether more
+// pages remain, then trims back down to limit.
+func (s *Store) ListUsers(ctx context.Context, role *models.UserRole, limit *int, offset int) ([]models.User, bool, error) {
 	query := `SELECT ` + userColumns + ` FROM users`
 	args := []any{}
 	if role != nil {
-		query += ` WHERE $1::user_role = ANY(roles)`
 		args = append(args, string(*role))
+		query += fmt.Sprintf(` WHERE $%d::user_role = ANY(roles)`, len(args))
 	}
 	query += ` ORDER BY full_name`
 
+	if limit != nil {
+		args = append(args, *limit+1, offset)
+		query += fmt.Sprintf(` LIMIT $%d OFFSET $%d`, len(args)-1, len(args))
+	}
+
 	rows, err := s.db.Query(ctx, query, args...)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
-	return pgx.CollectRows(rows, pgx.RowToStructByPos[models.User])
+	users, err := pgx.CollectRows(rows, pgx.RowToStructByPos[models.User])
+	if err != nil {
+		return nil, false, err
+	}
+
+	hasMore := false
+	if limit != nil && len(users) > *limit {
+		users = users[:*limit]
+		hasMore = true
+	}
+	return users, hasMore, nil
 }
 
 func (s *Store) GetUser(ctx context.Context, nuid string) (models.User, error) {
