@@ -46,14 +46,11 @@ export function ApplicationRow({
         <p className="text-text-secondary text-base font-medium">
           {template.title}
         </p>
-        <span
-          className={`shrink-0 rounded-md px-1.5 py-0.5 text-xs font-medium ${
-            template.isPublished
-              ? 'bg-status-open/10 text-status-open'
-              : 'bg-gray-100 text-text-faint'
-          }`}
-        >
-          {template.isPublished ? 'Published' : 'Draft'}
+        <span className="text-text-subtle flex shrink-0 items-center gap-1.5 text-xs">
+          <span
+            className={`h-2 w-2 shrink-0 rounded-full ${cycleStatusDot[template.status]}`}
+          />
+          {cycleStatusLabel[template.status]}
         </span>
       </div>
       <span

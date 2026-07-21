@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { ApplicationTemplateApplicationRole } from './applicationTemplateApplicationRole';
+import type { ApplicationTemplateStatus } from './applicationTemplateStatus';
 
 export interface ApplicationTemplate {
   /** A URL to the JSON Schema for this object. */
@@ -17,8 +18,8 @@ export interface ApplicationTemplate {
   description?: string;
   id: string;
   instructions?: string;
-  is_published: boolean;
   opens_at?: string;
+  status: ApplicationTemplateStatus;
   title: string;
   updated_at: string;
 }

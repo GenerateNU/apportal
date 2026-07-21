@@ -80,7 +80,7 @@ export function ApplicationsClient() {
           closesAt: cycle.closes_at ?? null,
           role,
           title: template?.title ?? `${ROLE_LABEL[role]} Application`,
-          isPublished: template?.is_published ?? false,
+          status: template?.status ?? 'draft',
           questionCount: summary?.question_count ?? 0,
           challengeCount: summary?.challenge_count ?? 0,
           submissionCount: summary?.submission_count ?? 0,

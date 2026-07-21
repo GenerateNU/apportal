@@ -12,7 +12,7 @@ export type ApplicationTemplateCard = {
   closesAt: string | null
   role: Role
   title: string
-  isPublished: boolean
+  status: CycleStatus
   questionCount: number
   challengeCount: number
   submissionCount: number

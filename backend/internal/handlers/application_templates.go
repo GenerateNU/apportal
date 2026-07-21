@@ -71,12 +71,12 @@ type UpdateApplicationTemplateInput struct {
 	ID   string `path:"id" doc:"Cycle ID"`
 	Role string `query:"role" doc:"Applicant role"`
 	Body struct {
-		Title        *string    `json:"title,omitempty"`
-		Description  *string    `json:"description,omitempty"`
-		Instructions *string    `json:"instructions,omitempty"`
-		OpensAt      *time.Time `json:"opens_at,omitempty"`
-		ClosesAt     *time.Time `json:"closes_at,omitempty"`
-		IsPublished  *bool      `json:"is_published,omitempty"`
+		Title        *string             `json:"title,omitempty"`
+		Description  *string             `json:"description,omitempty"`
+		Instructions *string             `json:"instructions,omitempty"`
+		OpensAt      *time.Time          `json:"opens_at,omitempty"`
+		ClosesAt     *time.Time          `json:"closes_at,omitempty"`
+		Status       *models.CycleStatus `json:"status,omitempty"`
 	}
 }
 
@@ -88,6 +88,9 @@ func (h *applicationTemplateHandler) update(ctx context.Context, in *UpdateAppli
 	if err != nil {
 		return nil, err
 	}
+	if in.Body.Status != nil && !in.Body.Status.Valid() {
+		return nil, huma.Error422UnprocessableEntity("invalid status")
+	}
 
 	t, err := h.store.UpdateApplicationTemplate(ctx, in.ID, role, store.ApplicationTemplateUpdate{
 		Title:        in.Body.Title,
@@ -95,7 +98,7 @@ func (h *applicationTemplateHandler) update(ctx context.Context, in *UpdateAppli
 		Instructions: in.Body.Instructions,
 		OpensAt:      in.Body.OpensAt,
 		ClosesAt:     in.Body.ClosesAt,
-		IsPublished:  in.Body.IsPublished,
+		Status:       in.Body.Status,
 	})
 	if err != nil {
 		return nil, storeErr(err)

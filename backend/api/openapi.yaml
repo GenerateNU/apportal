@@ -132,10 +132,15 @@ components:
           type: string
         instructions:
           type: string
-        is_published:
-          type: boolean
         opens_at:
           format: date-time
+          type: string
+        status:
+          enum:
+            - draft
+            - open
+            - closed
+            - archived
           type: string
         title:
           type: string
@@ -147,7 +152,7 @@ components:
         - cycle_id
         - application_role
         - title
-        - is_published
+        - status
         - created_at
         - updated_at
       type: object
@@ -1065,10 +1070,15 @@ components:
           type: string
         instructions:
           type: string
-        is_published:
-          type: boolean
         opens_at:
           format: date-time
+          type: string
+        status:
+          enum:
+            - draft
+            - open
+            - closed
+            - archived
           type: string
         title:
           type: string

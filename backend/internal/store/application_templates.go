@@ -18,10 +18,10 @@ type ApplicationTemplateUpdate struct {
 	Instructions *string
 	OpensAt      *time.Time
 	ClosesAt     *time.Time
-	IsPublished  *bool
+	Status       *models.CycleStatus
 }
 
-const applicationTemplateColumns = `id, cycle_id, application_role, title, description, instructions, opens_at, closes_at, is_published, created_at, updated_at`
+const applicationTemplateColumns = `id, cycle_id, application_role, title, description, instructions, opens_at, closes_at, status, created_at, updated_at`
 
 // defaultTemplateTitle seeds a new template's title before an admin has
 // customized it.
@@ -88,11 +88,11 @@ func (s *Store) UpdateApplicationTemplate(ctx context.Context, cycleID string, r
 			instructions = COALESCE($5, instructions),
 			opens_at     = COALESCE($6, opens_at),
 			closes_at    = COALESCE($7, closes_at),
-			is_published = COALESCE($8, is_published)
+			status       = COALESCE($8, status)
 		WHERE cycle_id = $1 AND application_role = $2
 		RETURNING ` + applicationTemplateColumns
 	rows, err := s.db.Query(ctx, q, cycleID, role,
-		in.Title, in.Description, in.Instructions, in.OpensAt, in.ClosesAt, in.IsPublished)
+		in.Title, in.Description, in.Instructions, in.OpensAt, in.ClosesAt, in.Status)
 	if err != nil {
 		return models.ApplicationTemplate{}, err
 	}

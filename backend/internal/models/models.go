@@ -32,22 +32,22 @@ type Cycle struct {
 
 // ApplicationTemplate holds per-role application content within a cycle
 // (e.g. Software Engineer vs Software Designer applications in the same
-// cycle each get their own title/description/instructions). OpensAt/
-// ClosesAt/IsPublished are stored for future use but are not yet enforced
-// anywhere — cycle-level status/dates remain the only thing that gates
-// access.
+// cycle each get their own title/description/instructions/status). OpensAt/
+// ClosesAt are stored for future use but are not yet enforced anywhere —
+// Status (mirroring cycle_status) is independent of the owning cycle's own
+// status once set, letting a role's application lag or lead the cycle.
 type ApplicationTemplate struct {
-	ID              string     `json:"id"`
-	CycleID         string     `json:"cycle_id"`
-	ApplicationRole Role       `json:"application_role"`
-	Title           string     `json:"title"`
-	Description     *string    `json:"description,omitempty"`
-	Instructions    *string    `json:"instructions,omitempty"`
-	OpensAt         *time.Time `json:"opens_at,omitempty"`
-	ClosesAt        *time.Time `json:"closes_at,omitempty"`
-	IsPublished     bool       `json:"is_published"`
-	CreatedAt       time.Time  `json:"created_at"`
-	UpdatedAt       time.Time  `json:"updated_at"`
+	ID              string      `json:"id"`
+	CycleID         string      `json:"cycle_id"`
+	ApplicationRole Role        `json:"application_role"`
+	Title           string      `json:"title"`
+	Description     *string     `json:"description,omitempty"`
+	Instructions    *string     `json:"instructions,omitempty"`
+	OpensAt         *time.Time  `json:"opens_at,omitempty"`
+	ClosesAt        *time.Time  `json:"closes_at,omitempty"`
+	Status          CycleStatus `json:"status"`
+	CreatedAt       time.Time   `json:"created_at"`
+	UpdatedAt       time.Time   `json:"updated_at"`
 }
 
 type CycleStage struct {

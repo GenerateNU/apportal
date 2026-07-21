@@ -5,6 +5,7 @@
  * Generate application portal — applications, reviews, and the hiring pipeline.
  * OpenAPI spec version: 0.1.0
  */
+import type { UpdateApplicationTemplateInputBodyStatus } from './updateApplicationTemplateInputBodyStatus';
 
 export interface UpdateApplicationTemplateInputBody {
   /** A URL to the JSON Schema for this object. */
@@ -12,7 +13,7 @@ export interface UpdateApplicationTemplateInputBody {
   closes_at?: string;
   description?: string;
   instructions?: string;
-  is_published?: boolean;
   opens_at?: string;
+  status?: UpdateApplicationTemplateInputBodyStatus;
   title?: string;
 }
