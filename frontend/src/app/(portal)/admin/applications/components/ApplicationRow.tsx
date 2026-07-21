@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { Clock, Code2, FileQuestion, Users } from 'lucide-react'
 import { Tooltip } from '@/components/Tooltip'
-import { ROLE_LABEL } from '@/lib/roles'
 import type { ApplicationTemplateCard } from './types'
 import { cycleStatusDot, cycleStatusLabel, paletteClass } from './constants'
 
@@ -43,9 +42,20 @@ export function ApplicationRow({
         </Tooltip>
       </div>
 
-      <p className="text-text-secondary mt-2 text-base font-medium">
-        {ROLE_LABEL[template.role]} Application
-      </p>
+      <div className="mt-2 flex items-center gap-2">
+        <p className="text-text-secondary text-base font-medium">
+          {template.title}
+        </p>
+        <span
+          className={`shrink-0 rounded-md px-1.5 py-0.5 text-xs font-medium ${
+            template.isPublished
+              ? 'bg-status-open/10 text-status-open'
+              : 'bg-gray-100 text-text-faint'
+          }`}
+        >
+          {template.isPublished ? 'Published' : 'Draft'}
+        </span>
+      </div>
       <span
         className={`mt-2 inline-block rounded-md px-2 py-0.5 text-xs font-medium ${paletteClass(template.cycleColorIndex)}`}
       >

@@ -11,6 +11,8 @@ export type ApplicationTemplateCard = {
   opensAt: string | null
   closesAt: string | null
   role: Role
+  title: string
+  isPublished: boolean
   questionCount: number
   challengeCount: number
   submissionCount: number
