@@ -6,16 +6,21 @@ import { ArrowLeft, Check, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import type { Role, WrittenAnswer } from '@/lib/api/types'
+import type { Role } from '@/lib/api/types'
 import { useAnswers } from '@/lib/queries/answers'
 import { useApplicant } from '@/lib/queries/applicants'
+import { useApplication } from '@/lib/queries/applications'
+import { useChallenges } from '@/lib/queries/challenges'
 import { useQuestions } from '@/lib/queries/questions'
+import { useSubmission } from '@/lib/queries/submissions'
 import {
   useUpsertWrittenReview,
   useWrittenReviews,
 } from '@/lib/queries/written-reviews'
 import { ROLE_LABEL } from '@/lib/roles'
 import { REVIEWER_ACTOR } from '@/lib/stub-actor'
+import { ApplicationFields } from '@/app/(portal)/applicant/applications/components/ApplicationFields'
+import type { AnswerValue } from '@/app/(portal)/applicant/applications/components/QuestionField'
 
 const OPTS = { actor: REVIEWER_ACTOR }
 const TEXTAREA_CLASS =
@@ -23,12 +28,7 @@ const TEXTAREA_CLASS =
 
 type ScoreEntry = { score: string; comment: string }
 
-function answerText(a: WrittenAnswer): string {
-  if (a.answer_text) return a.answer_text
-  const opts = a.answer_options
-  if (Array.isArray(opts) && opts.length) return (opts as string[]).join(', ')
-  return '—'
-}
+const noop = () => {}
 
 export function ReviewClient({
   applicationId,
@@ -42,8 +42,11 @@ export function ReviewClient({
   applicantNuid: string
 }) {
   const { data: applicant } = useApplicant(applicantNuid, OPTS)
+  const { data: application } = useApplication(applicationId, OPTS)
   const { data: answers = [] } = useAnswers(applicationId, OPTS)
   const { data: questions = [] } = useQuestions(cycleId, role, OPTS)
+  const { data: challenges = [] } = useChallenges(cycleId, role, OPTS)
+  const { data: submission } = useSubmission(applicationId, OPTS)
   const { data: reviews = [] } = useWrittenReviews(applicationId, OPTS)
   const upsert = useUpsertWrittenReview()
 
@@ -64,6 +67,18 @@ export function ReviewClient({
       ),
     [answers, questionById]
   )
+
+  // Answer values keyed by question id, in the shape ApplicationFields expects.
+  const values = useMemo(() => {
+    const map: Record<string, AnswerValue> = {}
+    for (const answer of answers) {
+      const opts = answer.answer_options
+      map[answer.question_id] = Array.isArray(opts)
+        ? { options: opts as string[] }
+        : { text: answer.answer_text ?? '' }
+    }
+    return map
+  }, [answers])
 
   const [scores, setScores] = useState<Record<string, ScoreEntry>>({})
   const [overall, setOverall] = useState('')
@@ -154,25 +169,19 @@ export function ReviewClient({
           <h2 className="text-text-subtle mb-4 text-xs font-medium tracking-wider uppercase">
             Application
           </h2>
-          {orderedAnswers.length === 0 ? (
-            <p className="text-text-faint text-sm">No answers submitted.</p>
-          ) : (
-            <div className="flex flex-col gap-5">
-              {orderedAnswers.map((answer, i) => {
-                const question = questionById.get(answer.question_id)
-                return (
-                  <div key={answer.id}>
-                    <p className="text-text-default text-sm font-medium">
-                      {i + 1}. {question?.question_text ?? 'Question'}
-                    </p>
-                    <p className="text-text-muted mt-1.5 text-sm whitespace-pre-wrap">
-                      {answerText(answer)}
-                    </p>
-                  </div>
-                )
-              })}
-            </div>
-          )}
+          <ApplicationFields
+            questions={questions}
+            challenge={challenges[0]}
+            values={values}
+            onValueChange={noop}
+            resumeUrl={application?.resume_url ?? ''}
+            onResumeChange={noop}
+            availability={application?.availability ?? {}}
+            onAvailabilityChange={noop}
+            submissionUrl={submission?.submission_url ?? ''}
+            onSubmissionChange={noop}
+            disabled
+          />
         </div>
 
         {/* Review */}

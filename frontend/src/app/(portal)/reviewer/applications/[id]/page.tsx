@@ -7,6 +7,8 @@ import {
 import { listAnswers } from '@/generated/answers/answers'
 import { getApplicant } from '@/generated/applicants/applicants'
 import { getApplication } from '@/generated/applications/applications'
+import { listCycleChallenges } from '@/generated/code-challenges/code-challenges'
+import { listCodeSubmissions } from '@/generated/code-submissions/code-submissions'
 import { listCycleQuestions } from '@/generated/questions/questions'
 import { listWrittenReviews } from '@/generated/written-reviews/written-reviews'
 import type { Application, Role } from '@/lib/api/types'
@@ -60,6 +62,19 @@ export default async function ReviewPage({
       queryKey: queryKeys.applicants.detail(application.user_nuid),
       queryFn: () =>
         getApplicant(application.user_nuid, { actor: REVIEWER_ACTOR }),
+    }),
+    queryClient.prefetchQuery({
+      queryKey: queryKeys.challenges.list(application.cycle_id, role),
+      queryFn: () =>
+        listCycleChallenges(
+          application.cycle_id,
+          { role },
+          { actor: REVIEWER_ACTOR }
+        ),
+    }),
+    queryClient.prefetchQuery({
+      queryKey: queryKeys.submissions.detail(id),
+      queryFn: () => listCodeSubmissions(id, { actor: REVIEWER_ACTOR }),
     }),
   ])
 
