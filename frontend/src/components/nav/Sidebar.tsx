@@ -3,7 +3,6 @@
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import {
-  LayoutDashboard,
   Users,
   UserPlus,
   FileText,
@@ -50,11 +49,6 @@ const sectionsByRole: Record<Role, NavSection> = {
   reviewer: {
     label: 'Review',
     items: [
-      {
-        href: '/reviewer/dashboard',
-        label: 'Dashboard',
-        icon: LayoutDashboard,
-      },
       { href: '/reviewer/applicants', label: 'Applicants', icon: Users },
       { href: '/reviewer/applications', label: 'Review queue', icon: FileText },
       {
