@@ -14,9 +14,9 @@ CREATE TABLE application_templates (
   title            TEXT              NOT NULL,
   description      TEXT,                                  -- shown at the top of the form
   instructions     TEXT,                                  -- any submission instructions
-  opens_at         TIMESTAMPTZ,                            -- unused override, see note above
-  closes_at        TIMESTAMPTZ,                            -- unused override, see note above
-  is_published     BOOLEAN           NOT NULL DEFAULT FALSE, -- unused flag, see note above
+  opens_at         TIMESTAMPTZ,                            
+  closes_at        TIMESTAMPTZ,                            
+  is_published     BOOLEAN           NOT NULL DEFAULT FALSE,
   created_at       TIMESTAMPTZ       NOT NULL DEFAULT NOW(),
   updated_at       TIMESTAMPTZ       NOT NULL DEFAULT NOW(),
 
