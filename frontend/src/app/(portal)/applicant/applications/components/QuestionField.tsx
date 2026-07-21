@@ -7,15 +7,17 @@ import type { Question } from '@/lib/api/types'
 export type AnswerValue = { text?: string; options?: string[] }
 
 const TEXTAREA_CLASS =
-  'border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 min-h-24 w-full rounded-lg border bg-transparent px-2.5 py-2 text-sm transition-colors outline-none focus-visible:ring-3'
+  'border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 min-h-24 w-full rounded-lg border bg-transparent px-2.5 py-2 text-base transition-colors outline-none focus-visible:ring-3'
 
 export function QuestionField({
   question,
+  index,
   value,
   onChange,
   disabled = false,
 }: {
   question: Question
+  index: number
   value: AnswerValue
   onChange: (next: AnswerValue) => void
   disabled?: boolean
@@ -23,14 +25,18 @@ export function QuestionField({
   const options = question.options ?? []
 
   return (
-    <div className="flex flex-col gap-1.5">
-      <Label className="text-text-default">
-        {question.question_text}
+    <div
+      id={`question-${question.id}`}
+      className="flex flex-col gap-1.5 rounded-lg border border-gray-100 p-4 scroll-mt-6"
+    >
+      <Label className="text-text-default text-base">
+        {index + 1}. {question.question_text}
         {question.is_required && <span className="text-destructive"> *</span>}
       </Label>
 
       {question.question_type === 'short_answer' && (
         <Input
+          className="h-11 text-base md:text-base"
           value={value.text ?? ''}
           onChange={(e) => onChange({ text: e.target.value })}
           placeholder="Your answer"
@@ -51,6 +57,7 @@ export function QuestionField({
       {question.question_type === 'url' && (
         <Input
           type="url"
+          className="h-11 text-base md:text-base"
           value={value.text ?? ''}
           onChange={(e) => onChange({ text: e.target.value })}
           placeholder="https://…"
@@ -63,7 +70,7 @@ export function QuestionField({
           {options.map((option) => (
             <label
               key={option}
-              className="text-text-default flex items-center gap-2 text-sm"
+              className="text-text-default flex items-center gap-2 text-base"
             >
               <input
                 type="radio"
@@ -87,7 +94,7 @@ export function QuestionField({
             return (
               <label
                 key={option}
-                className="text-text-default flex items-center gap-2 text-sm"
+                className="text-text-default flex items-center gap-2 text-base"
               >
                 <input
                   type="checkbox"

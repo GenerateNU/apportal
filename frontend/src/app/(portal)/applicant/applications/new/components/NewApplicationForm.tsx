@@ -22,6 +22,7 @@ import { useCurrentUser } from '@/lib/queries/users'
 import { ROLE_LABEL } from '@/lib/roles'
 import { ApplicationFields } from '../../components/ApplicationFields'
 import type { AnswerValue } from '../../components/QuestionField'
+import { QuestionOutline } from './QuestionOutline'
 
 export function NewApplicationForm({
   cycleId,
@@ -218,7 +219,7 @@ function Form({
   }
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-8 py-10">
+    <div className="mx-auto w-full max-w-6xl px-8 py-10">
       <button
         type="button"
         onClick={handleBack}
@@ -235,42 +236,54 @@ function Form({
         <p className="text-text-muted mt-1 text-sm">{cycleName}</p>
       </header>
 
-      <ApplicationFields
-        questions={questions}
-        challenge={challenge}
-        values={values}
-        onValueChange={(id, next) =>
-          setValues((prev) => ({ ...prev, [id]: next }))
-        }
-        resumeUrl={resumeUrl}
-        onResumeChange={setResumeUrl}
-        availability={availability}
-        onAvailabilityChange={setAvailability}
-        submissionUrl={submissionUrl}
-        onSubmissionChange={setSubmissionUrl}
-      />
+      <div className="grid grid-cols-1 items-start gap-10 lg:grid-cols-[220px_1fr]">
+        <aside className="hidden lg:sticky lg:top-10 lg:block">
+          <QuestionOutline questions={questions} />
+        </aside>
 
-      <div className="mt-8 flex items-center justify-end gap-3 border-t border-gray-100 pt-6">
-        {missingRequired && (
-          <p className="text-text-faint mr-auto text-xs">
-            Answer all required questions (*) before submitting.
-          </p>
-        )}
-        {error && (
-          <p className="text-destructive mr-auto text-xs">
-            Something went wrong submitting your application. Please try again.
-          </p>
-        )}
-        <Button onClick={handleSubmit} disabled={submitting || missingRequired}>
-          {submitting ? (
-            <>
-              <Loader2 className="animate-spin" size={14} />
-              Submitting…
-            </>
-          ) : (
-            'Submit application'
-          )}
-        </Button>
+        <div className="min-w-0">
+          <ApplicationFields
+            questions={questions}
+            challenge={challenge}
+            values={values}
+            onValueChange={(id, next) =>
+              setValues((prev) => ({ ...prev, [id]: next }))
+            }
+            resumeUrl={resumeUrl}
+            onResumeChange={setResumeUrl}
+            availability={availability}
+            onAvailabilityChange={setAvailability}
+            submissionUrl={submissionUrl}
+            onSubmissionChange={setSubmissionUrl}
+          />
+
+          <div className="mt-8 flex items-center justify-end gap-3 border-t border-gray-100 pt-6">
+            {missingRequired && (
+              <p className="text-text-muted mr-auto text-xs">
+                Answer all required questions (*) before submitting.
+              </p>
+            )}
+            {error && (
+              <p className="text-destructive mr-auto text-xs">
+                Something went wrong submitting your application. Please try
+                again.
+              </p>
+            )}
+            <Button
+              onClick={handleSubmit}
+              disabled={submitting || missingRequired}
+            >
+              {submitting ? (
+                <>
+                  <Loader2 className="animate-spin" size={14} />
+                  Submitting…
+                </>
+              ) : (
+                'Submit application'
+              )}
+            </Button>
+          </div>
+        </div>
       </div>
 
       <Dialog open={confirmLeave} onOpenChange={setConfirmLeave}>
