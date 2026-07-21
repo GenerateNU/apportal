@@ -27,7 +27,7 @@ export function QuestionField({
   return (
     <div
       id={`question-${question.id}`}
-      className="flex flex-col gap-1.5 rounded-lg border border-gray-100 p-4 scroll-mt-6"
+      className="flex scroll-mt-6 flex-col gap-1.5 rounded-lg border border-gray-100 p-4"
     >
       <Label className="text-text-default text-base">
         {index + 1}. {question.question_text}
