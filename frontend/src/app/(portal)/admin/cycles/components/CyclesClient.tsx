@@ -14,15 +14,6 @@ import {
 } from '../lib/cycle-meta'
 import { CycleDialog } from './CycleDialog'
 
-function formatDate(iso?: string | null): string | null {
-  if (!iso) return null
-  return new Date(iso).toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  })
-}
-
 export function CyclesClient() {
   const { data: cycles = [] } = useCycles({}, { actor: REVIEWER_ACTOR })
   const [showCreate, setShowCreate] = useState(false)
@@ -67,8 +58,6 @@ function CycleRow({ cycle }: { cycle: Cycle }) {
   const [showEdit, setShowEdit] = useState(false)
 
   const status = CYCLE_STATUS[cycle.status]
-  const opens = formatDate(cycle.opens_at)
-  const closes = formatDate(cycle.closes_at)
 
   function changeStatus(next: CycleStatus) {
     if (next === cycle.status) return
@@ -92,13 +81,6 @@ function CycleRow({ cycle }: { cycle: Cycle }) {
             ] ?? cycle.application_type}
           </span>
         </div>
-        <p className="text-text-faint mt-1 text-xs">
-          {opens || closes
-            ? `${opens ? `Opens ${opens}` : 'No open date'} · ${
-                closes ? `Closes ${closes}` : 'No close date'
-              }`
-            : 'No dates set'}
-        </p>
       </div>
 
       <div className="flex shrink-0 items-center gap-2">

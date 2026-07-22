@@ -72,6 +72,7 @@ export * from './listCycleStages200';
 export * from './listCycles200';
 export * from './listCyclesParams';
 export * from './listLeadAssignments200';
+export * from './listOpenApplicationTemplates200';
 export * from './listRecordingReviewerAssignments200';
 export * from './listRecordingReviews200';
 export * from './listReviewGates200';

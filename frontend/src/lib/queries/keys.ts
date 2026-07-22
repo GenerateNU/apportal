@@ -51,6 +51,8 @@ export const queryKeys = {
     details: () => [...queryKeys.applicationTemplates.all, 'detail'] as const,
     detail: (cycleId: string, role: Role) =>
       [...queryKeys.applicationTemplates.details(), cycleId, role] as const,
+    openList: () =>
+      [...queryKeys.applicationTemplates.all, 'open-list'] as const,
   },
 
   questions: {

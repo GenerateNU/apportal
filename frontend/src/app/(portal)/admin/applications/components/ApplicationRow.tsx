@@ -1,25 +1,14 @@
 import Link from 'next/link'
-import { Clock, Code2, FileQuestion, Users } from 'lucide-react'
+import { Code2, FileQuestion, Users } from 'lucide-react'
 import { Tooltip } from '@/components/Tooltip'
 import type { ApplicationTemplateCard } from './types'
 import { cycleStatusDot, cycleStatusLabel, paletteClass } from './constants'
-
-function formatDate(value: string | null) {
-  if (!value) return null
-  return new Date(value).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  })
-}
 
 export function ApplicationRow({
   template,
 }: {
   template: ApplicationTemplateCard
 }) {
-  const closes = formatDate(template.closesAt)
-
   return (
     <Link
       href={`/admin/applications/${template.cycleId}/${template.role}/builder`}
@@ -70,12 +59,6 @@ export function ApplicationRow({
           <span className="flex items-center gap-1">
             <Code2 className="h-3.5 w-3.5" />
             {template.challengeCount}
-          </span>
-        </Tooltip>
-        <Tooltip label="Closing date">
-          <span className="flex items-center gap-1">
-            <Clock className="h-3.5 w-3.5" />
-            {closes ?? 'No deadline'}
           </span>
         </Tooltip>
       </div>

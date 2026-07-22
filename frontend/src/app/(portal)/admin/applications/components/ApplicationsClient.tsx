@@ -76,8 +76,6 @@ export function ApplicationsClient() {
           cycleName: cycle.name,
           cycleStatus: cycle.status,
           cycleColorIndex,
-          opensAt: cycle.opens_at ?? null,
-          closesAt: cycle.closes_at ?? null,
           role,
           title: template?.title ?? `${ROLE_LABEL[role]} Application`,
           status: template?.status ?? 'draft',

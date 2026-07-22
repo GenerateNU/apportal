@@ -28,6 +28,7 @@ import type {
   ApplicationTemplate,
   ErrorModel,
   GetApplicationTemplateParams,
+  ListOpenApplicationTemplates200,
   UpdateApplicationTemplateInputBody,
   UpdateApplicationTemplateParams
 } from '.././model';
@@ -63,6 +64,98 @@ type NonReadonly<T> = [T] extends [UnionToIntersection<T>] ? {
 
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
+
+
+
+/**
+ * A row is included only when both its own status and its owning cycle's status are "open".
+ * @summary List application templates currently open to applicants
+ */
+export const listOpenApplicationTemplates = (
+    
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<ListOpenApplicationTemplates200>(
+      {url: `/application-templates/open`, method: 'GET', signal
+    },
+      options);
+    }
+  
+
+
+
+export const getListOpenApplicationTemplatesQueryKey = () => {
+    return [
+    `/application-templates/open`
+    ] as const;
+    }
+
+    
+export const getListOpenApplicationTemplatesQueryOptions = <TData = Awaited<ReturnType<typeof listOpenApplicationTemplates>>, TError = ErrorModel>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOpenApplicationTemplates>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListOpenApplicationTemplatesQueryKey();
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOpenApplicationTemplates>>> = ({ signal }) => listOpenApplicationTemplates(requestOptions, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listOpenApplicationTemplates>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListOpenApplicationTemplatesQueryResult = NonNullable<Awaited<ReturnType<typeof listOpenApplicationTemplates>>>
+export type ListOpenApplicationTemplatesQueryError = ErrorModel
+
+
+export function useListOpenApplicationTemplates<TData = Awaited<ReturnType<typeof listOpenApplicationTemplates>>, TError = ErrorModel>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOpenApplicationTemplates>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listOpenApplicationTemplates>>,
+          TError,
+          Awaited<ReturnType<typeof listOpenApplicationTemplates>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListOpenApplicationTemplates<TData = Awaited<ReturnType<typeof listOpenApplicationTemplates>>, TError = ErrorModel>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOpenApplicationTemplates>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listOpenApplicationTemplates>>,
+          TError,
+          Awaited<ReturnType<typeof listOpenApplicationTemplates>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListOpenApplicationTemplates<TData = Awaited<ReturnType<typeof listOpenApplicationTemplates>>, TError = ErrorModel>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOpenApplicationTemplates>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List application templates currently open to applicants
+ */
+
+export function useListOpenApplicationTemplates<TData = Awaited<ReturnType<typeof listOpenApplicationTemplates>>, TError = ErrorModel>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOpenApplicationTemplates>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListOpenApplicationTemplatesQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
 
 
 

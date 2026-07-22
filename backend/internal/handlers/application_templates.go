@@ -17,6 +17,15 @@ type applicationTemplateHandler struct {
 
 func (h *applicationTemplateHandler) register(api huma.API) {
 	huma.Register(api, huma.Operation{
+		OperationID: "list-open-application-templates",
+		Method:      http.MethodGet,
+		Path:        "/application-templates/open",
+		Summary:     "List application templates currently open to applicants",
+		Description: "A row is included only when both its own status and its owning cycle's status are \"open\".",
+		Tags:        []string{"Application Templates"},
+	}, h.listOpen)
+
+	huma.Register(api, huma.Operation{
 		OperationID: "get-application-template",
 		Method:      http.MethodGet,
 		Path:        "/cycles/{id}/template",
@@ -40,6 +49,21 @@ func (h *applicationTemplateHandler) register(api huma.API) {
 // ApplicationTemplateOutput wraps a single application template response body.
 type ApplicationTemplateOutput struct {
 	Body models.ApplicationTemplate
+}
+
+// ApplicationTemplatesOutput wraps a list of application templates.
+type ApplicationTemplatesOutput struct {
+	Body []models.ApplicationTemplate
+}
+
+type ListOpenApplicationTemplatesInput struct{}
+
+func (h *applicationTemplateHandler) listOpen(ctx context.Context, _ *ListOpenApplicationTemplatesInput) (*ApplicationTemplatesOutput, error) {
+	templates, err := h.store.ListOpenApplicationTemplates(ctx)
+	if err != nil {
+		return nil, storeErr(err)
+	}
+	return &ApplicationTemplatesOutput{Body: templates}, nil
 }
 
 func parseTemplateRole(raw string) (models.Role, error) {

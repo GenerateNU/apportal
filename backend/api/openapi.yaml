@@ -1616,6 +1616,30 @@ paths:
       summary: Get an applicant
       tags:
         - Applicants
+  /application-templates/open:
+    get:
+      description: A row is included only when both its own status and its owning cycle's status are "open".
+      operationId: list-open-application-templates
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/ApplicationTemplate"
+                type:
+                  - array
+                  - "null"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      summary: List application templates currently open to applicants
+      tags:
+        - Application Templates
   /applications:
     get:
       description: Reviewer queue; filter by cycle_id, role, and stage. Applicants may list their own by passing user_nuid.

@@ -8,8 +8,6 @@ export type ApplicationTemplateCard = {
   cycleName: string
   cycleStatus: CycleStatus
   cycleColorIndex: number
-  opensAt: string | null
-  closesAt: string | null
   role: Role
   title: string
   status: CycleStatus

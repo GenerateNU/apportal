@@ -79,6 +79,27 @@ func (s *Store) GetOrCreateApplicationTemplate(ctx context.Context, cycleID stri
 	return pgx.CollectExactlyOneRow(rows, pgx.RowToStructByPos[models.ApplicationTemplate])
 }
 
+// ListOpenApplicationTemplates returns every application template that is
+// currently live for applicants: its own status is "open" AND its owning
+// cycle's status is also "open" — a role can be held back at the template
+// level even while its cycle is open. Column references are qualified
+// because cycles and application_templates both have id/status/created_at
+// columns, which the join would otherwise make ambiguous.
+func (s *Store) ListOpenApplicationTemplates(ctx context.Context) ([]models.ApplicationTemplate, error) {
+	const q = `
+		SELECT at.id, at.cycle_id, at.application_role, at.title, at.description,
+			at.instructions, at.opens_at, at.closes_at, at.status, at.created_at, at.updated_at
+		FROM application_templates at
+		JOIN cycles c ON c.id = at.cycle_id
+		WHERE at.status = 'open' AND c.status = 'open'
+		ORDER BY c.created_at DESC, at.application_role`
+	rows, err := s.db.Query(ctx, q)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, pgx.RowToStructByPos[models.ApplicationTemplate])
+}
+
 func (s *Store) UpdateApplicationTemplate(ctx context.Context, cycleID string, role models.Role, in ApplicationTemplateUpdate) (models.ApplicationTemplate, error) {
 	// COALESCE keeps the existing value when the corresponding input is NULL.
 	const q = `
