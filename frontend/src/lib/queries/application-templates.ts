@@ -1,12 +1,24 @@
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   getApplicationTemplate,
+  listOpenApplicationTemplates,
   updateApplicationTemplate,
 } from '@/generated/application-templates/application-templates'
 import type { RequestOptions } from '@/lib/api/orval-mutator'
 import type { ApplicationTemplate, Role } from '@/lib/api/types'
 import { ROLE_COLUMNS } from '@/lib/roles'
 import { queryKeys } from './keys'
+
+// Templates currently visible to applicants: the "cycle open AND template
+// open" join happens server-side (list-open-application-templates), not here.
+export function useOpenApplicationTemplates(opts?: RequestOptions) {
+  return useQuery({
+    queryKey: queryKeys.applicationTemplates.openList(),
+    queryFn: async () =>
+      ((await listOpenApplicationTemplates(opts)) ??
+        []) as ApplicationTemplate[],
+  })
+}
 
 export function useApplicationTemplate(
   cycleId: string,

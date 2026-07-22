@@ -3,10 +3,9 @@ import {
   HydrationBoundary,
   QueryClient,
 } from '@tanstack/react-query'
-import { getApplicationTemplate } from '@/generated/application-templates/application-templates'
+import { listOpenApplicationTemplates } from '@/generated/application-templates/application-templates'
 import { listCycles } from '@/generated/cycles/cycles'
 import { queryKeys } from '@/lib/queries/keys'
-import { ROLE_COLUMNS } from '@/lib/roles'
 import { ApplicationsClient } from './components/ApplicationsClient'
 
 // Auth-gated, live data fetched per request from the backend — never prerender
@@ -18,24 +17,18 @@ export default async function ApplicationsPage() {
 
   // Cycles are the same for everyone; the applicant's own applications are
   // fetched client-side once their signed-in identity resolves.
-  const cycles = await queryClient.fetchQuery({
-    queryKey: queryKeys.cycles.list({}),
-    queryFn: async () => (await listCycles({})) ?? [],
-  })
-
-  // Per-role templates decide whether a role is actually visible to
-  // applicants (see ApplicationsClient) — prefetch every role's template for
-  // every cycle so that decision doesn't wait on a second round trip.
-  await Promise.all(
-    cycles.flatMap((cycle) =>
-      ROLE_COLUMNS.map((role) =>
-        queryClient.prefetchQuery({
-          queryKey: queryKeys.applicationTemplates.detail(cycle.id, role),
-          queryFn: () => getApplicationTemplate(cycle.id, { role }),
-        })
-      )
-    )
-  )
+  await Promise.all([
+    queryClient.prefetchQuery({
+      queryKey: queryKeys.cycles.list({}),
+      queryFn: async () => (await listCycles({})) ?? [],
+    }),
+    // Which roles are actually visible ("cycle open AND template open") is
+    // decided server-side by this one query — no client-side status joins.
+    queryClient.prefetchQuery({
+      queryKey: queryKeys.applicationTemplates.openList(),
+      queryFn: async () => (await listOpenApplicationTemplates()) ?? [],
+    }),
+  ])
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
