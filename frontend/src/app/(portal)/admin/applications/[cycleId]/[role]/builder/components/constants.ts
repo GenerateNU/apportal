@@ -1,6 +1,20 @@
 import { AlignLeft, CircleDot, Link2, ListChecks, Type } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import type { QuestionType } from '@/lib/api/types'
+import type { CycleStatus, QuestionType } from '@/lib/api/types'
+
+export const TEMPLATE_STATUS_ORDER: CycleStatus[] = [
+  'draft',
+  'open',
+  'closed',
+  'archived',
+]
+
+export const TEMPLATE_STATUS_LABEL: Record<CycleStatus, string> = {
+  draft: 'Draft',
+  open: 'Open',
+  closed: 'Closed',
+  archived: 'Archived',
+}
 
 export const QUESTION_TYPES: QuestionType[] = [
   'short_answer',

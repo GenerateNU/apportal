@@ -1,13 +1,15 @@
 'use client'
 
+import { useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowRight, Check, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { Application, Cycle, Role, User } from '@/lib/api/types'
 import { useApplications } from '@/lib/queries/applications'
+import { useOpenApplicationTemplates } from '@/lib/queries/application-templates'
 import { useCycles } from '@/lib/queries/cycles'
 import { useCurrentUser } from '@/lib/queries/users'
-import { ROLE_CHIP_CLASS, ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
+import { ROLE_CHIP_CLASS, ROLE_LABEL } from '@/lib/roles'
 import { APPLICANT_STATUS } from '../lib/status'
 
 export function ApplicationsClient() {
@@ -46,13 +48,27 @@ function Dashboard({ user }: { user: User }) {
     { actor }
   )
 
-  // Openness is driven purely by the manually-set cycle.status. opens_at /
-  // closes_at are currently just metadata — nothing auto-opens/closes.
-  // TODO: decide how to honor opens_at/closes_at. Two options: (1) derive
-  // "effective open" here as status === 'open' && now within [opens_at,
-  // closes_at]; or (2) add a scheduled job that flips cycle.status at those
-  // times (cleaner, but needs a scheduler the repo doesn't have yet).
-  const openCycles = cycles.filter((cycle) => cycle.status === 'open')
+  // Which roles are actually visible ("cycle open AND its own template open")
+  // is decided entirely server-side by list-open-application-templates — this
+  // just groups the already-filtered rows by cycle for rendering.
+  // opens_at/closes_at are currently just metadata — nothing auto-opens/closes.
+  // TODO: decide how to honor opens_at/closes_at, e.g. by folding an
+  // "effective open" window check into that same backend query.
+  const { data: openTemplates = [] } = useOpenApplicationTemplates({ actor })
+
+  const openRolesByCycle = useMemo(() => {
+    const map: Record<string, Role[]> = {}
+    openTemplates.forEach((template) => {
+      const roles = (map[template.cycle_id] ??= [])
+      roles.push(template.application_role)
+    })
+    return map
+  }, [openTemplates])
+
+  const visibleCycles = useMemo(
+    () => cycles.filter((cycle) => openRolesByCycle[cycle.id]?.length),
+    [cycles, openRolesByCycle]
+  )
 
   return (
     <div className="mx-auto w-full max-w-3xl px-8 py-10">
@@ -65,14 +81,15 @@ function Dashboard({ user }: { user: User }) {
         </p>
       </header>
 
-      {openCycles.length === 0 ? (
+      {visibleCycles.length === 0 ? (
         <EmptyState applications={applications} />
       ) : (
         <div className="flex flex-col gap-8">
-          {openCycles.map((cycle) => (
+          {visibleCycles.map((cycle) => (
             <CycleSection
               key={cycle.id}
               cycle={cycle}
+              roles={openRolesByCycle[cycle.id] ?? []}
               applications={applications}
             />
           ))}
@@ -84,9 +101,11 @@ function Dashboard({ user }: { user: User }) {
 
 function CycleSection({
   cycle,
+  roles,
   applications,
 }: {
   cycle: Cycle
+  roles: Role[]
   applications: Application[]
 }) {
   return (
@@ -95,7 +114,7 @@ function CycleSection({
         {cycle.name}
       </h2>
       <div className="grid gap-4 sm:grid-cols-2">
-        {ROLE_COLUMNS.map((role) => (
+        {roles.map((role) => (
           <RoleCard
             key={role}
             cycle={cycle}

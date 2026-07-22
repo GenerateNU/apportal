@@ -8,6 +8,7 @@
 import type {
   Applicant as GenApplicant,
   Application as GenApplication,
+  ApplicationTemplate as GenApplicationTemplate,
   Cycle as GenCycle,
   CodeChallenge as GenCodeChallenge,
   CodeSubmission as GenCodeSubmission,
@@ -39,6 +40,8 @@ export type User = Omit<GenUser, '$schema' | 'roles'> & {
 }
 
 export type Cycle = Omit<GenCycle, '$schema'>
+
+export type ApplicationTemplate = Omit<GenApplicationTemplate, '$schema'>
 
 export type Applicant = Omit<GenApplicant, '$schema'>
 
