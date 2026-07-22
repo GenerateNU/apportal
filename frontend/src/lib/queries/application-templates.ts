@@ -1,4 +1,9 @@
-import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query'
 import {
   getApplicationTemplate,
   listOpenApplicationTemplates,
