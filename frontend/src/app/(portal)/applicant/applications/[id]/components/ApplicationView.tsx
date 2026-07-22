@@ -51,7 +51,7 @@ export function ApplicationView({
   const status = application ? APPLICANT_STATUS[application.stage] : null
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-8 py-10">
+    <div className="mx-auto w-full max-w-2xl px-4 py-6 sm:px-8 sm:py-10">
       <Link
         href="/applicant/applications"
         className="text-text-muted hover:text-text-default mb-6 inline-flex items-center gap-1 text-sm"

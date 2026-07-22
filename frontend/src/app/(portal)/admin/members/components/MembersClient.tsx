@@ -80,26 +80,28 @@ export function MembersClient() {
           </p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-          <div
-            className={`text-text-subtle grid ${GRID_COLS} gap-4 border-b border-gray-100 px-4 py-3 text-xs font-medium tracking-wide uppercase`}
-          >
-            <span>User</span>
-            <span>Joined</span>
-            <span>Role</span>
-          </div>
-          <div className="divide-y divide-gray-100">
-            {members.map((user) => (
-              <MemberRow key={user.nuid} user={user} gridCols={GRID_COLS} />
-            ))}
-          </div>
-          {hasNextPage && (
-            <div ref={sentinelRef} className="p-3 text-center">
-              <p className="text-text-faint text-xs">
-                {isFetchingNextPage ? 'Loading more…' : ''}
-              </p>
+        <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
+          <div className="min-w-120">
+            <div
+              className={`text-text-subtle grid ${GRID_COLS} gap-4 border-b border-gray-100 px-4 py-3 text-xs font-medium tracking-wide uppercase`}
+            >
+              <span>User</span>
+              <span>Joined</span>
+              <span>Role</span>
             </div>
-          )}
+            <div className="divide-y divide-gray-100">
+              {members.map((user) => (
+                <MemberRow key={user.nuid} user={user} gridCols={GRID_COLS} />
+              ))}
+            </div>
+            {hasNextPage && (
+              <div ref={sentinelRef} className="p-3 text-center">
+                <p className="text-text-faint text-xs">
+                  {isFetchingNextPage ? 'Loading more…' : ''}
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

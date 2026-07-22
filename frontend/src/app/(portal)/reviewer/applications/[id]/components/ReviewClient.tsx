@@ -136,9 +136,9 @@ export function ReviewClient({
   }
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex min-h-full flex-col lg:h-full">
       {/* Top bar */}
-      <div className="flex items-center justify-between gap-3 border-b border-gray-100 bg-white px-8 py-3">
+      <div className="flex items-center justify-between gap-3 border-b border-gray-100 bg-white px-4 py-3 sm:px-8">
         <div className="flex items-center gap-4">
           <Link
             href="/reviewer/applications"
@@ -162,10 +162,10 @@ export function ReviewClient({
         )}
       </div>
 
-      {/* Split: application (left) · review (right) */}
-      <div className="grid min-h-0 flex-1 grid-cols-2 overflow-hidden">
+      {/* Split: application (left) · review (right) on desktop; stacked on mobile */}
+      <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-2 lg:overflow-hidden">
         {/* Application */}
-        <div className="overflow-y-auto border-r border-gray-100 px-8 py-6">
+        <div className="border-b border-gray-100 px-4 py-4 sm:px-8 sm:py-6 lg:overflow-y-auto lg:border-r lg:border-b-0">
           <h2 className="text-text-subtle mb-4 text-xs font-medium tracking-wider uppercase">
             Application
           </h2>
@@ -185,8 +185,8 @@ export function ReviewClient({
         </div>
 
         {/* Review */}
-        <div className="flex min-h-0 flex-col">
-          <div className="flex-1 overflow-y-auto px-8 py-6">
+        <div className="lg:flex lg:min-h-0 lg:flex-col">
+          <div className="px-4 py-4 sm:px-8 sm:py-6 lg:flex-1 lg:overflow-y-auto">
             <h2 className="text-text-subtle mb-4 text-xs font-medium tracking-wider uppercase">
               Your review
             </h2>
@@ -202,7 +202,7 @@ export function ReviewClient({
                     <p className="text-text-muted line-clamp-2 text-xs font-medium">
                       Q{i + 1}. {question?.question_text ?? 'Question'}
                     </p>
-                    <div className="mt-3 flex items-end gap-3">
+                    <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end">
                       <div className="flex flex-col gap-1.5">
                         <Label htmlFor={`score-${answer.id}`}>Score</Label>
                         <Input
@@ -298,9 +298,9 @@ export function ReviewClient({
           </div>
 
           {/* Action footer */}
-          <div className="flex items-center justify-end gap-3 border-t border-gray-100 bg-white px-8 py-4">
+          <div className="flex flex-col items-stretch gap-3 border-t border-gray-100 bg-white px-4 py-4 sm:flex-row sm:items-center sm:justify-end sm:px-8">
             {saved && !upsert.isPending && (
-              <span className="text-status-open mr-auto inline-flex items-center gap-1 text-sm">
+              <span className="text-status-open inline-flex items-center gap-1 text-sm sm:mr-auto">
                 <Check size={14} />
                 Saved
               </span>
@@ -309,12 +309,14 @@ export function ReviewClient({
               variant="outline"
               onClick={() => save(false)}
               disabled={upsert.isPending}
+              className="w-full sm:w-auto"
             >
               Save draft
             </Button>
             <Button
               onClick={() => save(true)}
               disabled={upsert.isPending || !overall}
+              className="w-full sm:w-auto"
             >
               {upsert.isPending ? (
                 <>

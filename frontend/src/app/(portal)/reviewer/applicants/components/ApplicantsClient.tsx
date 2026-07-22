@@ -106,11 +106,11 @@ export function ApplicantsClient() {
   })
 
   return (
-    <div className="flex flex-col gap-6 p-8">
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col gap-6 p-4 sm:p-8">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <h1 className="text-text-default text-2xl font-semibold">Applicants</h1>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <select
             aria-label="Filter by role"
             className={SELECT_CLASS}
@@ -139,7 +139,7 @@ export function ApplicantsClient() {
             ))}
           </select>
 
-          <div className="relative w-60">
+          <div className="relative w-full sm:w-60">
             <Search className="text-text-subtle absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
             <input
               type="text"

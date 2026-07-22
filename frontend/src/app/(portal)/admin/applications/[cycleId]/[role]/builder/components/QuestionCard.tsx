@@ -127,7 +127,7 @@ export function QuestionCard({ question }: { question: Question }) {
       id={`question-${question.id}`}
       ref={setNodeRef}
       style={style}
-      className="rounded-xl border border-gray-200 bg-white px-6 py-5 shadow-sm transition-shadow hover:shadow-md"
+      className="rounded-xl border border-gray-200 bg-white px-4 py-4 shadow-sm transition-shadow hover:shadow-md sm:px-6 sm:py-5"
     >
       <div className="flex items-start gap-3">
         <button
@@ -190,7 +190,7 @@ export function QuestionCard({ question }: { question: Question }) {
         </div>
       </div>
 
-      <div className="text-text-subtle -mx-6 mt-4 flex items-center justify-between border-t border-gray-200 px-6 pt-3 text-base">
+      <div className="text-text-subtle -mx-4 mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 px-4 pt-3 text-base sm:-mx-6 sm:px-6">
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-2">
             <Icon className="h-5 w-5" />

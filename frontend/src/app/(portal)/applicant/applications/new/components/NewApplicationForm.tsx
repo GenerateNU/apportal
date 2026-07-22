@@ -219,7 +219,7 @@ function Form({
   }
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-8 py-10">
+    <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-8 sm:py-10">
       <button
         type="button"
         onClick={handleBack}
@@ -257,14 +257,14 @@ function Form({
             onSubmissionChange={setSubmissionUrl}
           />
 
-          <div className="mt-8 flex items-center justify-end gap-3 border-t border-gray-100 pt-6">
+          <div className="mt-8 flex flex-col items-stretch gap-3 border-t border-gray-100 pt-6 sm:flex-row sm:items-center sm:justify-end">
             {missingRequired && (
-              <p className="text-text-muted mr-auto text-xs">
+              <p className="text-text-muted text-xs sm:mr-auto">
                 Answer all required questions (*) before submitting.
               </p>
             )}
             {error && (
-              <p className="text-destructive mr-auto text-xs">
+              <p className="text-destructive text-xs sm:mr-auto">
                 Something went wrong submitting your application. Please try
                 again.
               </p>
@@ -272,6 +272,7 @@ function Form({
             <Button
               onClick={handleSubmit}
               disabled={submitting || missingRequired}
+              className="w-full sm:w-auto"
             >
               {submitting ? (
                 <>
