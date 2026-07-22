@@ -74,6 +74,7 @@ func humaConfig() huma.Config {
 func registerHandlers(api huma.API, st *store.Store) {
 	(&cycleHandler{store: st}).register(api)
 	(&cycleStageHandler{store: st}).register(api)
+	(&applicationTemplateHandler{store: st}).register(api)
 	(&questionHandler{store: st}).register(api)
 	(&challengeHandler{store: st}).register(api)
 	(&userHandler{store: st}).register(api)

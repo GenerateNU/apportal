@@ -3,11 +3,12 @@
 import { useMemo, useState } from 'react'
 import { ChevronRight, Folder } from 'lucide-react'
 import type { Cycle } from '@/lib/api/types'
+import { useApplicationTemplatesByCycles } from '@/lib/queries/application-templates'
 import {
   useCycles,
   useCycleTemplateSummariesByCycles,
 } from '@/lib/queries/cycles'
-import { ROLE_COLUMNS } from '@/lib/roles'
+import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 import { REVIEWER_ACTOR } from '@/lib/stub-actor'
 import type { ApplicationTemplateCard } from './types'
 import { cycleStatusDot, cycleStatusLabel } from './constants'
@@ -51,20 +52,33 @@ export function ApplicationsClient() {
     return map
   }, [cycleIds, summaryQueries])
 
+  const templateQueries = useApplicationTemplatesByCycles(cycleIds, OPTS)
+  const templateByCycleRole = useMemo(() => {
+    const map: Record<string, (typeof templateQueries)[number]['data']> = {}
+    cycleIds.forEach((cycleId, cycleIndex) => {
+      ROLE_COLUMNS.forEach((role, roleIndex) => {
+        map[`${cycleId}-${role}`] =
+          templateQueries[cycleIndex * ROLE_COLUMNS.length + roleIndex]?.data
+      })
+    })
+    return map
+  }, [cycleIds, templateQueries])
+
   const templatesByCycle = useMemo(() => {
     const map: Record<string, ApplicationTemplateCard[]> = {}
     cycles.forEach((cycle, cycleColorIndex) => {
       const summaries = summaryByCycle[cycle.id] ?? []
       map[cycle.id] = ROLE_COLUMNS.map((role) => {
         const summary = summaries.find((s) => s.role === role)
+        const template = templateByCycleRole[`${cycle.id}-${role}`]
         return {
           cycleId: cycle.id,
           cycleName: cycle.name,
           cycleStatus: cycle.status,
           cycleColorIndex,
-          opensAt: cycle.opens_at ?? null,
-          closesAt: cycle.closes_at ?? null,
           role,
+          title: template?.title ?? `${ROLE_LABEL[role]} Application`,
+          status: template?.status ?? 'draft',
           questionCount: summary?.question_count ?? 0,
           challengeCount: summary?.challenge_count ?? 0,
           submissionCount: summary?.submission_count ?? 0,
@@ -72,7 +86,7 @@ export function ApplicationsClient() {
       })
     })
     return map
-  }, [cycles, summaryByCycle])
+  }, [cycles, summaryByCycle, templateByCycleRole])
 
   const openTemplates = useMemo(
     () => openCycles.flatMap((cycle) => templatesByCycle[cycle.id] ?? []),
