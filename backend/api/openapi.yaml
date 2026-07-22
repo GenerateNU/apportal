@@ -103,6 +103,59 @@ components:
         - submitted_at
         - updated_at
       type: object
+    ApplicationTemplate:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/ApplicationTemplate.json
+          format: uri
+          readOnly: true
+          type: string
+        application_role:
+          enum:
+            - software_engineer
+            - software_designer
+          type: string
+        closes_at:
+          format: date-time
+          type: string
+        created_at:
+          format: date-time
+          type: string
+        cycle_id:
+          type: string
+        description:
+          type: string
+        id:
+          type: string
+        instructions:
+          type: string
+        opens_at:
+          format: date-time
+          type: string
+        status:
+          enum:
+            - draft
+            - open
+            - closed
+            - archived
+          type: string
+        title:
+          type: string
+        updated_at:
+          format: date-time
+          type: string
+      required:
+        - id
+        - cycle_id
+        - application_role
+        - title
+        - status
+        - created_at
+        - updated_at
+      type: object
     AssignRecordingReviewerInputBody:
       additionalProperties: false
       properties:
@@ -1000,6 +1053,36 @@ components:
             - withdrawn
           type: string
       type: object
+    UpdateApplicationTemplateInputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/UpdateApplicationTemplateInputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        closes_at:
+          format: date-time
+          type: string
+        description:
+          type: string
+        instructions:
+          type: string
+        opens_at:
+          format: date-time
+          type: string
+        status:
+          enum:
+            - draft
+            - open
+            - closed
+            - archived
+          type: string
+        title:
+          type: string
+      type: object
     UpdateCycleInputBody:
       additionalProperties: false
       properties:
@@ -1533,6 +1616,30 @@ paths:
       summary: Get an applicant
       tags:
         - Applicants
+  /application-templates/open:
+    get:
+      description: A row is included only when both its own status and its owning cycle's status are "open".
+      operationId: list-open-application-templates
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/ApplicationTemplate"
+                type:
+                  - array
+                  - "null"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      summary: List application templates currently open to applicants
+      tags:
+        - Application Templates
   /applications:
     get:
       description: Reviewer queue; filter by cycle_id, role, and stage. Applicants may list their own by passing user_nuid.
@@ -3147,6 +3254,111 @@ paths:
       summary: Add a stage to a cycle's flow template
       tags:
         - Cycle stages
+  /cycles/{id}/template:
+    get:
+      description: ?role= selects which role's template to fetch (required). Creates a default-titled row on first access.
+      operationId: get-application-template
+      parameters:
+        - description: Cycle ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Cycle ID
+            type: string
+        - description: Applicant role
+          explode: false
+          in: query
+          name: role
+          schema:
+            description: Applicant role
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationTemplate"
+          description: OK
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Get a cycle's per-role application template
+      tags:
+        - Application Templates
+    patch:
+      description: Chief only. ?role= selects which role's template to update (required).
+      operationId: update-application-template
+      parameters:
+        - description: Cycle ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Cycle ID
+            type: string
+        - description: Applicant role
+          explode: false
+          in: query
+          name: role
+          schema:
+            description: Applicant role
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateApplicationTemplateInputBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationTemplate"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Update a cycle's per-role application template
+      tags:
+        - Application Templates
   /cycles/{id}/template-summary:
     get:
       description: "One entry per applicant role: question count (role-specific plus global), code challenge count, and submitted application count — computed via COUNT queries instead of requiring the full row sets."

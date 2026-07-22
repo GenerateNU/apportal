@@ -1,26 +1,14 @@
 import Link from 'next/link'
-import { Clock, Code2, FileQuestion, Users } from 'lucide-react'
+import { Code2, FileQuestion, Users } from 'lucide-react'
 import { Tooltip } from '@/components/Tooltip'
-import { ROLE_LABEL } from '@/lib/roles'
 import type { ApplicationTemplateCard } from './types'
 import { cycleStatusDot, cycleStatusLabel, paletteClass } from './constants'
-
-function formatDate(value: string | null) {
-  if (!value) return null
-  return new Date(value).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  })
-}
 
 export function ApplicationRow({
   template,
 }: {
   template: ApplicationTemplateCard
 }) {
-  const closes = formatDate(template.closesAt)
-
   return (
     <Link
       href={`/admin/applications/${template.cycleId}/${template.role}/builder`}
@@ -43,9 +31,17 @@ export function ApplicationRow({
         </Tooltip>
       </div>
 
-      <p className="text-text-secondary mt-2 text-base font-medium">
-        {ROLE_LABEL[template.role]} Application
-      </p>
+      <div className="mt-2 flex items-center gap-2">
+        <p className="text-text-secondary text-base font-medium">
+          {template.title}
+        </p>
+        <span className="text-text-subtle flex shrink-0 items-center gap-1.5 text-xs">
+          <span
+            className={`h-2 w-2 shrink-0 rounded-full ${cycleStatusDot[template.status]}`}
+          />
+          {cycleStatusLabel[template.status]}
+        </span>
+      </div>
       <span
         className={`mt-2 inline-block rounded-md px-2 py-0.5 text-xs font-medium ${paletteClass(template.cycleColorIndex)}`}
       >
@@ -63,12 +59,6 @@ export function ApplicationRow({
           <span className="flex items-center gap-1">
             <Code2 className="h-3.5 w-3.5" />
             {template.challengeCount}
-          </span>
-        </Tooltip>
-        <Tooltip label="Closing date">
-          <span className="flex items-center gap-1">
-            <Clock className="h-3.5 w-3.5" />
-            {closes ?? 'No deadline'}
           </span>
         </Tooltip>
       </div>

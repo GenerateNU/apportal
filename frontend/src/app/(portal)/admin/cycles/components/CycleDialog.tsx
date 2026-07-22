@@ -20,18 +20,6 @@ import { APPLICATION_TYPES, type ApplicationType } from '../lib/cycle-meta'
 const SELECT_CLASS =
   'border-input focus-visible:border-ring focus-visible:ring-ring/50 h-8 w-full rounded-lg border bg-transparent px-2.5 text-sm outline-none focus-visible:ring-3'
 
-// Converts an ISO timestamp to the value a datetime-local input expects (local
-// time, no seconds/zone), and back. Empty string ⇄ undefined.
-function isoToLocalInput(iso?: string | null): string {
-  if (!iso) return ''
-  const d = new Date(iso)
-  const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000)
-  return local.toISOString().slice(0, 16)
-}
-function localInputToIso(value: string): string | undefined {
-  return value ? new Date(value).toISOString() : undefined
-}
-
 export function CycleDialog({
   open,
   onOpenChange,
@@ -49,9 +37,6 @@ export function CycleDialog({
   const [applicationType, setApplicationType] = useState<ApplicationType>(
     (cycle?.application_type as ApplicationType) ?? 'member'
   )
-  const [opensAt, setOpensAt] = useState(isoToLocalInput(cycle?.opens_at))
-  const [closesAt, setClosesAt] = useState(isoToLocalInput(cycle?.closes_at))
-
   const pending = createCycle.isPending || updateCycle.isPending
 
   function handleSubmit(event: React.FormEvent) {
@@ -62,8 +47,6 @@ export function CycleDialog({
     const body = {
       name: trimmed,
       application_type: applicationType,
-      opens_at: localInputToIso(opensAt),
-      closes_at: localInputToIso(closesAt),
     }
     const opts = { actor: REVIEWER_ACTOR }
     const onSuccess = () => onOpenChange(false)
@@ -116,27 +99,6 @@ export function CycleDialog({
                 </option>
               ))}
             </select>
-          </div>
-
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-              <Label htmlFor="opens-at">Opens</Label>
-              <Input
-                id="opens-at"
-                type="datetime-local"
-                value={opensAt}
-                onChange={(e) => setOpensAt(e.target.value)}
-              />
-            </div>
-            <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-              <Label htmlFor="closes-at">Closes</Label>
-              <Input
-                id="closes-at"
-                type="datetime-local"
-                value={closesAt}
-                onChange={(e) => setClosesAt(e.target.value)}
-              />
-            </div>
           </div>
 
           <DialogFooter>

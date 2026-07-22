@@ -4,6 +4,7 @@ import {
   HydrationBoundary,
   QueryClient,
 } from '@tanstack/react-query'
+import { getApplicationTemplate } from '@/generated/application-templates/application-templates'
 import { getCycle } from '@/generated/cycles/cycles'
 import { listCycleQuestions } from '@/generated/questions/questions'
 import type { Role } from '@/lib/api/types'
@@ -35,15 +36,26 @@ export default async function FormBuilderPage({
     queryFn: () => getCycle(cycleId, { actor: REVIEWER_ACTOR }),
   })
 
-  await queryClient.prefetchQuery({
-    queryKey: queryKeys.questions.list(cycleId, validRole),
-    queryFn: () =>
-      listCycleQuestions(
-        cycleId,
-        { role: validRole },
-        { actor: REVIEWER_ACTOR }
-      ),
-  })
+  await Promise.all([
+    queryClient.prefetchQuery({
+      queryKey: queryKeys.questions.list(cycleId, validRole),
+      queryFn: () =>
+        listCycleQuestions(
+          cycleId,
+          { role: validRole },
+          { actor: REVIEWER_ACTOR }
+        ),
+    }),
+    queryClient.prefetchQuery({
+      queryKey: queryKeys.applicationTemplates.detail(cycleId, validRole),
+      queryFn: () =>
+        getApplicationTemplate(
+          cycleId,
+          { role: validRole },
+          { actor: REVIEWER_ACTOR }
+        ),
+    }),
+  ])
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>

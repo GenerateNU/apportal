@@ -19,7 +19,11 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
-import type { Question, Role } from '@/lib/api/types'
+import type { CycleStatus, Question, Role } from '@/lib/api/types'
+import {
+  useApplicationTemplate,
+  useUpdateApplicationTemplate,
+} from '@/lib/queries/application-templates'
 import { useQuestions, useReorderQuestions } from '@/lib/queries/questions'
 import { ROLE_CHIP_CLASS, ROLE_LABEL } from '@/lib/roles'
 import { REVIEWER_ACTOR } from '@/lib/stub-actor'
@@ -27,6 +31,10 @@ import { BlockPalette } from './BlockPalette'
 import { QuestionCard } from './QuestionCard'
 import { QuestionOutline } from './QuestionOutline'
 import { LivePreview } from './LivePreview'
+import { TEMPLATE_STATUS_LABEL, TEMPLATE_STATUS_ORDER } from './constants'
+
+const SELECT_CLASS =
+  'border-input focus-visible:border-ring focus-visible:ring-ring/50 h-8 rounded-lg border bg-white px-2 text-sm outline-none focus-visible:ring-3 disabled:opacity-50'
 
 export function FormBuilderClient({
   cycleId,
@@ -41,6 +49,21 @@ export function FormBuilderClient({
     actor: REVIEWER_ACTOR,
   })
   const reorderQuestions = useReorderQuestions(cycleId, role)
+
+  const { data: template } = useApplicationTemplate(cycleId, role, {
+    actor: REVIEWER_ACTOR,
+  })
+  const updateTemplate = useUpdateApplicationTemplate()
+
+  function changeStatus(next: CycleStatus) {
+    if (!template || next === template.status) return
+    updateTemplate.mutate({
+      cycleId,
+      role,
+      body: { status: next },
+      opts: { actor: REVIEWER_ACTOR },
+    })
+  }
 
   // Mirrors the fetched list locally so drag reordering feels instant.
   // Resyncs during render (not an effect) whenever the query data changes
@@ -107,23 +130,41 @@ export function FormBuilderClient({
           </span>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setShowPreview((prev) => !prev)}
-          className="text-text-secondary flex items-center gap-2 rounded-md border border-gray-200 bg-white px-4 py-2 text-base font-medium shadow-sm hover:bg-gray-50"
-        >
-          {showPreview ? (
-            <>
-              <Pencil className="h-5 w-5" />
-              Edit
-            </>
-          ) : (
-            <>
-              <Eye className="h-5 w-5" />
-              Preview
-            </>
+        <div className="flex items-center gap-2">
+          {template && (
+            <select
+              aria-label="Application status"
+              className={SELECT_CLASS}
+              value={template.status}
+              disabled={updateTemplate.isPending}
+              onChange={(e) => changeStatus(e.target.value as CycleStatus)}
+            >
+              {TEMPLATE_STATUS_ORDER.map((s) => (
+                <option key={s} value={s}>
+                  {TEMPLATE_STATUS_LABEL[s]}
+                </option>
+              ))}
+            </select>
           )}
-        </button>
+
+          <button
+            type="button"
+            onClick={() => setShowPreview((prev) => !prev)}
+            className="text-text-secondary flex items-center gap-2 rounded-md border border-gray-200 bg-white px-4 py-2 text-base font-medium shadow-sm hover:bg-gray-50"
+          >
+            {showPreview ? (
+              <>
+                <Pencil className="h-5 w-5" />
+                Edit
+              </>
+            ) : (
+              <>
+                <Eye className="h-5 w-5" />
+                Preview
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
       {showPreview ? (
