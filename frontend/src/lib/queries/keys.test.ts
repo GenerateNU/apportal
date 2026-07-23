@@ -35,9 +35,7 @@ describe('queryKeys', () => {
     ])
   })
 
-  it('keeps user detail and byEmail keys distinct', () => {
-    expect(queryKeys.users.detail('001')).not.toEqual(
-      queryKeys.users.byEmail('a@b.com')
-    )
+  it('keeps user detail and me keys distinct', () => {
+    expect(queryKeys.users.detail('001')).not.toEqual(queryKeys.users.me())
   })
 })

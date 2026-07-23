@@ -12,7 +12,6 @@ import {
 import { Button } from '@/components/ui/button'
 import type { User, UserRole } from '@/lib/api/types'
 import { useUpdateUser } from '@/lib/queries/users'
-import { REVIEWER_ACTOR } from '@/lib/stub-actor'
 import { USER_ROLE_LABEL, USER_ROLE_ORDER } from '../lib/role-meta'
 
 export function RoleEditDialog({
@@ -39,7 +38,6 @@ export function RoleEditDialog({
       {
         nuid: user.nuid,
         body: { roles },
-        opts: { actor: REVIEWER_ACTOR },
       },
       { onSuccess: () => onOpenChange(false) }
     )

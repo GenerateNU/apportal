@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Search, UserPlus } from 'lucide-react'
 import type { User, UserRole } from '@/lib/api/types'
 import { useMembersInfinite } from '@/lib/queries/users'
-import { REVIEWER_ACTOR } from '@/lib/stub-actor'
 import { isMember, STAFF_ROLES, USER_ROLE_LABEL } from '../lib/role-meta'
 import { AddMemberDialog } from './AddMemberDialog'
 import { Button } from '@/components/ui/button'
@@ -18,7 +17,7 @@ const MEMBERS_PAGE_SIZE = 10
 
 export function MembersClient() {
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage } =
-    useMembersInfinite(MEMBERS_PAGE_SIZE, { actor: REVIEWER_ACTOR })
+    useMembersInfinite(MEMBERS_PAGE_SIZE)
   const [search, setSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('all')
   const [showAddMember, setShowAddMember] = useState(false)

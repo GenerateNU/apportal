@@ -32,8 +32,9 @@ type Router struct {
 // plain health checks, creates a Huma API over the same app (which auto-serves
 // the OpenAPI spec at /openapi.json|yaml and Scalar docs at /docs), then
 // registers every domain's typed operations.
-func NewRouter(database *pgxpool.Pool, corsOrigins []string) *fiber.App {
+func NewRouter(database *pgxpool.Pool, corsOrigins []string, supabaseURL, supabaseAnonKey string) *fiber.App {
 	st := store.New(database)
+	verifier := middleware.NewSupabaseVerifier(supabaseURL, supabaseAnonKey)
 	app := fiber.New(fiber.Config{
 		ReadTimeout:  readTimeout,
 		WriteTimeout: writeTimeout,
@@ -45,7 +46,7 @@ func NewRouter(database *pgxpool.Pool, corsOrigins []string) *fiber.App {
 	app.Use(middleware.CORS(corsOrigins))
 	app.Use(middleware.Logging())
 	app.Use(middleware.WithTimeout(requestTimeout))
-	app.Use(middleware.WithActor())
+	app.Use(middleware.WithActor(verifier, st))
 
 	// Plain liveness/readiness routes (not part of the documented API surface).
 	router := &Router{database: database}

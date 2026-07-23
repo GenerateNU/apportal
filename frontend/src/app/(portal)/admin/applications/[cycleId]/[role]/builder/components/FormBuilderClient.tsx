@@ -26,7 +26,6 @@ import {
 } from '@/lib/queries/application-templates'
 import { useQuestions, useReorderQuestions } from '@/lib/queries/questions'
 import { ROLE_CHIP_CLASS, ROLE_LABEL } from '@/lib/roles'
-import { REVIEWER_ACTOR } from '@/lib/stub-actor'
 import { BlockPalette } from './BlockPalette'
 import { QuestionCard } from './QuestionCard'
 import { QuestionOutline } from './QuestionOutline'
@@ -45,14 +44,10 @@ export function FormBuilderClient({
   cycleName: string
   role: Role
 }) {
-  const { data: questions = [] } = useQuestions(cycleId, role, {
-    actor: REVIEWER_ACTOR,
-  })
+  const { data: questions = [] } = useQuestions(cycleId, role)
   const reorderQuestions = useReorderQuestions(cycleId, role)
 
-  const { data: template } = useApplicationTemplate(cycleId, role, {
-    actor: REVIEWER_ACTOR,
-  })
+  const { data: template } = useApplicationTemplate(cycleId, role)
   const updateTemplate = useUpdateApplicationTemplate()
 
   function changeStatus(next: CycleStatus) {
@@ -61,7 +56,6 @@ export function FormBuilderClient({
       cycleId,
       role,
       body: { status: next },
-      opts: { actor: REVIEWER_ACTOR },
     })
   }
 
@@ -97,7 +91,7 @@ export function FormBuilderClient({
     setOrder(reordered)
 
     reorderQuestions.mutate(
-      { ordered: reordered, opts: { actor: REVIEWER_ACTOR } },
+      { ordered: reordered },
       {
         // Roll the visible order back if persistence fails; the query cache is
         // rolled back by the mutation itself.

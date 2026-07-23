@@ -6,7 +6,6 @@ import { CSS } from '@dnd-kit/utilities'
 import { GripVertical, Plus, Trash2, X } from 'lucide-react'
 import type { Question } from '@/lib/api/types'
 import { useDeleteQuestion, useUpdateQuestion } from '@/lib/queries/questions'
-import { REVIEWER_ACTOR } from '@/lib/stub-actor'
 import { QUESTION_TYPE_META } from './constants'
 
 export function QuestionCard({ question }: { question: Question }) {
@@ -66,7 +65,6 @@ export function QuestionCard({ question }: { question: Question }) {
       updateQuestion.mutate({
         id: question.id,
         body: { question_text: trimmed },
-        opts: { actor: REVIEWER_ACTOR },
       })
     }
   }
@@ -75,7 +73,6 @@ export function QuestionCard({ question }: { question: Question }) {
     updateQuestion.mutate({
       id: question.id,
       body: { is_required: !question.is_required },
-      opts: { actor: REVIEWER_ACTOR },
     })
   }
 
@@ -83,7 +80,6 @@ export function QuestionCard({ question }: { question: Question }) {
     updateQuestion.mutate({
       id: question.id,
       body: { options: next },
-      opts: { actor: REVIEWER_ACTOR },
     })
   }
 
@@ -119,7 +115,7 @@ export function QuestionCard({ question }: { question: Question }) {
       setConfirmingDelete(true)
       return
     }
-    deleteQuestion.mutate({ id: question.id, opts: { actor: REVIEWER_ACTOR } })
+    deleteQuestion.mutate({ id: question.id })
   }
 
   return (

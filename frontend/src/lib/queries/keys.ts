@@ -10,8 +10,7 @@ export const queryKeys = {
       [...queryKeys.users.lists(), reviewerRole ?? 'any'] as const,
     details: () => [...queryKeys.users.all, 'detail'] as const,
     detail: (nuid: string) => [...queryKeys.users.details(), nuid] as const,
-    byEmail: (email: string) =>
-      [...queryKeys.users.all, 'byEmail', email] as const,
+    me: () => [...queryKeys.users.all, 'me'] as const,
   },
 
   applicants: {

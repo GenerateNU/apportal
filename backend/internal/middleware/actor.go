@@ -1,5 +1,5 @@
-// Package middleware holds Fiber middleware: the auth-stub actor extractor,
-// request logging, and panic recovery.
+// Package middleware holds Fiber middleware: the actor extractor, request
+// logging, and panic recovery.
 package middleware
 
 import (
@@ -9,11 +9,11 @@ import (
 	"github.com/gofiber/fiber/v3"
 
 	"github.com/GenerateNU/apportal/backend/internal/models"
+	"github.com/GenerateNU/apportal/backend/internal/store"
 )
 
-// Actor is the authenticated caller. This is a stub: identity is read from
-// request headers (X-NUID / X-Role) rather than a verified session/token.
-// Swapping in real NUID login means changing only how Actor gets populated.
+// Actor is the authenticated caller: a real user row, resolved from a
+// verified Supabase session rather than trusted from the request.
 type Actor struct {
 	NUID  string
 	Roles []models.UserRole
@@ -43,42 +43,42 @@ type contextKey struct{}
 
 var actorKey contextKey
 
-// WithActor reads X-NUID and X-Role headers and, when present, stores an Actor
-// on the request's user context (which Huma surfaces to operation handlers as
-// their context.Context). X-Role is a comma-separated list of roles. Absent
-// headers leave the context empty so applicant-facing (unauthenticated) routes
-// still work.
-func WithActor() fiber.Handler {
+// WithActor verifies the request's bearer token against Supabase and, when it
+// belongs to a known user, stores their real Actor (NUID and roles read from
+// the users table, not the request) on the request's context. A missing or
+// invalid token, or one with no matching user row, leaves the context empty
+// — requireReviewer/requireChief in the handlers package do the actual
+// rejecting, so applicant-facing (unauthenticated) routes still work.
+func WithActor(verifier *SupabaseVerifier, users *store.Store) fiber.Handler {
 	return func(c fiber.Ctx) error {
-		ctx := ContextWithActor(c.Context(), c.Get("X-NUID"), c.Get("X-Role"))
+		ctx := c.Context()
+
+		if token := bearerToken(c.Get("Authorization")); token != "" {
+			if email, err := verifier.Verify(ctx, token); err == nil {
+				if user, err := users.GetUserByEmail(ctx, email); err == nil {
+					ctx = ContextWithActor(ctx, Actor{NUID: user.NUID, Roles: user.Roles})
+				}
+			}
+		}
+
 		c.SetContext(ctx)
 		return c.Next()
 	}
 }
 
-// ContextWithActor returns ctx carrying an Actor built from the given NUID and
-// comma-separated role header. When nuid is empty it returns ctx unchanged.
-func ContextWithActor(ctx context.Context, nuid, roleHeader string) context.Context {
-	if nuid == "" {
-		return ctx
+// bearerToken extracts the token from an `Authorization: Bearer <token>`
+// header, or "" if the header is absent or malformed.
+func bearerToken(header string) string {
+	const prefix = "Bearer "
+	if !strings.HasPrefix(header, prefix) {
+		return ""
 	}
-	actor := Actor{NUID: nuid, Roles: parseRoles(roleHeader)}
-	return context.WithValue(ctx, actorKey, actor)
+	return strings.TrimPrefix(header, prefix)
 }
 
-// parseRoles splits a comma-separated X-Role header into roles, ignoring blanks.
-func parseRoles(header string) []models.UserRole {
-	if header == "" {
-		return nil
-	}
-	parts := strings.Split(header, ",")
-	roles := make([]models.UserRole, 0, len(parts))
-	for _, p := range parts {
-		if p = strings.TrimSpace(p); p != "" {
-			roles = append(roles, models.UserRole(p))
-		}
-	}
-	return roles
+// ContextWithActor returns ctx carrying the given actor.
+func ContextWithActor(ctx context.Context, actor Actor) context.Context {
+	return context.WithValue(ctx, actorKey, actor)
 }
 
 // ActorFrom returns the Actor stored on the context, if any. Authorization

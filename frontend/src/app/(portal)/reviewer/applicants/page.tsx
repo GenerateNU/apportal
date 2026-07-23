@@ -5,8 +5,8 @@ import {
 } from '@tanstack/react-query'
 import { listApplications } from '@/generated/applications/applications'
 import { getApplicant } from '@/generated/applicants/applicants'
+import { getServerRequestOptions } from '@/lib/api/server-request-options'
 import { queryKeys } from '@/lib/queries/keys'
-import { REVIEWER_ACTOR } from '@/lib/stub-actor'
 import { ApplicantsClient } from './components/ApplicantsClient'
 
 // Auth-gated, live data fetched per request from the backend — never prerender
@@ -15,11 +15,11 @@ export const dynamic = 'force-dynamic'
 
 export default async function ApplicantsPage() {
   const queryClient = new QueryClient()
+  const requestOptions = await getServerRequestOptions()
 
   const applications = await queryClient.fetchQuery({
     queryKey: queryKeys.applications.list({}),
-    queryFn: async () =>
-      (await listApplications({}, { actor: REVIEWER_ACTOR })) ?? [],
+    queryFn: async () => (await listApplications({}, requestOptions)) ?? [],
   })
 
   const uniqueNUIDs = [...new Set(applications.map((a) => a.user_nuid))]
@@ -27,7 +27,7 @@ export default async function ApplicantsPage() {
     uniqueNUIDs.map((nuid) =>
       queryClient.prefetchQuery({
         queryKey: queryKeys.applicants.detail(nuid),
-        queryFn: () => getApplicant(nuid, { actor: REVIEWER_ACTOR }),
+        queryFn: () => getApplicant(nuid, requestOptions),
       })
     )
   )
