@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   createUser,
+  getListUsersInfiniteQueryKey,
   getUser,
   getUserByEmail,
   listUsers,
@@ -11,6 +12,14 @@ import type { RequestOptions } from '@/lib/api/orval-mutator'
 import type { ReviewerRole, User } from '@/lib/api/types'
 import { useAuth } from '@/lib/auth/auth-context'
 import { queryKeys } from './keys'
+
+// The generated infinite-query hook (used by useMembersInfinite) keys its
+// cache under orval's own ['infinate', '/users', ...] namespace, not
+// queryKeys.users.* — invalidate both so mutations refresh every list view.
+function invalidateUserLists(queryClient: ReturnType<typeof useQueryClient>) {
+  queryClient.invalidateQueries({ queryKey: queryKeys.users.lists() })
+  queryClient.invalidateQueries({ queryKey: getListUsersInfiniteQueryKey() })
+}
 
 // Omitting `limit` (as both hooks below do) returns every matching user in
 // one unpaginated response — e.g. useLeads backs the reviewer-assignment
@@ -79,7 +88,7 @@ export function useCreateUser() {
       opts?: RequestOptions
     }) => createUser(vars.body, vars.opts),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.users.all })
+      invalidateUserLists(queryClient)
     },
   })
 }
@@ -94,7 +103,7 @@ export function useUpdateUser() {
     }) => updateUser(vars.nuid, vars.body, vars.opts),
     onSuccess: (data, vars) => {
       queryClient.setQueryData(queryKeys.users.detail(vars.nuid), data)
-      queryClient.invalidateQueries({ queryKey: queryKeys.users.lists() })
+      invalidateUserLists(queryClient)
     },
   })
 }

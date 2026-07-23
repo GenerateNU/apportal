@@ -17,6 +17,11 @@ export const USER_ROLE_LABEL: Record<UserRole, string> = {
   applicant: 'Applicant',
 }
 
+// The roles this page manages — the Members page (and adding staff to it)
+// never deals in the applicant role, which is assigned automatically on
+// signup rather than picked by an admin.
+export const STAFF_ROLES = USER_ROLE_ORDER.filter((r) => r !== 'applicant')
+
 // A "member" is anyone holding at least one staff role — someone who applied
 // and was never brought on (roles: ["applicant"], or none) doesn't belong on
 // this page, even though the same User row represents them.
