@@ -67,9 +67,7 @@ export function MembersClient() {
     <div className="flex flex-col gap-6 p-8">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-text-default text-2xl font-semibold">
-            Members
-          </h1>
+          <h1 className="text-text-default text-2xl font-semibold">Members</h1>
           <p className="text-text-muted mt-1 text-sm">
             Manage which roles each team member holds.
           </p>
@@ -94,7 +92,7 @@ export function MembersClient() {
           aria-label="Filter by role"
           value={roleFilter}
           onChange={(e) => setRoleFilter(e.target.value as RoleFilter)}
-          className="focus:border-brand-blue focus:ring-brand-blue rounded-lg border border-gray-300 py-2 px-3 text-sm outline-none focus:ring-1"
+          className="focus:border-brand-blue focus:ring-brand-blue rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-1"
         >
           <option value="all">All roles</option>
           {STAFF_ROLES.map((role) => (
