@@ -47,9 +47,7 @@ export default function PortalLayout({
           height={22}
           className="object-contain"
         />
-        <span className="text-brand-blue text-lg font-semibold">
-          Generate
-        </span>
+        <span className="text-brand-blue text-lg font-semibold">Generate</span>
       </header>
 
       <div className="hidden lg:block">
