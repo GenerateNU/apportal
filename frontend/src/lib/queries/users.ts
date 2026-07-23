@@ -72,7 +72,7 @@ export function useCurrentUser(opts?: RequestOptions) {
   const { user, isLoading: isAuthLoading } = useAuth()
 
   const query = useQuery({
-    queryKey: queryKeys.users.me(),
+    queryKey: queryKeys.users.me(user?.id ?? ''),
     queryFn: () => getCurrentUser(opts) as Promise<User>,
     enabled: !!user,
   })

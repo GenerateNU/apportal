@@ -36,6 +36,12 @@ describe('queryKeys', () => {
   })
 
   it('keeps user detail and me keys distinct', () => {
-    expect(queryKeys.users.detail('001')).not.toEqual(queryKeys.users.me())
+    expect(queryKeys.users.detail('001')).not.toEqual(
+      queryKeys.users.me('uid-1')
+    )
+  })
+
+  it('gives each signed-in identity its own me key', () => {
+    expect(queryKeys.users.me('uid-1')).not.toEqual(queryKeys.users.me('uid-2'))
   })
 })

@@ -10,7 +10,11 @@ export const queryKeys = {
       [...queryKeys.users.lists(), reviewerRole ?? 'any'] as const,
     details: () => [...queryKeys.users.all, 'detail'] as const,
     detail: (nuid: string) => [...queryKeys.users.details(), nuid] as const,
-    me: () => [...queryKeys.users.all, 'me'] as const,
+    // Keyed by the Supabase auth uid (not sent to the backend — /users/me
+    // takes no params) purely so switching signed-in identities in the same
+    // tab gets a fresh cache entry instead of showing the previous user's
+    // cached profile under the new session.
+    me: (uid: string) => [...queryKeys.users.all, 'me', uid] as const,
   },
 
   applicants: {
