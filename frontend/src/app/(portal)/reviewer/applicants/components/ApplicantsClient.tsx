@@ -7,7 +7,6 @@ import { useApplications } from '@/lib/queries/applications'
 import { useApplicantsByNuids } from '@/lib/queries/applicants'
 import { useCycles } from '@/lib/queries/cycles'
 import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
-import { REVIEWER_ACTOR } from '@/lib/stub-actor'
 import type { ApplicantApplication } from './types'
 import { TableView } from './TableView'
 import { KanbanView } from './KanbanView'
@@ -28,19 +27,14 @@ export function ApplicantsClient() {
   const [selectedMajors, setSelectedMajors] = useState<string[]>([])
   const [selectedYears, setSelectedYears] = useState<number[]>([])
 
-  const { data: applications = [] } = useApplications(
-    {},
-    { actor: REVIEWER_ACTOR }
-  )
-  const { data: cycles = [] } = useCycles({}, { actor: REVIEWER_ACTOR })
+  const { data: applications = [] } = useApplications({})
+  const { data: cycles = [] } = useCycles({})
 
   const uniqueNUIDs = useMemo(
     () => [...new Set(applications.map((a) => a.user_nuid))],
     [applications]
   )
-  const applicantQueries = useApplicantsByNuids(uniqueNUIDs, {
-    actor: REVIEWER_ACTOR,
-  })
+  const applicantQueries = useApplicantsByNuids(uniqueNUIDs)
   const byNUID = useMemo(() => {
     const map: Record<string, (typeof applicantQueries)[number]['data']> = {}
     for (const q of applicantQueries) {

@@ -7,20 +7,30 @@ import (
 )
 
 type Config struct {
-	Port        string
-	DatabaseURL string
-	CORSOrigins []string
+	Port            string
+	DatabaseURL     string
+	CORSOrigins     []string
+	SupabaseURL     string
+	SupabaseAnonKey string
 }
 
 func Load() (Config, error) {
 	cfg := Config{
-		Port:        getEnv("PORT", "8080"),
-		DatabaseURL: os.Getenv("DATABASE_URL"),
-		CORSOrigins: getEnvList("APP_CORS_ORIGINS", "http://localhost:3000"),
+		Port:            getEnv("PORT", "8080"),
+		DatabaseURL:     os.Getenv("DATABASE_URL"),
+		CORSOrigins:     getEnvList("APP_CORS_ORIGINS", "http://localhost:3000"),
+		SupabaseURL:     os.Getenv("SUPABASE_URL"),
+		SupabaseAnonKey: os.Getenv("SUPABASE_ANON_KEY"),
 	}
 
 	if cfg.DatabaseURL == "" {
 		return Config{}, fmt.Errorf("DATABASE_URL is required")
+	}
+	if cfg.SupabaseURL == "" {
+		return Config{}, fmt.Errorf("SUPABASE_URL is required")
+	}
+	if cfg.SupabaseAnonKey == "" {
+		return Config{}, fmt.Errorf("SUPABASE_ANON_KEY is required")
 	}
 
 	return cfg, nil

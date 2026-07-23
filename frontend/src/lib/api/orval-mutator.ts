@@ -1,31 +1,23 @@
 import Axios from 'axios'
+import { createClient } from '@/lib/supabase/client'
 import { APIError } from './client'
 
 export const AXIOS_INSTANCE = Axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080',
 })
 
-// The reviewer identity the backend reads from the X-NUID / X-Role headers.
-export type Actor = { nuid: string; role: string }
-
-// setActorHeaders records the signed-in reviewer as default headers on the
-// shared axios instance, so client-side generated requests are authed without
-// passing `actor` on every call. Call it from a client component/effect when the
-// signed-in user changes (and clearActorHeaders on sign-out).
-//
-// CLIENT-ONLY: the axios instance is shared across every request on the server,
-// so a default set there would leak one user's identity to another. Server-side
-// prefetch must instead pass `actor` per request via RequestOptions below — a
-// per-request actor always overrides these defaults.
-export function setActorHeaders(actor: Actor) {
-  AXIOS_INSTANCE.defaults.headers.common['X-NUID'] = actor.nuid
-  AXIOS_INSTANCE.defaults.headers.common['X-Role'] = actor.role
-}
-
-// clearActorHeaders removes the default reviewer headers (e.g. on sign-out).
-export function clearActorHeaders() {
-  delete AXIOS_INSTANCE.defaults.headers.common['X-NUID']
-  delete AXIOS_INSTANCE.defaults.headers.common['X-Role']
+// Lazily constructed only in the browser, where customInstance below attaches
+// the signed-in user's real Supabase access token to every request. Safe to
+// look up per request here — unlike the shared AXIOS_INSTANCE above, which is
+// a process-wide singleton on the server and so can't default to one user's
+// identity, this only ever runs client-side, where there's exactly one
+// signed-in user per tab. Server components instead pass an explicit
+// Authorization header per request (see server-request-options.ts).
+let browserSupabase: ReturnType<typeof createClient> | undefined
+function getBrowserSupabase() {
+  if (typeof window === 'undefined') return undefined
+  browserSupabase ??= createClient()
+  return browserSupabase
 }
 
 // The request shape Orval passes to the mutator. It's typed structurally rather
@@ -43,12 +35,11 @@ type RequestConfig = {
 }
 
 // Extra per-request options accepted by the generated hooks (via
-// SecondParameter). `actor` sets the reviewer auth headers for this one request
-// (required server-side; optional client-side once setActorHeaders has run);
-// standard request-config fields pass through.
-export type RequestOptions = RequestConfig & {
-  actor?: Actor
-}
+// SecondParameter). Currently just request-config passthrough (e.g. server
+// components set `headers.Authorization` explicitly — see
+// server-request-options.ts); kept as a named type since query hooks
+// throughout the app are typed against it.
+export type RequestOptions = RequestConfig
 
 // customInstance is the mutator Orval routes every generated request through.
 // It unwraps the axios response to the typed body and maps non-2xx responses to
@@ -57,17 +48,22 @@ export const customInstance = async <T>(
   config: RequestConfig,
   options?: RequestOptions
 ): Promise<T> => {
-  const { actor, headers, ...rest } = options ?? {}
-
-  const merged = {
-    ...config,
-    ...rest,
-    headers: {
-      ...config.headers,
-      ...headers,
-      ...(actor ? { 'X-NUID': actor.nuid, 'X-Role': actor.role } : {}),
-    },
+  const headers: Record<string, string | undefined> = {
+    ...config.headers,
+    ...options?.headers,
   }
+
+  const supabase = getBrowserSupabase()
+  if (supabase && !headers.Authorization) {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+    if (session?.access_token) {
+      headers.Authorization = `Bearer ${session.access_token}`
+    }
+  }
+
+  const merged = { ...config, ...options, headers }
 
   try {
     const response = await AXIOS_INSTANCE.request(

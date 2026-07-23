@@ -18,15 +18,12 @@ import {
 } from '@/lib/queries/review-releases'
 import { useCurrentUser, useLeads } from '@/lib/queries/users'
 import { ROLE_CHIP_CLASS, ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
-import { REVIEWER_ACTOR } from '@/lib/stub-actor'
-
-const OPTS = { actor: REVIEWER_ACTOR }
 
 export function AssignmentsClient() {
   const { data: currentUser } = useCurrentUser()
-  const { data: cycles = [] } = useCycles({}, OPTS)
-  const { data: allApplications = [] } = useApplications({}, OPTS)
-  const { data: leads = [] } = useLeads(OPTS)
+  const { data: cycles = [] } = useCycles({})
+  const { data: allApplications = [] } = useApplications({})
+  const { data: leads = [] } = useLeads()
 
   const isChief = !!currentUser?.roles.some(
     (r) => r === 'chief' || r === 'admin'
@@ -48,7 +45,7 @@ export function AssignmentsClient() {
     () => [...new Set(applications.map((a) => a.user_nuid))],
     [applications]
   )
-  const applicantQueries = useApplicantsByNuids(nuids, OPTS)
+  const applicantQueries = useApplicantsByNuids(nuids)
   const nameByNuid = useMemo(() => {
     const map: Record<string, string> = {}
     nuids.forEach((nuid, i) => {
@@ -65,7 +62,7 @@ export function AssignmentsClient() {
   }, [leads])
 
   const appIds = useMemo(() => applications.map((a) => a.id), [applications])
-  const assignmentQueries = useLeadAssignmentsByApplications(appIds, OPTS)
+  const assignmentQueries = useLeadAssignmentsByApplications(appIds)
   const assignmentsByApp = useMemo(() => {
     const map: Record<string, (typeof assignmentQueries)[number]['data']> = {}
     appIds.forEach((id, i) => {
@@ -74,7 +71,7 @@ export function AssignmentsClient() {
     return map
   }, [appIds, assignmentQueries])
 
-  const { data: gates = [] } = useReviewGates(cycleId, OPTS)
+  const { data: gates = [] } = useReviewGates(cycleId)
   const assignLead = useAssignLead()
   const unassignLead = useUnassignLead()
   const setRelease = useSetReviewRelease()
@@ -99,7 +96,7 @@ export function AssignmentsClient() {
     setFailed(0)
     const results = await Promise.allSettled(
       [...selected].map((applicationId) =>
-        assignLead.mutateAsync({ applicationId, leadNuid, opts: OPTS })
+        assignLead.mutateAsync({ applicationId, leadNuid })
       )
     )
     const failures = results.filter(
@@ -116,7 +113,6 @@ export function AssignmentsClient() {
     setRelease.mutate({
       cycleId,
       body: { role, kind: 'written', released },
-      opts: OPTS,
     })
   }
 
@@ -259,7 +255,6 @@ export function AssignmentsClient() {
                         unassignLead.mutate({
                           id,
                           applicationId: application.id,
-                          opts: OPTS,
                         })
                       }
                     />

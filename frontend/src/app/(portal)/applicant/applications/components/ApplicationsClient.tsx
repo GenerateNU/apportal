@@ -41,12 +41,10 @@ export function ApplicationsClient() {
 }
 
 function Dashboard({ user }: { user: User }) {
-  const actor = { nuid: user.nuid, role: 'applicant' }
-  const { data: cycles = [] } = useCycles({}, { actor })
-  const { data: applications = [] } = useApplications(
-    { user_nuid: user.nuid },
-    { actor }
-  )
+  const { data: cycles = [] } = useCycles({})
+  const { data: applications = [] } = useApplications({
+    user_nuid: user.nuid,
+  })
 
   // Which roles are actually visible ("cycle open AND its own template open")
   // is decided entirely server-side by list-open-application-templates — this
@@ -54,7 +52,7 @@ function Dashboard({ user }: { user: User }) {
   // opens_at/closes_at are currently just metadata — nothing auto-opens/closes.
   // TODO: decide how to honor opens_at/closes_at, e.g. by folding an
   // "effective open" window check into that same backend query.
-  const { data: openTemplates = [] } = useOpenApplicationTemplates({ actor })
+  const { data: openTemplates = [] } = useOpenApplicationTemplates()
 
   const openRolesByCycle = useMemo(() => {
     const map: Record<string, Role[]> = {}

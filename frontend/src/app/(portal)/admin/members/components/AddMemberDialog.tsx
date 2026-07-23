@@ -14,7 +14,6 @@ import { Button } from '@/components/ui/button'
 import { Avatar } from '@/components/ui/avatar'
 import type { User, UserRole } from '@/lib/api/types'
 import { useUpdateUser, useUsers } from '@/lib/queries/users'
-import { REVIEWER_ACTOR } from '@/lib/stub-actor'
 import { STAFF_ROLES, USER_ROLE_LABEL } from '../lib/role-meta'
 
 type Step = 'search' | 'roles'
@@ -28,7 +27,7 @@ export function AddMemberDialog({
 }) {
   // Unfiltered, unpaginated — unlike the Members table this needs every
   // account (applicants included) so staff can be promoted from the pool.
-  const { data: users = [] } = useUsers(undefined, { actor: REVIEWER_ACTOR })
+  const { data: users = [] } = useUsers()
   const updateUser = useUpdateUser()
   const [step, setStep] = useState<Step>('search')
   const [search, setSearch] = useState('')
@@ -80,7 +79,6 @@ export function AddMemberDialog({
           updateUser.mutateAsync({
             nuid: u.nuid,
             body: { roles },
-            opts: { actor: REVIEWER_ACTOR },
           })
         )
       )

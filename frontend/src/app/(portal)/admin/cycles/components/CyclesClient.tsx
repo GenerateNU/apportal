@@ -5,7 +5,6 @@ import { Pencil, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { Cycle, CycleStatus } from '@/lib/api/types'
 import { useCycles, useUpdateCycle } from '@/lib/queries/cycles'
-import { REVIEWER_ACTOR } from '@/lib/stub-actor'
 import {
   APPLICATION_TYPE_LABEL,
   CYCLE_STATUS,
@@ -15,7 +14,7 @@ import {
 import { CycleDialog } from './CycleDialog'
 
 export function CyclesClient() {
-  const { data: cycles = [] } = useCycles({}, { actor: REVIEWER_ACTOR })
+  const { data: cycles = [] } = useCycles({})
   const [showCreate, setShowCreate] = useState(false)
 
   return (
@@ -64,7 +63,6 @@ function CycleRow({ cycle }: { cycle: Cycle }) {
     updateCycle.mutate({
       id: cycle.id,
       body: { status: next },
-      opts: { actor: REVIEWER_ACTOR },
     })
   }
 

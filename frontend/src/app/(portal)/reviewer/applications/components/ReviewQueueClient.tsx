@@ -6,27 +6,25 @@ import { ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useApplicantsByNuids } from '@/lib/queries/applicants'
 import { useApplications } from '@/lib/queries/applications'
+import { useCurrentUser } from '@/lib/queries/users'
 import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
-import { REVIEWER_ACTOR } from '@/lib/stub-actor'
 
 type Scope = 'mine' | 'all'
 
 export function ReviewQueueClient() {
   const router = useRouter()
   const [scope, setScope] = useState<Scope>('mine')
+  const { data: currentUser } = useCurrentUser()
 
   const { data: applications = [] } = useApplications(
-    scope === 'mine' ? { assigned_to: REVIEWER_ACTOR.nuid } : {},
-    { actor: REVIEWER_ACTOR }
+    scope === 'mine' ? { assigned_to: currentUser?.nuid ?? '' } : {}
   )
 
   const nuids = useMemo(
     () => [...new Set(applications.map((a) => a.user_nuid))],
     [applications]
   )
-  const applicantQueries = useApplicantsByNuids(nuids, {
-    actor: REVIEWER_ACTOR,
-  })
+  const applicantQueries = useApplicantsByNuids(nuids)
   const nameByNuid = useMemo(() => {
     const map: Record<string, string> = {}
     nuids.forEach((nuid, i) => {

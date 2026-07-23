@@ -15,6 +15,4 @@ export interface CreateApplicationInputBody {
   cycle_id: string;
   resume_url?: string;
   role: CreateApplicationInputBodyRole;
-  /** @minLength 1 */
-  user_nuid: string;
 }

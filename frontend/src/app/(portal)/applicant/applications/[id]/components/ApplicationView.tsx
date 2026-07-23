@@ -10,12 +10,10 @@ import { useChallenges } from '@/lib/queries/challenges'
 import { useQuestions } from '@/lib/queries/questions'
 import { useSubmission } from '@/lib/queries/submissions'
 import { ROLE_LABEL } from '@/lib/roles'
-import { APPLICANT_ACTOR } from '@/lib/stub-actor'
 import { APPLICANT_STATUS } from '../../lib/status'
 import { ApplicationFields } from '../../components/ApplicationFields'
 import type { AnswerValue } from '../../components/QuestionField'
 
-const OPTS = { actor: APPLICANT_ACTOR }
 const noop = () => {}
 
 // Read-only view of a submitted application. Applications are only created on
@@ -31,11 +29,11 @@ export function ApplicationView({
   cycleName: string
   role: Role
 }) {
-  const { data: application } = useApplication(applicationId, OPTS)
-  const { data: questions = [] } = useQuestions(cycleId, role, OPTS)
-  const { data: challenges = [] } = useChallenges(cycleId, role, OPTS)
-  const { data: answers = [] } = useAnswers(applicationId, OPTS)
-  const { data: submission } = useSubmission(applicationId, OPTS)
+  const { data: application } = useApplication(applicationId)
+  const { data: questions = [] } = useQuestions(cycleId, role)
+  const { data: challenges = [] } = useChallenges(cycleId, role)
+  const { data: answers = [] } = useAnswers(applicationId)
+  const { data: submission } = useSubmission(applicationId)
 
   const values = useMemo(() => {
     const map: Record<string, AnswerValue> = {}

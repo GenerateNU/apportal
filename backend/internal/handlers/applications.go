@@ -7,6 +7,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
+	"github.com/GenerateNU/apportal/backend/internal/middleware"
 	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/store"
 )
@@ -68,7 +69,6 @@ type ApplicationsOutput struct {
 type CreateApplicationInput struct {
 	Body struct {
 		CycleID      string          `json:"cycle_id" minLength:"1"`
-		UserNUID     string          `json:"user_nuid" minLength:"1"`
 		Role         models.Role     `json:"role"`
 		Availability json.RawMessage `json:"availability,omitempty"`
 		ResumeURL    *string         `json:"resume_url,omitempty"`
@@ -76,13 +76,17 @@ type CreateApplicationInput struct {
 }
 
 func (h *applicationHandler) create(ctx context.Context, in *CreateApplicationInput) (*ApplicationOutput, error) {
+	actor, ok := middleware.ActorFrom(ctx)
+	if !ok || actor.NUID == "" {
+		return nil, huma.Error401Unauthorized("authentication required")
+	}
 	if !in.Body.Role.Valid() {
 		return nil, huma.Error422UnprocessableEntity("valid role is required")
 	}
 
 	app, err := h.store.CreateApplication(ctx, store.ApplicationCreate{
 		CycleID:      in.Body.CycleID,
-		UserNUID:     in.Body.UserNUID,
+		UserNUID:     actor.NUID,
 		Role:         in.Body.Role,
 		Availability: in.Body.Availability,
 		ResumeURL:    in.Body.ResumeURL,
@@ -114,12 +118,18 @@ type ListApplicationsInput struct {
 }
 
 func (h *applicationHandler) list(ctx context.Context, in *ListApplicationsInput) (*ApplicationsOutput, error) {
-	// Applicants may fetch their own applications by scoping to their user_nuid;
-	// the unscoped reviewer queue still requires a reviewer identity.
+	// Applicants may fetch their own applications by scoping to their own
+	// user_nuid; the unscoped reviewer queue requires a reviewer identity, and
+	// a non-reviewer scoping to someone else's user_nuid is rejected outright
+	// rather than silently ignored.
+	actor, hasActor := middleware.ActorFrom(ctx)
+	isReviewer := hasActor && actor.HasAnyRole(models.UserRoleLead, models.UserRoleChief, models.UserRoleAdmin)
 	if in.UserNUID == "" {
 		if err := requireReviewer(ctx); err != nil {
 			return nil, err
 		}
+	} else if !isReviewer && (!hasActor || actor.NUID != in.UserNUID) {
+		return nil, huma.Error403Forbidden("cannot list another user's applications")
 	}
 	filter := store.ApplicationFilter{
 		CycleID:    in.CycleID,

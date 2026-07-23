@@ -13,16 +13,15 @@ import { useApplication } from '@/lib/queries/applications'
 import { useChallenges } from '@/lib/queries/challenges'
 import { useQuestions } from '@/lib/queries/questions'
 import { useSubmission } from '@/lib/queries/submissions'
+import { useCurrentUser } from '@/lib/queries/users'
 import {
   useUpsertWrittenReview,
   useWrittenReviews,
 } from '@/lib/queries/written-reviews'
 import { ROLE_LABEL } from '@/lib/roles'
-import { REVIEWER_ACTOR } from '@/lib/stub-actor'
 import { ApplicationFields } from '@/app/(portal)/applicant/applications/components/ApplicationFields'
 import type { AnswerValue } from '@/app/(portal)/applicant/applications/components/QuestionField'
 
-const OPTS = { actor: REVIEWER_ACTOR }
 const TEXTAREA_CLASS =
   'border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 min-h-24 w-full rounded-lg border bg-transparent px-2.5 py-2 text-sm outline-none focus-visible:ring-3'
 
@@ -41,17 +40,18 @@ export function ReviewClient({
   role: Role
   applicantNuid: string
 }) {
-  const { data: applicant } = useApplicant(applicantNuid, OPTS)
-  const { data: application } = useApplication(applicationId, OPTS)
-  const { data: answers = [] } = useAnswers(applicationId, OPTS)
-  const { data: questions = [] } = useQuestions(cycleId, role, OPTS)
-  const { data: challenges = [] } = useChallenges(cycleId, role, OPTS)
-  const { data: submission } = useSubmission(applicationId, OPTS)
-  const { data: reviews = [] } = useWrittenReviews(applicationId, OPTS)
+  const { data: currentUser } = useCurrentUser()
+  const { data: applicant } = useApplicant(applicantNuid)
+  const { data: application } = useApplication(applicationId)
+  const { data: answers = [] } = useAnswers(applicationId)
+  const { data: questions = [] } = useQuestions(cycleId, role)
+  const { data: challenges = [] } = useChallenges(cycleId, role)
+  const { data: submission } = useSubmission(applicationId)
+  const { data: reviews = [] } = useWrittenReviews(applicationId)
   const upsert = useUpsertWrittenReview()
 
-  const own = reviews.find((r) => r.reviewer_nuid === REVIEWER_ACTOR.nuid)
-  const others = reviews.filter((r) => r.reviewer_nuid !== REVIEWER_ACTOR.nuid)
+  const own = reviews.find((r) => r.reviewer_nuid === currentUser?.nuid)
+  const others = reviews.filter((r) => r.reviewer_nuid !== currentUser?.nuid)
 
   // Applicant answers, ordered by their question's display order.
   const questionById = useMemo(
@@ -123,7 +123,6 @@ export function ReviewClient({
         submit,
         answer_scores: answerScores,
       },
-      opts: OPTS,
     })
     setSaved(true)
   }

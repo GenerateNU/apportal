@@ -8,8 +8,8 @@ import { getApplicationTemplate } from '@/generated/application-templates/applic
 import { getCycle } from '@/generated/cycles/cycles'
 import { listCycleQuestions } from '@/generated/questions/questions'
 import type { Role } from '@/lib/api/types'
+import { getServerRequestOptions } from '@/lib/api/server-request-options'
 import { queryKeys } from '@/lib/queries/keys'
-import { REVIEWER_ACTOR } from '@/lib/stub-actor'
 import { FormBuilderClient } from './components/FormBuilderClient'
 
 // Auth-gated, live data fetched per request from the backend — never prerender
@@ -30,30 +30,23 @@ export default async function FormBuilderPage({
   const validRole = role as Role
 
   const queryClient = new QueryClient()
+  const requestOptions = await getServerRequestOptions()
 
   const cycle = await queryClient.fetchQuery({
     queryKey: queryKeys.cycles.detail(cycleId),
-    queryFn: () => getCycle(cycleId, { actor: REVIEWER_ACTOR }),
+    queryFn: () => getCycle(cycleId, requestOptions),
   })
 
   await Promise.all([
     queryClient.prefetchQuery({
       queryKey: queryKeys.questions.list(cycleId, validRole),
       queryFn: () =>
-        listCycleQuestions(
-          cycleId,
-          { role: validRole },
-          { actor: REVIEWER_ACTOR }
-        ),
+        listCycleQuestions(cycleId, { role: validRole }, requestOptions),
     }),
     queryClient.prefetchQuery({
       queryKey: queryKeys.applicationTemplates.detail(cycleId, validRole),
       queryFn: () =>
-        getApplicationTemplate(
-          cycleId,
-          { role: validRole },
-          { actor: REVIEWER_ACTOR }
-        ),
+        getApplicationTemplate(cycleId, { role: validRole }, requestOptions),
     }),
   ])
 

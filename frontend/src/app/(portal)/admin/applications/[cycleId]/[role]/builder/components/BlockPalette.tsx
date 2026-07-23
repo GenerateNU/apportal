@@ -2,7 +2,6 @@
 
 import type { QuestionType, Role } from '@/lib/api/types'
 import { useCreateQuestion } from '@/lib/queries/questions'
-import { REVIEWER_ACTOR } from '@/lib/stub-actor'
 import {
   DEFAULT_OPTIONS,
   QUESTION_TYPES,
@@ -32,7 +31,6 @@ export function BlockPalette({
         display_order: nextOrder,
         options: meta.hasOptions ? DEFAULT_OPTIONS : undefined,
       },
-      opts: { actor: REVIEWER_ACTOR },
     })
   }
 

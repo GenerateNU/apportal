@@ -9,19 +9,16 @@ import {
   useCycleTemplateSummariesByCycles,
 } from '@/lib/queries/cycles'
 import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
-import { REVIEWER_ACTOR } from '@/lib/stub-actor'
 import type { ApplicationTemplateCard } from './types'
 import { cycleStatusDot, cycleStatusLabel } from './constants'
 import { ApplicationRow } from './ApplicationRow'
-
-const OPTS = { actor: REVIEWER_ACTOR }
 
 function byRecency(a: Cycle, b: Cycle) {
   return (b.opens_at ?? b.created_at).localeCompare(a.opens_at ?? a.created_at)
 }
 
 export function ApplicationsClient() {
-  const { data: cycles = [] } = useCycles({}, OPTS)
+  const { data: cycles = [] } = useCycles({})
 
   // Open cycles stay expanded as a flat grid up top. Draft and past
   // (closed/archived) cycles each collapse into their own folder so the
@@ -43,7 +40,7 @@ export function ApplicationsClient() {
   )
 
   const cycleIds = useMemo(() => cycles.map((c) => c.id), [cycles])
-  const summaryQueries = useCycleTemplateSummariesByCycles(cycleIds, OPTS)
+  const summaryQueries = useCycleTemplateSummariesByCycles(cycleIds)
   const summaryByCycle = useMemo(() => {
     const map: Record<string, (typeof summaryQueries)[number]['data']> = {}
     cycleIds.forEach((id, i) => {
@@ -52,7 +49,7 @@ export function ApplicationsClient() {
     return map
   }, [cycleIds, summaryQueries])
 
-  const templateQueries = useApplicationTemplatesByCycles(cycleIds, OPTS)
+  const templateQueries = useApplicationTemplatesByCycles(cycleIds)
   const templateByCycleRole = useMemo(() => {
     const map: Record<string, (typeof templateQueries)[number]['data']> = {}
     cycleIds.forEach((cycleId, cycleIndex) => {

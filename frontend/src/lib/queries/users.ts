@@ -1,9 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   createUser,
+  getCurrentUser,
   getListUsersInfiniteQueryKey,
   getUser,
-  getUserByEmail,
   listUsers,
   updateUser,
   useListUsersInfinite,
@@ -65,16 +65,16 @@ export function useUser(nuid: string, opts?: RequestOptions) {
   })
 }
 
-// Resolves the logged-in Supabase session to its backend user record. Sessions
-// only carry an email, so this is the bridge to nuid/full_name/roles.
+// Resolves the signed-in Supabase session to its backend user record
+// (nuid/full_name/roles) — the backend derives identity from the request's
+// verified session, so this needs no arguments.
 export function useCurrentUser(opts?: RequestOptions) {
   const { user, isLoading: isAuthLoading } = useAuth()
-  const email = user?.email
 
   const query = useQuery({
-    queryKey: queryKeys.users.byEmail(email ?? ''),
-    queryFn: () => getUserByEmail({ email: email! }, opts) as Promise<User>,
-    enabled: !!email,
+    queryKey: queryKeys.users.me(user?.id ?? ''),
+    queryFn: () => getCurrentUser(opts) as Promise<User>,
+    enabled: !!user,
   })
 
   return { ...query, isLoading: isAuthLoading || query.isLoading }

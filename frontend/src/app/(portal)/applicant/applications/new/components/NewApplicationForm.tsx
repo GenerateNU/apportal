@@ -58,7 +58,6 @@ export function NewApplicationForm({
       cycleId={cycleId}
       cycleName={cycleName}
       role={role}
-      userNuid={currentUser.nuid}
       onDone={(id) => router.push(`/applicant/applications/${id}`)}
     />
   )
@@ -68,20 +67,15 @@ function Form({
   cycleId,
   cycleName,
   role,
-  userNuid,
   onDone,
 }: {
   cycleId: string
   cycleName: string
   role: Role
-  userNuid: string
   onDone: (applicationId: string) => void
 }) {
-  const actor = { nuid: userNuid, role: 'applicant' }
-  const opts = { actor }
-
-  const { data: questions = [] } = useQuestions(cycleId, role, opts)
-  const { data: challenges = [] } = useChallenges(cycleId, role, opts)
+  const { data: questions = [] } = useQuestions(cycleId, role)
+  const { data: challenges = [] } = useChallenges(cycleId, role)
   const challenge = challenges[0]
 
   const createApplication = useCreateApplication()
@@ -166,12 +160,10 @@ function Form({
       const app = await createApplication.mutateAsync({
         body: {
           cycle_id: cycleId,
-          user_nuid: userNuid,
           role,
           resume_url: resumeUrl || undefined,
           availability,
         },
-        opts,
       })
       if (!app?.id) throw new Error('missing application id')
 
@@ -194,7 +186,6 @@ function Form({
           putAnswers.mutateAsync({
             applicationId: app.id,
             body: { answers: answerItems },
-            opts,
           })
         )
       }
@@ -206,7 +197,6 @@ function Form({
               challenge_id: challenge.id,
               submission_url: submissionUrl.trim(),
             },
-            opts,
           })
         )
       }
