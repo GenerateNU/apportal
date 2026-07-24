@@ -82,7 +82,9 @@ export function MembersClient() {
 
   const gridCols = view === 'staff' ? STAFF_GRID_COLS : APPLICANTS_GRID_COLS
   const headerLabel =
-    view === 'staff' ? 'Manage which roles each team member holds.' : 'View and update applicant status.'
+    view === 'staff'
+      ? 'Manage which roles each team member holds.'
+      : 'View and update applicant status.'
 
   return (
     <div className="flex flex-col gap-6 p-8">
@@ -108,7 +110,7 @@ export function MembersClient() {
             }}
             className={`rounded px-3 py-1.5 text-sm font-medium transition-colors ${
               view === 'staff'
-                ? 'bg-gray-100 text-text-default'
+                ? 'text-text-default bg-gray-100'
                 : 'text-text-muted hover:text-text-default'
             }`}
           >
@@ -118,7 +120,7 @@ export function MembersClient() {
             onClick={() => setView('applicants')}
             className={`rounded px-3 py-1.5 text-sm font-medium transition-colors ${
               view === 'applicants'
-                ? 'bg-gray-100 text-text-default'
+                ? 'text-text-default bg-gray-100'
                 : 'text-text-muted hover:text-text-default'
             }`}
           >
@@ -183,7 +185,11 @@ export function MembersClient() {
                 view === 'staff' ? (
                   <MemberRow key={user.nuid} user={user} gridCols={gridCols} />
                 ) : (
-                  <ApplicantRow key={user.nuid} user={user} gridCols={gridCols} />
+                  <ApplicantRow
+                    key={user.nuid}
+                    user={user}
+                    gridCols={gridCols}
+                  />
                 )
               )}
             </div>

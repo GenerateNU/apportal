@@ -51,7 +51,11 @@ export function ApplicantRow({
           <ChevronDown className="text-text-faint h-3.5 w-3.5" />
         </button>
 
-        <RoleEditDialog open={showEdit} onOpenChange={setShowEdit} user={user} />
+        <RoleEditDialog
+          open={showEdit}
+          onOpenChange={setShowEdit}
+          user={user}
+        />
       </div>
     </>
   )
