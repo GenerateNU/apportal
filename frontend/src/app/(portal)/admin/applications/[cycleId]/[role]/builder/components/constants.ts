@@ -1,4 +1,11 @@
-import { AlignLeft, CircleDot, Link2, ListChecks, Type } from 'lucide-react'
+import {
+  AlignLeft,
+  ChevronDown,
+  CircleDot,
+  Link2,
+  ListChecks,
+  Type,
+} from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type { CycleStatus, QuestionType } from '@/lib/api/types'
 
@@ -21,6 +28,7 @@ export const QUESTION_TYPES: QuestionType[] = [
   'long_answer',
   'multiple_choice',
   'checkbox',
+  'dropdown',
   'url',
 ]
 
@@ -36,6 +44,7 @@ export const QUESTION_TYPE_META: Record<
     hasOptions: true,
   },
   checkbox: { label: 'Checkboxes', icon: ListChecks, hasOptions: true },
+  dropdown: { label: 'Dropdown', icon: ChevronDown, hasOptions: true },
   url: { label: 'URL', icon: Link2, hasOptions: false },
 }
 

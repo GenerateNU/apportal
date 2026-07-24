@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"strings"
 	"testing"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -68,13 +67,9 @@ func TestRequireChief(t *testing.T) {
 }
 
 // withActor returns a context carrying the given actor, mirroring what
-// middleware.WithActor does from request headers.
+// middleware.WithActor does once it has verified the caller's identity.
 func withActor(a middleware.Actor) context.Context {
-	roles := make([]string, len(a.Roles))
-	for i, role := range a.Roles {
-		roles[i] = string(role)
-	}
-	return middleware.ContextWithActor(context.Background(), a.NUID, strings.Join(roles, ","))
+	return middleware.ContextWithActor(context.Background(), a)
 }
 
 type errExample string

@@ -12,8 +12,8 @@ import { listCodeSubmissions } from '@/generated/code-submissions/code-submissio
 import { listCycleQuestions } from '@/generated/questions/questions'
 import { listWrittenReviews } from '@/generated/written-reviews/written-reviews'
 import type { Application, Role } from '@/lib/api/types'
+import { getServerRequestOptions } from '@/lib/api/server-request-options'
 import { queryKeys } from '@/lib/queries/keys'
-import { REVIEWER_ACTOR } from '@/lib/stub-actor'
 import { ReviewClient } from './components/ReviewClient'
 
 // Auth-gated, live data fetched per request from the backend — never prerender
@@ -27,12 +27,13 @@ export default async function ReviewPage({
 }) {
   const { id } = await params
   const queryClient = new QueryClient()
+  const requestOptions = await getServerRequestOptions()
 
   let application: Application
   try {
     application = (await queryClient.fetchQuery({
       queryKey: queryKeys.applications.detail(id),
-      queryFn: () => getApplication(id, { actor: REVIEWER_ACTOR }),
+      queryFn: () => getApplication(id, requestOptions),
     })) as Application
   } catch {
     notFound()
@@ -43,38 +44,29 @@ export default async function ReviewPage({
   await Promise.all([
     queryClient.prefetchQuery({
       queryKey: queryKeys.answers.list(id),
-      queryFn: () => listAnswers(id, { actor: REVIEWER_ACTOR }),
+      queryFn: () => listAnswers(id, requestOptions),
     }),
     queryClient.prefetchQuery({
       queryKey: queryKeys.questions.list(application.cycle_id, role),
       queryFn: () =>
-        listCycleQuestions(
-          application.cycle_id,
-          { role },
-          { actor: REVIEWER_ACTOR }
-        ),
+        listCycleQuestions(application.cycle_id, { role }, requestOptions),
     }),
     queryClient.prefetchQuery({
       queryKey: queryKeys.writtenReviews.list(id),
-      queryFn: () => listWrittenReviews(id, { actor: REVIEWER_ACTOR }),
+      queryFn: () => listWrittenReviews(id, requestOptions),
     }),
     queryClient.prefetchQuery({
       queryKey: queryKeys.applicants.detail(application.user_nuid),
-      queryFn: () =>
-        getApplicant(application.user_nuid, { actor: REVIEWER_ACTOR }),
+      queryFn: () => getApplicant(application.user_nuid, requestOptions),
     }),
     queryClient.prefetchQuery({
       queryKey: queryKeys.challenges.list(application.cycle_id, role),
       queryFn: () =>
-        listCycleChallenges(
-          application.cycle_id,
-          { role },
-          { actor: REVIEWER_ACTOR }
-        ),
+        listCycleChallenges(application.cycle_id, { role }, requestOptions),
     }),
     queryClient.prefetchQuery({
       queryKey: queryKeys.submissions.detail(id),
-      queryFn: () => listCodeSubmissions(id, { actor: REVIEWER_ACTOR }),
+      queryFn: () => listCodeSubmissions(id, requestOptions),
     }),
   ])
 

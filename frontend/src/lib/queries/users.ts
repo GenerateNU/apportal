@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   createUser,
+  getCurrentUser,
+  getListUsersInfiniteQueryKey,
   getUser,
-  getUserByEmail,
   listUsers,
   updateUser,
   useListUsersInfinite,
@@ -11,6 +12,14 @@ import type { RequestOptions } from '@/lib/api/orval-mutator'
 import type { ReviewerRole, User } from '@/lib/api/types'
 import { useAuth } from '@/lib/auth/auth-context'
 import { queryKeys } from './keys'
+
+// The generated infinite-query hook (used by useMembersInfinite) keys its
+// cache under orval's own ['infinate', '/users', ...] namespace, not
+// queryKeys.users.* — invalidate both so mutations refresh every list view.
+function invalidateUserLists(queryClient: ReturnType<typeof useQueryClient>) {
+  queryClient.invalidateQueries({ queryKey: queryKeys.users.lists() })
+  queryClient.invalidateQueries({ queryKey: getListUsersInfiniteQueryKey() })
+}
 
 // Omitting `limit` (as both hooks below do) returns every matching user in
 // one unpaginated response — e.g. useLeads backs the reviewer-assignment
@@ -56,16 +65,16 @@ export function useUser(nuid: string, opts?: RequestOptions) {
   })
 }
 
-// Resolves the logged-in Supabase session to its backend user record. Sessions
-// only carry an email, so this is the bridge to nuid/full_name/roles.
+// Resolves the signed-in Supabase session to its backend user record
+// (nuid/full_name/roles) — the backend derives identity from the request's
+// verified session, so this needs no arguments.
 export function useCurrentUser(opts?: RequestOptions) {
   const { user, isLoading: isAuthLoading } = useAuth()
-  const email = user?.email
 
   const query = useQuery({
-    queryKey: queryKeys.users.byEmail(email ?? ''),
-    queryFn: () => getUserByEmail({ email: email! }, opts) as Promise<User>,
-    enabled: !!email,
+    queryKey: queryKeys.users.me(user?.id ?? ''),
+    queryFn: () => getCurrentUser(opts) as Promise<User>,
+    enabled: !!user,
   })
 
   return { ...query, isLoading: isAuthLoading || query.isLoading }
@@ -79,7 +88,7 @@ export function useCreateUser() {
       opts?: RequestOptions
     }) => createUser(vars.body, vars.opts),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.users.all })
+      invalidateUserLists(queryClient)
     },
   })
 }
@@ -94,7 +103,7 @@ export function useUpdateUser() {
     }) => updateUser(vars.nuid, vars.body, vars.opts),
     onSuccess: (data, vars) => {
       queryClient.setQueryData(queryKeys.users.detail(vars.nuid), data)
-      queryClient.invalidateQueries({ queryKey: queryKeys.users.lists() })
+      invalidateUserLists(queryClient)
     },
   })
 }

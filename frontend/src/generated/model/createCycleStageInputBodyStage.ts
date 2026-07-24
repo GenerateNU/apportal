@@ -11,6 +11,7 @@ export type CreateCycleStageInputBodyStage = typeof CreateCycleStageInputBodySta
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const CreateCycleStageInputBodyStage = {
+  draft: 'draft',
   submitted: 'submitted',
   lead_review: 'lead_review',
   chief_review: 'chief_review',

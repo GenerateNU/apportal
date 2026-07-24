@@ -11,6 +11,7 @@ export type ApplicationStage = typeof ApplicationStage[keyof typeof ApplicationS
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const ApplicationStage = {
+  draft: 'draft',
   submitted: 'submitted',
   lead_review: 'lead_review',
   chief_review: 'chief_review',

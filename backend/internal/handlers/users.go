@@ -6,6 +6,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
+	"github.com/GenerateNU/apportal/backend/internal/middleware"
 	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/store"
 )
@@ -26,14 +27,14 @@ func (h *userHandler) register(api huma.API) {
 	}, h.list)
 
 	huma.Register(api, huma.Operation{
-		OperationID: "get-user-by-email",
+		OperationID: "get-current-user",
 		Method:      http.MethodGet,
-		Path:        "/users/by-email",
-		Summary:     "Get the current user by email",
-		Description: "Self-serve; resolves the caller's own profile from their authenticated email.",
+		Path:        "/users/me",
+		Summary:     "Get the current user",
+		Description: "Self-serve; resolves the caller's own profile from their verified session.",
 		Tags:        []string{"Users"},
-		Errors:      []int{http.StatusNotFound},
-	}, h.getByEmail)
+		Errors:      []int{http.StatusUnauthorized, http.StatusNotFound},
+	}, h.me)
 
 	huma.Register(api, huma.Operation{
 		OperationID: "get-user",
@@ -164,12 +165,14 @@ func (h *userHandler) get(ctx context.Context, in *UserNUIDInput) (*UserOutput, 
 	return &UserOutput{Body: user}, nil
 }
 
-type UserEmailInput struct {
-	Email string `query:"email" required:"true"`
-}
+type MeInput struct{}
 
-func (h *userHandler) getByEmail(ctx context.Context, in *UserEmailInput) (*UserOutput, error) {
-	user, err := h.store.GetUserByEmail(ctx, in.Email)
+func (h *userHandler) me(ctx context.Context, _ *MeInput) (*UserOutput, error) {
+	actor, ok := middleware.ActorFrom(ctx)
+	if !ok || actor.NUID == "" {
+		return nil, huma.Error401Unauthorized("authentication required")
+	}
+	user, err := h.store.GetUser(ctx, actor.NUID)
 	if err != nil {
 		return nil, storeErr(err)
 	}

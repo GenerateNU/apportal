@@ -3,6 +3,7 @@
 import { useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowRight, Check, Loader2 } from 'lucide-react'
+import { HelpContact } from '@/components/HelpContact'
 import { Button } from '@/components/ui/button'
 import type { Application, Cycle, Role, User } from '@/lib/api/types'
 import { useApplications } from '@/lib/queries/applications'
@@ -41,12 +42,10 @@ export function ApplicationsClient() {
 }
 
 function Dashboard({ user }: { user: User }) {
-  const actor = { nuid: user.nuid, role: 'applicant' }
-  const { data: cycles = [] } = useCycles({}, { actor })
-  const { data: applications = [] } = useApplications(
-    { user_nuid: user.nuid },
-    { actor }
-  )
+  const { data: cycles = [] } = useCycles({})
+  const { data: applications = [] } = useApplications({
+    user_nuid: user.nuid,
+  })
 
   // Which roles are actually visible ("cycle open AND its own template open")
   // is decided entirely server-side by list-open-application-templates — this
@@ -54,7 +53,7 @@ function Dashboard({ user }: { user: User }) {
   // opens_at/closes_at are currently just metadata — nothing auto-opens/closes.
   // TODO: decide how to honor opens_at/closes_at, e.g. by folding an
   // "effective open" window check into that same backend query.
-  const { data: openTemplates = [] } = useOpenApplicationTemplates({ actor })
+  const { data: openTemplates = [] } = useOpenApplicationTemplates()
 
   const openRolesByCycle = useMemo(() => {
     const map: Record<string, Role[]> = {}
@@ -79,6 +78,7 @@ function Dashboard({ user }: { user: User }) {
         <p className="text-text-muted mt-1 text-sm">
           Apply to open roles and track where your applications stand.
         </p>
+        <HelpContact className="mt-3 text-left" />
       </header>
 
       {visibleCycles.length === 0 ? (
@@ -139,7 +139,9 @@ function RoleCard({
   application?: Application
 }) {
   const router = useRouter()
-  const status = application ? APPLICANT_STATUS[application.stage] : null
+  const isDraft = application?.stage === 'draft'
+  const status =
+    application && !isDraft ? APPLICANT_STATUS[application.stage] : null
 
   return (
     <div className="flex flex-col justify-between rounded-xl border border-gray-100 bg-white p-5">
@@ -159,7 +161,19 @@ function RoleCard({
         )}
       </div>
 
-      {application ? (
+      {isDraft ? (
+        <Button
+          variant="outline"
+          onClick={() =>
+            router.push(
+              `/applicant/applications/new?cycle=${cycle.id}&role=${role}`
+            )
+          }
+        >
+          Continue application
+          <ArrowRight data-icon="inline-end" size={14} />
+        </Button>
+      ) : application ? (
         <Button
           variant="outline"
           onClick={() =>

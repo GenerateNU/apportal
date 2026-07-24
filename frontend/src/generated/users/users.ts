@@ -32,7 +32,6 @@ import type {
 import type {
   CreateUserInputBody,
   ErrorModel,
-  GetUserByEmailParams,
   ListUsersParams,
   UpdateUserInputBody,
   User,
@@ -304,18 +303,17 @@ export const useCreateUser = <TError = ErrorModel | ErrorModel | ErrorModel | Er
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Self-serve; resolves the caller's own profile from their authenticated email.
- * @summary Get the current user by email
+ * Self-serve; resolves the caller's own profile from their verified session.
+ * @summary Get the current user
  */
-export const getUserByEmail = (
-    params: GetUserByEmailParams,
+export const getCurrentUser = (
+    
  options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
 ) => {
       
       
       return customInstance<User>(
-      {url: `/users/by-email`, method: 'GET',
-        params, signal
+      {url: `/users/me`, method: 'GET', signal
     },
       options);
     }
@@ -323,69 +321,69 @@ export const getUserByEmail = (
 
 
 
-export const getGetUserByEmailQueryKey = (params?: GetUserByEmailParams,) => {
+export const getGetCurrentUserQueryKey = () => {
     return [
-    `/users/by-email`, ...(params ? [params]: [])
+    `/users/me`
     ] as const;
     }
 
     
-export const getGetUserByEmailQueryOptions = <TData = Awaited<ReturnType<typeof getUserByEmail>>, TError = ErrorModel | ErrorModel | ErrorModel>(params: GetUserByEmailParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUserByEmail>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export const getGetCurrentUserQueryOptions = <TData = Awaited<ReturnType<typeof getCurrentUser>>, TError = ErrorModel | ErrorModel | ErrorModel>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getCurrentUser>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetUserByEmailQueryKey(params);
+  const queryKey =  queryOptions?.queryKey ?? getGetCurrentUserQueryKey();
 
   
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getUserByEmail>>> = ({ signal }) => getUserByEmail(params, requestOptions, signal);
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCurrentUser>>> = ({ signal }) => getCurrentUser(requestOptions, signal);
 
       
 
       
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getUserByEmail>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCurrentUser>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
-export type GetUserByEmailQueryResult = NonNullable<Awaited<ReturnType<typeof getUserByEmail>>>
-export type GetUserByEmailQueryError = ErrorModel | ErrorModel | ErrorModel
+export type GetCurrentUserQueryResult = NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>
+export type GetCurrentUserQueryError = ErrorModel | ErrorModel | ErrorModel
 
 
-export function useGetUserByEmail<TData = Awaited<ReturnType<typeof getUserByEmail>>, TError = ErrorModel | ErrorModel | ErrorModel>(
- params: GetUserByEmailParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUserByEmail>>, TError, TData>> & Pick<
+export function useGetCurrentUser<TData = Awaited<ReturnType<typeof getCurrentUser>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getCurrentUser>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getUserByEmail>>,
+          Awaited<ReturnType<typeof getCurrentUser>>,
           TError,
-          Awaited<ReturnType<typeof getUserByEmail>>
+          Awaited<ReturnType<typeof getCurrentUser>>
         > , 'initialData'
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetUserByEmail<TData = Awaited<ReturnType<typeof getUserByEmail>>, TError = ErrorModel | ErrorModel | ErrorModel>(
- params: GetUserByEmailParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUserByEmail>>, TError, TData>> & Pick<
+export function useGetCurrentUser<TData = Awaited<ReturnType<typeof getCurrentUser>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getCurrentUser>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getUserByEmail>>,
+          Awaited<ReturnType<typeof getCurrentUser>>,
           TError,
-          Awaited<ReturnType<typeof getUserByEmail>>
+          Awaited<ReturnType<typeof getCurrentUser>>
         > , 'initialData'
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetUserByEmail<TData = Awaited<ReturnType<typeof getUserByEmail>>, TError = ErrorModel | ErrorModel | ErrorModel>(
- params: GetUserByEmailParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUserByEmail>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export function useGetCurrentUser<TData = Awaited<ReturnType<typeof getCurrentUser>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getCurrentUser>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
- * @summary Get the current user by email
+ * @summary Get the current user
  */
 
-export function useGetUserByEmail<TData = Awaited<ReturnType<typeof getUserByEmail>>, TError = ErrorModel | ErrorModel | ErrorModel>(
- params: GetUserByEmailParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUserByEmail>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export function useGetCurrentUser<TData = Awaited<ReturnType<typeof getCurrentUser>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getCurrentUser>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getGetUserByEmailQueryOptions(params,options)
+  const queryOptions = getGetCurrentUserQueryOptions(options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

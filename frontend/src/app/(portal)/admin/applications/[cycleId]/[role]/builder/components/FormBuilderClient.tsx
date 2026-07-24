@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Eye, Pencil } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -26,11 +26,11 @@ import {
 } from '@/lib/queries/application-templates'
 import { useQuestions, useReorderQuestions } from '@/lib/queries/questions'
 import { ROLE_CHIP_CLASS, ROLE_LABEL } from '@/lib/roles'
-import { REVIEWER_ACTOR } from '@/lib/stub-actor'
 import { BlockPalette } from './BlockPalette'
 import { QuestionCard } from './QuestionCard'
 import { QuestionOutline } from './QuestionOutline'
 import { LivePreview } from './LivePreview'
+import { TemplateTextBlock } from './TemplateTextBlock'
 import { TEMPLATE_STATUS_LABEL, TEMPLATE_STATUS_ORDER } from './constants'
 
 const SELECT_CLASS =
@@ -45,14 +45,10 @@ export function FormBuilderClient({
   cycleName: string
   role: Role
 }) {
-  const { data: questions = [] } = useQuestions(cycleId, role, {
-    actor: REVIEWER_ACTOR,
-  })
+  const { data: questions = [] } = useQuestions(cycleId, role)
   const reorderQuestions = useReorderQuestions(cycleId, role)
 
-  const { data: template } = useApplicationTemplate(cycleId, role, {
-    actor: REVIEWER_ACTOR,
-  })
+  const { data: template } = useApplicationTemplate(cycleId, role)
   const updateTemplate = useUpdateApplicationTemplate()
 
   function changeStatus(next: CycleStatus) {
@@ -61,7 +57,6 @@ export function FormBuilderClient({
       cycleId,
       role,
       body: { status: next },
-      opts: { actor: REVIEWER_ACTOR },
     })
   }
 
@@ -97,7 +92,7 @@ export function FormBuilderClient({
     setOrder(reordered)
 
     reorderQuestions.mutate(
-      { ordered: reordered, opts: { actor: REVIEWER_ACTOR } },
+      { ordered: reordered },
       {
         // Roll the visible order back if persistence fails; the query cache is
         // rolled back by the mutation itself.
@@ -170,7 +165,13 @@ export function FormBuilderClient({
       {showPreview ? (
         <div className="flex-1 overflow-y-auto bg-gray-50 p-4 sm:p-10">
           <div className="mx-auto max-w-2xl">
-            <LivePreview cycleName={cycleName} role={role} questions={order} />
+            <LivePreview
+              cycleName={cycleName}
+              role={role}
+              questions={order}
+              description={template?.description}
+              instructions={template?.instructions}
+            />
           </div>
         </div>
       ) : (
@@ -188,28 +189,58 @@ export function FormBuilderClient({
             </div>
           </aside>
 
-          <div className="bg-gray-50 p-4 sm:p-6 lg:overflow-y-auto lg:p-10">
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleDragEnd}
-            >
-              <SortableContext
-                items={order.map((q) => q.id)}
-                strategy={verticalListSortingStrategy}
+          <div className="overflow-y-auto bg-gray-50 p-10">
+            <div className="mx-auto flex max-w-2xl flex-col gap-4">
+              <TemplateTextBlock
+                cycleId={cycleId}
+                role={role}
+                field="description"
+                label="Intro text — shown before the questions"
+                placeholder="Add an introduction applicants will see before the questions…"
+                value={template?.description}
+              />
+
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
               >
-                <div className="mx-auto flex max-w-2xl flex-col gap-4">
-                  {order.map((question) => (
-                    <QuestionCard key={question.id} question={question} />
-                  ))}
-                  {order.length === 0 && (
-                    <p className="text-text-subtle mt-10 text-center text-sm">
-                      Add a block from the left to start building this form.
-                    </p>
-                  )}
-                </div>
-              </SortableContext>
-            </DndContext>
+                <SortableContext
+                  items={order.map((q) => q.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className="flex flex-col gap-4">
+                    {order.map((question, index) => (
+                      <Fragment key={question.id}>
+                        {index > 0 && question.page_title && (
+                          <div className="flex items-center gap-3 pt-2">
+                            <span className="text-text-subtle text-xs font-semibold tracking-wide uppercase">
+                              {question.page_title}
+                            </span>
+                            <div className="h-px flex-1 bg-gray-200" />
+                          </div>
+                        )}
+                        <QuestionCard question={question} />
+                      </Fragment>
+                    ))}
+                    {order.length === 0 && (
+                      <p className="text-text-subtle mt-10 text-center text-sm">
+                        Add a block from the left to start building this form.
+                      </p>
+                    )}
+                  </div>
+                </SortableContext>
+              </DndContext>
+
+              <TemplateTextBlock
+                cycleId={cycleId}
+                role={role}
+                field="instructions"
+                label="Closing text — shown after the questions"
+                placeholder="Add submission instructions or closing notes applicants will see after the questions…"
+                value={template?.instructions}
+              />
+            </div>
           </div>
         </div>
       )}

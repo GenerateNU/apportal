@@ -15,7 +15,7 @@ func CORS(allowedOrigins []string) fiber.Handler {
 		// PATCH is included (unlike some of our other services) since
 		// update-user/update-cycle/etc. rely on it.
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE"},
-		AllowHeaders:     []string{"Content-Type", "X-NUID", "X-Role"},
+		AllowHeaders:     []string{"Content-Type", "Authorization"},
 		AllowCredentials: true,
 	})
 }

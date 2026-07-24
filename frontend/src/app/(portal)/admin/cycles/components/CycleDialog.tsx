@@ -14,7 +14,6 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import type { Cycle } from '@/lib/api/types'
 import { useCreateCycle, useUpdateCycle } from '@/lib/queries/cycles'
-import { REVIEWER_ACTOR } from '@/lib/stub-actor'
 import { APPLICATION_TYPES, type ApplicationType } from '../lib/cycle-meta'
 
 const SELECT_CLASS =
@@ -48,13 +47,12 @@ export function CycleDialog({
       name: trimmed,
       application_type: applicationType,
     }
-    const opts = { actor: REVIEWER_ACTOR }
     const onSuccess = () => onOpenChange(false)
 
     if (isEdit) {
-      updateCycle.mutate({ id: cycle.id, body, opts }, { onSuccess })
+      updateCycle.mutate({ id: cycle.id, body }, { onSuccess })
     } else {
-      createCycle.mutate({ body, opts }, { onSuccess })
+      createCycle.mutate({ body }, { onSuccess })
     }
   }
 

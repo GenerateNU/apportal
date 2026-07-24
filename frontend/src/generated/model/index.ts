@@ -47,7 +47,6 @@ export * from './errorDetail';
 export * from './errorModel';
 export * from './errorModelErrors';
 export * from './getApplicationTemplateParams';
-export * from './getUserByEmailParams';
 export * from './interview';
 export * from './interviewAssignment';
 export * from './interviewRating';

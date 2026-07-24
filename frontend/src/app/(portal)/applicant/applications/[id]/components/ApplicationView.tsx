@@ -3,19 +3,19 @@
 import { useMemo } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Check, Lock } from 'lucide-react'
+import { MarkdownContent } from '@/components/MarkdownContent'
 import type { Role } from '@/lib/api/types'
+import { useApplicationTemplate } from '@/lib/queries/application-templates'
 import { useApplication } from '@/lib/queries/applications'
 import { useAnswers } from '@/lib/queries/answers'
 import { useChallenges } from '@/lib/queries/challenges'
 import { useQuestions } from '@/lib/queries/questions'
 import { useSubmission } from '@/lib/queries/submissions'
 import { ROLE_LABEL } from '@/lib/roles'
-import { APPLICANT_ACTOR } from '@/lib/stub-actor'
 import { APPLICANT_STATUS } from '../../lib/status'
 import { ApplicationFields } from '../../components/ApplicationFields'
 import type { AnswerValue } from '../../components/QuestionField'
 
-const OPTS = { actor: APPLICANT_ACTOR }
 const noop = () => {}
 
 // Read-only view of a submitted application. Applications are only created on
@@ -31,11 +31,12 @@ export function ApplicationView({
   cycleName: string
   role: Role
 }) {
-  const { data: application } = useApplication(applicationId, OPTS)
-  const { data: questions = [] } = useQuestions(cycleId, role, OPTS)
-  const { data: challenges = [] } = useChallenges(cycleId, role, OPTS)
-  const { data: answers = [] } = useAnswers(applicationId, OPTS)
-  const { data: submission } = useSubmission(applicationId, OPTS)
+  const { data: application } = useApplication(applicationId)
+  const { data: questions = [] } = useQuestions(cycleId, role)
+  const { data: challenges = [] } = useChallenges(cycleId, role)
+  const { data: answers = [] } = useAnswers(applicationId)
+  const { data: submission } = useSubmission(applicationId)
+  const { data: template } = useApplicationTemplate(cycleId, role)
 
   const values = useMemo(() => {
     const map: Record<string, AnswerValue> = {}
@@ -82,6 +83,12 @@ export function ApplicationView({
         You&apos;ve submitted this application. It can no longer be edited.
       </div>
 
+      {template?.description && (
+        <MarkdownContent className="text-text-muted mb-6 text-sm leading-relaxed">
+          {template.description}
+        </MarkdownContent>
+      )}
+
       <ApplicationFields
         questions={questions}
         challenge={challenges[0]}
@@ -95,6 +102,12 @@ export function ApplicationView({
         onSubmissionChange={noop}
         disabled
       />
+
+      {template?.instructions && (
+        <MarkdownContent className="text-text-muted mt-6 text-sm leading-relaxed">
+          {template.instructions}
+        </MarkdownContent>
+      )}
     </div>
   )
 }

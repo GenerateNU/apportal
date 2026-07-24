@@ -11,8 +11,8 @@ import { listCycleChallenges } from '@/generated/code-challenges/code-challenges
 import { getCycle } from '@/generated/cycles/cycles'
 import { listCycleQuestions } from '@/generated/questions/questions'
 import type { Application, Role } from '@/lib/api/types'
+import { getServerRequestOptions } from '@/lib/api/server-request-options'
 import { queryKeys } from '@/lib/queries/keys'
-import { APPLICANT_ACTOR } from '@/lib/stub-actor'
 import { ApplicationView } from './components/ApplicationView'
 
 // Auth-gated, live data fetched per request from the backend — never prerender
@@ -26,12 +26,13 @@ export default async function ApplicationDetailPage({
 }) {
   const { id } = await params
   const queryClient = new QueryClient()
+  const requestOptions = await getServerRequestOptions()
 
   let application: Application
   try {
     application = (await queryClient.fetchQuery({
       queryKey: queryKeys.applications.detail(id),
-      queryFn: () => getApplication(id, { actor: APPLICANT_ACTOR }),
+      queryFn: () => getApplication(id, requestOptions),
     })) as Application
   } catch {
     notFound()
@@ -42,33 +43,25 @@ export default async function ApplicationDetailPage({
   const [cycle] = await Promise.all([
     queryClient.fetchQuery({
       queryKey: queryKeys.cycles.detail(application.cycle_id),
-      queryFn: () => getCycle(application.cycle_id, { actor: APPLICANT_ACTOR }),
+      queryFn: () => getCycle(application.cycle_id, requestOptions),
     }),
     queryClient.prefetchQuery({
       queryKey: queryKeys.questions.list(application.cycle_id, role),
       queryFn: () =>
-        listCycleQuestions(
-          application.cycle_id,
-          { role },
-          { actor: APPLICANT_ACTOR }
-        ),
+        listCycleQuestions(application.cycle_id, { role }, requestOptions),
     }),
     queryClient.prefetchQuery({
       queryKey: queryKeys.challenges.list(application.cycle_id, role),
       queryFn: () =>
-        listCycleChallenges(
-          application.cycle_id,
-          { role },
-          { actor: APPLICANT_ACTOR }
-        ),
+        listCycleChallenges(application.cycle_id, { role }, requestOptions),
     }),
     queryClient.prefetchQuery({
       queryKey: queryKeys.answers.list(id),
-      queryFn: () => listAnswers(id, { actor: APPLICANT_ACTOR }),
+      queryFn: () => listAnswers(id, requestOptions),
     }),
     queryClient.prefetchQuery({
       queryKey: queryKeys.submissions.detail(id),
-      queryFn: () => listCodeSubmissions(id, { actor: APPLICANT_ACTOR }),
+      queryFn: () => listCodeSubmissions(id, requestOptions),
     }),
   ])
 

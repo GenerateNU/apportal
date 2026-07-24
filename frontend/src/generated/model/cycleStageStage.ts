@@ -11,6 +11,7 @@ export type CycleStageStage = typeof CycleStageStage[keyof typeof CycleStageStag
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const CycleStageStage = {
+  draft: 'draft',
   submitted: 'submitted',
   lead_review: 'lead_review',
   chief_review: 'chief_review',

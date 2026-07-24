@@ -226,6 +226,68 @@ export const useCreateApplication = <TError = ErrorModel | ErrorModel | ErrorMod
       return useMutation(mutationOptions, queryClient);
     }
     /**
+ * Applicant only, and only while still a draft.
+ * @summary Discard a draft application
+ */
+export const deleteApplication = (
+    id: string,
+ options?: SecondParameter<typeof customInstance>,) => {
+      
+      
+      return customInstance<void>(
+      {url: `/applications/${id}`, method: 'DELETE'
+    },
+      options);
+    }
+  
+
+
+export const getDeleteApplicationMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteApplication>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteApplication>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['deleteApplication'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteApplication>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteApplication(id,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteApplicationMutationResult = NonNullable<Awaited<ReturnType<typeof deleteApplication>>>
+    
+    export type DeleteApplicationMutationError = ErrorModel | ErrorModel | ErrorModel | ErrorModel
+
+    /**
+ * @summary Discard a draft application
+ */
+export const useDeleteApplication = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteApplication>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof deleteApplication>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+
+      const mutationOptions = getDeleteApplicationMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
  * @summary Get an application
  */
 export const getApplication = (
@@ -336,7 +398,7 @@ export const updateApplication = (
   
 
 
-export const getUpdateApplicationMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel,
+export const getUpdateApplicationMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateApplication>>, TError,{id: string;data: NonReadonly<UpdateApplicationInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
 ): UseMutationOptions<Awaited<ReturnType<typeof updateApplication>>, TError,{id: string;data: NonReadonly<UpdateApplicationInputBody>}, TContext> => {
 
@@ -363,12 +425,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type UpdateApplicationMutationResult = NonNullable<Awaited<ReturnType<typeof updateApplication>>>
     export type UpdateApplicationMutationBody = NonReadonly<UpdateApplicationInputBody>
-    export type UpdateApplicationMutationError = ErrorModel | ErrorModel | ErrorModel
+    export type UpdateApplicationMutationError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel
 
     /**
  * @summary Update an application
  */
-export const useUpdateApplication = <TError = ErrorModel | ErrorModel | ErrorModel,
+export const useUpdateApplication = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateApplication>>, TError,{id: string;data: NonReadonly<UpdateApplicationInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof updateApplication>>,
