@@ -40,8 +40,8 @@ export default function SignupForm() {
       return
     }
 
-    // Every new account starts as an applicant — upsertApplicant never sets
-    // roles, so the users table default of {applicant} applies.
+    // Every new account starts as a member — the backend sets this role
+    // explicitly on insert when upsertApplicant is called here.
     try {
       await upsertApplicant({ nuid, email, full_name: fullName })
     } catch {

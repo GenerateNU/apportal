@@ -19,8 +19,8 @@ type ApplicantUpsert struct {
 }
 
 // Applicants were merged into the users table; these methods expose the
-// applicant-facing profile subset of a user. The "applicant" role is applied by
-// the users table default on insert and left untouched on update.
+// applicant-facing profile subset of a user. New signups get the "member"
+// role explicitly on insert; existing roles are left untouched on update.
 const applicantColumns = `nuid, email, full_name, github_username, graduation_year, major, created_at, updated_at`
 
 // UpsertApplicant inserts a new applicant user or updates the existing one keyed
@@ -28,8 +28,8 @@ const applicantColumns = `nuid, email, full_name, github_username, graduation_ye
 // conflict. Existing roles are preserved.
 func (s *Store) UpsertApplicant(ctx context.Context, in ApplicantUpsert) (models.Applicant, error) {
 	const q = `
-		INSERT INTO users (nuid, email, full_name, github_username, graduation_year, major)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO users (nuid, email, full_name, github_username, graduation_year, major, roles)
+		VALUES ($1, $2, $3, $4, $5, $6, '{member}'::user_role[])
 		ON CONFLICT (nuid) DO UPDATE SET
 			email           = EXCLUDED.email,
 			full_name       = EXCLUDED.full_name,
