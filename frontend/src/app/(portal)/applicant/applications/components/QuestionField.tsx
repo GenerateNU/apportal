@@ -94,7 +94,11 @@ export function QuestionField({
       )}
 
       {question.question_type === 'dropdown' && (
-        <Select value={value.text ?? ''} onValueChange={(val) => onChange({ text: val })} disabled={disabled}>
+        <Select
+          value={value.text ?? ''}
+          onValueChange={(val) => onChange({ text: val })}
+          disabled={disabled}
+        >
           <SelectTrigger aria-label={question.question_text}>
             <SelectValue placeholder="Select an option" />
           </SelectTrigger>

@@ -64,7 +64,9 @@ function PreviewField({ question }: { question: Question }) {
 
       {question.question_type === 'dropdown' && (
         <Select defaultValue="">
-          <SelectTrigger aria-label={question.question_text || 'Untitled question'}>
+          <SelectTrigger
+            aria-label={question.question_text || 'Untitled question'}
+          >
             <SelectValue placeholder="Select an option" />
           </SelectTrigger>
           <SelectContent>

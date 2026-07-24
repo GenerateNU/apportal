@@ -96,7 +96,11 @@ function CycleRow({ cycle }: { cycle: Cycle }) {
           {status.label}
         </span>
 
-        <Select value={cycle.status} onValueChange={(val) => changeStatus(val as CycleStatus)} disabled={updateCycle.isPending}>
+        <Select
+          value={cycle.status}
+          onValueChange={(val) => changeStatus(val as CycleStatus)}
+          disabled={updateCycle.isPending}
+        >
           <SelectTrigger className="w-32" aria-label="Change status">
             <SelectValue />
           </SelectTrigger>

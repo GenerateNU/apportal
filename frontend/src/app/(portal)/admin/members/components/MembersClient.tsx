@@ -94,7 +94,10 @@ export function MembersClient() {
             className="focus:border-brand-blue focus:ring-brand-blue w-full rounded-lg border border-gray-300 py-2 pr-3 pl-9 text-sm outline-none focus:ring-1"
           />
         </div>
-        <Select value={roleFilter} onValueChange={(val) => setRoleFilter(val as RoleFilter)}>
+        <Select
+          value={roleFilter}
+          onValueChange={(val) => setRoleFilter(val as RoleFilter)}
+        >
           <SelectTrigger className="w-40" aria-label="Filter by role">
             <SelectValue />
           </SelectTrigger>

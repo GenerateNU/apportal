@@ -109,7 +109,10 @@ export function ApplicantsClient() {
         <h1 className="text-text-default text-2xl font-semibold">Applicants</h1>
 
         <div className="flex flex-wrap items-center gap-3">
-          <Select value={activeRole} onValueChange={(val) => setActiveRole(val as Role | 'all')}>
+          <Select
+            value={activeRole}
+            onValueChange={(val) => setActiveRole(val as Role | 'all')}
+          >
             <SelectTrigger className="w-40" aria-label="Filter by role">
               <SelectValue />
             </SelectTrigger>
