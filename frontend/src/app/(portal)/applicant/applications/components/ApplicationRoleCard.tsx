@@ -2,7 +2,6 @@
 
 import { useRouter } from 'next/navigation'
 import { ArrowRight, Calendar, Check, FileQuestion } from 'lucide-react'
-import { Tooltip } from '@/components/Tooltip'
 import {
   cycleStatusDot,
   cycleStatusLabel,
@@ -79,12 +78,10 @@ export function ApplicationRoleCard({
       <div className="text-text-subtle -mx-4 mt-3 flex items-center justify-between gap-3 border-t border-gray-100 px-4 pt-3 text-xs">
         <div className="flex items-center gap-3">
           {template.closes_at ? (
-            <Tooltip label="Application Deadline">
-              <span className="inline-flex cursor-help items-center gap-1">
-                <Calendar className="h-3.5 w-3.5" />
-                {formatDate(template.closes_at)}
-              </span>
-            </Tooltip>
+            <span className="inline-flex items-center gap-1">
+              <Calendar className="h-3.5 w-3.5" />
+              {formatDate(template.closes_at)}
+            </span>
           ) : null}
           <span className="flex items-center gap-1">
             <FileQuestion className="h-3.5 w-3.5" />
