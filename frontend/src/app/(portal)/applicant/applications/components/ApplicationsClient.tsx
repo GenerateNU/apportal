@@ -2,15 +2,31 @@
 
 import { useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowRight, Check, Loader2 } from 'lucide-react'
+import {
+  ArrowRight,
+  Calendar,
+  Check,
+  FileQuestion,
+  Loader2,
+} from 'lucide-react'
 import { HelpContact } from '@/components/HelpContact'
-import { Button } from '@/components/ui/button'
-import type { Application, Cycle, Role, User } from '@/lib/api/types'
+import {
+  cycleStatusDot,
+  cycleStatusLabel,
+  paletteClass,
+} from '@/app/(portal)/admin/applications/components/constants'
+import type {
+  Application,
+  ApplicationTemplate,
+  Cycle,
+  User,
+} from '@/lib/api/types'
 import { useApplications } from '@/lib/queries/applications'
 import { useOpenApplicationTemplates } from '@/lib/queries/application-templates'
-import { useCycles } from '@/lib/queries/cycles'
+import { useCycles, useCycleTemplateSummary } from '@/lib/queries/cycles'
 import { useCurrentUser } from '@/lib/queries/users'
 import { ROLE_CHIP_CLASS, ROLE_LABEL } from '@/lib/roles'
+import { formatDate } from '@/lib/utils'
 import { APPLICANT_STATUS } from '../lib/status'
 
 export function ApplicationsClient() {
@@ -55,18 +71,18 @@ function Dashboard({ user }: { user: User }) {
   // "effective open" window check into that same backend query.
   const { data: openTemplates = [] } = useOpenApplicationTemplates()
 
-  const openRolesByCycle = useMemo(() => {
-    const map: Record<string, Role[]> = {}
+  const openTemplatesByCycle = useMemo(() => {
+    const map: Record<string, ApplicationTemplate[]> = {}
     openTemplates.forEach((template) => {
-      const roles = (map[template.cycle_id] ??= [])
-      roles.push(template.application_role)
+      const templates = (map[template.cycle_id] ??= [])
+      templates.push(template)
     })
     return map
   }, [openTemplates])
 
   const visibleCycles = useMemo(
-    () => cycles.filter((cycle) => openRolesByCycle[cycle.id]?.length),
-    [cycles, openRolesByCycle]
+    () => cycles.filter((cycle) => openTemplatesByCycle[cycle.id]?.length),
+    [cycles, openTemplatesByCycle]
   )
 
   return (
@@ -85,11 +101,12 @@ function Dashboard({ user }: { user: User }) {
         <EmptyState applications={applications} />
       ) : (
         <div className="flex flex-col gap-8">
-          {visibleCycles.map((cycle) => (
+          {visibleCycles.map((cycle, cycleIndex) => (
             <CycleSection
               key={cycle.id}
               cycle={cycle}
-              roles={openRolesByCycle[cycle.id] ?? []}
+              cycleColorIndex={cycleIndex}
+              templates={openTemplatesByCycle[cycle.id] ?? []}
               applications={applications}
             />
           ))}
@@ -101,26 +118,36 @@ function Dashboard({ user }: { user: User }) {
 
 function CycleSection({
   cycle,
-  roles,
+  cycleColorIndex,
+  templates,
   applications,
 }: {
   cycle: Cycle
-  roles: Role[]
+  cycleColorIndex: number
+  templates: ApplicationTemplate[]
   applications: Application[]
 }) {
+  const { data: summaries = [] } = useCycleTemplateSummary(cycle.id)
+
   return (
     <section>
       <h2 className="text-text-default mb-3 text-sm font-semibold">
-        {cycle.name}
+        Open roles
       </h2>
       <div className="grid gap-4 sm:grid-cols-2">
-        {roles.map((role) => (
+        {templates.map((template) => (
           <RoleCard
-            key={role}
+            key={template.application_role}
             cycle={cycle}
-            role={role}
+            cycleColorIndex={cycleColorIndex}
+            template={template}
+            questionCount={
+              summaries.find((s) => s.role === template.application_role)
+                ?.question_count ?? 0
+            }
             application={applications.find(
-              (a) => a.cycle_id === cycle.id && a.role === role
+              (a) =>
+                a.cycle_id === cycle.id && a.role === template.application_role
             )}
           />
         ))}
@@ -131,71 +158,109 @@ function CycleSection({
 
 function RoleCard({
   cycle,
-  role,
+  cycleColorIndex,
+  template,
+  questionCount,
   application,
 }: {
   cycle: Cycle
-  role: Role
+  cycleColorIndex: number
+  template: ApplicationTemplate
+  questionCount: number
   application?: Application
 }) {
   const router = useRouter()
+  const role = template.application_role
   const isDraft = application?.stage === 'draft'
   const status =
     application && !isDraft ? APPLICANT_STATUS[application.stage] : null
 
+  const handleClick = () => {
+    if (isDraft) {
+      router.push(`/applicant/applications/new?cycle=${cycle.id}&role=${role}`)
+    } else if (application) {
+      router.push(`/applicant/applications/${application.id}`)
+    } else {
+      router.push(`/applicant/applications/new?cycle=${cycle.id}&role=${role}`)
+    }
+  }
+
   return (
-    <div className="flex flex-col justify-between rounded-xl border border-gray-100 bg-white p-5">
-      <div className="mb-6 flex items-start justify-between gap-2">
+    <button
+      type="button"
+      onClick={handleClick}
+      className="group rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm transition-shadow hover:shadow-md"
+    >
+      <div className="flex items-center justify-between gap-2 text-left">
         <span
-          className={`inline-flex rounded-md px-2 py-0.5 text-xs font-medium ${ROLE_CHIP_CLASS[role]}`}
+          className={`inline-flex rounded-md px-2 py-0.5 text-xs font-medium ${paletteClass(cycleColorIndex)}`}
         >
-          {ROLE_LABEL[role]}
+          {cycle.name}
         </span>
-        {status && (
+        {status ? (
           <span
             className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium ${status.className}`}
           >
             <Check size={12} />
             {status.label}
           </span>
+        ) : (
+          <span className="text-text-subtle flex shrink-0 items-center gap-1.5 text-xs">
+            <span
+              className={`h-2 w-2 shrink-0 rounded-full ${cycleStatusDot[cycle.status]}`}
+            />
+            {cycleStatusLabel[cycle.status]}
+          </span>
         )}
       </div>
 
-      {isDraft ? (
-        <Button
-          variant="outline"
-          onClick={() =>
-            router.push(
-              `/applicant/applications/new?cycle=${cycle.id}&role=${role}`
-            )
-          }
-        >
-          Continue application
-          <ArrowRight data-icon="inline-end" size={14} />
-        </Button>
-      ) : application ? (
-        <Button
-          variant="outline"
-          onClick={() =>
-            router.push(`/applicant/applications/${application.id}`)
-          }
-        >
-          View application
-          <ArrowRight data-icon="inline-end" size={14} />
-        </Button>
-      ) : (
-        <Button
-          onClick={() =>
-            router.push(
-              `/applicant/applications/new?cycle=${cycle.id}&role=${role}`
-            )
-          }
-        >
-          Apply
-          <ArrowRight data-icon="inline-end" size={14} />
-        </Button>
-      )}
-    </div>
+      <p className="text-text-secondary mt-2 text-left text-base font-medium">
+        {template.title}
+      </p>
+
+      <div className="text-text-subtle -mx-4 mt-3 flex items-center justify-between gap-3 border-t border-gray-100 px-4 pt-3 text-xs">
+        <div className="flex items-center gap-3">
+          <span className="flex items-center gap-1">
+            <Calendar className="h-3.5 w-3.5" />
+            {template.closes_at
+              ? formatDate(template.closes_at)
+              : 'No deadline'}
+          </span>
+          <span className="flex items-center gap-1">
+            <FileQuestion className="h-3.5 w-3.5" />
+            {questionCount} question{questionCount === 1 ? '' : 's'}
+          </span>
+        </div>
+
+        <span className="text-text-subtle group-hover:text-brand-blue flex items-center gap-1 text-sm font-medium transition-colors">
+          {isDraft ? (
+            <>
+              Continue
+              <ArrowRight
+                size={14}
+                className="transition-transform group-hover:translate-x-1"
+              />
+            </>
+          ) : application ? (
+            <>
+              View
+              <ArrowRight
+                size={14}
+                className="transition-transform group-hover:translate-x-1"
+              />
+            </>
+          ) : (
+            <>
+              Apply
+              <ArrowRight
+                size={14}
+                className="transition-transform group-hover:translate-x-1"
+              />
+            </>
+          )}
+        </span>
+      </div>
+    </button>
   )
 }
 
