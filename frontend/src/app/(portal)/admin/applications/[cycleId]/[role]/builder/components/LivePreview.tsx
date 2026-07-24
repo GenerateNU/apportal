@@ -70,10 +70,14 @@ export function LivePreview({
   cycleName,
   role,
   questions,
+  description,
+  instructions,
 }: {
   cycleName: string
   role: Role
   questions: Question[]
+  description?: string
+  instructions?: string
 }) {
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-8 shadow-sm">
@@ -81,6 +85,12 @@ export function LivePreview({
       <h2 className="text-text-default mb-8 text-xl font-semibold">
         {cycleName} Application
       </h2>
+
+      {description && (
+        <p className="text-text-secondary mb-8 whitespace-pre-wrap text-base">
+          {description}
+        </p>
+      )}
 
       <div className="flex flex-col gap-6">
         {questions.map((question) => (
@@ -92,6 +102,12 @@ export function LivePreview({
           </p>
         )}
       </div>
+
+      {instructions && (
+        <p className="text-text-secondary mt-8 whitespace-pre-wrap text-base">
+          {instructions}
+        </p>
+      )}
     </div>
   )
 }

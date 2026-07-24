@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import type { Role } from '@/lib/api/types'
+import { useApplicationTemplate } from '@/lib/queries/application-templates'
 import { useCreateApplication } from '@/lib/queries/applications'
 import { usePutAnswers } from '@/lib/queries/answers'
 import { useChallenges } from '@/lib/queries/challenges'
@@ -76,6 +77,7 @@ function Form({
 }) {
   const { data: questions = [] } = useQuestions(cycleId, role)
   const { data: challenges = [] } = useChallenges(cycleId, role)
+  const { data: template } = useApplicationTemplate(cycleId, role)
   const challenge = challenges[0]
 
   const createApplication = useCreateApplication()
@@ -226,6 +228,12 @@ function Form({
         <p className="text-text-muted mt-1 text-sm">{cycleName}</p>
       </header>
 
+      {template?.description && (
+        <p className="text-text-muted mb-8 whitespace-pre-wrap text-sm leading-relaxed">
+          {template.description}
+        </p>
+      )}
+
       <div className="grid grid-cols-1 items-start gap-10 lg:grid-cols-[220px_1fr]">
         <aside className="hidden lg:sticky lg:top-10 lg:block">
           <QuestionOutline questions={questions} />
@@ -246,6 +254,12 @@ function Form({
             submissionUrl={submissionUrl}
             onSubmissionChange={setSubmissionUrl}
           />
+
+          {template?.instructions && (
+            <p className="text-text-muted mt-8 whitespace-pre-wrap text-sm leading-relaxed">
+              {template.instructions}
+            </p>
+          )}
 
           <div className="mt-8 flex items-center justify-end gap-3 border-t border-gray-100 pt-6">
             {missingRequired && (
