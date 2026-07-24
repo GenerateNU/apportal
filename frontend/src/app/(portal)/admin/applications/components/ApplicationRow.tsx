@@ -35,12 +35,6 @@ export function ApplicationRow({
         <p className="text-text-secondary text-base font-medium">
           {template.title}
         </p>
-        <span className="text-text-subtle flex shrink-0 items-center gap-1.5 text-xs">
-          <span
-            className={`h-2 w-2 shrink-0 rounded-full ${cycleStatusDot[template.status]}`}
-          />
-          {cycleStatusLabel[template.status]}
-        </span>
       </div>
       <span
         className={`mt-2 inline-block rounded-md px-2 py-0.5 text-xs font-medium ${paletteClass(template.cycleColorIndex)}`}
