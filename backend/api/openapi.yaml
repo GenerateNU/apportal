@@ -75,6 +75,7 @@ components:
           type: string
         stage:
           enum:
+            - draft
             - submitted
             - lead_review
             - chief_review
@@ -389,6 +390,7 @@ components:
           type: integer
         stage:
           enum:
+            - draft
             - submitted
             - lead_review
             - chief_review
@@ -435,6 +437,9 @@ components:
         is_required:
           type: boolean
         options: {}
+        page_title:
+          description: Set to start a new page at this question. Role-specific questions only.
+          type: string
         question_text:
           type: string
         question_type:
@@ -443,6 +448,7 @@ components:
             - long_answer
             - multiple_choice
             - checkbox
+            - dropdown
             - url
           type: string
         role:
@@ -593,6 +599,7 @@ components:
           type: integer
         stage:
           enum:
+            - draft
             - submitted
             - lead_review
             - chief_review
@@ -916,6 +923,8 @@ components:
         is_required:
           type: boolean
         options: {}
+        page_title:
+          type: string
         question_text:
           type: string
         question_type:
@@ -924,6 +933,7 @@ components:
             - long_answer
             - multiple_choice
             - checkbox
+            - dropdown
             - url
           type: string
         role:
@@ -1037,6 +1047,7 @@ components:
           type: string
         stage:
           enum:
+            - draft
             - submitted
             - lead_review
             - chief_review
@@ -1142,12 +1153,18 @@ components:
           format: uri
           readOnly: true
           type: string
+        clear_page_title:
+          description: Set true to stop this question from starting a page
+          type: boolean
         display_order:
           format: int64
           type: integer
         is_required:
           type: boolean
         options: {}
+        page_title:
+          description: Set to start (or rename) a page at this question
+          type: string
         question_text:
           type: string
         question_type:
@@ -1156,6 +1173,7 @@ components:
             - long_answer
             - multiple_choice
             - checkbox
+            - dropdown
             - url
           type: string
       type: object
@@ -1738,6 +1756,45 @@ paths:
       tags:
         - Applications
   /applications/{id}:
+    delete:
+      description: Applicant only, and only while still a draft.
+      operationId: delete-application
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Discard a draft application
+      tags:
+        - Applications
     get:
       operationId: get-application
       parameters:
@@ -1796,6 +1853,18 @@ paths:
               schema:
                 $ref: "#/components/schemas/Application"
           description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
         "404":
           content:
             application/problem+json:

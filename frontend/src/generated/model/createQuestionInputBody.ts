@@ -14,6 +14,8 @@ export interface CreateQuestionInputBody {
   display_order?: number;
   is_required?: boolean;
   options?: unknown;
+  /** Set to start a new page at this question. Role-specific questions only. */
+  page_title?: string;
   question_text: string;
   question_type?: CreateQuestionInputBodyQuestionType;
   /** Omit for a global question shown to all roles */

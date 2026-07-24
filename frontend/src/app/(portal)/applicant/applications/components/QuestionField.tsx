@@ -86,6 +86,25 @@ export function QuestionField({
         </div>
       )}
 
+      {question.question_type === 'dropdown' && (
+        <select
+          aria-label={question.question_text}
+          className="border-input h-11 w-full rounded-lg border bg-transparent px-2.5 text-base outline-none"
+          value={value.text ?? ''}
+          onChange={(e) => onChange({ text: e.target.value })}
+          disabled={disabled}
+        >
+          <option value="" disabled>
+            Select an option
+          </option>
+          {options.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      )}
+
       {question.question_type === 'checkbox' && (
         <div className="flex flex-col gap-1.5">
           {options.map((option) => {

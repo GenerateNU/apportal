@@ -34,6 +34,11 @@ type ApplicationFilter struct {
 	// AssignedTo limits results to applications the given lead is assigned to
 	// write-review (via lead_assignments).
 	AssignedTo string
+	// IncludeDraft allows draft applications into the results. Callers should
+	// only set this when listing a user's own applications by their own
+	// identity — drafts are otherwise invisible (reviewer queues, admin
+	// counts, etc.).
+	IncludeDraft bool
 }
 
 const applicationColumns = `id, cycle_id, user_nuid, application_role, stage, availability, resume_url, submitted_at, updated_at`
@@ -93,6 +98,9 @@ func (s *Store) ListApplications(ctx context.Context, f ApplicationFilter) ([]mo
 			` WHERE la.application_id = applications.id AND la.lead_nuid = $` +
 			strconv.Itoa(len(args)) + `)`
 	}
+	if !f.IncludeDraft {
+		query += ` AND stage != 'draft'`
+	}
 	query += ` ORDER BY submitted_at DESC`
 
 	rows, err := s.db.Query(ctx, query, args...)
@@ -100,6 +108,23 @@ func (s *Store) ListApplications(ctx context.Context, f ApplicationFilter) ([]mo
 		return nil, err
 	}
 	return pgx.CollectRows(rows, pgx.RowToStructByPos[models.Application])
+}
+
+// DeleteDraftApplication discards an applicant's own in-progress draft. The
+// stage='draft' and user_nuid match are enforced in the WHERE clause itself
+// (rather than a separate fetch-then-check) so a non-owner or a
+// non-draft application both fail the same way, without leaking which.
+func (s *Store) DeleteDraftApplication(ctx context.Context, id, userNUID string) error {
+	tag, err := s.db.Exec(ctx,
+		`DELETE FROM applications WHERE id = $1 AND user_nuid = $2 AND stage = 'draft'`,
+		id, userNUID)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
 }
 
 func (s *Store) UpdateApplication(ctx context.Context, id string, in ApplicationUpdate) (models.Application, error) {

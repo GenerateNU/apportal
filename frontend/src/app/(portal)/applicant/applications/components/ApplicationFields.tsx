@@ -15,6 +15,7 @@ import { QuestionField, type AnswerValue } from './QuestionField'
 // change when this is re-enabled.
 export function ApplicationFields({
   questions,
+  startIndex = 0,
   challenge,
   values,
   onValueChange,
@@ -23,6 +24,9 @@ export function ApplicationFields({
   disabled = false,
 }: {
   questions: Question[]
+  // Offset for question numbering — lets a page's slice of questions
+  // continue the count (6, 7, 8…) rather than restarting at 1.
+  startIndex?: number
   challenge?: CodeChallenge
   values: Record<string, AnswerValue>
   onValueChange: (questionId: string, next: AnswerValue) => void
@@ -47,7 +51,7 @@ export function ApplicationFields({
               <QuestionField
                 key={question.id}
                 question={question}
-                index={i}
+                index={startIndex + i}
                 value={values[question.id] ?? {}}
                 disabled={disabled}
                 onChange={(next) => onValueChange(question.id, next)}

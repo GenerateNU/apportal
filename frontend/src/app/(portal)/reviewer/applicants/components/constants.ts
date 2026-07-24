@@ -34,7 +34,10 @@ export const FILTER_STAGES: {
   { label: 'Withdrawn', value: 'withdrawn' },
 ]
 
+// Reviewers never see 'draft' applications (filtered out server-side) — these
+// entries exist only so the Record stays exhaustive against ApplicationStage.
 export const stageBadge: Record<ApplicationStage, string> = {
+  draft: 'bg-gray-100 text-gray-500',
   submitted: 'bg-blue-50 text-blue-700',
   lead_review: 'bg-purple-50 text-purple-700',
   chief_review: 'bg-indigo-50 text-indigo-700',
@@ -48,6 +51,7 @@ export const stageBadge: Record<ApplicationStage, string> = {
 }
 
 export const stageLabel: Record<ApplicationStage, string> = {
+  draft: 'Draft',
   submitted: 'Submitted',
   lead_review: 'Lead Review',
   chief_review: 'Chief Review',
@@ -61,6 +65,7 @@ export const stageLabel: Record<ApplicationStage, string> = {
 }
 
 export const stageDot: Record<ApplicationStage, string> = {
+  draft: 'bg-gray-300',
   submitted: 'bg-blue-500',
   lead_review: 'bg-purple-500',
   chief_review: 'bg-indigo-500',

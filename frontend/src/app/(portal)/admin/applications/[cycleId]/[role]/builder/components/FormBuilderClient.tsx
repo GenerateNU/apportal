@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Eye, Pencil } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -210,8 +210,18 @@ export function FormBuilderClient({
                   strategy={verticalListSortingStrategy}
                 >
                   <div className="flex flex-col gap-4">
-                    {order.map((question) => (
-                      <QuestionCard key={question.id} question={question} />
+                    {order.map((question, index) => (
+                      <Fragment key={question.id}>
+                        {index > 0 && question.page_title && (
+                          <div className="flex items-center gap-3 pt-2">
+                            <span className="text-text-subtle text-xs font-semibold tracking-wide uppercase">
+                              {question.page_title}
+                            </span>
+                            <div className="h-px flex-1 bg-gray-200" />
+                          </div>
+                        )}
+                        <QuestionCard question={question} />
+                      </Fragment>
                     ))}
                     {order.length === 0 && (
                       <p className="text-text-subtle mt-10 text-center text-sm">

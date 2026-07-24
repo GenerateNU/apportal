@@ -46,6 +46,21 @@ export function QuestionCard({ question }: { question: Question }) {
     setOptions(persistedOptions)
   }
 
+  const [prevPageTitle, setPrevPageTitle] = useState(question.page_title ?? '')
+  const [pageTitleDraft, setPageTitleDraft] = useState(
+    question.page_title ?? ''
+  )
+  if ((question.page_title ?? '') !== prevPageTitle) {
+    setPrevPageTitle(question.page_title ?? '')
+    setPageTitleDraft(question.page_title ?? '')
+  }
+  const hasPageBreak = question.page_title != null
+  // Global questions (role === null) are shared across every role's form at
+  // potentially different relative positions, so a page boundary on one
+  // wouldn't mean the same thing for another — only role-specific questions
+  // can start a page.
+  const canHavePageBreak = question.role !== null
+
   const meta = QUESTION_TYPE_META[question.question_type]
   const Icon = meta.icon
 
@@ -110,6 +125,30 @@ export function QuestionCard({ question }: { question: Question }) {
     }
   }
 
+  function togglePageBreak() {
+    if (hasPageBreak) {
+      updateQuestion.mutate({
+        id: question.id,
+        body: { clear_page_title: true },
+      })
+      return
+    }
+    const title = pageTitleDraft.trim() || 'Untitled page'
+    setPageTitleDraft(title)
+    updateQuestion.mutate({ id: question.id, body: { page_title: title } })
+  }
+
+  function commitPageTitle() {
+    const trimmed = pageTitleDraft.trim()
+    if (!trimmed) {
+      setPageTitleDraft(question.page_title ?? '')
+      return
+    }
+    if (trimmed !== question.page_title) {
+      updateQuestion.mutate({ id: question.id, body: { page_title: trimmed } })
+    }
+  }
+
   function handleDelete() {
     if (!confirmingDelete) {
       setConfirmingDelete(true)
@@ -145,18 +184,45 @@ export function QuestionCard({ question }: { question: Question }) {
             className="text-text-default w-full rounded-md border border-transparent px-1.5 py-1 text-lg font-medium outline-none hover:border-gray-200 focus:border-gray-300"
           />
 
+          {canHavePageBreak && (
+            <div className="flex items-center gap-2">
+              <label className="text-text-subtle flex items-center gap-1.5 text-sm">
+                <input
+                  type="checkbox"
+                  checked={hasPageBreak}
+                  onChange={togglePageBreak}
+                  className="accent-brand-blue h-3.5 w-3.5"
+                />
+                Start a new page here
+              </label>
+              {hasPageBreak && (
+                <input
+                  aria-label="Page title"
+                  value={pageTitleDraft}
+                  onChange={(event) => setPageTitleDraft(event.target.value)}
+                  onBlur={commitPageTitle}
+                  placeholder="Page title"
+                  className="text-text-secondary rounded-md border border-transparent px-1.5 py-0.5 text-sm outline-none hover:border-gray-200 focus:border-gray-300"
+                />
+              )}
+            </div>
+          )}
+
           {meta.hasOptions && (
             <div className="flex flex-col gap-2">
               {options.map((option, index) => (
                 <div key={index} className="flex items-center gap-2.5">
-                  <span
-                    className={
-                      question.question_type === 'checkbox'
-                        ? 'h-4 w-4 shrink-0 rounded-sm border border-gray-300'
-                        : 'h-4 w-4 shrink-0 rounded-full border border-gray-300'
-                    }
-                  />
+                  {question.question_type !== 'dropdown' && (
+                    <span
+                      className={
+                        question.question_type === 'checkbox'
+                          ? 'h-4 w-4 shrink-0 rounded-sm border border-gray-300'
+                          : 'h-4 w-4 shrink-0 rounded-full border border-gray-300'
+                      }
+                    />
+                  )}
                   <input
+                    aria-label={`Option ${index + 1}`}
                     value={option}
                     onChange={(event) => editOption(index, event.target.value)}
                     onBlur={commitOptionsOnBlur}
@@ -200,6 +266,12 @@ export function QuestionCard({ question }: { question: Question }) {
         </div>
 
         <div className="flex items-center gap-4">
+          {confirmingDelete && hasPageBreak && (
+            <span className="max-w-xs text-xs text-red-600">
+              This question starts a page (&quot;{question.page_title}&quot;) —
+              deleting it will merge this page into the previous one.
+            </span>
+          )}
           <label className="flex items-center gap-2">
             <input
               type="checkbox"

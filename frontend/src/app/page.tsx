@@ -29,8 +29,8 @@ export default function RootPage() {
             Couldn&apos;t verify your sign-in
           </h1>
           <p className="text-text-muted text-sm">
-            We couldn&apos;t reach the server to check your sign-in status.
-            This is usually temporary.
+            We couldn&apos;t reach the server to check your sign-in status. This
+            is usually temporary.
           </p>
           <Button onClick={() => refetch()}>Try again</Button>
         </div>

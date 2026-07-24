@@ -18,6 +18,7 @@ type QuestionCreate struct {
 	IsRequired   bool
 	DisplayOrder int
 	Options      json.RawMessage
+	PageTitle    *string
 }
 
 type QuestionUpdate struct {
@@ -26,17 +27,23 @@ type QuestionUpdate struct {
 	IsRequired   *bool
 	DisplayOrder *int
 	Options      json.RawMessage
+	// PageTitle sets a new page title; ClearPageTitle explicitly clears it.
+	// Both nil/false means "leave page_title untouched" — a plain COALESCE
+	// can't distinguish "not provided" from "clear to NULL", so this needs
+	// its own flag rather than reusing the Options-style nullable pattern.
+	PageTitle      *string
+	ClearPageTitle bool
 }
 
-const questionColumns = `id, cycle_id, application_role, question_text, question_type, is_required, display_order, options, created_at`
+const questionColumns = `id, cycle_id, application_role, question_text, question_type, is_required, display_order, options, page_title, created_at`
 
 func (s *Store) CreateQuestion(ctx context.Context, in QuestionCreate) (models.Question, error) {
 	const q = `
-		INSERT INTO questions (cycle_id, application_role, question_text, question_type, is_required, display_order, options)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO questions (cycle_id, application_role, question_text, question_type, is_required, display_order, options, page_title)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING ` + questionColumns
 	rows, err := s.db.Query(ctx, q, in.CycleID, in.Role, in.QuestionText,
-		in.QuestionType, in.IsRequired, in.DisplayOrder, jsonArg(in.Options))
+		in.QuestionType, in.IsRequired, in.DisplayOrder, jsonArg(in.Options), in.PageTitle)
 	if err != nil {
 		return models.Question{}, err
 	}
@@ -68,11 +75,16 @@ func (s *Store) UpdateQuestion(ctx context.Context, id string, in QuestionUpdate
 			question_type = COALESCE($3, question_type),
 			is_required   = COALESCE($4, is_required),
 			display_order = COALESCE($5, display_order),
-			options       = COALESCE($6::jsonb, options)
+			options       = COALESCE($6::jsonb, options),
+			page_title    = CASE
+				WHEN $7 THEN NULL
+				WHEN $8::text IS NOT NULL THEN $8
+				ELSE page_title
+			END
 		WHERE id = $1
 		RETURNING ` + questionColumns
 	rows, err := s.db.Query(ctx, q, id, in.QuestionText, in.QuestionType,
-		in.IsRequired, in.DisplayOrder, jsonArg(in.Options))
+		in.IsRequired, in.DisplayOrder, jsonArg(in.Options), in.ClearPageTitle, in.PageTitle)
 	if err != nil {
 		return models.Question{}, err
 	}
