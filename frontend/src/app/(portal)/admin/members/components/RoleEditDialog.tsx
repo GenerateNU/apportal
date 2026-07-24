@@ -34,7 +34,7 @@ export function RoleEditDialog({
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
-    const finalRoles = roles.length === 0 ? ['applicant'] : roles
+    const finalRoles: UserRole[] = roles.length === 0 ? ['applicant'] : roles
     updateUser.mutate(
       {
         nuid: user.nuid,
