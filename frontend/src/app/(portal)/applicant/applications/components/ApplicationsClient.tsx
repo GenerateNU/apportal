@@ -3,6 +3,7 @@
 import { useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowRight, Check, Loader2 } from 'lucide-react'
+import { HelpContact } from '@/components/HelpContact'
 import { Button } from '@/components/ui/button'
 import type { Application, Cycle, Role, User } from '@/lib/api/types'
 import { useApplications } from '@/lib/queries/applications'
@@ -77,6 +78,7 @@ function Dashboard({ user }: { user: User }) {
         <p className="text-text-muted mt-1 text-sm">
           Apply to open roles and track where your applications stand.
         </p>
+        <HelpContact className="mt-3 text-left" />
       </header>
 
       {visibleCycles.length === 0 ? (

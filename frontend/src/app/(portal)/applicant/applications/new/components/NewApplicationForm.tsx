@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Loader2 } from 'lucide-react'
+import { HelpContact } from '@/components/HelpContact'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -226,6 +227,7 @@ function Form({
           {ROLE_LABEL[role]}
         </h1>
         <p className="text-text-muted mt-1 text-sm">{cycleName}</p>
+        <HelpContact className="mt-3 text-left" />
       </header>
 
       {template?.description && (

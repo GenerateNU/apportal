@@ -1,6 +1,7 @@
 'use client' // Error boundaries must be Client Components
 
 import { useEffect } from 'react'
+import { HelpContact } from '@/components/HelpContact'
 import { Button } from '@/components/ui/button'
 
 // Scoped to the portal segment so an error while a page prefetches from the Go
@@ -18,7 +19,7 @@ export default function PortalError({
   }, [error])
 
   return (
-    <div className="flex flex-1 items-center justify-center p-8">
+    <div className="flex flex-1 flex-col items-center justify-center gap-6 p-8">
       <div className="flex w-full max-w-sm flex-col items-center gap-4 rounded-lg border border-gray-100 bg-white p-8 text-center shadow-sm">
         <h1 className="text-text-default text-lg font-semibold">
           Couldn&apos;t load this page
@@ -33,6 +34,7 @@ export default function PortalError({
         )}
         <Button onClick={() => unstable_retry()}>Try again</Button>
       </div>
+      <HelpContact className="max-w-sm" />
     </div>
   )
 }
