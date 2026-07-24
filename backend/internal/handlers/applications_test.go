@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/danielgtaylor/huma/v2"
 
@@ -38,6 +39,28 @@ func TestApplicationCreateValidatesRole(t *testing.T) {
 	var se huma.StatusError
 	if !errors.As(err, &se) || se.GetStatus() != http.StatusUnprocessableEntity {
 		t.Fatalf("got %v, want 422", err)
+	}
+}
+
+func TestDeadlinePassed(t *testing.T) {
+	past := time.Now().Add(-time.Hour)
+	future := time.Now().Add(time.Hour)
+
+	cases := []struct {
+		name string
+		tpl  models.ApplicationTemplate
+		want bool
+	}{
+		{"no deadline set", models.ApplicationTemplate{ClosesAt: nil}, false},
+		{"deadline in the future", models.ApplicationTemplate{ClosesAt: &future}, false},
+		{"deadline in the past", models.ApplicationTemplate{ClosesAt: &past}, true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := deadlinePassed(tc.tpl); got != tc.want {
+				t.Fatalf("deadlinePassed() = %v, want %v", got, tc.want)
+			}
+		})
 	}
 }
 

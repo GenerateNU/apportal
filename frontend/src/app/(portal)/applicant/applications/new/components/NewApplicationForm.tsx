@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { groupQuestionsIntoPages } from '@/lib/applicationPages'
+import { APIError } from '@/lib/api/client'
 import type {
   Application,
   CodeSubmission,
@@ -235,7 +236,20 @@ function Form({
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [confirmDiscard, setConfirmDiscard] = useState(false)
+  // Set once the backend rejects a save/submit because the template's
+  // deadline has passed — freezes the form instead of retrying autosave
+  // against a request that will only ever 403 again.
+  const [deadlineRejected, setDeadlineRejected] = useState(false)
   const [pageIndex, setPageIndex] = useState(0)
+
+  // Derived rather than synced via an effect so an already-passed deadline
+  // (e.g. a stale direct link) is caught on the very first render, not one
+  // render later.
+  const deadlineClosed =
+    deadlineRejected ||
+    (template?.closes_at
+      ? new Date(template.closes_at).getTime() < new Date().getTime()
+      : false)
   const pendingScrollRef = useRef<string | null>(null)
 
   const pages = useMemo(() => groupQuestionsIntoPages(questions), [questions])
@@ -250,6 +264,7 @@ function Form({
   // saves can be serialized (never more than one in flight at a time).
   const applicationIdRef = useRef(applicationId)
   const hasEditedRef = useRef(hasEdited)
+  const deadlineClosedRef = useRef(deadlineClosed)
   const snapshotRef = useRef<SaveSnapshot>({
     values,
     resumeUrl,
@@ -269,6 +284,9 @@ function Form({
   useEffect(() => {
     hasEditedRef.current = hasEdited
   }, [hasEdited])
+  useEffect(() => {
+    deadlineClosedRef.current = deadlineClosed
+  }, [deadlineClosed])
 
   async function runSave(snapshot: SaveSnapshot) {
     savingRef.current = true
@@ -323,8 +341,12 @@ function Form({
         })
       }
       setSaveStatus('saved')
-    } catch {
+    } catch (err) {
       setSaveStatus('error')
+      if (err instanceof APIError && err.status === 403) {
+        setDeadlineRejected(true)
+        pendingRef.current = false
+      }
     } finally {
       savingRef.current = false
       if (pendingRef.current) {
@@ -346,7 +368,7 @@ function Form({
   // firing overlapping requests that could resolve out of order.
   useEffect(() => {
     snapshotRef.current = { values, resumeUrl, availability, submissionUrl }
-    if (!hasEdited) return
+    if (!hasEdited || deadlineClosedRef.current) return
 
     if (savingRef.current) {
       pendingRef.current = true
@@ -362,7 +384,9 @@ function Form({
   // where the very last keystroke could be lost, in addition to the debounce.
   useEffect(() => {
     function flush() {
-      if (hasEditedRef.current) void runSaveRef.current(snapshotRef.current)
+      if (hasEditedRef.current && !deadlineClosedRef.current) {
+        void runSaveRef.current(snapshotRef.current)
+      }
     }
     function onVisibilityChange() {
       if (document.visibilityState === 'hidden') flush()
@@ -531,10 +555,17 @@ function Form({
         body: { stage: 'submitted' },
       })
       onDone(app.id)
-    } catch {
-      setSubmitError(
-        'Something went wrong submitting your application. Please try again.'
-      )
+    } catch (err) {
+      if (err instanceof APIError && err.status === 403) {
+        setDeadlineRejected(true)
+        setSubmitError(
+          'The application deadline has passed. This application can no longer be submitted.'
+        )
+      } else {
+        setSubmitError(
+          'Something went wrong submitting your application. Please try again.'
+        )
+      }
     } finally {
       setSubmitting(false)
     }
@@ -585,6 +616,13 @@ function Form({
         <HelpContact className="mt-3 text-left" />
       </header>
 
+      {deadlineClosed && (
+        <p className="border-destructive/30 bg-destructive/5 text-destructive mb-6 rounded-lg border px-4 py-3 text-sm">
+          The application deadline has passed. Your answers are saved, but this
+          application can no longer be edited or submitted.
+        </p>
+      )}
+
       {template?.description && pageIndex === 0 && (
         <MarkdownContent className="text-text-muted mb-8 text-sm leading-relaxed">
           {template.description}
@@ -625,6 +663,7 @@ function Form({
             onAvailabilityChange={updateAvailability}
             submissionUrl={submissionUrl}
             onSubmissionChange={updateSubmissionUrl}
+            disabled={deadlineClosed}
           />
 
           {template?.instructions && pageIndex === lastPage && (
@@ -658,7 +697,7 @@ function Form({
             {pageIndex < lastPage ? (
               <Button
                 onClick={handleNextPage}
-                disabled={currentPageMissingRequired}
+                disabled={currentPageMissingRequired || deadlineClosed}
               >
                 Next
                 <ArrowRight size={14} />
@@ -666,7 +705,7 @@ function Form({
             ) : (
               <Button
                 onClick={handleSubmit}
-                disabled={submitting || missingRequired}
+                disabled={submitting || missingRequired || deadlineClosed}
               >
                 {submitting ? (
                   <>

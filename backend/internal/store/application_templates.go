@@ -81,10 +81,11 @@ func (s *Store) GetOrCreateApplicationTemplate(ctx context.Context, cycleID stri
 
 // ListOpenApplicationTemplates returns every application template that is
 // currently live for applicants: its own status is "open" AND its owning
-// cycle's status is also "open" — a role can be held back at the template
-// level even while its cycle is open. Column references are qualified
-// because cycles and application_templates both have id/status/created_at
-// columns, which the join would otherwise make ambiguous.
+// cycle's status is also "open" AND its closing time (if any) hasn't passed
+// yet — a role can be held back at the template level even while its cycle
+// is open. Column references are qualified because cycles and
+// application_templates both have id/status/created_at columns, which the
+// join would otherwise make ambiguous.
 func (s *Store) ListOpenApplicationTemplates(ctx context.Context) ([]models.ApplicationTemplate, error) {
 	const q = `
 		SELECT at.id, at.cycle_id, at.application_role, at.title, at.description,
@@ -92,6 +93,7 @@ func (s *Store) ListOpenApplicationTemplates(ctx context.Context) ([]models.Appl
 		FROM application_templates at
 		JOIN cycles c ON c.id = at.cycle_id
 		WHERE at.status = 'open' AND c.status = 'open'
+			AND (at.closes_at IS NULL OR at.closes_at > now())
 		ORDER BY c.created_at DESC, at.application_role`
 	rows, err := s.db.Query(ctx, q)
 	if err != nil {
