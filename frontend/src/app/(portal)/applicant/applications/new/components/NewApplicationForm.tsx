@@ -85,6 +85,13 @@ export function NewApplicationForm({
 // (the unique constraint guarantees at most one). A draft resumes into the
 // form below; anything else means they've already submitted, so send them to
 // the read-only view instead of letting them re-enter the create form.
+//
+// This decision is made exactly once and then frozen. Form's own autosave
+// creates the application on the first save, which invalidates this same
+// "does an application exist" query — without freezing, that refetch would
+// flip isDraft/loadingAnswers/loadingSubmission and unmount Form (destroying
+// whatever the applicant had just typed) every time it saved for the first
+// time.
 function ResumeGate({
   cycleId,
   cycleName,
@@ -113,15 +120,40 @@ function ResumeGate({
   const { data: existingSubmission, isLoading: loadingSubmission } =
     useSubmission(isDraft ? existingApp.id : '')
 
+  const notReady =
+    loadingExisting ||
+    (!!existingApp && existingApp.stage !== 'draft') ||
+    (isDraft && (loadingAnswers || loadingSubmission))
+
+  // Freeze the initial resume decision the first time everything is ready,
+  // computed during render (not in an effect) so it lands within the same
+  // render pass — this codebase's established pattern for "sync from a
+  // value that settles over a few renders" (see QuestionCard.tsx,
+  // FormBuilderClient.tsx). It has to be frozen: once mounted, Form's own
+  // autosave creates the application, which invalidates this same
+  // useApplications query. Without freezing, that refetch would flip
+  // isDraft/loadingAnswers/loadingSubmission back to "not ready" and unmount
+  // Form, destroying whatever the applicant had just typed.
+  const [initialData, setInitialData] = useState<{
+    application: Application | null
+    answers: WrittenAnswer[]
+    submission: CodeSubmission | null
+  } | null>(null)
+  if (!initialData && !notReady) {
+    setInitialData({
+      application: isDraft ? existingApp : null,
+      answers: isDraft ? (existingAnswers ?? []) : [],
+      submission: isDraft ? (existingSubmission ?? null) : null,
+    })
+  }
+
   useEffect(() => {
     if (existingApp && existingApp.stage !== 'draft') {
       router.replace(`/applicant/applications/${existingApp.id}`)
     }
   }, [existingApp, router])
 
-  if (loadingExisting) return <Loading />
-  if (existingApp && existingApp.stage !== 'draft') return <Loading />
-  if (isDraft && (loadingAnswers || loadingSubmission)) return <Loading />
+  if (!initialData) return <Loading />
 
   return (
     <Form
@@ -129,9 +161,9 @@ function ResumeGate({
       cycleName={cycleName}
       role={role}
       onDone={onDone}
-      initialApplication={isDraft ? existingApp : null}
-      initialAnswers={isDraft ? (existingAnswers ?? []) : []}
-      initialSubmission={isDraft ? (existingSubmission ?? null) : null}
+      initialApplication={initialData.application}
+      initialAnswers={initialData.answers}
+      initialSubmission={initialData.submission}
     />
   )
 }
