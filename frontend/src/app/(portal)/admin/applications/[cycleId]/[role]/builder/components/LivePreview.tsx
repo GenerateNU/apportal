@@ -87,7 +87,7 @@ export function LivePreview({
       </h2>
 
       {description && (
-        <p className="text-text-secondary mb-8 whitespace-pre-wrap text-base">
+        <p className="text-text-secondary mb-8 text-base whitespace-pre-wrap">
           {description}
         </p>
       )}
@@ -104,7 +104,7 @@ export function LivePreview({
       </div>
 
       {instructions && (
-        <p className="text-text-secondary mt-8 whitespace-pre-wrap text-base">
+        <p className="text-text-secondary mt-8 text-base whitespace-pre-wrap">
           {instructions}
         </p>
       )}

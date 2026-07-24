@@ -229,7 +229,7 @@ function Form({
       </header>
 
       {template?.description && (
-        <p className="text-text-muted mb-8 whitespace-pre-wrap text-sm leading-relaxed">
+        <p className="text-text-muted mb-8 text-sm leading-relaxed whitespace-pre-wrap">
           {template.description}
         </p>
       )}
@@ -256,7 +256,7 @@ function Form({
           />
 
           {template?.instructions && (
-            <p className="text-text-muted mt-8 whitespace-pre-wrap text-sm leading-relaxed">
+            <p className="text-text-muted mt-8 text-sm leading-relaxed whitespace-pre-wrap">
               {template.instructions}
             </p>
           )}

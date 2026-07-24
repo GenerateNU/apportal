@@ -83,7 +83,7 @@ export function ApplicationView({
       </div>
 
       {template?.description && (
-        <p className="text-text-muted mb-6 whitespace-pre-wrap text-sm leading-relaxed">
+        <p className="text-text-muted mb-6 text-sm leading-relaxed whitespace-pre-wrap">
           {template.description}
         </p>
       )}
@@ -103,7 +103,7 @@ export function ApplicationView({
       />
 
       {template?.instructions && (
-        <p className="text-text-muted mt-6 whitespace-pre-wrap text-sm leading-relaxed">
+        <p className="text-text-muted mt-6 text-sm leading-relaxed whitespace-pre-wrap">
           {template.instructions}
         </p>
       )}
