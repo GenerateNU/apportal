@@ -4,6 +4,7 @@ import { Fragment, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Eye, Pencil } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { DateTimePicker } from '@/components/ui/datetime-picker'
 import {
   Select,
   SelectContent,
@@ -61,6 +62,15 @@ export function FormBuilderClient({
       cycleId,
       role,
       body: { status: next },
+    })
+  }
+
+  function changeDeadline(date: Date) {
+    if (!template) return
+    updateTemplate.mutate({
+      cycleId,
+      role,
+      body: { closes_at: date.toISOString() },
     })
   }
 
@@ -131,18 +141,26 @@ export function FormBuilderClient({
 
         <div className="flex items-center gap-2">
           {template && (
-            <Select value={template.status} onValueChange={changeStatus}>
-              <SelectTrigger className="w-40">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {TEMPLATE_STATUS_ORDER.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {TEMPLATE_STATUS_LABEL[s]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <>
+              <Select value={template.status} onValueChange={changeStatus}>
+                <SelectTrigger className="w-40">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {TEMPLATE_STATUS_ORDER.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {TEMPLATE_STATUS_LABEL[s]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <DateTimePicker
+                value={template.closes_at ? new Date(template.closes_at) : undefined}
+                onValueChange={changeDeadline}
+                placeholder="Set deadline"
+              />
+            </>
           )}
 
           <button
