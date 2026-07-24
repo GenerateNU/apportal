@@ -156,7 +156,9 @@ export function FormBuilderClient({
               </Select>
 
               <DateTimePicker
-                value={template.closes_at ? new Date(template.closes_at) : undefined}
+                value={
+                  template.closes_at ? new Date(template.closes_at) : undefined
+                }
                 onValueChange={changeDeadline}
                 placeholder="Set deadline"
               />

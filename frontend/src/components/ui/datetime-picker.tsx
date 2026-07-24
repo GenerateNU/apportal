@@ -23,7 +23,9 @@ function DateTimePicker({
 }) {
   const [open, setOpen] = React.useState(false)
   const [month, setMonth] = React.useState<Date>(value || new Date())
-  const [hours24, setHours24] = React.useState<number>(value ? value.getHours() : 0)
+  const [hours24, setHours24] = React.useState<number>(
+    value ? value.getHours() : 0
+  )
   const [minutes, setMinutes] = React.useState<string>(
     value ? String(value.getMinutes()).padStart(2, '0') : '00'
   )
@@ -32,7 +34,14 @@ function DateTimePicker({
   const meridiem = hours24 >= 12 ? 'PM' : 'AM'
 
   const handleHourChange = (newHour12: number) => {
-    const newHour24 = newHour12 === 12 ? (meridiem === 'PM' ? 12 : 0) : (meridiem === 'PM' ? newHour12 + 12 : newHour12)
+    const newHour24 =
+      newHour12 === 12
+        ? meridiem === 'PM'
+          ? 12
+          : 0
+        : meridiem === 'PM'
+          ? newHour12 + 12
+          : newHour12
     setHours24(newHour24)
 
     const newDate = new Date(value || month)
@@ -74,8 +83,16 @@ function DateTimePicker({
     onValueChange(newDate)
   }
 
-  const daysInMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate()
-  const firstDayOfMonth = new Date(month.getFullYear(), month.getMonth(), 1).getDay()
+  const daysInMonth = new Date(
+    month.getFullYear(),
+    month.getMonth() + 1,
+    0
+  ).getDate()
+  const firstDayOfMonth = new Date(
+    month.getFullYear(),
+    month.getMonth(),
+    1
+  ).getDay()
   const days = Array.from({ length: daysInMonth }, (_, i) => i + 1)
   const emptyDays = Array.from({ length: firstDayOfMonth }, (_, i) => i)
 
@@ -109,13 +126,13 @@ function DateTimePicker({
               onClick={() =>
                 setMonth(new Date(month.getFullYear(), month.getMonth() - 1))
               }
-              className="text-text-subtle hover:text-text-default hover:bg-gray-100 rounded-md p-1.5 transition"
+              className="text-text-subtle hover:text-text-default rounded-md p-1.5 transition hover:bg-gray-100"
             >
               ←
             </button>
             <button
               onClick={() => setMonth(new Date())}
-              className="text-text-default flex-1 text-center text-sm font-medium hover:bg-gray-100 rounded-md py-1 transition"
+              className="text-text-default flex-1 rounded-md py-1 text-center text-sm font-medium transition hover:bg-gray-100"
             >
               {monthName} {year}
             </button>
@@ -123,7 +140,7 @@ function DateTimePicker({
               onClick={() =>
                 setMonth(new Date(month.getFullYear(), month.getMonth() + 1))
               }
-              className="text-text-subtle hover:text-text-default hover:bg-gray-100 rounded-md p-1.5 transition"
+              className="text-text-subtle hover:text-text-default rounded-md p-1.5 transition hover:bg-gray-100"
             >
               →
             </button>
@@ -161,9 +178,9 @@ function DateTimePicker({
                     className={cn(
                       'text-text-default relative h-8 w-8 rounded-md text-sm font-medium transition-colors',
                       isSelected
-                        ? 'bg-primary text-white hover:bg-primary'
+                        ? 'bg-primary hover:bg-primary text-white'
                         : isToday
-                          ? 'border-2 border-primary/30 hover:bg-gray-100'
+                          ? 'border-primary/30 border-2 hover:bg-gray-100'
                           : 'hover:bg-gray-100'
                     )}
                   >
@@ -178,7 +195,7 @@ function DateTimePicker({
           <div className="border-t border-gray-200 pt-3">
             <div className="flex items-center gap-3">
               <span className="text-xs font-medium text-gray-600">Time:</span>
-              <div className="flex items-center gap-1 ml-auto">
+              <div className="ml-auto flex items-center gap-1">
                 <input
                   type="number"
                   min="1"
@@ -190,9 +207,9 @@ function DateTimePicker({
                       handleHourChange(val)
                     }
                   }}
-                  className="h-8 w-10 rounded-md border border-gray-300 text-center text-sm font-medium focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  className="focus:border-primary focus:ring-primary/20 h-8 w-10 rounded-md border border-gray-300 text-center text-sm font-medium focus:ring-2 focus:outline-none"
                 />
-                <span className="text-gray-400 font-medium">:</span>
+                <span className="font-medium text-gray-400">:</span>
                 <input
                   type="number"
                   min="0"
@@ -200,17 +217,20 @@ function DateTimePicker({
                   value={minutes}
                   onChange={(e) => {
                     const val = e.target.value
-                    if (val === '' || (parseInt(val) >= 0 && parseInt(val) <= 59)) {
+                    if (
+                      val === '' ||
+                      (parseInt(val) >= 0 && parseInt(val) <= 59)
+                    ) {
                       handleMinutesChange(val.padStart(2, '0'))
                     }
                   }}
-                  className="h-8 w-10 rounded-md border border-gray-300 text-center text-sm font-medium focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  className="focus:border-primary focus:ring-primary/20 h-8 w-10 rounded-md border border-gray-300 text-center text-sm font-medium focus:ring-2 focus:outline-none"
                 />
                 <div className="ml-1 flex gap-1">
                   <button
                     onClick={() => handleMeridiemChange('AM')}
                     className={cn(
-                      'h-8 px-2 text-xs font-medium rounded-md transition',
+                      'h-8 rounded-md px-2 text-xs font-medium transition',
                       meridiem === 'AM'
                         ? 'bg-primary text-white'
                         : 'border border-gray-300 text-gray-600 hover:bg-gray-100'
@@ -221,7 +241,7 @@ function DateTimePicker({
                   <button
                     onClick={() => handleMeridiemChange('PM')}
                     className={cn(
-                      'h-8 px-2 text-xs font-medium rounded-md transition',
+                      'h-8 rounded-md px-2 text-xs font-medium transition',
                       meridiem === 'PM'
                         ? 'bg-primary text-white'
                         : 'border border-gray-300 text-gray-600 hover:bg-gray-100'
