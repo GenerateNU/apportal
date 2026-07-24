@@ -117,29 +117,71 @@ function CycleSection({
 }) {
   const { data: summaries = [] } = useCycleTemplateSummary(cycle.id)
 
+  const cycleApplications = applications.filter((a) => a.cycle_id === cycle.id)
+  const applicationsMap = new Map(
+    cycleApplications.map((a) => [a.role, a])
+  )
+
+  const submittedApplications = new Set(
+    cycleApplications
+      .filter((a) => a.stage !== 'draft')
+      .map((a) => a.role)
+  )
+
+  const openRoleTemplates = templates.filter(
+    (t) => !submittedApplications.has(t.application_role)
+  )
+  const submittedRoleTemplates = templates.filter((t) =>
+    submittedApplications.has(t.application_role)
+  )
+
   return (
     <section>
-      <h2 className="text-text-default mb-3 text-sm font-semibold">
-        Open roles
-      </h2>
-      <div className="grid gap-4 sm:grid-cols-2">
-        {templates.map((template) => (
-          <ApplicationRoleCard
-            key={template.application_role}
-            cycle={cycle}
-            cycleColorIndex={cycleColorIndex}
-            template={template}
-            questionCount={
-              summaries.find((s) => s.role === template.application_role)
-                ?.question_count ?? 0
-            }
-            application={applications.find(
-              (a) =>
-                a.cycle_id === cycle.id && a.role === template.application_role
-            )}
-          />
-        ))}
-      </div>
+      {openRoleTemplates.length > 0 && (
+        <div>
+          <h2 className="text-text-default mb-3 text-sm font-semibold">
+            Open roles
+          </h2>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {openRoleTemplates.map((template) => (
+              <ApplicationRoleCard
+                key={template.application_role}
+                cycle={cycle}
+                cycleColorIndex={cycleColorIndex}
+                template={template}
+                questionCount={
+                  summaries.find((s) => s.role === template.application_role)
+                    ?.question_count ?? 0
+                }
+                application={applicationsMap.get(template.application_role)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {submittedRoleTemplates.length > 0 && (
+        <div className="mt-6">
+          <h3 className="text-text-default mb-3 text-sm font-semibold">
+            My Applications
+          </h3>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {submittedRoleTemplates.map((template) => (
+              <ApplicationRoleCard
+                key={template.application_role}
+                cycle={cycle}
+                cycleColorIndex={cycleColorIndex}
+                template={template}
+                questionCount={
+                  summaries.find((s) => s.role === template.application_role)
+                    ?.question_count ?? 0
+                }
+                application={applicationsMap.get(template.application_role)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </section>
   )
 }
