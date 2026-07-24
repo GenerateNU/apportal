@@ -15,7 +15,13 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { groupQuestionsIntoPages } from '@/lib/applicationPages'
-import type { Application, CodeSubmission, Role, User, WrittenAnswer } from '@/lib/api/types'
+import type {
+  Application,
+  CodeSubmission,
+  Role,
+  User,
+  WrittenAnswer,
+} from '@/lib/api/types'
 import { useApplicationTemplate } from '@/lib/queries/application-templates'
 import {
   useApplications,
@@ -169,7 +175,9 @@ function Form({
 
   const router = useRouter()
 
-  const [applicationId, setApplicationId] = useState(initialApplication?.id ?? null)
+  const [applicationId, setApplicationId] = useState(
+    initialApplication?.id ?? null
+  )
   const [values, setValues] = useState<Record<string, AnswerValue>>(() => {
     const map: Record<string, AnswerValue> = {}
     for (const a of initialAnswers) {
@@ -179,7 +187,9 @@ function Form({
     }
     return map
   })
-  const [resumeUrl, setResumeUrl] = useState(initialApplication?.resume_url ?? '')
+  const [resumeUrl, setResumeUrl] = useState(
+    initialApplication?.resume_url ?? ''
+  )
   const [availability, setAvailability] = useState<Record<string, boolean>>(
     initialApplication?.availability ?? {}
   )
@@ -217,7 +227,9 @@ function Form({
   const savingRef = useRef(false)
   const pendingRef = useRef(false)
   const pendingBackRef = useRef(false)
-  const runSaveRef = useRef<(snapshot: SaveSnapshot) => Promise<void>>(async () => {})
+  const runSaveRef = useRef<(snapshot: SaveSnapshot) => Promise<void>>(
+    async () => {}
+  )
 
   useEffect(() => {
     applicationIdRef.current = applicationId
@@ -517,10 +529,14 @@ function Form({
               <span className="text-text-subtle text-xs">Saving…</span>
             )}
             {saveStatus === 'saved' && (
-              <span className="text-text-subtle text-xs">All changes saved</span>
+              <span className="text-text-subtle text-xs">
+                All changes saved
+              </span>
             )}
             {saveStatus === 'error' && (
-              <span className="text-destructive text-xs">Couldn&apos;t save</span>
+              <span className="text-destructive text-xs">
+                Couldn&apos;t save
+              </span>
             )}
             {applicationId && (
               <button
@@ -616,7 +632,10 @@ function Form({
                 <ArrowRight size={14} />
               </Button>
             ) : (
-              <Button onClick={handleSubmit} disabled={submitting || missingRequired}>
+              <Button
+                onClick={handleSubmit}
+                disabled={submitting || missingRequired}
+              >
                 {submitting ? (
                   <>
                     <Loader2 className="animate-spin" size={14} />
@@ -636,8 +655,8 @@ function Form({
           <DialogHeader>
             <DialogTitle>Discard this draft?</DialogTitle>
             <DialogDescription>
-              This will permanently delete everything you&apos;ve entered so
-              far and start you over with a blank form.
+              This will permanently delete everything you&apos;ve entered so far
+              and start you over with a blank form.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

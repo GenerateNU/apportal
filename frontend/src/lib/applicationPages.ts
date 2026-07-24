@@ -10,7 +10,9 @@ export type ApplicationPage = {
 // titled page_title; questions before the first such marker form an
 // untitled first page. Used identically by the applicant-facing form and
 // the builder's live preview, so both paginate the same way.
-export function groupQuestionsIntoPages(questions: Question[]): ApplicationPage[] {
+export function groupQuestionsIntoPages(
+  questions: Question[]
+): ApplicationPage[] {
   const pages: ApplicationPage[] = []
   for (const question of questions) {
     if (question.page_title || pages.length === 0) {

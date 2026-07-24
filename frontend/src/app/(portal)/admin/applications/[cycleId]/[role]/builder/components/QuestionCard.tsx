@@ -47,7 +47,9 @@ export function QuestionCard({ question }: { question: Question }) {
   }
 
   const [prevPageTitle, setPrevPageTitle] = useState(question.page_title ?? '')
-  const [pageTitleDraft, setPageTitleDraft] = useState(question.page_title ?? '')
+  const [pageTitleDraft, setPageTitleDraft] = useState(
+    question.page_title ?? ''
+  )
   if ((question.page_title ?? '') !== prevPageTitle) {
     setPrevPageTitle(question.page_title ?? '')
     setPageTitleDraft(question.page_title ?? '')
@@ -266,8 +268,8 @@ export function QuestionCard({ question }: { question: Question }) {
         <div className="flex items-center gap-4">
           {confirmingDelete && hasPageBreak && (
             <span className="max-w-xs text-xs text-red-600">
-              This question starts a page (&quot;{question.page_title}&quot;)
-              — deleting it will merge this page into the previous one.
+              This question starts a page (&quot;{question.page_title}&quot;) —
+              deleting it will merge this page into the previous one.
             </span>
           )}
           <label className="flex items-center gap-2">

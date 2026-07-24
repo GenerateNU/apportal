@@ -140,7 +140,8 @@ function RoleCard({
 }) {
   const router = useRouter()
   const isDraft = application?.stage === 'draft'
-  const status = application && !isDraft ? APPLICANT_STATUS[application.stage] : null
+  const status =
+    application && !isDraft ? APPLICANT_STATUS[application.stage] : null
 
   return (
     <div className="flex flex-col justify-between rounded-xl border border-gray-100 bg-white p-5">
