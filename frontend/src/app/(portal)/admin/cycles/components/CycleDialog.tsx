@@ -86,7 +86,10 @@ export function CycleDialog({
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="cycle-type">Application type</Label>
-            <Select value={applicationType} onValueChange={setApplicationType}>
+            <Select
+              value={applicationType}
+              onValueChange={(val) => setApplicationType(val as ApplicationType)}
+            >
               <SelectTrigger id="cycle-type">
                 <SelectValue />
               </SelectTrigger>

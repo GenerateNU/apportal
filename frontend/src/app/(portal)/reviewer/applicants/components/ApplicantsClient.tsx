@@ -113,7 +113,7 @@ export function ApplicantsClient() {
             value={activeRole}
             onValueChange={(val) => setActiveRole(val as Role | 'all')}
           >
-            <SelectTrigger className="w-40" aria-label="Filter by role">
+            <SelectTrigger className="w-56" aria-label="Filter by role">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
