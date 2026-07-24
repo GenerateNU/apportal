@@ -30,6 +30,7 @@ import { BlockPalette } from './BlockPalette'
 import { QuestionCard } from './QuestionCard'
 import { QuestionOutline } from './QuestionOutline'
 import { LivePreview } from './LivePreview'
+import { TemplateTextBlock } from './TemplateTextBlock'
 import { TEMPLATE_STATUS_LABEL, TEMPLATE_STATUS_ORDER } from './constants'
 
 const SELECT_CLASS =
@@ -164,7 +165,13 @@ export function FormBuilderClient({
       {showPreview ? (
         <div className="flex-1 overflow-y-auto bg-gray-50 p-10">
           <div className="mx-auto max-w-2xl">
-            <LivePreview cycleName={cycleName} role={role} questions={order} />
+            <LivePreview
+              cycleName={cycleName}
+              role={role}
+              questions={order}
+              description={template?.description}
+              instructions={template?.instructions}
+            />
           </div>
         </div>
       ) : (
@@ -183,27 +190,47 @@ export function FormBuilderClient({
           </aside>
 
           <div className="overflow-y-auto bg-gray-50 p-10">
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleDragEnd}
-            >
-              <SortableContext
-                items={order.map((q) => q.id)}
-                strategy={verticalListSortingStrategy}
+            <div className="mx-auto flex max-w-2xl flex-col gap-4">
+              <TemplateTextBlock
+                cycleId={cycleId}
+                role={role}
+                field="description"
+                label="Intro text — shown before the questions"
+                placeholder="Add an introduction applicants will see before the questions…"
+                value={template?.description}
+              />
+
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
               >
-                <div className="mx-auto flex max-w-2xl flex-col gap-4">
-                  {order.map((question) => (
-                    <QuestionCard key={question.id} question={question} />
-                  ))}
-                  {order.length === 0 && (
-                    <p className="text-text-subtle mt-10 text-center text-sm">
-                      Add a block from the left to start building this form.
-                    </p>
-                  )}
-                </div>
-              </SortableContext>
-            </DndContext>
+                <SortableContext
+                  items={order.map((q) => q.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className="flex flex-col gap-4">
+                    {order.map((question) => (
+                      <QuestionCard key={question.id} question={question} />
+                    ))}
+                    {order.length === 0 && (
+                      <p className="text-text-subtle mt-10 text-center text-sm">
+                        Add a block from the left to start building this form.
+                      </p>
+                    )}
+                  </div>
+                </SortableContext>
+              </DndContext>
+
+              <TemplateTextBlock
+                cycleId={cycleId}
+                role={role}
+                field="instructions"
+                label="Closing text — shown after the questions"
+                placeholder="Add submission instructions or closing notes applicants will see after the questions…"
+                value={template?.instructions}
+              />
+            </div>
           </div>
         </div>
       )}

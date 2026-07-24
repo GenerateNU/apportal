@@ -4,6 +4,7 @@ import { useMemo } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Check, Lock } from 'lucide-react'
 import type { Role } from '@/lib/api/types'
+import { useApplicationTemplate } from '@/lib/queries/application-templates'
 import { useApplication } from '@/lib/queries/applications'
 import { useAnswers } from '@/lib/queries/answers'
 import { useChallenges } from '@/lib/queries/challenges'
@@ -34,6 +35,7 @@ export function ApplicationView({
   const { data: challenges = [] } = useChallenges(cycleId, role)
   const { data: answers = [] } = useAnswers(applicationId)
   const { data: submission } = useSubmission(applicationId)
+  const { data: template } = useApplicationTemplate(cycleId, role)
 
   const values = useMemo(() => {
     const map: Record<string, AnswerValue> = {}
@@ -80,6 +82,12 @@ export function ApplicationView({
         You&apos;ve submitted this application. It can no longer be edited.
       </div>
 
+      {template?.description && (
+        <p className="text-text-muted mb-6 text-sm leading-relaxed whitespace-pre-wrap">
+          {template.description}
+        </p>
+      )}
+
       <ApplicationFields
         questions={questions}
         challenge={challenges[0]}
@@ -93,6 +101,12 @@ export function ApplicationView({
         onSubmissionChange={noop}
         disabled
       />
+
+      {template?.instructions && (
+        <p className="text-text-muted mt-6 text-sm leading-relaxed whitespace-pre-wrap">
+          {template.instructions}
+        </p>
+      )}
     </div>
   )
 }
