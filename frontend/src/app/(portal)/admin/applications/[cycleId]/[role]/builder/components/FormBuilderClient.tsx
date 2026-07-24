@@ -5,6 +5,13 @@ import Link from 'next/link'
 import { ArrowLeft, Eye, Pencil } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
   DndContext,
   KeyboardSensor,
   PointerSensor,
@@ -32,9 +39,6 @@ import { QuestionOutline } from './QuestionOutline'
 import { LivePreview } from './LivePreview'
 import { TemplateTextBlock } from './TemplateTextBlock'
 import { TEMPLATE_STATUS_LABEL, TEMPLATE_STATUS_ORDER } from './constants'
-
-const SELECT_CLASS =
-  'border-input focus-visible:border-ring focus-visible:ring-ring/50 h-8 rounded-lg border bg-white px-2 text-sm outline-none focus-visible:ring-3 disabled:opacity-50'
 
 export function FormBuilderClient({
   cycleId,
@@ -127,19 +131,18 @@ export function FormBuilderClient({
 
         <div className="flex items-center gap-2">
           {template && (
-            <select
-              aria-label="Application status"
-              className={SELECT_CLASS}
-              value={template.status}
-              disabled={updateTemplate.isPending}
-              onChange={(e) => changeStatus(e.target.value as CycleStatus)}
-            >
-              {TEMPLATE_STATUS_ORDER.map((s) => (
-                <option key={s} value={s}>
-                  {TEMPLATE_STATUS_LABEL[s]}
-                </option>
-              ))}
-            </select>
+            <Select value={template.status} onValueChange={changeStatus}>
+              <SelectTrigger className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {TEMPLATE_STATUS_ORDER.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {TEMPLATE_STATUS_LABEL[s]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           )}
 
           <button

@@ -3,6 +3,13 @@
 import { useMemo, useState } from 'react'
 import { Loader2, Lock, Unlock, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import type { Application, Role } from '@/lib/api/types'
 import { useApplicantsByNuids } from '@/lib/queries/applicants'
 import { useApplications } from '@/lib/queries/applications'
@@ -128,18 +135,18 @@ export function AssignmentsClient() {
             reviews once everyone&apos;s in.
           </p>
         </div>
-        <select
-          aria-label="Cycle"
-          className="border-input focus-visible:border-ring focus-visible:ring-ring/50 h-8 rounded-lg border bg-transparent px-2.5 text-sm outline-none focus-visible:ring-3"
-          value={cycleId}
-          onChange={(e) => setCycleId(e.target.value)}
-        >
-          {cycles.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
+        <Select value={cycleId} onValueChange={setCycleId}>
+          <SelectTrigger className="w-48">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {cycles.map((c) => (
+              <SelectItem key={c.id} value={c.id}>
+                {c.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Bulk toolbar */}
@@ -153,19 +160,18 @@ export function AssignmentsClient() {
           </span>
         )}
         <div className="ml-auto flex items-center gap-2">
-          <select
-            aria-label="Lead to assign"
-            className="border-input focus-visible:border-ring focus-visible:ring-ring/50 h-8 rounded-lg border bg-transparent px-2.5 text-sm outline-none focus-visible:ring-3"
-            value={leadNuid}
-            onChange={(e) => setLeadNuid(e.target.value)}
-          >
-            <option value="">Select a lead…</option>
-            {leads.map((lead) => (
-              <option key={lead.nuid} value={lead.nuid}>
-                {lead.full_name}
-              </option>
-            ))}
-          </select>
+          <Select value={leadNuid} onValueChange={setLeadNuid}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Select a lead…" />
+            </SelectTrigger>
+            <SelectContent>
+              {leads.map((lead) => (
+                <SelectItem key={lead.nuid} value={lead.nuid}>
+                  {lead.full_name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Button
             onClick={assignSelected}
             disabled={!leadNuid || selected.size === 0 || assigning}
