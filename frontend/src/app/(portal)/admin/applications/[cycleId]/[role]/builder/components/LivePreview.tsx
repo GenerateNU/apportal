@@ -107,7 +107,7 @@ export function LivePreview({
   const currentPage = pages[Math.min(pageIndex, Math.max(lastPage, 0))]
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-8 shadow-sm">
+    <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-8">
       <p className="text-text-subtle text-sm">{ROLE_LABEL[role]}</p>
       <h2 className="text-text-default mb-8 text-xl font-semibold">
         {cycleName} Application

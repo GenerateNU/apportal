@@ -103,7 +103,7 @@ export function FormBuilderClient({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-start justify-between gap-3 border-b-2 border-gray-100 px-8 py-6">
+      <div className="flex items-start justify-between gap-3 border-b-2 border-gray-100 px-4 py-4 sm:px-8 sm:py-6">
         <div className="flex flex-col gap-2">
           <Link
             href="/admin/applications"
@@ -145,7 +145,7 @@ export function FormBuilderClient({
           <button
             type="button"
             onClick={() => setShowPreview((prev) => !prev)}
-            className="text-text-secondary flex items-center gap-2 rounded-md border border-gray-200 bg-white px-4 py-2 text-base font-medium shadow-sm hover:bg-gray-50"
+            className="text-text-secondary flex shrink-0 items-center gap-2 rounded-md border border-gray-200 bg-white px-4 py-2 text-base font-medium shadow-sm hover:bg-gray-50"
           >
             {showPreview ? (
               <>
@@ -163,7 +163,7 @@ export function FormBuilderClient({
       </div>
 
       {showPreview ? (
-        <div className="flex-1 overflow-y-auto bg-gray-50 p-10">
+        <div className="flex-1 overflow-y-auto bg-gray-50 p-4 sm:p-10">
           <div className="mx-auto max-w-2xl">
             <LivePreview
               cycleName={cycleName}
@@ -175,8 +175,8 @@ export function FormBuilderClient({
           </div>
         </div>
       ) : (
-        <div className="grid flex-1 grid-cols-[280px_1fr] overflow-hidden">
-          <aside className="flex flex-col overflow-y-auto border-r border-gray-100 bg-white">
+        <div className="grid flex-1 grid-cols-1 overflow-y-auto lg:grid-cols-[280px_1fr] lg:overflow-hidden">
+          <aside className="flex flex-col border-b border-gray-100 bg-white lg:overflow-y-auto lg:border-r lg:border-b-0">
             <div className="p-4">
               <BlockPalette
                 cycleId={cycleId}
