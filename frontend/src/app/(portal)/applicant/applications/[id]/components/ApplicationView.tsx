@@ -3,6 +3,7 @@
 import { useMemo } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Check, Lock } from 'lucide-react'
+import { MarkdownContent } from '@/components/MarkdownContent'
 import type { Role } from '@/lib/api/types'
 import { useApplicationTemplate } from '@/lib/queries/application-templates'
 import { useApplication } from '@/lib/queries/applications'
@@ -83,9 +84,9 @@ export function ApplicationView({
       </div>
 
       {template?.description && (
-        <p className="text-text-muted mb-6 text-sm leading-relaxed whitespace-pre-wrap">
+        <MarkdownContent className="text-text-muted mb-6 text-sm leading-relaxed">
           {template.description}
-        </p>
+        </MarkdownContent>
       )}
 
       <ApplicationFields
@@ -103,9 +104,9 @@ export function ApplicationView({
       />
 
       {template?.instructions && (
-        <p className="text-text-muted mt-6 text-sm leading-relaxed whitespace-pre-wrap">
+        <MarkdownContent className="text-text-muted mt-6 text-sm leading-relaxed">
           {template.instructions}
-        </p>
+        </MarkdownContent>
       )}
     </div>
   )

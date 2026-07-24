@@ -57,6 +57,10 @@ export function TemplateTextBlock({
         rows={3}
         className="text-text-default w-full resize-y rounded-md border border-transparent px-1.5 py-1 text-base outline-none hover:border-gray-200 focus:border-gray-300"
       />
+      <p className="text-text-faint mt-1 text-xs">
+        Supports Markdown — # Header, ## Subheader, **bold**, _italic_, - lists,
+        [links](url).
+      </p>
     </div>
   )
 }
