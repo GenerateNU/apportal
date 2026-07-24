@@ -79,27 +79,13 @@ export function ApplicationRoleCard({
       <div className="text-text-subtle -mx-4 mt-3 flex items-center justify-between gap-3 border-t border-gray-100 px-4 pt-3 text-xs">
         <div className="flex items-center gap-3">
           {template.closes_at ? (
-            <Tooltip
-              label={new Date(template.closes_at).toLocaleString('en-US', {
-                month: 'short',
-                day: 'numeric',
-                year: 'numeric',
-                hour: 'numeric',
-                minute: '2-digit',
-                hour12: true,
-              })}
-            >
-              <span className="flex items-center gap-1">
+            <Tooltip label="Application Deadline">
+              <span className="inline-flex cursor-help items-center gap-1">
                 <Calendar className="h-3.5 w-3.5" />
                 {formatDate(template.closes_at)}
               </span>
             </Tooltip>
-          ) : (
-            <span className="flex items-center gap-1">
-              <Calendar className="h-3.5 w-3.5" />
-              No deadline
-            </span>
-          )}
+          ) : null}
           <span className="flex items-center gap-1">
             <FileQuestion className="h-3.5 w-3.5" />
             {questionCount} question{questionCount === 1 ? '' : 's'}

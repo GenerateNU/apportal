@@ -2,7 +2,7 @@
 
 import { Fragment, useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Eye, Pencil } from 'lucide-react'
+import { ArrowLeft, Eye, Pencil, Clock, AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { DateTimePicker } from '@/components/ui/datetime-picker'
 import {
@@ -139,36 +139,50 @@ export function FormBuilderClient({
           </span>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-6">
           {template && (
             <>
-              <Select value={template.status} onValueChange={changeStatus}>
-                <SelectTrigger className="w-40">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {TEMPLATE_STATUS_ORDER.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {TEMPLATE_STATUS_LABEL[s]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex items-center gap-1.5">
+                <AlertCircle className="h-5 w-5 text-gray-500" />
+                <span className="text-sm font-medium whitespace-nowrap text-gray-600">
+                  Status
+                </span>
+                <Select value={template.status} onValueChange={changeStatus}>
+                  <SelectTrigger className="h-8 w-32 px-2.5 py-1.5 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TEMPLATE_STATUS_ORDER.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {TEMPLATE_STATUS_LABEL[s]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-              <DateTimePicker
-                value={
-                  template.closes_at ? new Date(template.closes_at) : undefined
-                }
-                onValueChange={changeDeadline}
-                placeholder="Set deadline"
-              />
+              <div className="flex items-center gap-1.5">
+                <Clock className="h-5 w-5 text-gray-500" />
+                <span className="text-sm font-medium whitespace-nowrap text-gray-600">
+                  Deadline
+                </span>
+                <DateTimePicker
+                  value={
+                    template.closes_at
+                      ? new Date(template.closes_at)
+                      : undefined
+                  }
+                  onValueChange={changeDeadline}
+                  placeholder="Set deadline"
+                />
+              </div>
             </>
           )}
 
           <button
             type="button"
             onClick={() => setShowPreview((prev) => !prev)}
-            className="text-text-secondary flex shrink-0 items-center gap-2 rounded-md border border-gray-200 bg-white px-4 py-2 text-base font-medium shadow-sm hover:bg-gray-50"
+            className="text-text-secondary border-input focus-visible:border-ring focus-visible:ring-ring/50 flex h-8 items-center gap-2 rounded-lg border bg-transparent px-2.5 py-1.5 text-sm font-medium transition-all hover:border-gray-300 focus-visible:ring-3"
           >
             {showPreview ? (
               <>

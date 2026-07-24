@@ -202,9 +202,30 @@ function DateTimePicker({
                   max="12"
                   value={String(hours12).padStart(2, '0')}
                   onChange={(e) => {
-                    const val = parseInt(e.target.value)
-                    if (!isNaN(val) && val >= 1 && val <= 12) {
-                      handleHourChange(val)
+                    const val = e.target.value
+                    const parsed = parseInt(val)
+                    if (
+                      val === '' ||
+                      (!isNaN(parsed) && parsed >= 1 && parsed <= 12)
+                    ) {
+                      setHours24(
+                        val === ''
+                          ? 0
+                          : parsed === 12
+                            ? meridiem === 'PM'
+                              ? 12
+                              : 0
+                            : meridiem === 'PM'
+                              ? parsed + 12
+                              : parsed
+                      )
+                    }
+                  }}
+                  onBlur={(e) => {
+                    const val = e.target.value
+                    const parsed = parseInt(val)
+                    if (!isNaN(parsed) && parsed >= 1 && parsed <= 12) {
+                      handleHourChange(parsed)
                     }
                   }}
                   className="focus:border-primary focus:ring-primary/20 h-8 w-10 rounded-md border border-gray-300 text-center text-sm font-medium focus:ring-2 focus:outline-none"
@@ -221,7 +242,14 @@ function DateTimePicker({
                       val === '' ||
                       (parseInt(val) >= 0 && parseInt(val) <= 59)
                     ) {
-                      handleMinutesChange(val.padStart(2, '0'))
+                      setMinutes(val)
+                    }
+                  }}
+                  onBlur={(e) => {
+                    const val = e.target.value
+                    const parsed = parseInt(val)
+                    if (!isNaN(parsed) && parsed >= 0 && parsed <= 59) {
+                      handleMinutesChange(String(parsed).padStart(2, '0'))
                     }
                   }}
                   className="focus:border-primary focus:ring-primary/20 h-8 w-10 rounded-md border border-gray-300 text-center text-sm font-medium focus:ring-2 focus:outline-none"

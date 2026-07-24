@@ -17,10 +17,10 @@ export function ApplicationRow({
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5">
           <span
-            className={`h-2 w-2 shrink-0 rounded-full ${cycleStatusDot[template.cycleStatus]}`}
+            className={`h-2 w-2 shrink-0 rounded-full ${cycleStatusDot[template.status]}`}
           />
           <span className="text-text-subtle text-xs font-medium">
-            {cycleStatusLabel[template.cycleStatus]}
+            {cycleStatusLabel[template.status]}
           </span>
         </div>
         <Tooltip label="Applicants">
