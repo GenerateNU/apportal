@@ -70,7 +70,13 @@ type Question struct {
 	IsRequired   bool            `json:"is_required"`
 	DisplayOrder int             `json:"display_order"`
 	Options      json.RawMessage `json:"options,omitempty"`
-	CreatedAt    time.Time       `json:"created_at"`
+	// PageTitle, when set, means a new page starts at this question, titled
+	// PageTitle. Only role-specific questions may carry one — a global
+	// question (Role == nil) is shared across every role's form at
+	// potentially different relative positions, so a page boundary on one
+	// wouldn't mean the same thing for another.
+	PageTitle *string   `json:"page_title,omitempty"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 type CodeChallenge struct {

@@ -21,6 +21,7 @@ func (r Role) Valid() bool {
 type ApplicationStage string
 
 const (
+	StageDraft              ApplicationStage = "draft"
 	StageSubmitted          ApplicationStage = "submitted"
 	StageLeadReview         ApplicationStage = "lead_review"
 	StageChiefReview        ApplicationStage = "chief_review"
@@ -35,7 +36,7 @@ const (
 
 func (s ApplicationStage) Valid() bool {
 	switch s {
-	case StageSubmitted, StageLeadReview, StageChiefReview, StageInterviewScheduled,
+	case StageDraft, StageSubmitted, StageLeadReview, StageChiefReview, StageInterviewScheduled,
 		StageInterviewConducted, StageInterviewReview, StageSelection,
 		StageAccepted, StageRejected, StageWithdrawn:
 		return true
@@ -106,13 +107,14 @@ const (
 	QuestionLongAnswer     QuestionType = "long_answer"
 	QuestionMultipleChoice QuestionType = "multiple_choice"
 	QuestionCheckbox       QuestionType = "checkbox"
+	QuestionDropdown       QuestionType = "dropdown"
 	QuestionURL            QuestionType = "url"
 )
 
 func (q QuestionType) Valid() bool {
 	switch q {
 	case QuestionShortAnswer, QuestionLongAnswer, QuestionMultipleChoice,
-		QuestionCheckbox, QuestionURL:
+		QuestionCheckbox, QuestionDropdown, QuestionURL:
 		return true
 	}
 	return false

@@ -11,6 +11,7 @@ export type UpdateApplicationInputBodyStage = typeof UpdateApplicationInputBodyS
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const UpdateApplicationInputBodyStage = {
+  draft: 'draft',
   submitted: 'submitted',
   lead_review: 'lead_review',
   chief_review: 'chief_review',

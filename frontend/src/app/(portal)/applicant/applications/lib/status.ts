@@ -7,6 +7,10 @@ export const APPLICANT_STATUS: Record<
   ApplicationStage,
   { label: string; className: string }
 > = {
+  draft: {
+    label: 'Draft',
+    className: 'bg-status-archived/15 text-status-archived',
+  },
   submitted: {
     label: 'Submitted',
     className: 'bg-status-open/15 text-status-open',

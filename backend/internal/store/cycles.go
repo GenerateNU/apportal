@@ -89,7 +89,7 @@ func (s *Store) CycleRoleSummary(ctx context.Context, cycleID string, role model
 			(SELECT COUNT(*) FROM code_challenges
 				WHERE cycle_id = $1 AND application_role = $2),
 			(SELECT COUNT(*) FROM applications
-				WHERE cycle_id = $1 AND application_role = $2)`
+				WHERE cycle_id = $1 AND application_role = $2 AND stage != 'draft')`
 	err := s.db.QueryRow(ctx, q, cycleID, role).Scan(
 		&summary.QuestionCount, &summary.ChallengeCount, &summary.SubmissionCount)
 	return summary, err

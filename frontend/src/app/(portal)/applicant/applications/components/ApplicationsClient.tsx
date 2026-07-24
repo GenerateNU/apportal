@@ -139,7 +139,8 @@ function RoleCard({
   application?: Application
 }) {
   const router = useRouter()
-  const status = application ? APPLICANT_STATUS[application.stage] : null
+  const isDraft = application?.stage === 'draft'
+  const status = application && !isDraft ? APPLICANT_STATUS[application.stage] : null
 
   return (
     <div className="flex flex-col justify-between rounded-xl border border-gray-100 bg-white p-5">
@@ -159,7 +160,19 @@ function RoleCard({
         )}
       </div>
 
-      {application ? (
+      {isDraft ? (
+        <Button
+          variant="outline"
+          onClick={() =>
+            router.push(
+              `/applicant/applications/new?cycle=${cycle.id}&role=${role}`
+            )
+          }
+        >
+          Continue application
+          <ArrowRight data-icon="inline-end" size={14} />
+        </Button>
+      ) : application ? (
         <Button
           variant="outline"
           onClick={() =>

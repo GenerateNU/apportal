@@ -10,9 +10,13 @@ import type { UpdateQuestionInputBodyQuestionType } from './updateQuestionInputB
 export interface UpdateQuestionInputBody {
   /** A URL to the JSON Schema for this object. */
   readonly $schema?: string;
+  /** Set true to stop this question from starting a page */
+  clear_page_title?: boolean;
   display_order?: number;
   is_required?: boolean;
   options?: unknown;
+  /** Set to start (or rename) a page at this question */
+  page_title?: string;
   question_text?: string;
   question_type?: UpdateQuestionInputBodyQuestionType;
 }

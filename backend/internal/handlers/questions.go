@@ -75,6 +75,7 @@ type CreateQuestionInput struct {
 		IsRequired   *bool               `json:"is_required,omitempty"`
 		DisplayOrder int                 `json:"display_order,omitempty"`
 		Options      json.RawMessage     `json:"options,omitempty"`
+		PageTitle    *string             `json:"page_title,omitempty" doc:"Set to start a new page at this question. Role-specific questions only."`
 	}
 }
 
@@ -92,6 +93,9 @@ func (h *questionHandler) create(ctx context.Context, in *CreateQuestionInput) (
 	if in.Body.Role != nil && !in.Body.Role.Valid() {
 		return nil, huma.Error422UnprocessableEntity("invalid role")
 	}
+	if in.Body.PageTitle != nil && in.Body.Role == nil {
+		return nil, huma.Error422UnprocessableEntity("only role-specific questions may start a page")
+	}
 	required := true
 	if in.Body.IsRequired != nil {
 		required = *in.Body.IsRequired
@@ -105,6 +109,7 @@ func (h *questionHandler) create(ctx context.Context, in *CreateQuestionInput) (
 		IsRequired:   required,
 		DisplayOrder: in.Body.DisplayOrder,
 		Options:      in.Body.Options,
+		PageTitle:    in.Body.PageTitle,
 	})
 	if err != nil {
 		return nil, storeErr(err)
@@ -137,11 +142,13 @@ func (h *questionHandler) list(ctx context.Context, in *ListQuestionsInput) (*Qu
 type UpdateQuestionInput struct {
 	ID   string `path:"id" doc:"Question ID"`
 	Body struct {
-		QuestionText *string              `json:"question_text,omitempty"`
-		QuestionType *models.QuestionType `json:"question_type,omitempty"`
-		IsRequired   *bool                `json:"is_required,omitempty"`
-		DisplayOrder *int                 `json:"display_order,omitempty"`
-		Options      json.RawMessage      `json:"options,omitempty"`
+		QuestionText   *string              `json:"question_text,omitempty"`
+		QuestionType   *models.QuestionType `json:"question_type,omitempty"`
+		IsRequired     *bool                `json:"is_required,omitempty"`
+		DisplayOrder   *int                 `json:"display_order,omitempty"`
+		Options        json.RawMessage      `json:"options,omitempty"`
+		PageTitle      *string              `json:"page_title,omitempty" doc:"Set to start (or rename) a page at this question"`
+		ClearPageTitle bool                 `json:"clear_page_title,omitempty" doc:"Set true to stop this question from starting a page"`
 	}
 }
 
@@ -154,11 +161,13 @@ func (h *questionHandler) update(ctx context.Context, in *UpdateQuestionInput) (
 	}
 
 	q, err := h.store.UpdateQuestion(ctx, in.ID, store.QuestionUpdate{
-		QuestionText: in.Body.QuestionText,
-		QuestionType: in.Body.QuestionType,
-		IsRequired:   in.Body.IsRequired,
-		DisplayOrder: in.Body.DisplayOrder,
-		Options:      in.Body.Options,
+		QuestionText:   in.Body.QuestionText,
+		QuestionType:   in.Body.QuestionType,
+		IsRequired:     in.Body.IsRequired,
+		DisplayOrder:   in.Body.DisplayOrder,
+		Options:        in.Body.Options,
+		PageTitle:      in.Body.PageTitle,
+		ClearPageTitle: in.Body.ClearPageTitle,
 	})
 	if err != nil {
 		return nil, storeErr(err)

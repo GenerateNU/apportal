@@ -15,5 +15,6 @@ export const CreateQuestionInputBodyQuestionType = {
   long_answer: 'long_answer',
   multiple_choice: 'multiple_choice',
   checkbox: 'checkbox',
+  dropdown: 'dropdown',
   url: 'url',
 } as const;

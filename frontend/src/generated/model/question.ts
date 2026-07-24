@@ -17,6 +17,7 @@ export interface Question {
   id: string;
   is_required: boolean;
   options?: unknown;
+  page_title?: string;
   question_text: string;
   question_type: QuestionQuestionType;
   role?: QuestionRole;
