@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { ArrowRight, Calendar, Check, FileQuestion } from 'lucide-react'
+import { ArrowRight, Calendar, FileQuestion } from 'lucide-react'
 import {
   cycleStatusDot,
   cycleStatusLabel,
@@ -69,10 +69,8 @@ export function ApplicationRoleCard({
           {cycle.name}
         </span>
         {status ? (
-          <span
-            className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium ${status.className}`}
-          >
-            <Check size={12} />
+          <span className="text-text-subtle flex shrink-0 items-center gap-1.5 text-xs">
+            <span className="h-2 w-2 shrink-0 rounded-full bg-gray-400" />
             {status.label}
           </span>
         ) : (

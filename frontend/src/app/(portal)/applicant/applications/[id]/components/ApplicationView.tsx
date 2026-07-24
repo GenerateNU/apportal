@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Check, Lock } from 'lucide-react'
+import { ArrowLeft, Lock } from 'lucide-react'
 import { MarkdownContent } from '@/components/MarkdownContent'
 import type { Role } from '@/lib/api/types'
 import { useApplicationTemplate } from '@/lib/queries/application-templates'
@@ -69,10 +69,8 @@ export function ApplicationView({
           <p className="text-text-muted mt-1 text-sm">{cycleName}</p>
         </div>
         {status && (
-          <span
-            className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium ${status.className}`}
-          >
-            <Check size={12} />
+          <span className="text-text-subtle inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-medium">
+            <span className="h-2 w-2 rounded-full bg-gray-400" />
             {status.label}
           </span>
         )}
