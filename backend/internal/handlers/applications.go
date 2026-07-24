@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/danielgtaylor/huma/v2"
 
@@ -26,7 +27,7 @@ func (h *applicationHandler) register(api huma.API) {
 		Description:   "One application per applicant, role, and cycle.",
 		Tags:          []string{"Applications"},
 		DefaultStatus: http.StatusCreated,
-		Errors:        []int{http.StatusConflict},
+		Errors:        []int{http.StatusConflict, http.StatusForbidden},
 	}, h.create)
 
 	huma.Register(api, huma.Operation{
@@ -94,6 +95,14 @@ func (h *applicationHandler) create(ctx context.Context, in *CreateApplicationIn
 	}
 	if !in.Body.Role.Valid() {
 		return nil, huma.Error422UnprocessableEntity("valid role is required")
+	}
+
+	tpl, err := h.store.GetOrCreateApplicationTemplate(ctx, in.Body.CycleID, in.Body.Role)
+	if err != nil {
+		return nil, storeErr(err)
+	}
+	if deadlinePassed(tpl) {
+		return nil, huma.Error403Forbidden("the application deadline has passed")
 	}
 
 	app, err := h.store.CreateApplication(ctx, store.ApplicationCreate{
@@ -213,6 +222,20 @@ func (h *applicationHandler) update(ctx context.Context, in *UpdateApplicationIn
 		return nil, huma.Error403Forbidden("cannot update another applicant's application")
 	}
 
+	// A draft is frozen once its template's deadline has passed — no autosave,
+	// no submit, no reviewer-initiated stage change either. This is a hard
+	// stop enforced regardless of who's making the request, unlike the
+	// owner-only rules below.
+	if current.Stage == models.StageDraft {
+		tpl, err := h.store.GetOrCreateApplicationTemplate(ctx, current.CycleID, current.Role)
+		if err != nil {
+			return nil, storeErr(err)
+		}
+		if deadlinePassed(tpl) {
+			return nil, huma.Error403Forbidden("the application deadline has passed")
+		}
+	}
+
 	// Applicants self-servicing their own application (as opposed to a
 	// reviewer advancing it through the pipeline) may only flip their own
 	// draft to submitted, and only once it's actually complete — never any
@@ -280,6 +303,12 @@ func (h *applicationHandler) requireComplete(ctx context.Context, app models.App
 		}
 	}
 	return nil
+}
+
+// deadlinePassed reports whether a template's closing time has passed. A nil
+// ClosesAt means no deadline was ever set, so it never blocks.
+func deadlinePassed(tpl models.ApplicationTemplate) bool {
+	return tpl.ClosesAt != nil && time.Now().After(*tpl.ClosesAt)
 }
 
 func (h *applicationHandler) delete(ctx context.Context, in *ApplicationIDInput) (*struct{}, error) {
