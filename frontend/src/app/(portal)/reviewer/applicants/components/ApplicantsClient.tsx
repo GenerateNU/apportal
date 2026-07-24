@@ -2,6 +2,13 @@
 
 import { useMemo, useState } from 'react'
 import { Search, List, Columns } from 'lucide-react'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import type { ApplicationStage, Role } from '@/lib/api/types'
 import { useApplications } from '@/lib/queries/applications'
 import { useApplicantsByNuids } from '@/lib/queries/applicants'
@@ -12,9 +19,6 @@ import { TableView } from './TableView'
 import { KanbanView } from './KanbanView'
 
 type View = 'table' | 'kanban'
-
-const SELECT_CLASS =
-  'h-8 rounded-md border border-gray-200 bg-white px-2.5 text-sm text-text-default focus:border-brand-blue focus:outline-none'
 
 export function ApplicantsClient() {
   const [view, setView] = useState<View>('table')
@@ -105,33 +109,36 @@ export function ApplicantsClient() {
         <h1 className="text-text-default text-2xl font-semibold">Applicants</h1>
 
         <div className="flex flex-wrap items-center gap-3">
-          <select
-            aria-label="Filter by role"
-            className={SELECT_CLASS}
+          <Select
             value={activeRole}
-            onChange={(e) => setActiveRole(e.target.value as Role | 'all')}
+            onValueChange={(val) => setActiveRole(val as Role | 'all')}
           >
-            <option value="all">All roles</option>
-            {ROLE_COLUMNS.map((role) => (
-              <option key={role} value={role}>
-                {ROLE_LABEL[role]}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="w-56" aria-label="Filter by role">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All roles</SelectItem>
+              {ROLE_COLUMNS.map((role) => (
+                <SelectItem key={role} value={role}>
+                  {ROLE_LABEL[role]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-          <select
-            aria-label="Filter by cycle"
-            className={SELECT_CLASS}
-            value={activeCycle}
-            onChange={(e) => setActiveCycle(e.target.value)}
-          >
-            <option value="all">All cycles</option>
-            {cycles.map((cycle) => (
-              <option key={cycle.id} value={cycle.id}>
-                {cycle.name}
-              </option>
-            ))}
-          </select>
+          <Select value={activeCycle} onValueChange={setActiveCycle}>
+            <SelectTrigger className="w-40" aria-label="Filter by cycle">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All cycles</SelectItem>
+              {cycles.map((cycle) => (
+                <SelectItem key={cycle.id} value={cycle.id}>
+                  {cycle.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
           <div className="relative w-full sm:w-60">
             <Search className="text-text-subtle absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />

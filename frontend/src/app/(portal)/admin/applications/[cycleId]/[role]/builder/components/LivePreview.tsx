@@ -3,6 +3,13 @@
 import { useState } from 'react'
 import { ArrowLeft, ArrowRight } from 'lucide-react'
 import { MarkdownContent } from '@/components/MarkdownContent'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import type { Question, Role } from '@/lib/api/types'
 import { groupQuestionsIntoPages } from '@/lib/applicationPages'
 import { ROLE_LABEL } from '@/lib/roles'
@@ -56,19 +63,20 @@ function PreviewField({ question }: { question: Question }) {
       )}
 
       {question.question_type === 'dropdown' && (
-        <select
-          aria-label={question.question_text || 'Untitled question'}
-          className="text-text-default focus:border-brand-blue focus:ring-brand-blue rounded-md border border-gray-300 px-4 py-2.5 text-base outline-none focus:ring-1"
-        >
-          <option value="" disabled>
-            Select an option
-          </option>
-          {options.map((option, index) => (
-            <option key={index} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
+        <Select defaultValue="">
+          <SelectTrigger
+            aria-label={question.question_text || 'Untitled question'}
+          >
+            <SelectValue placeholder="Select an option" />
+          </SelectTrigger>
+          <SelectContent>
+            {options.map((option, index) => (
+              <SelectItem key={index} value={option}>
+                {option}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       )}
 
       {question.question_type === 'checkbox' && (

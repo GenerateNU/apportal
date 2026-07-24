@@ -2,6 +2,13 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Search, UserPlus } from 'lucide-react'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import type { User, UserRole } from '@/lib/api/types'
 import { useMembersInfinite } from '@/lib/queries/users'
 import { isMember, STAFF_ROLES, USER_ROLE_LABEL } from '../lib/role-meta'
@@ -87,19 +94,22 @@ export function MembersClient() {
             className="focus:border-brand-blue focus:ring-brand-blue w-full rounded-lg border border-gray-300 py-2 pr-3 pl-9 text-sm outline-none focus:ring-1"
           />
         </div>
-        <select
-          aria-label="Filter by role"
+        <Select
           value={roleFilter}
-          onChange={(e) => setRoleFilter(e.target.value as RoleFilter)}
-          className="focus:border-brand-blue focus:ring-brand-blue rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-1"
+          onValueChange={(val) => setRoleFilter(val as RoleFilter)}
         >
-          <option value="all">All roles</option>
-          {STAFF_ROLES.map((role) => (
-            <option key={role} value={role}>
-              {USER_ROLE_LABEL[role]}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger className="w-40" aria-label="Filter by role">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All roles</SelectItem>
+            {STAFF_ROLES.map((role) => (
+              <SelectItem key={role} value={role}>
+                {USER_ROLE_LABEL[role]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <AddMemberDialog open={showAddMember} onOpenChange={setShowAddMember} />

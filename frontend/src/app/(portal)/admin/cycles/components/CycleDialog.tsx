@@ -12,12 +12,16 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import type { Cycle } from '@/lib/api/types'
 import { useCreateCycle, useUpdateCycle } from '@/lib/queries/cycles'
 import { APPLICATION_TYPES, type ApplicationType } from '../lib/cycle-meta'
-
-const SELECT_CLASS =
-  'border-input focus-visible:border-ring focus-visible:ring-ring/50 h-8 w-full rounded-lg border bg-transparent px-2.5 text-sm outline-none focus-visible:ring-3'
 
 export function CycleDialog({
   open,
@@ -82,21 +86,23 @@ export function CycleDialog({
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="cycle-type">Application type</Label>
-            <select
-              id="cycle-type"
-              aria-label="Application type"
-              className={SELECT_CLASS}
+            <Select
               value={applicationType}
-              onChange={(e) =>
-                setApplicationType(e.target.value as ApplicationType)
+              onValueChange={(val) =>
+                setApplicationType(val as ApplicationType)
               }
             >
-              {APPLICATION_TYPES.map((t) => (
-                <option key={t.value} value={t.value}>
-                  {t.label}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger id="cycle-type">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {APPLICATION_TYPES.map((t) => (
+                  <SelectItem key={t.value} value={t.value}>
+                    {t.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <DialogFooter>

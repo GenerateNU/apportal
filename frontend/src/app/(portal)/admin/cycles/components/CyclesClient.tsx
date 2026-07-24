@@ -3,6 +3,13 @@
 import { useState } from 'react'
 import { Pencil, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import type { Cycle, CycleStatus } from '@/lib/api/types'
 import { useCycles, useUpdateCycle } from '@/lib/queries/cycles'
 import {
@@ -89,19 +96,22 @@ function CycleRow({ cycle }: { cycle: Cycle }) {
           {status.label}
         </span>
 
-        <select
-          aria-label="Change status"
-          className="border-input focus-visible:border-ring focus-visible:ring-ring/50 h-8 rounded-lg border bg-transparent px-2 text-sm outline-none focus-visible:ring-3 disabled:opacity-50"
+        <Select
           value={cycle.status}
+          onValueChange={(val) => changeStatus(val as CycleStatus)}
           disabled={updateCycle.isPending}
-          onChange={(e) => changeStatus(e.target.value as CycleStatus)}
         >
-          {CYCLE_STATUS_ORDER.map((s) => (
-            <option key={s} value={s}>
-              {CYCLE_STATUS[s].label}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger className="w-32" aria-label="Change status">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {CYCLE_STATUS_ORDER.map((s) => (
+              <SelectItem key={s} value={s}>
+                {CYCLE_STATUS[s].label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
         <Button
           variant="outline"
