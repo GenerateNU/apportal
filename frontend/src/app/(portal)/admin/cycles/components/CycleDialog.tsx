@@ -88,7 +88,9 @@ export function CycleDialog({
             <Label htmlFor="cycle-type">Application type</Label>
             <Select
               value={applicationType}
-              onValueChange={(val) => setApplicationType(val as ApplicationType)}
+              onValueChange={(val) =>
+                setApplicationType(val as ApplicationType)
+              }
             >
               <SelectTrigger id="cycle-type">
                 <SelectValue />
