@@ -239,8 +239,17 @@ function Form({
   // Set once the backend rejects a save/submit because the template's
   // deadline has passed — freezes the form instead of retrying autosave
   // against a request that will only ever 403 again.
-  const [deadlineClosed, setDeadlineClosed] = useState(false)
+  const [deadlineRejected, setDeadlineRejected] = useState(false)
   const [pageIndex, setPageIndex] = useState(0)
+
+  // Derived rather than synced via an effect so an already-passed deadline
+  // (e.g. a stale direct link) is caught on the very first render, not one
+  // render later.
+  const deadlineClosed =
+    deadlineRejected ||
+    (template?.closes_at
+      ? new Date(template.closes_at).getTime() < new Date().getTime()
+      : false)
   const pendingScrollRef = useRef<string | null>(null)
 
   const pages = useMemo(() => groupQuestionsIntoPages(questions), [questions])
@@ -278,17 +287,6 @@ function Form({
   useEffect(() => {
     deadlineClosedRef.current = deadlineClosed
   }, [deadlineClosed])
-
-  // Catches an already-passed deadline up front (e.g. a stale direct link)
-  // rather than waiting for the first autosave to fail.
-  useEffect(() => {
-    if (
-      template?.closes_at &&
-      new Date(template.closes_at).getTime() < Date.now()
-    ) {
-      setDeadlineClosed(true)
-    }
-  }, [template])
 
   async function runSave(snapshot: SaveSnapshot) {
     savingRef.current = true
@@ -346,7 +344,7 @@ function Form({
     } catch (err) {
       setSaveStatus('error')
       if (err instanceof APIError && err.status === 403) {
-        setDeadlineClosed(true)
+        setDeadlineRejected(true)
         pendingRef.current = false
       }
     } finally {
@@ -559,7 +557,7 @@ function Form({
       onDone(app.id)
     } catch (err) {
       if (err instanceof APIError && err.status === 403) {
-        setDeadlineClosed(true)
+        setDeadlineRejected(true)
         setSubmitError(
           'The application deadline has passed. This application can no longer be submitted.'
         )
@@ -620,8 +618,8 @@ function Form({
 
       {deadlineClosed && (
         <p className="border-destructive/30 bg-destructive/5 text-destructive mb-6 rounded-lg border px-4 py-3 text-sm">
-          The application deadline has passed. Your answers are saved, but
-          this application can no longer be edited or submitted.
+          The application deadline has passed. Your answers are saved, but this
+          application can no longer be edited or submitted.
         </p>
       )}
 
