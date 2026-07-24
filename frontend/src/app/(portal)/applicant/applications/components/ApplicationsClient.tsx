@@ -118,14 +118,10 @@ function CycleSection({
   const { data: summaries = [] } = useCycleTemplateSummary(cycle.id)
 
   const cycleApplications = applications.filter((a) => a.cycle_id === cycle.id)
-  const applicationsMap = new Map(
-    cycleApplications.map((a) => [a.role, a])
-  )
+  const applicationsMap = new Map(cycleApplications.map((a) => [a.role, a]))
 
   const submittedApplications = new Set(
-    cycleApplications
-      .filter((a) => a.stage !== 'draft')
-      .map((a) => a.role)
+    cycleApplications.filter((a) => a.stage !== 'draft').map((a) => a.role)
   )
 
   const openRoleTemplates = templates.filter(
