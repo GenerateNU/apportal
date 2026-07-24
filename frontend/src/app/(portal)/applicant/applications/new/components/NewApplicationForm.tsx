@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Loader2 } from 'lucide-react'
 import { HelpContact } from '@/components/HelpContact'
+import { MarkdownContent } from '@/components/MarkdownContent'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -231,9 +232,9 @@ function Form({
       </header>
 
       {template?.description && (
-        <p className="text-text-muted mb-8 text-sm leading-relaxed whitespace-pre-wrap">
+        <MarkdownContent className="text-text-muted mb-8 text-sm leading-relaxed">
           {template.description}
-        </p>
+        </MarkdownContent>
       )}
 
       <div className="grid grid-cols-1 items-start gap-10 lg:grid-cols-[220px_1fr]">
@@ -258,9 +259,9 @@ function Form({
           />
 
           {template?.instructions && (
-            <p className="text-text-muted mt-8 text-sm leading-relaxed whitespace-pre-wrap">
+            <MarkdownContent className="text-text-muted mt-8 text-sm leading-relaxed">
               {template.instructions}
-            </p>
+            </MarkdownContent>
           )}
 
           <div className="mt-8 flex items-center justify-end gap-3 border-t border-gray-100 pt-6">

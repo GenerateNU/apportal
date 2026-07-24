@@ -1,3 +1,4 @@
+import { MarkdownContent } from '@/components/MarkdownContent'
 import type { Question, Role } from '@/lib/api/types'
 import { ROLE_LABEL } from '@/lib/roles'
 
@@ -87,9 +88,9 @@ export function LivePreview({
       </h2>
 
       {description && (
-        <p className="text-text-secondary mb-8 text-base whitespace-pre-wrap">
+        <MarkdownContent className="text-text-secondary mb-8 text-base">
           {description}
-        </p>
+        </MarkdownContent>
       )}
 
       <div className="flex flex-col gap-6">
@@ -104,9 +105,9 @@ export function LivePreview({
       </div>
 
       {instructions && (
-        <p className="text-text-secondary mt-8 text-base whitespace-pre-wrap">
+        <MarkdownContent className="text-text-secondary mt-8 text-base">
           {instructions}
-        </p>
+        </MarkdownContent>
       )}
     </div>
   )
