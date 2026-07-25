@@ -644,7 +644,6 @@ function Form({
         <aside className="hidden lg:sticky lg:top-20 lg:block lg:max-h-[calc(100vh-80px)] lg:overflow-y-auto">
           <QuestionOutline
             pages={pages}
-            currentPageIndex={pageIndex}
             selectedQuestionId={selectedQuestionId}
             onNavigate={handleOutlineNavigate}
           />

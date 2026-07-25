@@ -8,12 +8,10 @@ import { cn } from '@/lib/utils'
 // within the current one.
 export function QuestionOutline({
   pages,
-  currentPageIndex,
   selectedQuestionId,
   onNavigate,
 }: {
   pages: ApplicationPage[]
-  currentPageIndex: number
   selectedQuestionId: string | null
   onNavigate: (pageIndex: number, questionId: string) => void
 }) {
@@ -34,7 +32,7 @@ export function QuestionOutline({
       <p className="text-text-subtle mb-4 px-3 text-xs font-medium tracking-wider uppercase">
         Questions
       </p>
-      {rows.map((row, idx) => (
+      {rows.map((row) => (
         <div key={row.question.id}>
           {row.pageTitle && (
             <p className="text-text-default mt-6 mb-3 px-3 text-xs font-semibold first:mt-0">
