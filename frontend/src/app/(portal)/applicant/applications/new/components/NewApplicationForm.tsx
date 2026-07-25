@@ -241,7 +241,9 @@ function Form({
   // against a request that will only ever 403 again.
   const [deadlineRejected, setDeadlineRejected] = useState(false)
   const [pageIndex, setPageIndex] = useState(0)
-  const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(null)
+  const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(
+    null
+  )
 
   // Derived rather than synced via an effect so an already-passed deadline
   // (e.g. a stale direct link) is caught on the very first render, not one

@@ -37,7 +37,7 @@ export function QuestionOutline({
       {rows.map((row, idx) => (
         <div key={row.question.id}>
           {row.pageTitle && (
-            <p className="text-text-default mb-3 mt-6 px-3 text-xs font-semibold first:mt-0">
+            <p className="text-text-default mt-6 mb-3 px-3 text-xs font-semibold first:mt-0">
               {row.pageTitle}
             </p>
           )}
@@ -45,16 +45,17 @@ export function QuestionOutline({
             type="button"
             onClick={() => onNavigate(row.pageIndex, row.question.id)}
             className={cn(
-              'text-text-secondary hover:text-text-default mb-2 flex w-full items-start gap-2.5 rounded-md px-3 py-2.5 text-left text-sm transition-all duration-200 hover:bg-blue-50 select-none',
-              row.question.id === selectedQuestionId && 'bg-blue-50 text-brand-blue font-medium'
+              'text-text-secondary hover:text-text-default mb-2 flex w-full items-start gap-2.5 rounded-md px-3 py-2.5 text-left text-sm transition-all duration-200 select-none hover:bg-blue-50',
+              row.question.id === selectedQuestionId &&
+                'text-brand-blue bg-blue-50 font-medium'
             )}
           >
             <span
               className={cn(
-                'flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-xs font-semibold pointer-events-none transition-all duration-200',
+                'pointer-events-none flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-xs font-semibold transition-all duration-200',
                 row.question.id === selectedQuestionId
-                  ? 'bg-brand-blue text-white scale-105'
-                  : 'bg-gray-200 text-text-default'
+                  ? 'bg-brand-blue scale-105 text-white'
+                  : 'text-text-default bg-gray-200'
               )}
             >
               {row.number + 1}
