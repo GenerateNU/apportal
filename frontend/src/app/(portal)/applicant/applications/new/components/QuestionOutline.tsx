@@ -9,10 +9,12 @@ import { cn } from '@/lib/utils'
 export function QuestionOutline({
   pages,
   currentPageIndex,
+  selectedQuestionId,
   onNavigate,
 }: {
   pages: ApplicationPage[]
   currentPageIndex: number
+  selectedQuestionId: string | null
   onNavigate: (pageIndex: number, questionId: string) => void
 }) {
   let number = 0
@@ -28,14 +30,14 @@ export function QuestionOutline({
   if (rows.length === 0) return null
 
   return (
-    <nav className="flex flex-col gap-0.5">
-      <p className="text-text-subtle mb-1 px-3 text-xs font-medium tracking-wider uppercase">
+    <nav className="flex flex-col gap-0 select-none">
+      <p className="text-text-subtle mb-4 px-3 text-xs font-medium tracking-wider uppercase">
         Questions
       </p>
-      {rows.map((row) => (
+      {rows.map((row, idx) => (
         <div key={row.question.id}>
           {row.pageTitle && (
-            <p className="text-text-faint mt-3 px-3 text-xs font-semibold first:mt-0">
+            <p className="text-text-default mb-3 mt-6 px-3 text-xs font-semibold first:mt-0">
               {row.pageTitle}
             </p>
           )}
@@ -43,14 +45,21 @@ export function QuestionOutline({
             type="button"
             onClick={() => onNavigate(row.pageIndex, row.question.id)}
             className={cn(
-              'text-text-secondary hover:text-text-default flex w-full items-start gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-gray-100',
-              row.pageIndex === currentPageIndex && 'bg-gray-100'
+              'text-text-secondary hover:text-text-default mb-2 flex w-full items-start gap-2.5 rounded-md px-3 py-2.5 text-left text-sm transition-all duration-200 hover:bg-blue-50 select-none',
+              row.question.id === selectedQuestionId && 'bg-blue-50 text-brand-blue font-medium'
             )}
           >
-            <span className="text-text-faint w-4 shrink-0 text-xs font-medium">
+            <span
+              className={cn(
+                'flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-xs font-semibold pointer-events-none transition-all duration-200',
+                row.question.id === selectedQuestionId
+                  ? 'bg-brand-blue text-white scale-105'
+                  : 'bg-gray-200 text-text-default'
+              )}
+            >
               {row.number + 1}
             </span>
-            <span className="truncate">
+            <span className="pointer-events-none flex-1 truncate text-sm">
               {row.question.question_text || 'Untitled question'}
             </span>
           </button>
