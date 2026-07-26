@@ -83,11 +83,11 @@ function SidebarUser({ fullName }: { fullName: string }) {
   }
 
   return (
-    <div className="px-4 py-3">
+    <div className="px-4 py-4">
       <div className="flex items-center justify-between gap-2.5">
         <div className="flex items-center gap-2.5">
           <Avatar name={fullName} size="sm" />
-          <span className="text-text-secondary text-sm font-medium">
+          <span className="text-text-secondary text-base font-medium">
             {fullName}
           </span>
         </div>
@@ -128,10 +128,10 @@ export default function Sidebar({ roles, fullName, isChief }: SidebarProps) {
       </div>
 
       {/* Nav sections */}
-      <nav className="flex flex-1 flex-col gap-4 overflow-y-auto px-3 py-4">
+      <nav className="flex flex-1 flex-col gap-4 overflow-y-auto pl-0 pr-3 py-5">
         {sections.map((section) => (
           <div key={section.label}>
-            <p className="text-text-subtle mb-1 px-3 text-xs font-medium tracking-wider uppercase">
+            <p className="text-text-subtle mb-2 px-3 text-sm font-medium tracking-wider uppercase">
               {section.label}
             </p>
             <div className="flex flex-col gap-0.5">
