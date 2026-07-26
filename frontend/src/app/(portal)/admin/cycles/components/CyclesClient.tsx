@@ -1,4 +1,5 @@
 'use client'
+import { PageContainer } from '@/components/PageContainer'
 
 import { useState } from 'react'
 import { Pencil, Plus } from 'lucide-react'
@@ -25,7 +26,7 @@ export function CyclesClient() {
   const [showCreate, setShowCreate] = useState(false)
 
   return (
-    <div className="flex flex-col gap-6 p-8">
+    <PageContainer>
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-text-default text-2xl font-semibold">Cycles</h1>
@@ -55,7 +56,7 @@ export function CyclesClient() {
       )}
 
       <CycleDialog open={showCreate} onOpenChange={setShowCreate} />
-    </div>
+    </PageContainer>
   )
 }
 

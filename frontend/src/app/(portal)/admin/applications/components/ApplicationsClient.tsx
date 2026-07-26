@@ -1,4 +1,5 @@
 'use client'
+import { PageContainer } from '@/components/PageContainer'
 
 import { useMemo, useState } from 'react'
 import { ChevronRight, Folder } from 'lucide-react'
@@ -91,7 +92,7 @@ export function ApplicationsClient() {
   )
 
   return (
-    <div className="flex flex-col gap-6 p-8">
+    <PageContainer>
       <h1 className="text-text-default text-2xl font-semibold">Applications</h1>
 
       {cycles.length === 0 ? (
@@ -148,7 +149,7 @@ export function ApplicationsClient() {
           ))}
         </div>
       )}
-    </div>
+    </PageContainer>
   )
 }
 

@@ -1,4 +1,5 @@
 'use client'
+import { PageContainer } from '@/components/PageContainer'
 
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -35,7 +36,7 @@ export function ReviewQueueClient() {
   }, [nuids, applicantQueries])
 
   return (
-    <div className="flex flex-col gap-6 p-8">
+    <PageContainer>
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-text-default text-2xl font-semibold">
@@ -120,6 +121,6 @@ export function ReviewQueueClient() {
           })}
         </div>
       )}
-    </div>
+    </PageContainer>
   )
 }

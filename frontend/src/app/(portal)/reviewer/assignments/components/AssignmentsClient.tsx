@@ -1,4 +1,5 @@
 'use client'
+import { PageContainer } from '@/components/PageContainer'
 
 import { useMemo, useState } from 'react'
 import { Loader2, Lock, Unlock, X } from 'lucide-react'
@@ -124,7 +125,7 @@ export function AssignmentsClient() {
   }
 
   return (
-    <div className="flex flex-col gap-6 p-8">
+    <PageContainer>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-text-default text-2xl font-semibold">
@@ -271,7 +272,7 @@ export function AssignmentsClient() {
           )
         })
       )}
-    </div>
+    </PageContainer>
   )
 }
 

@@ -1,4 +1,5 @@
 'use client'
+import { PageContainer } from '@/components/PageContainer'
 
 import { useMemo } from 'react'
 import { Loader2 } from 'lucide-react'
@@ -74,7 +75,7 @@ function Dashboard({ user }: { user: User }) {
   )
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-8 sm:py-10">
+    <PageContainer className="mx-auto w-full max-w-3xl">
       <header className="mb-8">
         <h1 className="text-text-default text-2xl font-semibold">
           My Applications
@@ -100,7 +101,7 @@ function Dashboard({ user }: { user: User }) {
           ))}
         </div>
       )}
-    </div>
+    </PageContainer>
   )
 }
 

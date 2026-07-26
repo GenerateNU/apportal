@@ -83,7 +83,7 @@ function SidebarUser({ fullName }: { fullName: string }) {
   }
 
   return (
-    <div className="border-t border-gray-100 px-4 py-3">
+    <div className="px-4 py-3">
       <div className="flex items-center justify-between gap-2.5">
         <div className="flex items-center gap-2.5">
           <Avatar name={fullName} size="sm" />
@@ -114,9 +114,9 @@ export default function Sidebar({ roles, fullName, isChief }: SidebarProps) {
     }))
 
   return (
-    <aside className="flex h-screen w-60 flex-col border-r border-gray-100 bg-white">
+    <aside className="flex h-screen w-60 flex-col bg-gray-50">
       {/* Logo */}
-      <div className="flex h-14 items-center gap-2 border-b border-gray-100 px-5">
+      <div className="flex h-14 items-center gap-2 px-5">
         <Image
           src="/GenerateNU Logo.png"
           alt="GenerateNU"
