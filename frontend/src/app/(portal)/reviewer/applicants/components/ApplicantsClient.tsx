@@ -1,4 +1,5 @@
 'use client'
+import { PageContainer } from '@/components/PageContainer'
 
 import { useMemo, useState } from 'react'
 import { Search, List, Columns } from 'lucide-react'
@@ -104,7 +105,7 @@ export function ApplicantsClient() {
   })
 
   return (
-    <div className="flex flex-col gap-6 p-4 sm:p-8">
+    <PageContainer>
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <h1 className="text-text-default text-2xl font-semibold">Applicants</h1>
 
@@ -194,6 +195,6 @@ export function ApplicantsClient() {
       ) : (
         <KanbanView applicants={filtered} />
       )}
-    </div>
+    </PageContainer>
   )
 }

@@ -1,4 +1,5 @@
 'use client'
+import { PageContainer } from '@/components/PageContainer'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Search, UserPlus } from 'lucide-react'
@@ -87,7 +88,7 @@ export function MembersClient() {
       : 'View and update applicant status.'
 
   return (
-    <div className="flex flex-col gap-6 p-8">
+    <PageContainer>
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-text-default text-2xl font-semibold">Members</h1>
@@ -203,6 +204,6 @@ export function MembersClient() {
           </div>
         </div>
       )}
-    </div>
+    </PageContainer>
   )
 }

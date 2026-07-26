@@ -30,7 +30,7 @@ export default function PortalLayout({
   }
 
   return (
-    <div className="flex h-screen flex-col lg:flex-row">
+    <div className="flex h-screen flex-col overflow-hidden lg:flex-row lg:bg-gray-50 lg:pt-4 lg:pl-4">
       <header className="flex h-14 shrink-0 items-center gap-3 border-b border-gray-100 px-4 lg:hidden">
         <button
           type="button"
@@ -66,8 +66,8 @@ export default function PortalLayout({
         />
       </MobileNavSheet>
 
-      <main className="flex flex-1 flex-col overflow-y-auto bg-gray-50">
-        {children}
+      <main className="flex flex-1 flex-col overflow-hidden border border-gray-200 bg-white lg:rounded-tl-[40]">
+        <div className="flex flex-1 flex-col overflow-y-auto">{children}</div>
       </main>
     </div>
   )
