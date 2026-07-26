@@ -241,6 +241,9 @@ function Form({
   // against a request that will only ever 403 again.
   const [deadlineRejected, setDeadlineRejected] = useState(false)
   const [pageIndex, setPageIndex] = useState(0)
+  const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(
+    null
+  )
 
   // Derived rather than synced via an effect so an already-passed deadline
   // (e.g. a stale direct link) is caught on the very first render, not one
@@ -508,10 +511,12 @@ function Form({
   )
 
   function handleOutlineNavigate(targetPage: number, questionId: string) {
+    setSelectedQuestionId(questionId)
     if (targetPage === pageIndex) {
-      document
-        .getElementById(`question-${questionId}`)
-        ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      const element = document.getElementById(`question-${questionId}`)
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }
       return
     }
     pendingScrollRef.current = questionId
@@ -572,7 +577,7 @@ function Form({
   }
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-8 sm:py-10">
+    <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-8 sm:py-10">
       <button
         type="button"
         onClick={handleBack}
@@ -635,11 +640,11 @@ function Form({
         </p>
       )}
 
-      <div className="grid grid-cols-1 items-start gap-10 lg:grid-cols-[220px_1fr]">
-        <aside className="hidden lg:sticky lg:top-10 lg:block">
+      <div className="grid grid-cols-1 items-start gap-12 lg:grid-cols-[280px_1fr]">
+        <aside className="hidden lg:sticky lg:top-20 lg:block lg:max-h-[calc(100vh-80px)] lg:overflow-y-auto">
           <QuestionOutline
             pages={pages}
-            currentPageIndex={pageIndex}
+            selectedQuestionId={selectedQuestionId}
             onNavigate={handleOutlineNavigate}
           />
         </aside>
