@@ -43,10 +43,10 @@ const sectionsByRole: Record<Role, NavSection> = {
     label: 'Review',
     items: [
       { href: '/reviewer/applicants', label: 'Applications', icon: Users },
-      { href: '/reviewer/applications', label: 'Review queue', icon: FileText },
+      { href: '/reviewer/applications', label: 'Review Queue', icon: FileText },
       {
         href: '/reviewer/assignments',
-        label: 'Assign reviewers',
+        label: 'Assign Reviewers',
         icon: UserPlus,
         chiefOnly: true,
       },
