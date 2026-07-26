@@ -80,7 +80,7 @@ function SidebarUser({ fullName }: { fullName: string }) {
   }
 
   return (
-    <div className="border-t border-gray-200 -mx-3 px-3 py-2 pb-6">
+    <div className="-mx-3 border-t border-gray-200 px-3 py-2 pb-6">
       <div className="flex flex-1 items-center justify-between gap-2.5">
         <div className="flex min-w-0 items-center gap-2.5">
           <Avatar name={fullName} size="sm" />
