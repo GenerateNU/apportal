@@ -17,7 +17,7 @@ export default function NavItem({ href, label, icon: Icon }: NavItemProps) {
   return (
     <Link
       href={href}
-      className={`flex items-center gap-2.5 rounded-md px-3 py-2 text-base font-medium transition-colors ${
+      className={`flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium transition-colors ${
         isActive
           ? 'text-brand-blue bg-blue-50'
           : 'text-text-secondary hover:text-text-default hover:bg-gray-100'

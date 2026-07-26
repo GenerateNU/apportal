@@ -2,14 +2,7 @@
 
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import {
-  Users,
-  UserPlus,
-  FileText,
-  RefreshCw,
-  Settings,
-  LogOut,
-} from 'lucide-react'
+import { Users, UserPlus, FileText, Calendar, LogOut } from 'lucide-react'
 import NavItem from './NavItem'
 import { Avatar } from '@/components/ui/avatar'
 import { useAuth } from '@/lib/auth/auth-context'
@@ -41,7 +34,7 @@ const sectionsByRole: Record<Role, NavSection> = {
     items: [
       {
         href: '/applicant/applications',
-        label: 'My Applications',
+        label: 'Apply',
         icon: FileText,
       },
     ],
@@ -49,7 +42,7 @@ const sectionsByRole: Record<Role, NavSection> = {
   reviewer: {
     label: 'Review',
     items: [
-      { href: '/reviewer/applicants', label: 'Applicants', icon: Users },
+      { href: '/reviewer/applicants', label: 'Applications', icon: Users },
       { href: '/reviewer/applications', label: 'Review queue', icon: FileText },
       {
         href: '/reviewer/assignments',
@@ -62,15 +55,19 @@ const sectionsByRole: Record<Role, NavSection> = {
   admin: {
     label: 'Admin',
     items: [
-      { href: '/admin/cycles', label: 'Cycles', icon: RefreshCw },
-      { href: '/admin/applications', label: 'Applications', icon: FileText },
-      { href: '/admin/members', label: 'Members', icon: Settings },
+      { href: '/admin/cycles', label: 'Cycles', icon: Calendar },
+      {
+        href: '/admin/applications',
+        label: 'Application Forms',
+        icon: FileText,
+      },
+      { href: '/admin/members', label: 'Members', icon: Users },
     ],
   },
 }
 
-// Display order: reviewer sections before applicant, admin last
-const roleOrder: Role[] = ['reviewer', 'applicant', 'admin']
+// Display order: applicant, then reviewer, then admin
+const roleOrder: Role[] = ['applicant', 'reviewer', 'admin']
 
 function SidebarUser({ fullName }: { fullName: string }) {
   const router = useRouter()
@@ -83,11 +80,11 @@ function SidebarUser({ fullName }: { fullName: string }) {
   }
 
   return (
-    <div className="px-4 py-4">
+    <div className="border-t border-gray-200 px-3 py-3">
       <div className="flex items-center justify-between gap-2.5">
-        <div className="flex items-center gap-2.5">
+        <div className="flex min-w-0 items-center gap-2.5">
           <Avatar name={fullName} size="sm" />
-          <span className="text-text-secondary text-base font-medium">
+          <span className="text-text-default truncate text-sm font-medium">
             {fullName}
           </span>
         </div>
@@ -95,7 +92,7 @@ function SidebarUser({ fullName }: { fullName: string }) {
           type="button"
           onClick={handleSignOut}
           aria-label="Sign out"
-          className="text-text-subtle hover:text-text-default rounded-md p-1.5 hover:bg-gray-100"
+          className="text-text-subtle hover:text-text-default flex-shrink-0 rounded-md p-1.5 transition-colors hover:bg-gray-100"
         >
           <LogOut size={16} />
         </button>
@@ -116,22 +113,22 @@ export default function Sidebar({ roles, fullName, isChief }: SidebarProps) {
   return (
     <aside className="flex h-screen w-60 flex-col bg-gray-50">
       {/* Logo */}
-      <div className="flex h-14 items-center gap-2 px-5">
+      <div className="flex h-14 items-center gap-3 px-3">
         <Image
           src="/GenerateNU Logo.png"
           alt="GenerateNU"
-          width={28}
-          height={28}
+          width={32}
+          height={32}
           className="object-contain"
         />
         <span className="text-brand-blue text-xl font-semibold">Generate</span>
       </div>
 
       {/* Nav sections */}
-      <nav className="flex flex-1 flex-col gap-4 overflow-y-auto pl-0 pr-3 py-5">
+      <nav className="flex flex-1 flex-col gap-4 overflow-y-auto px-3 py-4">
         {sections.map((section) => (
           <div key={section.label}>
-            <p className="text-text-subtle mb-2 px-3 text-sm font-medium tracking-wider uppercase">
+            <p className="text-text-subtle mb-2 px-2 text-xs font-semibold tracking-wider uppercase">
               {section.label}
             </p>
             <div className="flex flex-col gap-0.5">

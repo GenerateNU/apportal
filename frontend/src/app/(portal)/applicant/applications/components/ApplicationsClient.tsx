@@ -137,7 +137,7 @@ function CycleSection({
       {openRoleTemplates.length > 0 && (
         <div>
           <h2 className="text-text-default mb-3 text-sm font-semibold">
-            Open roles
+            Open Roles
           </h2>
           <div className="grid gap-4 sm:grid-cols-2">
             {openRoleTemplates.map((template) => (
