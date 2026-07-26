@@ -80,8 +80,8 @@ function SidebarUser({ fullName }: { fullName: string }) {
   }
 
   return (
-    <div className="border-t border-gray-200 px-3 py-3">
-      <div className="flex items-center justify-between gap-2.5">
+    <div className="border-t border-gray-200 -mx-3 px-3 py-2 pb-6">
+      <div className="flex flex-1 items-center justify-between gap-2.5">
         <div className="flex min-w-0 items-center gap-2.5">
           <Avatar name={fullName} size="sm" />
           <span className="text-text-default truncate text-sm font-medium">
@@ -113,7 +113,7 @@ export default function Sidebar({ roles, fullName, isChief }: SidebarProps) {
   return (
     <aside className="flex h-screen w-60 flex-col bg-gray-50">
       {/* Logo */}
-      <div className="flex h-14 items-center gap-3 px-3">
+      <div className="flex flex-shrink-0 items-center gap-3 px-3 py-3">
         <Image
           src="/GenerateNU Logo.png"
           alt="GenerateNU"
@@ -125,7 +125,7 @@ export default function Sidebar({ roles, fullName, isChief }: SidebarProps) {
       </div>
 
       {/* Nav sections */}
-      <nav className="flex flex-1 flex-col gap-4 overflow-y-auto px-3 py-4">
+      <nav className="flex flex-1 flex-col gap-4 overflow-hidden px-3 py-4">
         {sections.map((section) => (
           <div key={section.label}>
             <p className="text-text-subtle mb-2 px-2 text-xs font-semibold tracking-wider uppercase">
