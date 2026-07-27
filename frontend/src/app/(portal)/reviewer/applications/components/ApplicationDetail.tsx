@@ -50,8 +50,8 @@ export function ApplicationDetail({
             onClick={handleReview}
             className="text-text-muted hover:text-text-default inline-flex items-center gap-1 text-sm transition-colors"
           >
-            Review Applicant
             <Maximize2 className="h-3 w-3" />
+            Review Applicant
           </button>
         </div>
 
