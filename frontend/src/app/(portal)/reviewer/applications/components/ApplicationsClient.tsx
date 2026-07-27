@@ -24,6 +24,7 @@ import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 import type { ApplicantApplication } from './types'
 import { TableView } from './TableView'
 import { KanbanView } from './KanbanView'
+import { ApplicationDetail } from './ApplicationDetail'
 
 type View = 'table' | 'kanban'
 
@@ -36,6 +37,9 @@ export function ApplicationsClient() {
   const [activeCycle, setActiveCycle] = useState<string>('')
   const [cycleDefaulted, setCycleDefaulted] = useState(false)
   const [search, setSearch] = useState('')
+  const [selectedApplicationId, setSelectedApplicationId] = useState<
+    string | null
+  >(null)
 
   const { data: cycles = [] } = useCycles({})
 
@@ -109,6 +113,8 @@ export function ApplicationsClient() {
       applications.map((app) => ({
         id: app.id,
         nuid: app.user_nuid,
+        fullName: app.full_name,
+        email: app.email,
         role: app.role,
         cycleId: app.cycle_id,
         stage: app.stage,
@@ -239,11 +245,31 @@ export function ApplicationsClient() {
             columns={columns}
             questionsByCycleRole={questionsByCycleRole}
             answersByApplicationId={answersByApplicationId}
+            selectedApplicationId={selectedApplicationId}
+            onSelectApplication={setSelectedApplicationId}
           />
         ) : (
           <KanbanView applicants={filtered} />
         )}
       </div>
+
+      {selectedApplicationId &&
+        (() => {
+          const selectedApp = rows.find((a) => a.id === selectedApplicationId)
+          return selectedApp ? (
+            <ApplicationDetail
+              applicant={selectedApp}
+              columns={columns}
+              rowQuestions={
+                questionsByCycleRole[
+                  `${selectedApp.cycleId}:${selectedApp.role}`
+                ] ?? []
+              }
+              answers={answersByApplicationId[selectedApplicationId] ?? []}
+              onClose={() => setSelectedApplicationId(null)}
+            />
+          ) : null
+        })()}
     </PageContainer>
   )
 }

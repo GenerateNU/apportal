@@ -13,6 +13,8 @@ export function TableView({
   columns,
   questionsByCycleRole,
   answersByApplicationId,
+  selectedApplicationId,
+  onSelectApplication,
 }: {
   applicants: ApplicantApplication[]
   allApplicants: ApplicantApplication[]
@@ -21,6 +23,8 @@ export function TableView({
   columns: Question[]
   questionsByCycleRole: Record<string, Question[]>
   answersByApplicationId: Record<string, WrittenAnswer[]>
+  selectedApplicationId: string | null
+  onSelectApplication: (id: string) => void
 }) {
   const countByStage = (stage: ApplicationStage | 'all') =>
     stage === 'all'
@@ -82,6 +86,8 @@ export function TableView({
                     questionsByCycleRole[`${a.cycleId}:${a.role}`] ?? []
                   }
                   answers={answersByApplicationId[a.id] ?? []}
+                  isSelected={selectedApplicationId === a.id}
+                  onSelect={() => onSelectApplication(a.id)}
                 />
               ))
             ) : (

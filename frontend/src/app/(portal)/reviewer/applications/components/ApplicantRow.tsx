@@ -9,14 +9,23 @@ export function ApplicantRow({
   columns,
   rowQuestions,
   answers,
+  isSelected,
+  onSelect,
 }: {
   applicant: ApplicantApplication
   columns: Question[]
   rowQuestions: Question[]
   answers: WrittenAnswer[]
+  isSelected: boolean
+  onSelect: () => void
 }) {
   return (
-    <tr className="border-b border-gray-100 bg-white hover:bg-gray-50">
+    <tr
+      onClick={onSelect}
+      className={`cursor-pointer border-b border-gray-100 transition-colors ${
+        isSelected ? 'bg-blue-50' : 'bg-white hover:bg-gray-50'
+      }`}
+    >
       {columns.map((q) => {
         const rowQuestion = rowQuestions.find(
           (rq) =>
