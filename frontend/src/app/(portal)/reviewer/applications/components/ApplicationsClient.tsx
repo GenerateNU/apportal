@@ -10,10 +10,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import type { ApplicationStage, Role } from '@/lib/api/types'
+import type {
+  ApplicationStage,
+  Question,
+  Role,
+  WrittenAnswer,
+} from '@/lib/api/types'
+import { useAnswersByApplicationIds } from '@/lib/queries/answers'
 import { useApplications } from '@/lib/queries/applications'
 import { useApplicantsByNuids } from '@/lib/queries/applicants'
 import { useCycles } from '@/lib/queries/cycles'
+import { useQuestionsByCycleRoles } from '@/lib/queries/questions'
 import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 import type { ApplicantApplication } from './types'
 import { TableView } from './TableView'
@@ -21,19 +28,39 @@ import { KanbanView } from './KanbanView'
 
 type View = 'table' | 'kanban'
 
-export function ApplicantsClient() {
+export function ApplicationsClient() {
   const [view, setView] = useState<View>('table')
   const [activeStage, setActiveStage] = useState<ApplicationStage | 'all'>(
     'all'
   )
-  const [activeRole, setActiveRole] = useState<Role | 'all'>('all')
+  const [activeRole, setActiveRole] = useState<Role>(ROLE_COLUMNS[0])
   const [activeCycle, setActiveCycle] = useState<string>('all')
+  const [cycleDefaulted, setCycleDefaulted] = useState(false)
   const [search, setSearch] = useState('')
-  const [selectedMajors, setSelectedMajors] = useState<string[]>([])
-  const [selectedYears, setSelectedYears] = useState<number[]>([])
 
   const { data: applications = [] } = useApplications({})
   const { data: cycles = [] } = useCycles({})
+
+  // Default the cycle filter to the cycle currently accepting applications,
+  // so reviewers land on the current cycle instead of every cycle ever run.
+  // Falls back to whichever cycle opened most recently if none is open
+  // (opens_at is only set on scheduled/draft cycles in practice).
+  const currentCycleId = useMemo(() => {
+    const open = cycles.find((c) => c.status === 'open')
+    if (open) return open.id
+    let latest: { id: string; opens_at: string } | null = null
+    for (const c of cycles) {
+      if (c.opens_at && (!latest || c.opens_at > latest.opens_at)) {
+        latest = { id: c.id, opens_at: c.opens_at }
+      }
+    }
+    return latest?.id ?? null
+  }, [cycles])
+
+  if (!cycleDefaulted && currentCycleId) {
+    setActiveCycle(currentCycleId)
+    setCycleDefaulted(true)
+  }
 
   const uniqueNUIDs = useMemo(
     () => [...new Set(applications.map((a) => a.user_nuid))],
@@ -57,8 +84,6 @@ export function ApplicantsClient() {
           fullName: person?.full_name ?? app.user_nuid,
           nuid: app.user_nuid,
           email: person?.email ?? '',
-          major: person?.major ?? null,
-          graduationYear: person?.graduation_year ?? null,
           role: app.role,
           cycleId: app.cycle_id,
           stage: app.stage,
@@ -68,19 +93,10 @@ export function ApplicantsClient() {
     [applications, byNUID]
   )
 
-  const allMajors = [
-    ...new Set(rows.map((a) => a.major).filter((m): m is string => m !== null)),
-  ].sort()
-  const allYears = [
-    ...new Set(
-      rows.map((a) => a.graduationYear).filter((y): y is number => y !== null)
-    ),
-  ].sort((a, b) => a - b)
-
   const filtered = rows.filter((a) => {
     const matchesStage =
       view === 'kanban' || activeStage === 'all' || a.stage === activeStage
-    const matchesRole = activeRole === 'all' || a.role === activeRole
+    const matchesRole = a.role === activeRole
     const matchesCycle = activeCycle === 'all' || a.cycleId === activeCycle
     const query = search.toLowerCase()
     const matchesSearch =
@@ -88,37 +104,85 @@ export function ApplicantsClient() {
       a.fullName.toLowerCase().includes(query) ||
       a.nuid.includes(query) ||
       a.email.toLowerCase().includes(query)
-    const matchesMajor =
-      selectedMajors.length === 0 ||
-      (a.major !== null && selectedMajors.includes(a.major))
-    const matchesYear =
-      selectedYears.length === 0 ||
-      (a.graduationYear !== null && selectedYears.includes(a.graduationYear))
-    return (
-      matchesStage &&
-      matchesRole &&
-      matchesCycle &&
-      matchesSearch &&
-      matchesMajor &&
-      matchesYear
-    )
+    return matchesStage && matchesRole && matchesCycle && matchesSearch
   })
+
+  // Pull in each visible application's question set (per its own cycle+role,
+  // since roles within a cycle can have different questions) and answers, so
+  // reviewers can preview a response inline without opening the application.
+  const uniquePairs = useMemo(() => {
+    const seen = new Set<string>()
+    const pairs: { cycleId: string; role: Role }[] = []
+    for (const a of filtered) {
+      const key = `${a.cycleId}:${a.role}`
+      if (!seen.has(key)) {
+        seen.add(key)
+        pairs.push({ cycleId: a.cycleId, role: a.role })
+      }
+    }
+    return pairs
+  }, [filtered])
+
+  const questionQueries = useQuestionsByCycleRoles(uniquePairs)
+  const questionsByCycleRole = useMemo(() => {
+    const map: Record<string, Question[]> = {}
+    uniquePairs.forEach((pair, i) => {
+      const data = questionQueries[i]?.data
+      if (data) map[`${pair.cycleId}:${pair.role}`] = data
+    })
+    return map
+  }, [uniquePairs, questionQueries])
+
+  // One column per distinct question across the visible rows' cycle/role
+  // combinations, ordered the same way the application form displays them.
+  // Roles within a cycle each get their own copy of common fields (e.g.
+  // "First Name") as separate question rows, so we dedupe by text rather
+  // than id — otherwise every role duplicates its own column.
+  const columns = useMemo(() => {
+    const byText = new Map<string, Question>()
+    for (const questions of Object.values(questionsByCycleRole)) {
+      for (const q of questions) {
+        const key = q.question_text.trim().toLowerCase()
+        const existing = byText.get(key)
+        if (!existing || q.display_order < existing.display_order) {
+          byText.set(key, q)
+        }
+      }
+    }
+    return [...byText.values()].sort(
+      (a, b) =>
+        a.display_order - b.display_order ||
+        a.created_at.localeCompare(b.created_at)
+    )
+  }, [questionsByCycleRole])
+
+  const applicationIds = useMemo(() => filtered.map((a) => a.id), [filtered])
+  const answerQueries = useAnswersByApplicationIds(applicationIds)
+  const answersByApplicationId = useMemo(() => {
+    const map: Record<string, WrittenAnswer[]> = {}
+    applicationIds.forEach((id, i) => {
+      const data = answerQueries[i]?.data
+      if (data) map[id] = data
+    })
+    return map
+  }, [applicationIds, answerQueries])
 
   return (
     <PageContainer>
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <h1 className="text-text-default text-2xl font-semibold">Applicants</h1>
+        <h1 className="text-text-default text-2xl font-semibold">
+          Applications
+        </h1>
 
         <div className="flex flex-wrap items-center gap-3">
           <Select
             value={activeRole}
-            onValueChange={(val) => setActiveRole(val as Role | 'all')}
+            onValueChange={(val) => setActiveRole(val as Role)}
           >
             <SelectTrigger className="w-56" aria-label="Filter by role">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All roles</SelectItem>
               {ROLE_COLUMNS.map((role) => (
                 <SelectItem key={role} value={role}>
                   {ROLE_LABEL[role]}
@@ -185,12 +249,9 @@ export function ApplicantsClient() {
           allApplicants={rows}
           activeStage={activeStage}
           onStageChange={setActiveStage}
-          allMajors={allMajors}
-          selectedMajors={selectedMajors}
-          onChangeMajors={setSelectedMajors}
-          allYears={allYears}
-          selectedYears={selectedYears}
-          onChangeYears={setSelectedYears}
+          columns={columns}
+          questionsByCycleRole={questionsByCycleRole}
+          answersByApplicationId={answersByApplicationId}
         />
       ) : (
         <KanbanView applicants={filtered} />

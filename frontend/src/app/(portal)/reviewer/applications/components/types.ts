@@ -7,8 +7,6 @@ export type ApplicantApplication = {
   fullName: string
   nuid: string
   email: string
-  major: string | null
-  graduationYear: number | null
   role: Role
   cycleId: string
   stage: ApplicationStage

@@ -1,30 +1,26 @@
+import type { Question, WrittenAnswer } from '@/lib/api/types'
 import type { ApplicantApplication, ApplicationStage } from './types'
 import { FILTER_STAGES } from './constants'
-import { FilterBar } from './FilterBar'
 import { ApplicantRow } from './ApplicantRow'
+
+const BASE_COLUMNS = ['Name', 'NUID', 'Email', 'Role', 'Stage', 'Submitted']
 
 export function TableView({
   applicants,
   allApplicants,
   activeStage,
   onStageChange,
-  allMajors,
-  selectedMajors,
-  onChangeMajors,
-  allYears,
-  selectedYears,
-  onChangeYears,
+  columns,
+  questionsByCycleRole,
+  answersByApplicationId,
 }: {
   applicants: ApplicantApplication[]
   allApplicants: ApplicantApplication[]
   activeStage: ApplicationStage | 'all'
   onStageChange: (s: ApplicationStage | 'all') => void
-  allMajors: string[]
-  selectedMajors: string[]
-  onChangeMajors: (v: string[]) => void
-  allYears: number[]
-  selectedYears: number[]
-  onChangeYears: (v: number[]) => void
+  columns: Question[]
+  questionsByCycleRole: Record<string, Question[]>
+  answersByApplicationId: Record<string, WrittenAnswer[]>
 }) {
   const countByStage = (stage: ApplicationStage | 'all') =>
     stage === 'all'
@@ -52,29 +48,11 @@ export function TableView({
         ))}
       </div>
 
-      <FilterBar
-        allMajors={allMajors}
-        selectedMajors={selectedMajors}
-        onChangeMajors={onChangeMajors}
-        allYears={allYears}
-        selectedYears={selectedYears}
-        onChangeYears={onChangeYears}
-      />
-
       <div className="overflow-x-auto">
         <table className="w-full min-w-180">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50">
-              {[
-                'Name',
-                'NUID',
-                'Email',
-                'Major',
-                'Year',
-                'Role',
-                'Stage',
-                'Submitted',
-              ].map((col) => (
+              {BASE_COLUMNS.map((col) => (
                 <th
                   key={col}
                   className="text-text-subtle px-4 py-2.5 text-left text-xs font-medium tracking-wider uppercase"
@@ -82,15 +60,34 @@ export function TableView({
                   {col}
                 </th>
               ))}
+              {columns.map((q) => (
+                <th
+                  key={q.id}
+                  title={q.question_text}
+                  className="text-text-subtle max-w-50 truncate px-4 py-2.5 text-left text-xs font-medium tracking-wider uppercase"
+                >
+                  {q.question_text}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
             {applicants.length > 0 ? (
-              applicants.map((a) => <ApplicantRow key={a.id} applicant={a} />)
+              applicants.map((a) => (
+                <ApplicantRow
+                  key={a.id}
+                  applicant={a}
+                  columns={columns}
+                  rowQuestions={
+                    questionsByCycleRole[`${a.cycleId}:${a.role}`] ?? []
+                  }
+                  answers={answersByApplicationId[a.id] ?? []}
+                />
+              ))
             ) : (
               <tr>
                 <td
-                  colSpan={8}
+                  colSpan={BASE_COLUMNS.length + columns.length}
                   className="text-text-subtle px-4 py-10 text-center text-sm"
                 >
                   No applicants found.

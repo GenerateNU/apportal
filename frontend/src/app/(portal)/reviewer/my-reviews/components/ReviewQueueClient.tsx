@@ -106,7 +106,7 @@ export function ReviewQueueClient() {
                         variant="outline"
                         onClick={() =>
                           router.push(
-                            `/reviewer/applications/${application.id}`
+                            `/reviewer/my-reviews/${application.id}`
                           )
                         }
                       >

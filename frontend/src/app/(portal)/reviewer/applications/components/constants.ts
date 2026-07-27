@@ -1,8 +1,4 @@
-import type { ElementType } from 'react'
-import { GraduationCap, Hash } from 'lucide-react'
 import type { ApplicationStage } from '@/lib/api/types'
-
-export type FilterKey = 'major' | 'year'
 
 export const ORDERED_STAGES: ApplicationStage[] = [
   'submitted',
@@ -77,12 +73,3 @@ export const stageDot: Record<ApplicationStage, string> = {
   rejected: 'bg-red-400',
   withdrawn: 'bg-gray-300',
 }
-
-export const FILTER_FIELDS: {
-  key: FilterKey
-  label: string
-  Icon: ElementType
-}[] = [
-  { key: 'major', label: 'Major', Icon: GraduationCap },
-  { key: 'year', label: 'Year', Icon: Hash },
-]

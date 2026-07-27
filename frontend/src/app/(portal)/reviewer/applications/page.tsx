@@ -3,17 +3,17 @@ import {
   HydrationBoundary,
   QueryClient,
 } from '@tanstack/react-query'
-import { getApplicant } from '@/generated/applicants/applicants'
 import { listApplications } from '@/generated/applications/applications'
+import { getApplicant } from '@/generated/applicants/applicants'
 import { getServerRequestOptions } from '@/lib/api/server-request-options'
 import { queryKeys } from '@/lib/queries/keys'
-import { ReviewQueueClient } from './components/ReviewQueueClient'
+import { ApplicationsClient } from './components/ApplicationsClient'
 
 // Auth-gated, live data fetched per request from the backend — never prerender
 // this at build time (the backend isn't running then).
 export const dynamic = 'force-dynamic'
 
-export default async function ReviewQueuePage() {
+export default async function ApplicationsPage() {
   const queryClient = new QueryClient()
   const requestOptions = await getServerRequestOptions()
 
@@ -34,7 +34,7 @@ export default async function ReviewQueuePage() {
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <ReviewQueueClient />
+      <ApplicationsClient />
     </HydrationBoundary>
   )
 }
