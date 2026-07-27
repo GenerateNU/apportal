@@ -18,7 +18,6 @@ import type {
 } from '@/lib/api/types'
 import { useAnswersByApplicationIds } from '@/lib/queries/answers'
 import { useApplications } from '@/lib/queries/applications'
-import { useApplicantsByNuids } from '@/lib/queries/applicants'
 import { useCycles } from '@/lib/queries/cycles'
 import { useQuestionsByCycleRoles } from '@/lib/queries/questions'
 import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
@@ -34,11 +33,10 @@ export function ApplicationsClient() {
     'all'
   )
   const [activeRole, setActiveRole] = useState<Role>(ROLE_COLUMNS[0])
-  const [activeCycle, setActiveCycle] = useState<string>('all')
+  const [activeCycle, setActiveCycle] = useState<string>('')
   const [cycleDefaulted, setCycleDefaulted] = useState(false)
   const [search, setSearch] = useState('')
 
-  const { data: applications = [] } = useApplications({})
   const { data: cycles = [] } = useCycles({})
 
   // Default the cycle filter to the cycle currently accepting applications,
@@ -62,66 +60,25 @@ export function ApplicationsClient() {
     setCycleDefaulted(true)
   }
 
-  const uniqueNUIDs = useMemo(
-    () => [...new Set(applications.map((a) => a.user_nuid))],
-    [applications]
-  )
-  const applicantQueries = useApplicantsByNuids(uniqueNUIDs)
-  const byNUID = useMemo(() => {
-    const map: Record<string, (typeof applicantQueries)[number]['data']> = {}
-    for (const q of applicantQueries) {
-      if (q.data) map[q.data.nuid] = q.data
-    }
-    return map
-  }, [applicantQueries])
-
-  const rows: ApplicantApplication[] = useMemo(
-    () =>
-      applications.map((app) => {
-        const person = byNUID[app.user_nuid]
-        return {
-          id: app.id,
-          fullName: person?.full_name ?? app.user_nuid,
-          nuid: app.user_nuid,
-          email: person?.email ?? '',
-          role: app.role,
-          cycleId: app.cycle_id,
-          stage: app.stage,
-          submittedAt: app.submitted_at,
-        }
-      }),
-    [applications, byNUID]
+  // Scoped server-side to the selected cycle+role (both required, so this is
+  // always exactly what's on screen) — keeps the question/answer batch below
+  // limited to applications actually in view instead of every application.
+  const { data: applications = [] } = useApplications(
+    activeCycle ? { cycle_id: activeCycle, role: activeRole } : undefined
   )
 
-  const filtered = rows.filter((a) => {
-    const matchesStage =
-      view === 'kanban' || activeStage === 'all' || a.stage === activeStage
-    const matchesRole = a.role === activeRole
-    const matchesCycle = activeCycle === 'all' || a.cycleId === activeCycle
-    const query = search.toLowerCase()
-    const matchesSearch =
-      !query ||
-      a.fullName.toLowerCase().includes(query) ||
-      a.nuid.includes(query) ||
-      a.email.toLowerCase().includes(query)
-    return matchesStage && matchesRole && matchesCycle && matchesSearch
-  })
-
-  // Pull in each visible application's question set (per its own cycle+role,
-  // since roles within a cycle can have different questions) and answers, so
-  // reviewers can preview a response inline without opening the application.
   const uniquePairs = useMemo(() => {
     const seen = new Set<string>()
     const pairs: { cycleId: string; role: Role }[] = []
-    for (const a of filtered) {
-      const key = `${a.cycleId}:${a.role}`
+    for (const app of applications) {
+      const key = `${app.cycle_id}:${app.role}`
       if (!seen.has(key)) {
         seen.add(key)
-        pairs.push({ cycleId: a.cycleId, role: a.role })
+        pairs.push({ cycleId: app.cycle_id, role: app.role })
       }
     }
     return pairs
-  }, [filtered])
+  }, [applications])
 
   const questionQueries = useQuestionsByCycleRoles(uniquePairs)
   const questionsByCycleRole = useMemo(() => {
@@ -133,8 +90,49 @@ export function ApplicationsClient() {
     return map
   }, [uniquePairs, questionQueries])
 
+  const applicationIds = useMemo(
+    () => applications.map((a) => a.id),
+    [applications]
+  )
+  const answerQueries = useAnswersByApplicationIds(applicationIds)
+  const answersByApplicationId = useMemo(() => {
+    const map: Record<string, WrittenAnswer[]> = {}
+    applicationIds.forEach((id, i) => {
+      const data = answerQueries[i]?.data
+      if (data) map[id] = data
+    })
+    return map
+  }, [applicationIds, answerQueries])
+
+  const rows: ApplicantApplication[] = useMemo(
+    () =>
+      applications.map((app) => ({
+        id: app.id,
+        nuid: app.user_nuid,
+        role: app.role,
+        cycleId: app.cycle_id,
+        stage: app.stage,
+        submittedAt: app.submitted_at,
+      })),
+    [applications]
+  )
+
+  // Everything but the stage filter — used both as the base for `filtered`
+  // and as the denominator for the stage tab counts, so those counts track
+  // search instead of always reflecting every application in the cycle+role.
+  const filteredExceptStage = rows.filter((a) => {
+    const query = search.toLowerCase()
+    return !query || a.nuid.includes(query)
+  })
+
+  const filtered = filteredExceptStage.filter(
+    (a) => view === 'kanban' || activeStage === 'all' || a.stage === activeStage
+  )
+
   // One column per distinct question across the visible rows' cycle/role
-  // combinations, ordered the same way the application form displays them.
+  // combinations, ordered the same way the application form displays them —
+  // every response the application actually collected, and nothing else
+  // (no separate Name/Email columns sourced from the applicant record).
   // Roles within a cycle each get their own copy of common fields (e.g.
   // "First Name") as separate question rows, so we dedupe by text rather
   // than id — otherwise every role duplicates its own column.
@@ -156,19 +154,8 @@ export function ApplicationsClient() {
     )
   }, [questionsByCycleRole])
 
-  const applicationIds = useMemo(() => filtered.map((a) => a.id), [filtered])
-  const answerQueries = useAnswersByApplicationIds(applicationIds)
-  const answersByApplicationId = useMemo(() => {
-    const map: Record<string, WrittenAnswer[]> = {}
-    applicationIds.forEach((id, i) => {
-      const data = answerQueries[i]?.data
-      if (data) map[id] = data
-    })
-    return map
-  }, [applicationIds, answerQueries])
-
   return (
-    <PageContainer>
+    <PageContainer className="flex-1">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <h1 className="text-text-default text-2xl font-semibold">
           Applications
@@ -196,7 +183,6 @@ export function ApplicationsClient() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All cycles</SelectItem>
               {cycles.map((cycle) => (
                 <SelectItem key={cycle.id} value={cycle.id}>
                   {cycle.name}
@@ -209,7 +195,7 @@ export function ApplicationsClient() {
             <Search className="text-text-subtle absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Search name, NUID, email..."
+              placeholder="Search NUID..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="focus:border-brand-blue text-text-default placeholder:text-text-subtle w-full rounded-md border border-gray-200 py-1.5 pr-3 pl-9 text-sm focus:outline-none"
@@ -243,19 +229,21 @@ export function ApplicationsClient() {
         </div>
       </div>
 
-      {view === 'table' ? (
-        <TableView
-          applicants={filtered}
-          allApplicants={rows}
-          activeStage={activeStage}
-          onStageChange={setActiveStage}
-          columns={columns}
-          questionsByCycleRole={questionsByCycleRole}
-          answersByApplicationId={answersByApplicationId}
-        />
-      ) : (
-        <KanbanView applicants={filtered} />
-      )}
+      <div className="flex min-h-0 flex-1 flex-col">
+        {view === 'table' ? (
+          <TableView
+            applicants={filtered}
+            allApplicants={filteredExceptStage}
+            activeStage={activeStage}
+            onStageChange={setActiveStage}
+            columns={columns}
+            questionsByCycleRole={questionsByCycleRole}
+            answersByApplicationId={answersByApplicationId}
+          />
+        ) : (
+          <KanbanView applicants={filtered} />
+        )}
+      </div>
     </PageContainer>
   )
 }

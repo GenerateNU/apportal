@@ -180,7 +180,7 @@ export const createApplication = (
   
 
 
-export const getCreateApplicationMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel,
+export const getCreateApplicationMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createApplication>>, TError,{data: NonReadonly<CreateApplicationInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
 ): UseMutationOptions<Awaited<ReturnType<typeof createApplication>>, TError,{data: NonReadonly<CreateApplicationInputBody>}, TContext> => {
 
@@ -207,12 +207,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CreateApplicationMutationResult = NonNullable<Awaited<ReturnType<typeof createApplication>>>
     export type CreateApplicationMutationBody = NonReadonly<CreateApplicationInputBody>
-    export type CreateApplicationMutationError = ErrorModel | ErrorModel | ErrorModel
+    export type CreateApplicationMutationError = ErrorModel | ErrorModel | ErrorModel | ErrorModel
 
     /**
  * @summary Submit an application
  */
-export const useCreateApplication = <TError = ErrorModel | ErrorModel | ErrorModel,
+export const useCreateApplication = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createApplication>>, TError,{data: NonReadonly<CreateApplicationInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof createApplication>>,

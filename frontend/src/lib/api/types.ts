@@ -8,6 +8,7 @@
 import type {
   Applicant as GenApplicant,
   Application as GenApplication,
+  ApplicationSummary as GenApplicationSummary,
   ApplicationTemplate as GenApplicationTemplate,
   Cycle as GenCycle,
   CodeChallenge as GenCodeChallenge,
@@ -16,6 +17,7 @@ import type {
   User as GenUser,
   WrittenAnswer as GenWrittenAnswer,
   ApplicationRole,
+  ApplicationStage,
   QuestionQuestionType,
   UserRolesAnyOfItem,
 } from '@/generated/model'
@@ -60,6 +62,19 @@ export type Application = Omit<
   // JSONB availability blob keyed by slot.
   availability: Record<string, boolean> | null
   resume_url: string | null
+}
+
+// An application bundled with its applicant's full_name/email — what the
+// reviewer applications list actually returns, so the frontend never needs a
+// separate applicant-profile fetch just to show who applied.
+export type ApplicationSummary = Omit<
+  GenApplicationSummary,
+  'availability' | 'resume_url' | 'role' | 'stage'
+> & {
+  availability: Record<string, boolean> | null
+  resume_url: string | null
+  role: Role
+  stage: ApplicationStage
 }
 
 export type WrittenAnswer = Omit<GenWrittenAnswer, 'answer_options'> & {

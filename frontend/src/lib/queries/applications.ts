@@ -7,7 +7,12 @@ import {
   updateApplication,
 } from '@/generated/applications/applications'
 import type { RequestOptions } from '@/lib/api/orval-mutator'
-import type { Application, ApplicationStage, Role } from '@/lib/api/types'
+import type {
+  Application,
+  ApplicationStage,
+  ApplicationSummary,
+  Role,
+} from '@/lib/api/types'
 import { queryKeys } from './keys'
 
 export function useApplications(
@@ -23,7 +28,7 @@ export function useApplications(
   return useQuery({
     queryKey: queryKeys.applications.list(params),
     queryFn: async () =>
-      ((await listApplications(params, opts)) ?? []) as Application[],
+      ((await listApplications(params, opts)) ?? []) as ApplicationSummary[],
   })
 }
 

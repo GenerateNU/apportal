@@ -125,6 +125,15 @@ type Application struct {
 	UpdatedAt    time.Time        `json:"updated_at"`
 }
 
+// ApplicationSummary bundles an application with its applicant's display name
+// and email (not a table) — spares reviewer-facing list views a separate
+// per-application lookup against /applicants just to show who applied.
+type ApplicationSummary struct {
+	Application
+	FullName string `json:"full_name"`
+	Email    string `json:"email"`
+}
+
 type WrittenAnswer struct {
 	ID            string          `json:"id"`
 	ApplicationID string          `json:"application_id"`

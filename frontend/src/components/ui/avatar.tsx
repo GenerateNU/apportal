@@ -45,7 +45,11 @@ interface AvatarProps {
 }
 
 export function Avatar({ name, size = 'md', className }: AvatarProps) {
-  const colorClass = PROFILE_COLORS[hashToBucket(name, PROFILE_COLORS.length)]
+  // Callers occasionally have this in a loading/unresolved state (e.g. a
+  // profile fetch that hasn't returned yet) despite the required prop type.
+  const safeName = name || ''
+  const colorClass =
+    PROFILE_COLORS[hashToBucket(safeName, PROFILE_COLORS.length)]
 
   return (
     <div
@@ -56,7 +60,7 @@ export function Avatar({ name, size = 'md', className }: AvatarProps) {
         className
       )}
     >
-      {initials(name)}
+      {initials(safeName)}
     </div>
   )
 }

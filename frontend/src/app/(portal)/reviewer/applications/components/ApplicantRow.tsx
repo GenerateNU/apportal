@@ -1,7 +1,7 @@
 import type { Question, WrittenAnswer } from '@/lib/api/types'
 import type { ApplicantApplication } from './types'
 import { formatDate } from '@/lib/utils'
-import { stageBadge, stageLabel } from './constants'
+import { stageDot, stageLabel, stageTextColor } from './constants'
 import { AnswerCell } from './AnswerCell'
 
 export function ApplicantRow({
@@ -16,25 +16,7 @@ export function ApplicantRow({
   answers: WrittenAnswer[]
 }) {
   return (
-    <tr className="border-b border-gray-100 hover:bg-gray-50">
-      <td className="text-text-default px-4 py-3 text-sm font-medium">
-        {applicant.fullName}
-      </td>
-      <td className="text-text-muted px-4 py-3 text-sm">{applicant.nuid}</td>
-      <td className="text-text-muted px-4 py-3 text-sm">{applicant.email}</td>
-      <td className="text-text-muted px-4 py-3 text-sm capitalize">
-        {applicant.role.replace('_', ' ')}
-      </td>
-      <td className="px-4 py-3">
-        <span
-          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${stageBadge[applicant.stage]}`}
-        >
-          {stageLabel[applicant.stage]}
-        </span>
-      </td>
-      <td className="text-text-muted px-4 py-3 text-sm">
-        {formatDate(applicant.submittedAt)}
-      </td>
+    <tr className="border-b border-gray-100 bg-white hover:bg-gray-50">
       {columns.map((q) => {
         const rowQuestion = rowQuestions.find(
           (rq) =>
@@ -42,7 +24,10 @@ export function ApplicantRow({
             q.question_text.trim().toLowerCase()
         )
         return (
-          <td key={q.id} className="px-4 py-3">
+          <td
+            key={q.id}
+            className="border-r border-gray-100 px-3 py-2 last:border-r-0"
+          >
             <AnswerCell
               answer={
                 rowQuestion
@@ -50,10 +35,24 @@ export function ApplicantRow({
                   : undefined
               }
               applicable={!!rowQuestion}
+              questionType={q.question_type}
             />
           </td>
         )
       })}
+      <td className="border-r border-gray-100 px-3 py-2 whitespace-nowrap">
+        <span
+          className={`inline-flex items-center gap-1.5 text-sm font-medium ${stageTextColor[applicant.stage]}`}
+        >
+          <span
+            className={`h-1.5 w-1.5 rounded-full ${stageDot[applicant.stage]}`}
+          />
+          {stageLabel[applicant.stage]}
+        </span>
+      </td>
+      <td className="text-text-muted px-3 py-2 text-sm whitespace-nowrap">
+        {formatDate(applicant.submittedAt)}
+      </td>
     </tr>
   )
 }
