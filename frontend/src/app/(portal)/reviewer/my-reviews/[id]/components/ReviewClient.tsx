@@ -9,25 +9,19 @@ import { Label } from '@/components/ui/label'
 import type { Role } from '@/lib/api/types'
 import { useAnswers } from '@/lib/queries/answers'
 import { useApplicant } from '@/lib/queries/applicants'
-import { useApplication } from '@/lib/queries/applications'
-import { useChallenges } from '@/lib/queries/challenges'
 import { useQuestions } from '@/lib/queries/questions'
-import { useSubmission } from '@/lib/queries/submissions'
 import { useCurrentUser } from '@/lib/queries/users'
 import {
   useUpsertWrittenReview,
   useWrittenReviews,
 } from '@/lib/queries/written-reviews'
 import { ROLE_LABEL } from '@/lib/roles'
-import { ApplicationFields } from '@/app/(portal)/applicant/applications/components/ApplicationFields'
-import type { AnswerValue } from '@/app/(portal)/applicant/applications/components/QuestionField'
+import { ResponseField } from '@/app/(portal)/reviewer/applications/components/ResponseField'
 
 const TEXTAREA_CLASS =
   'border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 min-h-24 w-full rounded-lg border bg-transparent px-2.5 py-2 text-sm outline-none focus-visible:ring-3'
 
 type ScoreEntry = { score: string; comment: string }
-
-const noop = () => {}
 
 export function ReviewClient({
   applicationId,
@@ -42,11 +36,8 @@ export function ReviewClient({
 }) {
   const { data: currentUser } = useCurrentUser()
   const { data: applicant } = useApplicant(applicantNuid)
-  const { data: application } = useApplication(applicationId)
   const { data: answers = [] } = useAnswers(applicationId)
   const { data: questions = [] } = useQuestions(cycleId, role)
-  const { data: challenges = [] } = useChallenges(cycleId, role)
-  const { data: submission } = useSubmission(applicationId)
   const { data: reviews = [] } = useWrittenReviews(applicationId)
   const upsert = useUpsertWrittenReview()
 
@@ -68,17 +59,10 @@ export function ReviewClient({
     [answers, questionById]
   )
 
-  // Answer values keyed by question id, in the shape ApplicationFields expects.
-  const values = useMemo(() => {
-    const map: Record<string, AnswerValue> = {}
-    for (const answer of answers) {
-      const opts = answer.answer_options
-      map[answer.question_id] = Array.isArray(opts)
-        ? { options: opts as string[] }
-        : { text: answer.answer_text ?? '' }
-    }
-    return map
-  }, [answers])
+  const answersByQuestionId = useMemo(
+    () => new Map(answers.map((a) => [a.question_id, a])),
+    [answers]
+  )
 
   const [scores, setScores] = useState<Record<string, ScoreEntry>>({})
   const [overall, setOverall] = useState('')
@@ -168,19 +152,16 @@ export function ReviewClient({
           <h2 className="text-text-subtle mb-4 text-xs font-medium tracking-wider uppercase">
             Application
           </h2>
-          <ApplicationFields
-            questions={questions}
-            challenge={challenges[0]}
-            values={values}
-            onValueChange={noop}
-            resumeUrl={application?.resume_url ?? ''}
-            onResumeChange={noop}
-            availability={application?.availability ?? {}}
-            onAvailabilityChange={noop}
-            submissionUrl={submission?.submission_url ?? ''}
-            onSubmissionChange={noop}
-            disabled
-          />
+          <div className="space-y-4">
+            {questions.map((q) => (
+              <ResponseField
+                key={q.id}
+                question={q}
+                answer={answersByQuestionId.get(q.id)}
+                applicable={true}
+              />
+            ))}
+          </div>
         </div>
 
         {/* Review */}
