@@ -76,7 +76,7 @@ type ApplicationOutput struct {
 }
 
 type ApplicationsOutput struct {
-	Body []models.Application
+	Body []models.ApplicationSummary
 }
 
 type CreateApplicationInput struct {

@@ -73,41 +73,46 @@ func (s *Store) GetApplication(ctx context.Context, id string) (models.Applicati
 	return a, err
 }
 
-func (s *Store) ListApplications(ctx context.Context, f ApplicationFilter) ([]models.Application, error) {
-	query := `SELECT ` + applicationColumns + ` FROM applications WHERE 1 = 1`
+// applicationSummaryColumns matches models.ApplicationSummary's field order:
+// Application's fields (positionally, per applicationColumns) followed by the
+// joined applicant's full_name and email.
+const applicationSummaryColumns = `a.id, a.cycle_id, a.user_nuid, a.application_role, a.stage, a.availability, a.resume_url, a.submitted_at, a.updated_at, u.full_name, u.email`
+
+func (s *Store) ListApplications(ctx context.Context, f ApplicationFilter) ([]models.ApplicationSummary, error) {
+	query := `SELECT ` + applicationSummaryColumns + ` FROM applications a JOIN users u ON u.nuid = a.user_nuid WHERE 1 = 1`
 	args := []any{}
 	if f.CycleID != "" {
 		args = append(args, f.CycleID)
-		query += ` AND cycle_id = $` + strconv.Itoa(len(args))
+		query += ` AND a.cycle_id = $` + strconv.Itoa(len(args))
 	}
 	if f.UserNUID != "" {
 		args = append(args, f.UserNUID)
-		query += ` AND user_nuid = $` + strconv.Itoa(len(args))
+		query += ` AND a.user_nuid = $` + strconv.Itoa(len(args))
 	}
 	if f.Role != nil {
 		args = append(args, *f.Role)
-		query += ` AND application_role = $` + strconv.Itoa(len(args))
+		query += ` AND a.application_role = $` + strconv.Itoa(len(args))
 	}
 	if f.Stage != nil {
 		args = append(args, *f.Stage)
-		query += ` AND stage = $` + strconv.Itoa(len(args))
+		query += ` AND a.stage = $` + strconv.Itoa(len(args))
 	}
 	if f.AssignedTo != "" {
 		args = append(args, f.AssignedTo)
 		query += ` AND EXISTS (SELECT 1 FROM lead_assignments la` +
-			` WHERE la.application_id = applications.id AND la.lead_nuid = $` +
+			` WHERE la.application_id = a.id AND la.lead_nuid = $` +
 			strconv.Itoa(len(args)) + `)`
 	}
 	if !f.IncludeDraft {
-		query += ` AND stage != 'draft'`
+		query += ` AND a.stage != 'draft'`
 	}
-	query += ` ORDER BY submitted_at DESC`
+	query += ` ORDER BY a.submitted_at DESC`
 
 	rows, err := s.db.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
-	return pgx.CollectRows(rows, pgx.RowToStructByPos[models.Application])
+	return pgx.CollectRows(rows, pgx.RowToStructByPos[models.ApplicationSummary])
 }
 
 // DeleteDraftApplication discards an applicant's own in-progress draft. The

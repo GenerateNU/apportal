@@ -1,8 +1,4 @@
-import type { ElementType } from 'react'
-import { GraduationCap, Hash } from 'lucide-react'
 import type { ApplicationStage } from '@/lib/api/types'
-
-export type FilterKey = 'major' | 'year'
 
 export const ORDERED_STAGES: ApplicationStage[] = [
   'submitted',
@@ -78,11 +74,17 @@ export const stageDot: Record<ApplicationStage, string> = {
   withdrawn: 'bg-gray-300',
 }
 
-export const FILTER_FIELDS: {
-  key: FilterKey
-  label: string
-  Icon: ElementType
-}[] = [
-  { key: 'major', label: 'Major', Icon: GraduationCap },
-  { key: 'year', label: 'Year', Icon: Hash },
-]
+// Same hues as stageDot, for the text label sat next to the dot.
+export const stageTextColor: Record<ApplicationStage, string> = {
+  draft: 'text-gray-500',
+  submitted: 'text-blue-700',
+  lead_review: 'text-purple-700',
+  chief_review: 'text-indigo-700',
+  interview_scheduled: 'text-yellow-700',
+  interview_conducted: 'text-orange-700',
+  interview_review: 'text-amber-700',
+  selection: 'text-cyan-700',
+  accepted: 'text-green-700',
+  rejected: 'text-red-700',
+  withdrawn: 'text-gray-500',
+}

@@ -140,7 +140,7 @@ export function ReviewClient({
       <div className="flex items-center justify-between gap-3 border-b border-gray-100 bg-white px-4 py-3 sm:px-8">
         <div className="flex items-center gap-4">
           <Link
-            href="/reviewer/applications"
+            href="/reviewer/my-reviews"
             className="text-text-muted hover:text-text-default inline-flex items-center gap-1 text-sm"
           >
             <ArrowLeft size={14} />
