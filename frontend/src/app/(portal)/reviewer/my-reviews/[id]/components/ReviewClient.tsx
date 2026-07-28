@@ -7,25 +7,20 @@ import { Button } from '@/components/ui/button'
 import type { Role } from '@/lib/api/types'
 import { useAnswers } from '@/lib/queries/answers'
 import { useApplicant } from '@/lib/queries/applicants'
-import { useApplication } from '@/lib/queries/applications'
 import { useApplicationTemplate } from '@/lib/queries/application-templates'
-import { useChallenges } from '@/lib/queries/challenges'
 import { useQuestions } from '@/lib/queries/questions'
 import { useReviewQuestions } from '@/lib/queries/review-questions'
-import { useSubmission } from '@/lib/queries/submissions'
 import { useCurrentUser } from '@/lib/queries/users'
 import {
   useUpsertWrittenReview,
   useWrittenReviews,
 } from '@/lib/queries/written-reviews'
 import { ROLE_LABEL } from '@/lib/roles'
-import { ApplicationFields } from '@/app/(portal)/applicant/applications/components/ApplicationFields'
+import { ResponseField } from '@/app/(portal)/reviewer/applications/components/ResponseField'
 import {
   QuestionField,
   type AnswerValue,
 } from '@/app/(portal)/applicant/applications/components/QuestionField'
-
-const noop = () => {}
 
 export function ReviewClient({
   applicationId,
@@ -40,13 +35,10 @@ export function ReviewClient({
 }) {
   const { data: currentUser } = useCurrentUser()
   const { data: applicant } = useApplicant(applicantNuid)
-  const { data: application } = useApplication(applicationId)
   const { data: answers = [] } = useAnswers(applicationId)
   const { data: questions = [] } = useQuestions(cycleId, role)
   const { data: reviewQuestions = [] } = useReviewQuestions(cycleId, role)
   const { data: template } = useApplicationTemplate(cycleId, role)
-  const { data: challenges = [] } = useChallenges(cycleId, role)
-  const { data: submission } = useSubmission(applicationId)
   const { data: reviews = [] } = useWrittenReviews(applicationId)
   const upsert = useUpsertWrittenReview()
 
@@ -58,17 +50,11 @@ export function ReviewClient({
   const own = reviews.find((r) => r.reviewer_nuid === currentUser?.nuid)
   const others = reviews.filter((r) => r.reviewer_nuid !== currentUser?.nuid)
 
-  // Answer values keyed by question id, in the shape ApplicationFields expects.
-  const values = useMemo(() => {
-    const map: Record<string, AnswerValue> = {}
-    for (const answer of answers) {
-      const opts = answer.answer_options
-      map[answer.question_id] = Array.isArray(opts)
-        ? { options: opts as string[] }
-        : { text: answer.answer_text ?? '' }
-    }
-    return map
-  }, [answers])
+  // Applicant answers keyed by question id, for the read-only left panel.
+  const answersByQuestionId = useMemo(
+    () => new Map(answers.map((a) => [a.question_id, a])),
+    [answers]
+  )
 
   const [reviewValues, setReviewValues] = useState<Record<string, AnswerValue>>(
     {}
@@ -142,7 +128,7 @@ export function ReviewClient({
       <div className="flex items-center justify-between gap-3 border-b border-gray-100 bg-white px-4 py-3 sm:px-8">
         <div className="flex items-center gap-4">
           <Link
-            href="/reviewer/applications"
+            href="/reviewer/my-reviews"
             className="text-text-muted hover:text-text-default inline-flex items-center gap-1 text-sm"
           >
             <ArrowLeft size={14} />
@@ -170,19 +156,16 @@ export function ReviewClient({
           <h2 className="text-text-subtle mb-4 text-xs font-medium tracking-wider uppercase">
             Application
           </h2>
-          <ApplicationFields
-            questions={questions}
-            challenge={challenges[0]}
-            values={values}
-            onValueChange={noop}
-            resumeUrl={application?.resume_url ?? ''}
-            onResumeChange={noop}
-            availability={application?.availability ?? {}}
-            onAvailabilityChange={noop}
-            submissionUrl={submission?.submission_url ?? ''}
-            onSubmissionChange={noop}
-            disabled
-          />
+          <div className="space-y-4">
+            {questions.map((q) => (
+              <ResponseField
+                key={q.id}
+                question={q}
+                answer={answersByQuestionId.get(q.id)}
+                applicable={true}
+              />
+            ))}
+          </div>
         </div>
 
         {/* Review */}

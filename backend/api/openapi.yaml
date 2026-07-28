@@ -89,6 +89,58 @@ components:
         - submitted_at
         - updated_at
       type: object
+    ApplicationSummary:
+      additionalProperties: false
+      properties:
+        availability: {}
+        cycle_id:
+          type: string
+        email:
+          type: string
+        full_name:
+          type: string
+        id:
+          type: string
+        resume_url:
+          type: string
+        role:
+          enum:
+            - software_engineer
+            - software_designer
+          type: string
+        stage:
+          enum:
+            - draft
+            - submitted
+            - lead_review
+            - chief_review
+            - interview_scheduled
+            - interview_conducted
+            - interview_review
+            - selection
+            - accepted
+            - rejected
+            - withdrawn
+          type: string
+        submitted_at:
+          format: date-time
+          type: string
+        updated_at:
+          format: date-time
+          type: string
+        user_nuid:
+          type: string
+      required:
+        - full_name
+        - email
+        - id
+        - cycle_id
+        - user_nuid
+        - role
+        - stage
+        - submitted_at
+        - updated_at
+      type: object
     ApplicationTemplate:
       additionalProperties: false
       properties:
@@ -1825,7 +1877,7 @@ paths:
             application/json:
               schema:
                 items:
-                  $ref: "#/components/schemas/Application"
+                  $ref: "#/components/schemas/ApplicationSummary"
                 type:
                   - array
                   - "null"
