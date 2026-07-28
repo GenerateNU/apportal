@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { ApplicationTemplateApplicationRole } from './applicationTemplateApplicationRole';
+import type { ApplicationTemplateReviewStatus } from './applicationTemplateReviewStatus';
 import type { ApplicationTemplateStatus } from './applicationTemplateStatus';
 
 export interface ApplicationTemplate {
@@ -19,6 +20,8 @@ export interface ApplicationTemplate {
   id: string;
   instructions?: string;
   opens_at?: string;
+  review_closes_at?: string;
+  review_status: ApplicationTemplateReviewStatus;
   status: ApplicationTemplateStatus;
   title: string;
   updated_at: string;

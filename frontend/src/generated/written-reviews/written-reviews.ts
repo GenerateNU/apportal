@@ -66,7 +66,7 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
 /**
- * Reviewer only; upserts the calling reviewer's review and per-answer scores.
+ * Reviewer only; upserts the calling reviewer's review-question answers.
  * @summary Submit or update your written review
  */
 export const upsertWrittenReview = (

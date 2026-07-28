@@ -1,9 +1,21 @@
 'use client'
 
-import type { Question } from '@/lib/api/types'
+import type { QuestionType } from '@/lib/api/types'
 import { QUESTION_TYPE_META } from './constants'
 
-export function QuestionOutline({ questions }: { questions: Question[] }) {
+// Minimal shape — satisfied by both Question and ReviewQuestion, so this one
+// component works for both the application and review-question builders.
+type OutlineQuestion = {
+  id: string
+  question_text: string
+  question_type: QuestionType
+}
+
+export function QuestionOutline({
+  questions,
+}: {
+  questions: OutlineQuestion[]
+}) {
   function handleSelect(id: string) {
     document
       .getElementById(`question-${id}`)

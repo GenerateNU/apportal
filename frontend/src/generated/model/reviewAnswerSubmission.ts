@@ -5,6 +5,14 @@
  * Generate application portal — applications, reviews, and the hiring pipeline.
  * OpenAPI spec version: 0.1.0
  */
-import type { WrittenReviewAnswerScore } from './writtenReviewAnswerScore';
 
-export type WrittenReviewDetailAnswerScores = WrittenReviewAnswerScore[] | null;
+export interface ReviewAnswerSubmission {
+  answer_options?: unknown;
+  answer_text?: string;
+  review_question_id: string;
+  /**
+   * @minimum 1
+   * @maximum 10
+   */
+  score?: number;
+}

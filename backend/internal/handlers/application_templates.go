@@ -95,12 +95,14 @@ type UpdateApplicationTemplateInput struct {
 	ID   string `path:"id" doc:"Cycle ID"`
 	Role string `query:"role" doc:"Applicant role"`
 	Body struct {
-		Title        *string             `json:"title,omitempty"`
-		Description  *string             `json:"description,omitempty"`
-		Instructions *string             `json:"instructions,omitempty"`
-		OpensAt      *time.Time          `json:"opens_at,omitempty"`
-		ClosesAt     *time.Time          `json:"closes_at,omitempty"`
-		Status       *models.CycleStatus `json:"status,omitempty"`
+		Title          *string             `json:"title,omitempty"`
+		Description    *string             `json:"description,omitempty"`
+		Instructions   *string             `json:"instructions,omitempty"`
+		OpensAt        *time.Time          `json:"opens_at,omitempty"`
+		ClosesAt       *time.Time          `json:"closes_at,omitempty"`
+		Status         *models.CycleStatus `json:"status,omitempty"`
+		ReviewStatus   *models.CycleStatus `json:"review_status,omitempty"`
+		ReviewClosesAt *time.Time          `json:"review_closes_at,omitempty"`
 	}
 }
 
@@ -115,14 +117,19 @@ func (h *applicationTemplateHandler) update(ctx context.Context, in *UpdateAppli
 	if in.Body.Status != nil && !in.Body.Status.Valid() {
 		return nil, huma.Error422UnprocessableEntity("invalid status")
 	}
+	if in.Body.ReviewStatus != nil && !in.Body.ReviewStatus.Valid() {
+		return nil, huma.Error422UnprocessableEntity("invalid review_status")
+	}
 
 	t, err := h.store.UpdateApplicationTemplate(ctx, in.ID, role, store.ApplicationTemplateUpdate{
-		Title:        in.Body.Title,
-		Description:  in.Body.Description,
-		Instructions: in.Body.Instructions,
-		OpensAt:      in.Body.OpensAt,
-		ClosesAt:     in.Body.ClosesAt,
-		Status:       in.Body.Status,
+		Title:          in.Body.Title,
+		Description:    in.Body.Description,
+		Instructions:   in.Body.Instructions,
+		OpensAt:        in.Body.OpensAt,
+		ClosesAt:       in.Body.ClosesAt,
+		Status:         in.Body.Status,
+		ReviewStatus:   in.Body.ReviewStatus,
+		ReviewClosesAt: in.Body.ReviewClosesAt,
 	})
 	if err != nil {
 		return nil, storeErr(err)

@@ -5,6 +5,7 @@
  * Generate application portal — applications, reviews, and the hiring pipeline.
  * OpenAPI spec version: 0.1.0
  */
+import type { UpdateApplicationTemplateInputBodyReviewStatus } from './updateApplicationTemplateInputBodyReviewStatus';
 import type { UpdateApplicationTemplateInputBodyStatus } from './updateApplicationTemplateInputBodyStatus';
 
 export interface UpdateApplicationTemplateInputBody {
@@ -14,6 +15,8 @@ export interface UpdateApplicationTemplateInputBody {
   description?: string;
   instructions?: string;
   opens_at?: string;
+  review_closes_at?: string;
+  review_status?: UpdateApplicationTemplateInputBodyReviewStatus;
   status?: UpdateApplicationTemplateInputBodyStatus;
   title?: string;
 }

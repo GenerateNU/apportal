@@ -17,4 +17,5 @@ export const CreateQuestionInputBodyQuestionType = {
   checkbox: 'checkbox',
   dropdown: 'dropdown',
   url: 'url',
+  score: 'score',
 } as const;

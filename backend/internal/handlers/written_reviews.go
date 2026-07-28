@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -20,7 +21,7 @@ func (h *writtenReviewHandler) register(api huma.API) {
 		Method:      http.MethodPut,
 		Path:        "/applications/{id}/written-review",
 		Summary:     "Submit or update your written review",
-		Description: "Reviewer only; upserts the calling reviewer's review and per-answer scores.",
+		Description: "Reviewer only; upserts the calling reviewer's review-question answers.",
 		Tags:        []string{"Written reviews"},
 		Errors:      []int{http.StatusUnauthorized},
 	}, h.upsert)
@@ -44,20 +45,20 @@ type WrittenReviewsOutput struct {
 	Body []models.WrittenReviewDetail
 }
 
-// AnswerScoreSubmission is one per-answer score within a written review.
-type AnswerScoreSubmission struct {
-	AnswerID string  `json:"answer_id"`
-	Score    *int    `json:"score,omitempty" minimum:"1" maximum:"10"`
-	Comment  *string `json:"comment,omitempty"`
+// ReviewAnswerSubmission is a reviewer's answer to one of the cycle/role's
+// review_questions.
+type ReviewAnswerSubmission struct {
+	ReviewQuestionID string          `json:"review_question_id"`
+	AnswerText       *string         `json:"answer_text,omitempty"`
+	AnswerOptions    json.RawMessage `json:"answer_options,omitempty"`
+	Score            *int            `json:"score,omitempty" minimum:"1" maximum:"10"`
 }
 
 type UpsertWrittenReviewInput struct {
 	ID   string `path:"id" doc:"Application ID"`
 	Body struct {
-		OverallScore *int                    `json:"overall_score,omitempty" minimum:"1" maximum:"10"`
-		Reasoning    *string                 `json:"reasoning,omitempty"`
-		Submit       bool                    `json:"submit,omitempty" doc:"When true, marks the review as submitted"`
-		AnswerScores []AnswerScoreSubmission `json:"answer_scores,omitempty"`
+		Submit  bool                     `json:"submit,omitempty" doc:"When true, marks the review as submitted"`
+		Answers []ReviewAnswerSubmission `json:"answers,omitempty"`
 	}
 }
 
@@ -65,25 +66,24 @@ func (h *writtenReviewHandler) upsert(ctx context.Context, in *UpsertWrittenRevi
 	if err := requireReviewer(ctx); err != nil {
 		return nil, err
 	}
-	scores := make([]store.AnswerScoreInput, 0, len(in.Body.AnswerScores))
-	for _, sc := range in.Body.AnswerScores {
-		if sc.AnswerID == "" {
-			return nil, huma.Error422UnprocessableEntity("each answer score requires an answer_id")
+	answers := make([]store.ReviewAnswerInput, 0, len(in.Body.Answers))
+	for _, a := range in.Body.Answers {
+		if a.ReviewQuestionID == "" {
+			return nil, huma.Error422UnprocessableEntity("each answer requires a review_question_id")
 		}
-		scores = append(scores, store.AnswerScoreInput{
-			AnswerID: sc.AnswerID,
-			Score:    sc.Score,
-			Comment:  sc.Comment,
+		answers = append(answers, store.ReviewAnswerInput{
+			ReviewQuestionID: a.ReviewQuestionID,
+			AnswerText:       a.AnswerText,
+			AnswerOptions:    a.AnswerOptions,
+			Score:            a.Score,
 		})
 	}
 
 	detail, err := h.store.UpsertWrittenReview(ctx, store.WrittenReviewUpsert{
 		ApplicationID: in.ID,
 		ReviewerNUID:  currentActor(ctx).NUID,
-		OverallScore:  in.Body.OverallScore,
-		Reasoning:     in.Body.Reasoning,
 		Submit:        in.Body.Submit,
-		AnswerScores:  scores,
+		Answers:       answers,
 	})
 	if err != nil {
 		return nil, storeErr(err)
