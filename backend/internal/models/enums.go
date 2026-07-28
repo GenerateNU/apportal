@@ -109,12 +109,15 @@ const (
 	QuestionCheckbox       QuestionType = "checkbox"
 	QuestionDropdown       QuestionType = "dropdown"
 	QuestionURL            QuestionType = "url"
+	// QuestionScore is a 1-10 numeric rating, used by review_questions to
+	// replace written_reviews' old fixed overall_score column.
+	QuestionScore QuestionType = "score"
 )
 
 func (q QuestionType) Valid() bool {
 	switch q {
 	case QuestionShortAnswer, QuestionLongAnswer, QuestionMultipleChoice,
-		QuestionCheckbox, QuestionDropdown, QuestionURL:
+		QuestionCheckbox, QuestionDropdown, QuestionURL, QuestionScore:
 		return true
 	}
 	return false

@@ -4,11 +4,48 @@ import { useState } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { GripVertical, Plus, Trash2, X } from 'lucide-react'
-import type { Question } from '@/lib/api/types'
-import { useDeleteQuestion, useUpdateQuestion } from '@/lib/queries/questions'
+import type { QuestionType, Role } from '@/lib/api/types'
 import { QUESTION_TYPE_META } from './constants'
 
-export function QuestionCard({ question }: { question: Question }) {
+// Structural shape QuestionCard actually needs — satisfied by both the
+// applicant-facing Question and the reviewer-facing ReviewQuestion types, so
+// this one component edits either. page_title is optional because
+// ReviewQuestion doesn't have the concept at all (allowPageBreak is false
+// wherever a ReviewQuestion is passed in).
+export type QuestionCardQuestion = {
+  id: string
+  question_text: string
+  question_type: QuestionType
+  is_required: boolean
+  options: string[] | null
+  role: Role | null
+  page_title?: string
+}
+
+export type QuestionCardUpdateBody = {
+  question_text?: string
+  is_required?: boolean
+  options?: string[]
+  page_title?: string
+  clear_page_title?: boolean
+}
+
+export function QuestionCard({
+  question,
+  allowPageBreak = true,
+  onUpdate,
+  onDelete,
+}: {
+  question: QuestionCardQuestion
+  // Global questions (role === null) are shared across every role's form at
+  // potentially different relative positions, so a page boundary on one
+  // wouldn't mean the same thing for another — only role-specific questions
+  // can start a page. Review questions don't have pages at all, so their
+  // builder passes allowPageBreak={false} regardless of role.
+  allowPageBreak?: boolean
+  onUpdate: (body: QuestionCardUpdateBody) => void
+  onDelete: () => void
+}) {
   const {
     attributes,
     listeners,
@@ -17,8 +54,6 @@ export function QuestionCard({ question }: { question: Question }) {
     transition,
     isDragging,
   } = useSortable({ id: question.id })
-  const updateQuestion = useUpdateQuestion()
-  const deleteQuestion = useDeleteQuestion()
 
   const [confirmingDelete, setConfirmingDelete] = useState(false)
 
@@ -55,11 +90,7 @@ export function QuestionCard({ question }: { question: Question }) {
     setPageTitleDraft(question.page_title ?? '')
   }
   const hasPageBreak = question.page_title != null
-  // Global questions (role === null) are shared across every role's form at
-  // potentially different relative positions, so a page boundary on one
-  // wouldn't mean the same thing for another — only role-specific questions
-  // can start a page.
-  const canHavePageBreak = question.role !== null
+  const canHavePageBreak = allowPageBreak && question.role !== null
 
   const meta = QUESTION_TYPE_META[question.question_type]
   const Icon = meta.icon
@@ -77,25 +108,16 @@ export function QuestionCard({ question }: { question: Question }) {
       return
     }
     if (trimmed !== question.question_text) {
-      updateQuestion.mutate({
-        id: question.id,
-        body: { question_text: trimmed },
-      })
+      onUpdate({ question_text: trimmed })
     }
   }
 
   function toggleRequired() {
-    updateQuestion.mutate({
-      id: question.id,
-      body: { is_required: !question.is_required },
-    })
+    onUpdate({ is_required: !question.is_required })
   }
 
   function commitOptions(next: string[]) {
-    updateQuestion.mutate({
-      id: question.id,
-      body: { options: next },
-    })
+    onUpdate({ options: next })
   }
 
   function addOption() {
@@ -127,15 +149,12 @@ export function QuestionCard({ question }: { question: Question }) {
 
   function togglePageBreak() {
     if (hasPageBreak) {
-      updateQuestion.mutate({
-        id: question.id,
-        body: { clear_page_title: true },
-      })
+      onUpdate({ clear_page_title: true })
       return
     }
     const title = pageTitleDraft.trim() || 'Untitled page'
     setPageTitleDraft(title)
-    updateQuestion.mutate({ id: question.id, body: { page_title: title } })
+    onUpdate({ page_title: title })
   }
 
   function commitPageTitle() {
@@ -145,7 +164,7 @@ export function QuestionCard({ question }: { question: Question }) {
       return
     }
     if (trimmed !== question.page_title) {
-      updateQuestion.mutate({ id: question.id, body: { page_title: trimmed } })
+      onUpdate({ page_title: trimmed })
     }
   }
 
@@ -154,7 +173,7 @@ export function QuestionCard({ question }: { question: Question }) {
       setConfirmingDelete(true)
       return
     }
-    deleteQuestion.mutate({ id: question.id })
+    onDelete()
   }
 
   return (

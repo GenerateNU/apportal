@@ -9,9 +9,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import type { Question } from '@/lib/api/types'
+import type { QuestionType } from '@/lib/api/types'
 
 export type AnswerValue = { text?: string; options?: string[] }
+
+// Minimal shape — satisfied by both Question and ReviewQuestion, so this one
+// component renders/edits answers for either.
+export type FieldQuestion = {
+  id: string
+  question_text: string
+  question_type: QuestionType
+  is_required: boolean
+  options: string[] | null
+}
 
 const TEXTAREA_CLASS =
   'border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 min-h-32 w-full rounded-lg border bg-transparent px-3.5 py-2.5 text-base transition-all outline-none focus-visible:ring-3 hover:border-gray-300 resize-none'
@@ -23,7 +33,7 @@ export function QuestionField({
   onChange,
   disabled = false,
 }: {
-  question: Question
+  question: FieldQuestion
   index: number
   value: AnswerValue
   onChange: (next: AnswerValue) => void
@@ -91,6 +101,19 @@ export function QuestionField({
             </label>
           ))}
         </div>
+      )}
+
+      {question.question_type === 'score' && (
+        <Input
+          type="number"
+          min={1}
+          max={10}
+          className="h-11 w-24 text-base md:text-base"
+          value={value.text ?? ''}
+          onChange={(e) => onChange({ text: e.target.value })}
+          placeholder="1-10"
+          disabled={disabled}
+        />
       )}
 
       {question.question_type === 'dropdown' && (

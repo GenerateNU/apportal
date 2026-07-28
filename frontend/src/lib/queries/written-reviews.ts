@@ -3,8 +3,8 @@ import {
   listWrittenReviews,
   upsertWrittenReview,
 } from '@/generated/written-reviews/written-reviews'
-import type { WrittenReviewDetail } from '@/generated/model'
 import type { RequestOptions } from '@/lib/api/orval-mutator'
+import type { WrittenReviewDetail } from '@/lib/api/types'
 import { queryKeys } from './keys'
 
 // A lead's written review of an application. The list is blind: a lead sees only

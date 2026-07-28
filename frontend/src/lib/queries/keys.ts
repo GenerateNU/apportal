@@ -65,6 +65,13 @@ export const queryKeys = {
       [...queryKeys.questions.lists(), cycleId, role ?? 'any'] as const,
   },
 
+  reviewQuestions: {
+    all: ['review-questions'] as const,
+    lists: () => [...queryKeys.reviewQuestions.all, 'list'] as const,
+    list: (cycleId: string, role?: Role) =>
+      [...queryKeys.reviewQuestions.lists(), cycleId, role ?? 'any'] as const,
+  },
+
   challenges: {
     all: ['challenges'] as const,
     lists: () => [...queryKeys.challenges.all, 'list'] as const,

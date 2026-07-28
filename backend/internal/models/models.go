@@ -32,10 +32,17 @@ type Cycle struct {
 
 // ApplicationTemplate holds per-role application content within a cycle
 // (e.g. Software Engineer vs Software Designer applications in the same
-// cycle each get their own title/description/instructions/status). OpensAt/
-// ClosesAt are stored for future use but are not yet enforced anywhere —
-// Status (mirroring cycle_status) is independent of the owning cycle's own
-// status once set, letting a role's application lag or lead the cycle.
+// cycle each get their own title/description/instructions/status). Status
+// (mirroring cycle_status) is independent of the owning cycle's own status
+// once set, letting a role's application lag or lead the cycle. ClosesAt is
+// enforced (see deadlinePassed in handlers/applications.go) — new
+// applications and draft edits are rejected once it passes.
+//
+// ReviewStatus/ReviewClosesAt are a separate open/closed state and deadline
+// for when lead reviews should be done, tracked independently of the
+// application side. Unlike ClosesAt, these are purely informational: nothing
+// enforces them, so a lead can still submit a review after ReviewClosesAt
+// passes.
 type ApplicationTemplate struct {
 	ID              string      `json:"id"`
 	CycleID         string      `json:"cycle_id"`
@@ -48,6 +55,8 @@ type ApplicationTemplate struct {
 	Status          CycleStatus `json:"status"`
 	CreatedAt       time.Time   `json:"created_at"`
 	UpdatedAt       time.Time   `json:"updated_at"`
+	ReviewStatus    CycleStatus `json:"review_status"`
+	ReviewClosesAt  *time.Time  `json:"review_closes_at,omitempty"`
 }
 
 type CycleStage struct {

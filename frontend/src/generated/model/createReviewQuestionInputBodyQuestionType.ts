@@ -6,11 +6,11 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type QuestionQuestionType = typeof QuestionQuestionType[keyof typeof QuestionQuestionType];
+export type CreateReviewQuestionInputBodyQuestionType = typeof CreateReviewQuestionInputBodyQuestionType[keyof typeof CreateReviewQuestionInputBodyQuestionType];
 
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-export const QuestionQuestionType = {
+export const CreateReviewQuestionInputBodyQuestionType = {
   short_answer: 'short_answer',
   long_answer: 'long_answer',
   multiple_choice: 'multiple_choice',

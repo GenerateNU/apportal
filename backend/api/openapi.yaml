@@ -1,20 +1,5 @@
 components:
   schemas:
-    AnswerScoreSubmission:
-      additionalProperties: false
-      properties:
-        answer_id:
-          type: string
-        comment:
-          type: string
-        score:
-          format: int64
-          maximum: 10
-          minimum: 1
-          type: integer
-      required:
-        - answer_id
-      type: object
     Applicant:
       additionalProperties: false
       properties:
@@ -136,6 +121,16 @@ components:
         opens_at:
           format: date-time
           type: string
+        review_closes_at:
+          format: date-time
+          type: string
+        review_status:
+          enum:
+            - draft
+            - open
+            - closed
+            - archived
+          type: string
         status:
           enum:
             - draft
@@ -156,6 +151,7 @@ components:
         - status
         - created_at
         - updated_at
+        - review_status
       type: object
     AssignRecordingReviewerInputBody:
       additionalProperties: false
@@ -450,9 +446,47 @@ components:
             - checkbox
             - dropdown
             - url
+            - score
           type: string
         role:
           description: Omit for a global question shown to all roles
+          enum:
+            - software_engineer
+            - software_designer
+          type: string
+      required:
+        - question_text
+      type: object
+    CreateReviewQuestionInputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/CreateReviewQuestionInputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        display_order:
+          format: int64
+          type: integer
+        is_required:
+          type: boolean
+        options: {}
+        question_text:
+          type: string
+        question_type:
+          enum:
+            - short_answer
+            - long_answer
+            - multiple_choice
+            - checkbox
+            - dropdown
+            - url
+            - score
+          type: string
+        role:
+          description: Omit for a global question shown for all roles
           enum:
             - software_engineer
             - software_designer
@@ -935,6 +969,7 @@ components:
             - checkbox
             - dropdown
             - url
+            - score
           type: string
         role:
           enum:
@@ -949,6 +984,22 @@ components:
         - is_required
         - display_order
         - created_at
+      type: object
+    ReviewAnswerSubmission:
+      additionalProperties: false
+      properties:
+        answer_options: {}
+        answer_text:
+          type: string
+        review_question_id:
+          type: string
+        score:
+          format: int64
+          maximum: 10
+          minimum: 1
+          type: integer
+      required:
+        - review_question_id
       type: object
     ReviewGate:
       additionalProperties: false
@@ -989,6 +1040,55 @@ components:
         - assigned_count
         - submitted_count
         - released
+      type: object
+    ReviewQuestion:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/ReviewQuestion.json
+          format: uri
+          readOnly: true
+          type: string
+        created_at:
+          format: date-time
+          type: string
+        cycle_id:
+          type: string
+        display_order:
+          format: int64
+          type: integer
+        id:
+          type: string
+        is_required:
+          type: boolean
+        options: {}
+        question_text:
+          type: string
+        question_type:
+          enum:
+            - short_answer
+            - long_answer
+            - multiple_choice
+            - checkbox
+            - dropdown
+            - url
+            - score
+          type: string
+        role:
+          enum:
+            - software_engineer
+            - software_designer
+          type: string
+      required:
+        - id
+        - cycle_id
+        - question_text
+        - question_type
+        - is_required
+        - display_order
+        - created_at
       type: object
     SetInterviewAssignmentInputBody:
       additionalProperties: false
@@ -1079,6 +1179,16 @@ components:
           type: string
         opens_at:
           format: date-time
+          type: string
+        review_closes_at:
+          format: date-time
+          type: string
+        review_status:
+          enum:
+            - draft
+            - open
+            - closed
+            - archived
           type: string
         status:
           enum:
@@ -1175,6 +1285,36 @@ components:
             - checkbox
             - dropdown
             - url
+            - score
+          type: string
+      type: object
+    UpdateReviewQuestionInputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/UpdateReviewQuestionInputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        display_order:
+          format: int64
+          type: integer
+        is_required:
+          type: boolean
+        options: {}
+        question_text:
+          type: string
+        question_type:
+          enum:
+            - short_answer
+            - long_answer
+            - multiple_choice
+            - checkbox
+            - dropdown
+            - url
+            - score
           type: string
       type: object
     UpdateUserInputBody:
@@ -1376,19 +1516,12 @@ components:
           format: uri
           readOnly: true
           type: string
-        answer_scores:
+        answers:
           items:
-            $ref: "#/components/schemas/AnswerScoreSubmission"
+            $ref: "#/components/schemas/ReviewAnswerSubmission"
           type:
             - array
             - "null"
-        overall_score:
-          format: int64
-          maximum: 10
-          minimum: 1
-          type: integer
-        reasoning:
-          type: string
         submit:
           description: When true, marks the review as submitted
           type: boolean
@@ -1486,24 +1619,29 @@ components:
         - question_id
         - submitted_at
       type: object
-    WrittenReviewAnswerScore:
+    WrittenReviewAnswer:
       additionalProperties: false
       properties:
-        answer_id:
-          type: string
-        comment:
+        answer_options: {}
+        answer_text:
           type: string
         id:
           type: string
         review_id:
           type: string
+        review_question_id:
+          type: string
         score:
           format: int64
           type: integer
+        submitted_at:
+          format: date-time
+          type: string
       required:
         - id
         - review_id
-        - answer_id
+        - review_question_id
+        - submitted_at
       type: object
     WrittenReviewDetail:
       additionalProperties: false
@@ -1515,9 +1653,9 @@ components:
           format: uri
           readOnly: true
           type: string
-        answer_scores:
+        answers:
           items:
-            $ref: "#/components/schemas/WrittenReviewAnswerScore"
+            $ref: "#/components/schemas/WrittenReviewAnswer"
           type:
             - array
             - "null"
@@ -1528,11 +1666,6 @@ components:
           type: string
         id:
           type: string
-        overall_score:
-          format: int64
-          type: integer
-        reasoning:
-          type: string
         reviewer_nuid:
           type: string
         submitted_at:
@@ -1542,7 +1675,7 @@ components:
           format: date-time
           type: string
       required:
-        - answer_scores
+        - answers
         - id
         - application_id
         - reviewer_nuid
@@ -1734,6 +1867,12 @@ paths:
               schema:
                 $ref: "#/components/schemas/Application"
           description: Created
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
         "409":
           content:
             application/problem+json:
@@ -2593,7 +2732,7 @@ paths:
         - Selections
   /applications/{id}/written-review:
     put:
-      description: Reviewer only; upserts the calling reviewer's review and per-answer scores.
+      description: Reviewer only; upserts the calling reviewer's review-question answers.
       operationId: upsert-written-review
       parameters:
         - description: Application ID
@@ -3180,6 +3319,108 @@ paths:
       summary: Release or hide a cycle's reviews for a role
       tags:
         - Review releases
+  /cycles/{id}/review-questions:
+    get:
+      description: Reviewer only. Optional ?role= returns that role's questions plus global ones.
+      operationId: list-cycle-review-questions
+      parameters:
+        - description: Cycle ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Cycle ID
+            type: string
+        - description: Optional role filter
+          explode: false
+          in: query
+          name: role
+          schema:
+            description: Optional role filter
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/ReviewQuestion"
+                type:
+                  - array
+                  - "null"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: List a cycle's review questions
+      tags:
+        - Review questions
+    post:
+      description: Chief only.
+      operationId: create-review-question
+      parameters:
+        - description: Cycle ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Cycle ID
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateReviewQuestionInputBody"
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewQuestion"
+          description: Created
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Create a review question
+      tags:
+        - Review questions
   /cycles/{id}/selections:
     get:
       description: Optional ?lead_nuid= filters to one lead.
@@ -3741,6 +3982,111 @@ paths:
       summary: Update a question
       tags:
         - Questions
+  /review-questions/{id}:
+    delete:
+      description: Chief only.
+      operationId: delete-review-question
+      parameters:
+        - description: Review question ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Review question ID
+            type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Delete a review question
+      tags:
+        - Review questions
+    patch:
+      description: Chief only.
+      operationId: update-review-question
+      parameters:
+        - description: Review question ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Review question ID
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateReviewQuestionInputBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewQuestion"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Update a review question
+      tags:
+        - Review questions
   /users:
     get:
       description: Chief only.

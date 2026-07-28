@@ -13,15 +13,17 @@ import (
 // ApplicationTemplateUpdate carries partial-update fields; nil pointers are
 // left unchanged.
 type ApplicationTemplateUpdate struct {
-	Title        *string
-	Description  *string
-	Instructions *string
-	OpensAt      *time.Time
-	ClosesAt     *time.Time
-	Status       *models.CycleStatus
+	Title          *string
+	Description    *string
+	Instructions   *string
+	OpensAt        *time.Time
+	ClosesAt       *time.Time
+	Status         *models.CycleStatus
+	ReviewStatus   *models.CycleStatus
+	ReviewClosesAt *time.Time
 }
 
-const applicationTemplateColumns = `id, cycle_id, application_role, title, description, instructions, opens_at, closes_at, status, created_at, updated_at`
+const applicationTemplateColumns = `id, cycle_id, application_role, title, description, instructions, opens_at, closes_at, status, created_at, updated_at, review_status, review_closes_at`
 
 // defaultTemplateTitle seeds a new template's title before an admin has
 // customized it.
@@ -89,7 +91,8 @@ func (s *Store) GetOrCreateApplicationTemplate(ctx context.Context, cycleID stri
 func (s *Store) ListOpenApplicationTemplates(ctx context.Context) ([]models.ApplicationTemplate, error) {
 	const q = `
 		SELECT at.id, at.cycle_id, at.application_role, at.title, at.description,
-			at.instructions, at.opens_at, at.closes_at, at.status, at.created_at, at.updated_at
+			at.instructions, at.opens_at, at.closes_at, at.status, at.created_at, at.updated_at,
+			at.review_status, at.review_closes_at
 		FROM application_templates at
 		JOIN cycles c ON c.id = at.cycle_id
 		WHERE at.status = 'open' AND c.status = 'open'
@@ -106,16 +109,19 @@ func (s *Store) UpdateApplicationTemplate(ctx context.Context, cycleID string, r
 	// COALESCE keeps the existing value when the corresponding input is NULL.
 	const q = `
 		UPDATE application_templates SET
-			title        = COALESCE($3, title),
-			description  = COALESCE($4, description),
-			instructions = COALESCE($5, instructions),
-			opens_at     = COALESCE($6, opens_at),
-			closes_at    = COALESCE($7, closes_at),
-			status       = COALESCE($8, status)
+			title            = COALESCE($3, title),
+			description      = COALESCE($4, description),
+			instructions     = COALESCE($5, instructions),
+			opens_at         = COALESCE($6, opens_at),
+			closes_at        = COALESCE($7, closes_at),
+			status           = COALESCE($8, status),
+			review_status    = COALESCE($9, review_status),
+			review_closes_at = COALESCE($10, review_closes_at)
 		WHERE cycle_id = $1 AND application_role = $2
 		RETURNING ` + applicationTemplateColumns
 	rows, err := s.db.Query(ctx, q, cycleID, role,
-		in.Title, in.Description, in.Instructions, in.OpensAt, in.ClosesAt, in.Status)
+		in.Title, in.Description, in.Instructions, in.OpensAt, in.ClosesAt, in.Status,
+		in.ReviewStatus, in.ReviewClosesAt)
 	if err != nil {
 		return models.ApplicationTemplate{}, err
 	}
