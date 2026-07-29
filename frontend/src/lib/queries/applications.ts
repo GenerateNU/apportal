@@ -15,6 +15,12 @@ import type {
 } from '@/lib/api/types'
 import { queryKeys } from './keys'
 
+export interface AnswerFilterParam {
+  question_id: string
+  question_type: string
+  values: string | { options: string[] } | { min: number; max: number }
+}
+
 export function useApplications(
   params?: {
     cycle_id?: string
@@ -22,6 +28,7 @@ export function useApplications(
     assigned_to?: string
     stage?: ApplicationStage
     role?: Role
+    answer_filters?: AnswerFilterParam[]
   },
   opts?: RequestOptions
 ) {

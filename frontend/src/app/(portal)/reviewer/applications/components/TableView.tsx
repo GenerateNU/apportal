@@ -1,7 +1,9 @@
 import type { Question, WrittenAnswer } from '@/lib/api/types'
 import type { ApplicantApplication, ApplicationStage } from './types'
+import type { AnswerFilter } from './FilterButton'
 import { FILTER_STAGES } from './constants'
 import { ApplicantRow } from './ApplicantRow'
+import { FilterChips } from './FilterButton'
 
 const TRAILING_COLUMNS = ['Stage', 'Submitted']
 
@@ -15,6 +17,8 @@ export function TableView({
   answersByApplicationId,
   selectedApplicationId,
   onSelectApplication,
+  filters,
+  onFilterChange,
 }: {
   applicants: ApplicantApplication[]
   allApplicants: ApplicantApplication[]
@@ -25,6 +29,11 @@ export function TableView({
   answersByApplicationId: Record<string, WrittenAnswer[]>
   selectedApplicationId: string | null
   onSelectApplication: (id: string) => void
+  filters: AnswerFilter[]
+  onFilterChange: (
+    filter: AnswerFilter | null,
+    action: 'add' | 'remove'
+  ) => void
 }) {
   const countByStage = (stage: ApplicationStage | 'all') =>
     stage === 'all'
@@ -33,23 +42,30 @@ export function TableView({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col rounded-lg border border-gray-200 bg-white">
-      <div className="flex shrink-0 items-center gap-1 overflow-x-auto border-b border-gray-100 px-4 py-3">
-        {FILTER_STAGES.map(({ label, value }) => (
-          <button
-            key={value}
-            onClick={() => onStageChange(value)}
-            className={`shrink-0 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-              activeStage === value
-                ? 'text-brand-blue bg-blue-50'
-                : 'text-text-muted hover:text-text-secondary hover:bg-gray-100'
-            }`}
-          >
-            {label}
-            <span className="text-text-subtle ml-1.5 text-xs">
-              {countByStage(value)}
-            </span>
-          </button>
-        ))}
+      <div className="space-y-3 border-b border-gray-100 px-4 py-3">
+        <FilterChips
+          filters={filters}
+          columns={columns}
+          onFilterChange={onFilterChange}
+        />
+        <div className="flex shrink-0 items-center gap-1 overflow-x-auto">
+          {FILTER_STAGES.map(({ label, value }) => (
+            <button
+              key={value}
+              onClick={() => onStageChange(value)}
+              className={`shrink-0 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                activeStage === value
+                  ? 'text-brand-blue bg-blue-50'
+                  : 'text-text-muted hover:text-text-secondary hover:bg-gray-100'
+              }`}
+            >
+              {label}
+              <span className="text-text-subtle ml-1.5 text-xs">
+                {countByStage(value)}
+              </span>
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="min-h-0 flex-1 overflow-auto">

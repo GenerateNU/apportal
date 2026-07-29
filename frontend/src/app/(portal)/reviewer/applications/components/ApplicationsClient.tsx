@@ -22,6 +22,7 @@ import { useCycles } from '@/lib/queries/cycles'
 import { useQuestionsByCycleRoles } from '@/lib/queries/questions'
 import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 import type { ApplicantApplication } from './types'
+import type { AnswerFilter } from './FilterButton'
 import { TableView } from './TableView'
 import { KanbanView } from './KanbanView'
 import { ApplicationDetail } from './ApplicationDetail'
@@ -40,6 +41,7 @@ export function ApplicationsClient() {
   const [selectedApplicationId, setSelectedApplicationId] = useState<
     string | null
   >(null)
+  const [filters, setFilters] = useState<AnswerFilter[]>([])
 
   const { data: cycles = [] } = useCycles({})
 
@@ -68,7 +70,17 @@ export function ApplicationsClient() {
   // always exactly what's on screen) — keeps the question/answer batch below
   // limited to applications actually in view instead of every application.
   const { data: applications = [] } = useApplications(
-    activeCycle ? { cycle_id: activeCycle, role: activeRole } : undefined
+    activeCycle
+      ? {
+          cycle_id: activeCycle,
+          role: activeRole,
+          answer_filters: filters.map((f) => ({
+            question_id: f.question_id,
+            question_type: f.question_type,
+            values: f.values,
+          })),
+        }
+      : undefined
   )
 
   const uniquePairs = useMemo(() => {
@@ -247,6 +259,16 @@ export function ApplicationsClient() {
             answersByApplicationId={answersByApplicationId}
             selectedApplicationId={selectedApplicationId}
             onSelectApplication={setSelectedApplicationId}
+            filters={filters}
+            onFilterChange={(filter, action) => {
+              if (action === 'add' && filter) {
+                setFilters((prev) => [...prev, filter])
+              } else if (action === 'remove' && filter) {
+                setFilters((prev) =>
+                  prev.filter((f) => f.question_id !== filter.question_id)
+                )
+              }
+            }}
           />
         ) : (
           <KanbanView applicants={filtered} />
