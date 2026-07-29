@@ -25,12 +25,20 @@ type ApplicationUpdate struct {
 	ResumeURL    *string
 }
 
+// AnswerFilter holds a filter for a specific question's answers.
+type AnswerFilter struct {
+	QuestionID   string
+	QuestionType string
+	Values any // string for text/url, []any for checkbox/dropdown
+}
+
 // ApplicationFilter holds optional list filters; empty fields are ignored.
 type ApplicationFilter struct {
-	CycleID  string
-	UserNUID string
-	Role     *models.Role
-	Stage    *models.ApplicationStage
+	CycleID       string
+	UserNUID      string
+	Role          *models.Role
+	Stage         *models.ApplicationStage
+	AnswerFilters []AnswerFilter
 	// AssignedTo limits results to applications the given lead is assigned to
 	// write-review (via lead_assignments).
 	AssignedTo string
@@ -79,8 +87,17 @@ func (s *Store) GetApplication(ctx context.Context, id string) (models.Applicati
 const applicationSummaryColumns = `a.id, a.cycle_id, a.user_nuid, a.application_role, a.stage, a.availability, a.resume_url, a.submitted_at, a.updated_at, u.full_name, u.email`
 
 func (s *Store) ListApplications(ctx context.Context, f ApplicationFilter) ([]models.ApplicationSummary, error) {
-	query := `SELECT ` + applicationSummaryColumns + ` FROM applications a JOIN users u ON u.nuid = a.user_nuid WHERE 1 = 1`
+	query := `SELECT DISTINCT ` + applicationSummaryColumns + ` FROM applications a JOIN users u ON u.nuid = a.user_nuid`
 	args := []any{}
+
+	// Add JOINs for each answer filter
+	for i, af := range f.AnswerFilters {
+		joinAlias := `wa` + strconv.Itoa(i)
+		query += ` LEFT JOIN written_answers ` + joinAlias + ` ON ` + joinAlias + `.application_id = a.id AND ` + joinAlias + `.question_id = $` + strconv.Itoa(len(args)+1)
+		args = append(args, af.QuestionID)
+	}
+
+	query += ` WHERE 1 = 1`
 	if f.CycleID != "" {
 		args = append(args, f.CycleID)
 		query += ` AND a.cycle_id = $` + strconv.Itoa(len(args))
@@ -106,6 +123,27 @@ func (s *Store) ListApplications(ctx context.Context, f ApplicationFilter) ([]mo
 	if !f.IncludeDraft {
 		query += ` AND a.stage != 'draft'`
 	}
+
+	// Add WHERE conditions for answer filters
+	for i, af := range f.AnswerFilters {
+		joinAlias := `wa` + strconv.Itoa(i)
+		if af.QuestionType == "checkbox" || af.QuestionType == "dropdown" {
+			// For checkbox/dropdown, Values should be []any
+			if options, ok := af.Values.([]any); ok {
+				for _, opt := range options {
+					args = append(args, opt)
+					query += ` AND ` + joinAlias + `.answer_options @> jsonb_build_array($` + strconv.Itoa(len(args)) + `)`
+				}
+			}
+		} else {
+			// For text/url, Values should be string - use ILIKE for case-insensitive search
+			if text, ok := af.Values.(string); ok {
+				args = append(args, "%"+text+"%")
+				query += ` AND ` + joinAlias + `.answer_text ILIKE $` + strconv.Itoa(len(args))
+			}
+		}
+	}
+
 	query += ` ORDER BY a.submitted_at DESC`
 
 	rows, err := s.db.Query(ctx, query, args...)

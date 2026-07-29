@@ -140,11 +140,18 @@ func (h *applicationHandler) get(ctx context.Context, in *ApplicationIDInput) (*
 }
 
 type ListApplicationsInput struct {
-	CycleID    string `query:"cycle_id"`
-	UserNUID   string `query:"user_nuid"`
-	AssignedTo string `query:"assigned_to" doc:"Limit to applications this lead is assigned to review"`
-	Role       string `query:"role"`
-	Stage      string `query:"stage"`
+	CycleID       string            `query:"cycle_id"`
+	UserNUID      string            `query:"user_nuid"`
+	AssignedTo    string            `query:"assigned_to" doc:"Limit to applications this lead is assigned to review"`
+	Role          string            `query:"role"`
+	Stage         string            `query:"stage"`
+	AnswerFilters []AnswerFilterInput `query:"answer_filters"`
+}
+
+type AnswerFilterInput struct {
+	QuestionID   string `json:"question_id"`
+	QuestionType string `json:"question_type"`
+	Values       any    `json:"values"`
 }
 
 func (h *applicationHandler) list(ctx context.Context, in *ListApplicationsInput) (*ApplicationsOutput, error) {
@@ -161,10 +168,21 @@ func (h *applicationHandler) list(ctx context.Context, in *ListApplicationsInput
 	} else if !isReviewer && (!hasActor || actor.NUID != in.UserNUID) {
 		return nil, huma.Error403Forbidden("cannot list another user's applications")
 	}
+	// Convert AnswerFilterInput to store.AnswerFilter
+	answerFilters := make([]store.AnswerFilter, 0, len(in.AnswerFilters))
+	for _, af := range in.AnswerFilters {
+		answerFilters = append(answerFilters, store.AnswerFilter{
+			QuestionID:   af.QuestionID,
+			QuestionType: af.QuestionType,
+			Values:       af.Values,
+		})
+	}
+
 	filter := store.ApplicationFilter{
-		CycleID:    in.CycleID,
-		UserNUID:   in.UserNUID,
-		AssignedTo: in.AssignedTo,
+		CycleID:       in.CycleID,
+		UserNUID:      in.UserNUID,
+		AssignedTo:    in.AssignedTo,
+		AnswerFilters: answerFilters,
 		// Only a user listing their own applications by their own identity
 		// ever sees their own draft — the reviewer queue and lookups of
 		// someone else's user_nuid never do.
