@@ -7,3 +7,6 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+
+# mise (https://mise.jdx.dev)
+mise.local.toml

@@ -1,0 +1,6 @@
+[tools]
+air = "latest"
+go = "1.25"
+golangci-lint = "latest"
+prettier = "latest"
+orval = { version = "latest", allow_builds = ["esbuild"] }
