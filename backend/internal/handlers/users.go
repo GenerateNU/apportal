@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"net/http"
+	"strings"
 
 	"github.com/danielgtaylor/huma/v2"
 
@@ -103,7 +104,7 @@ func (h *userHandler) create(ctx context.Context, in *CreateUserInput) (*UserOut
 
 	user, err := h.store.CreateUser(ctx, store.UserCreate{
 		NUID:           in.Body.NUID,
-		Email:          in.Body.Email,
+		Email:          strings.ToLower(in.Body.Email),
 		FullName:       in.Body.FullName,
 		Roles:          in.Body.Roles,
 		GraduationYear: in.Body.GraduationYear,
@@ -201,8 +202,14 @@ func (h *userHandler) update(ctx context.Context, in *UpdateUserInput) (*UserOut
 		}
 	}
 
+	normalizedEmail := in.Body.Email
+	if normalizedEmail != nil {
+		lowercasedEmail := strings.ToLower(*normalizedEmail)
+		normalizedEmail = &lowercasedEmail
+	}
+
 	user, err := h.store.UpdateUser(ctx, in.NUID, store.UserUpdate{
-		Email:          in.Body.Email,
+		Email:          normalizedEmail,
 		FullName:       in.Body.FullName,
 		Roles:          in.Body.Roles,
 		GraduationYear: in.Body.GraduationYear,
