@@ -189,7 +189,11 @@ export function MembersClient() {
               ) : (
                 members.map((user) =>
                   view === 'staff' ? (
-                    <MemberRow key={user.nuid} user={user} gridCols={gridCols} />
+                    <MemberRow
+                      key={user.nuid}
+                      user={user}
+                      gridCols={gridCols}
+                    />
                   ) : (
                     <ApplicantRow
                       key={user.nuid}
