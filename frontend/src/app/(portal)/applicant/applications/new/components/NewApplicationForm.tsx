@@ -214,9 +214,16 @@ function Form({
   const [values, setValues] = useState<Record<string, AnswerValue>>(() => {
     const map: Record<string, AnswerValue> = {}
     for (const a of initialAnswers) {
-      map[a.question_id] = a.answer_options?.length
-        ? { options: a.answer_options }
-        : { text: a.answer_text ?? '' }
+      if (a.answer_options?.length) {
+        map[a.question_id] = { options: a.answer_options }
+      } else if (a.answer_file_path) {
+        map[a.question_id] = {
+          filePath: a.answer_file_path,
+          fileName: a.answer_file_name ?? undefined,
+        }
+      } else {
+        map[a.question_id] = { text: a.answer_text ?? '' }
+      }
     }
     return map
   })
@@ -327,7 +334,20 @@ function Form({
         if (q.question_type === 'checkbox') {
           return { question_id: q.id, answer_options: v?.options ?? [] }
         }
-        return { question_id: q.id, answer_text: v?.text ?? '' }
+        if (q.question_type === 'url' && v?.filePath) {
+          return {
+            question_id: q.id,
+            answer_text: '',
+            answer_file_path: v.filePath,
+            answer_file_name: v.fileName ?? '',
+          }
+        }
+        return {
+          question_id: q.id,
+          answer_text: v?.text ?? '',
+          answer_file_path: '',
+          answer_file_name: '',
+        }
       })
       await putAnswers.mutateAsync({
         applicationId: id,
@@ -494,6 +514,7 @@ function Form({
     if (!q.is_required) return false
     const v = values[q.id]
     if (q.question_type === 'checkbox') return !v?.options?.length
+    if (q.question_type === 'url') return !v?.text?.trim() && !v?.filePath
     return !v?.text?.trim()
   }
 
@@ -662,6 +683,7 @@ function Form({
             challenge={pageIndex === lastPage ? challenge : undefined}
             values={values}
             onValueChange={updateValue}
+            applicationId={applicationId ?? undefined}
             resumeUrl={resumeUrl}
             onResumeChange={updateResumeUrl}
             availability={availability}

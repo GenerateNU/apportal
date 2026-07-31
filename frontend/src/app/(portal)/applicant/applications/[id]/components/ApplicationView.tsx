@@ -42,9 +42,16 @@ export function ApplicationView({
     const map: Record<string, AnswerValue> = {}
     for (const answer of answers) {
       const opts = answer.answer_options
-      map[answer.question_id] = Array.isArray(opts)
-        ? { options: opts as string[] }
-        : { text: answer.answer_text ?? '' }
+      if (Array.isArray(opts)) {
+        map[answer.question_id] = { options: opts as string[] }
+      } else if (answer.answer_file_path) {
+        map[answer.question_id] = {
+          filePath: answer.answer_file_path,
+          fileName: answer.answer_file_name ?? undefined,
+        }
+      } else {
+        map[answer.question_id] = { text: answer.answer_text ?? '' }
+      }
     }
     return map
   }, [answers])
@@ -92,6 +99,7 @@ export function ApplicationView({
         challenge={challenges[0]}
         values={values}
         onValueChange={noop}
+        applicationId={applicationId}
         resumeUrl={application?.resume_url ?? ''}
         onResumeChange={noop}
         availability={application?.availability ?? {}}

@@ -1,4 +1,5 @@
 import { ExternalLink } from 'lucide-react'
+import { FileAnswerLink } from '@/components/FileAnswerLink'
 import type { WrittenAnswer, QuestionType } from '@/lib/api/types'
 import { ChipsResponse } from './ChipsResponse'
 
@@ -26,12 +27,24 @@ export function AnswerCell({
   }
 
   const text = formatAnswer(answer)
+  const isFile = questionType === 'url' && answer?.answer_file_path
   const isUrl = questionType === 'url' && answer && answer.answer_text?.trim()
   const isCheckbox =
     !truncate && questionType === 'checkbox' && answer?.answer_options
 
   if (isCheckbox) {
     return <ChipsResponse options={answer.answer_options} />
+  }
+
+  if (isFile) {
+    return (
+      <FileAnswerLink
+        applicationId={answer.application_id}
+        questionId={answer.question_id}
+        fileName={answer.answer_file_name}
+        className={truncate ? 'max-w-96 text-xs' : 'max-w-96 text-base'}
+      />
+    )
   }
 
   if (isUrl) {

@@ -22,6 +22,7 @@ export function ApplicationFields({
   submissionUrl,
   onSubmissionChange,
   disabled = false,
+  applicationId,
 }: {
   questions: Question[]
   // Offset for question numbering — lets a page's slice of questions
@@ -37,6 +38,8 @@ export function ApplicationFields({
   submissionUrl: string
   onSubmissionChange: (next: string) => void
   disabled?: boolean
+  // Threaded through to QuestionField for its `url` file-upload affordance.
+  applicationId?: string
 }) {
   return (
     <div className="flex flex-col gap-8">
@@ -54,6 +57,7 @@ export function ApplicationFields({
                 index={startIndex + i}
                 value={values[question.id] ?? {}}
                 disabled={disabled}
+                applicationId={applicationId}
                 onChange={(next) => onValueChange(question.id, next)}
               />
             ))}

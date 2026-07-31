@@ -25,6 +25,9 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  CreateFileURLOutputBody,
+  CreateUploadURLInputBody,
+  CreateUploadURLOutputBody,
   ErrorModel,
   ListAnswers200,
   UpsertAnswers200,
@@ -218,6 +221,171 @@ export const useUpsertAnswers = <TError = ErrorModel,
       > => {
 
       const mutationOptions = getUpsertAnswersMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * @summary Get a signed URL to view an uploaded PDF answer
+ */
+export const createAnswerFileUrl = (
+    id: string,
+    questionId: string,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<CreateFileURLOutputBody>(
+      {url: `/applications/${id}/answers/${questionId}/file-url`, method: 'GET', signal
+    },
+      options);
+    }
+  
+
+
+
+export const getCreateAnswerFileUrlQueryKey = (id?: string,
+    questionId?: string,) => {
+    return [
+    `/applications/${id}/answers/${questionId}/file-url`
+    ] as const;
+    }
+
+    
+export const getCreateAnswerFileUrlQueryOptions = <TData = Awaited<ReturnType<typeof createAnswerFileUrl>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel>(id: string,
+    questionId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof createAnswerFileUrl>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getCreateAnswerFileUrlQueryKey(id,questionId);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof createAnswerFileUrl>>> = ({ signal }) => createAnswerFileUrl(id,questionId, requestOptions, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(id && questionId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof createAnswerFileUrl>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type CreateAnswerFileUrlQueryResult = NonNullable<Awaited<ReturnType<typeof createAnswerFileUrl>>>
+export type CreateAnswerFileUrlQueryError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel
+
+
+export function useCreateAnswerFileUrl<TData = Awaited<ReturnType<typeof createAnswerFileUrl>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
+ id: string,
+    questionId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof createAnswerFileUrl>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof createAnswerFileUrl>>,
+          TError,
+          Awaited<ReturnType<typeof createAnswerFileUrl>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCreateAnswerFileUrl<TData = Awaited<ReturnType<typeof createAnswerFileUrl>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
+ id: string,
+    questionId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof createAnswerFileUrl>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof createAnswerFileUrl>>,
+          TError,
+          Awaited<ReturnType<typeof createAnswerFileUrl>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCreateAnswerFileUrl<TData = Awaited<ReturnType<typeof createAnswerFileUrl>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
+ id: string,
+    questionId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof createAnswerFileUrl>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get a signed URL to view an uploaded PDF answer
+ */
+
+export function useCreateAnswerFileUrl<TData = Awaited<ReturnType<typeof createAnswerFileUrl>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
+ id: string,
+    questionId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof createAnswerFileUrl>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getCreateAnswerFileUrlQueryOptions(id,questionId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+/**
+ * Only valid for `url`-type questions. The caller PUTs the file to the returned URL, then records answer_file_path/answer_file_name via the answers upsert endpoint.
+ * @summary Get a signed URL to upload a PDF answer
+ */
+export const createAnswerUploadUrl = (
+    id: string,
+    questionId: string,
+    createUploadURLInputBody: NonReadonly<CreateUploadURLInputBody>,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<CreateUploadURLOutputBody>(
+      {url: `/applications/${id}/answers/${questionId}/upload-url`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: createUploadURLInputBody, signal
+    },
+      options);
+    }
+  
+
+
+export const getCreateAnswerUploadUrlMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAnswerUploadUrl>>, TError,{id: string;questionId: string;data: NonReadonly<CreateUploadURLInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof createAnswerUploadUrl>>, TError,{id: string;questionId: string;data: NonReadonly<CreateUploadURLInputBody>}, TContext> => {
+
+const mutationKey = ['createAnswerUploadUrl'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAnswerUploadUrl>>, {id: string;questionId: string;data: NonReadonly<CreateUploadURLInputBody>}> = (props) => {
+          const {id,questionId,data} = props ?? {};
+
+          return  createAnswerUploadUrl(id,questionId,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateAnswerUploadUrlMutationResult = NonNullable<Awaited<ReturnType<typeof createAnswerUploadUrl>>>
+    export type CreateAnswerUploadUrlMutationBody = NonReadonly<CreateUploadURLInputBody>
+    export type CreateAnswerUploadUrlMutationError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel
+
+    /**
+ * @summary Get a signed URL to upload a PDF answer
+ */
+export const useCreateAnswerUploadUrl = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAnswerUploadUrl>>, TError,{id: string;questionId: string;data: NonReadonly<CreateUploadURLInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof createAnswerUploadUrl>>,
+        TError,
+        {id: string;questionId: string;data: NonReadonly<CreateUploadURLInputBody>},
+        TContext
+      > => {
+
+      const mutationOptions = getCreateAnswerUploadUrlMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }

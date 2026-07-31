@@ -7,20 +7,22 @@ import (
 )
 
 type Config struct {
-	Port            string
-	DatabaseURL     string
-	CORSOrigins     []string
-	SupabaseURL     string
-	SupabaseAnonKey string
+	Port                   string
+	DatabaseURL            string
+	CORSOrigins            []string
+	SupabaseURL            string
+	SupabaseAnonKey        string
+	SupabaseServiceRoleKey string
 }
 
 func Load() (Config, error) {
 	cfg := Config{
-		Port:            getEnv("PORT", "8080"),
-		DatabaseURL:     os.Getenv("DATABASE_URL"),
-		CORSOrigins:     getEnvList("APP_CORS_ORIGINS", "http://localhost:3000"),
-		SupabaseURL:     os.Getenv("SUPABASE_URL"),
-		SupabaseAnonKey: os.Getenv("SUPABASE_ANON_KEY"),
+		Port:                   getEnv("PORT", "8080"),
+		DatabaseURL:            os.Getenv("DATABASE_URL"),
+		CORSOrigins:            getEnvList("APP_CORS_ORIGINS", "http://localhost:3000"),
+		SupabaseURL:            os.Getenv("SUPABASE_URL"),
+		SupabaseAnonKey:        os.Getenv("SUPABASE_ANON_KEY"),
+		SupabaseServiceRoleKey: os.Getenv("SUPABASE_SERVICE_ROLE_KEY"),
 	}
 
 	if cfg.DatabaseURL == "" {
@@ -31,6 +33,9 @@ func Load() (Config, error) {
 	}
 	if cfg.SupabaseAnonKey == "" {
 		return Config{}, fmt.Errorf("SUPABASE_ANON_KEY is required")
+	}
+	if cfg.SupabaseServiceRoleKey == "" {
+		return Config{}, fmt.Errorf("SUPABASE_SERVICE_ROLE_KEY is required")
 	}
 
 	return cfg, nil

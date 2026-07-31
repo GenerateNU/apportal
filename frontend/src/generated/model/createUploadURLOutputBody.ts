@@ -6,10 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface Item {
-  answer_file_name?: string;
-  answer_file_path?: string;
-  answer_options?: unknown;
-  answer_text?: string;
-  question_id: string;
+export interface CreateUploadURLOutputBody {
+  /** A URL to the JSON Schema for this object. */
+  readonly $schema?: string;
+  path: string;
+  upload_url: string;
 }
