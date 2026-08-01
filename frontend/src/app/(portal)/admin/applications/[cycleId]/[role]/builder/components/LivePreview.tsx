@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ArrowLeft, ArrowRight } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Paperclip } from 'lucide-react'
 import { MarkdownContent } from '@/components/MarkdownContent'
 import {
   Select,
@@ -24,16 +24,28 @@ function PreviewField({ question }: { question: Question }) {
         {question.is_required && <span className="text-red-500"> *</span>}
       </label>
 
-      {(question.question_type === 'short_answer' ||
-        question.question_type === 'url') && (
+      {question.question_type === 'short_answer' && (
         <input
-          placeholder={
-            question.question_type === 'url'
-              ? 'https://example.com'
-              : 'Your answer'
-          }
+          placeholder="Your answer"
           className="text-text-default focus:border-brand-blue focus:ring-brand-blue rounded-md border border-gray-300 px-4 py-2.5 text-base outline-none focus:ring-1"
         />
+      )}
+
+      {question.question_type === 'url' && (
+        <div className="flex flex-col gap-2">
+          <input
+            placeholder="https://example.com"
+            className="text-text-default focus:border-brand-blue focus:ring-brand-blue rounded-md border border-gray-300 px-4 py-2.5 text-base outline-none focus:ring-1"
+          />
+          <button
+            type="button"
+            disabled
+            className="text-text-secondary inline-flex w-fit items-center gap-1.5 rounded-md border border-gray-200 px-2.5 py-1.5 text-sm"
+          >
+            <Paperclip className="h-3.5 w-3.5" />
+            Upload a PDF instead
+          </button>
+        </div>
       )}
 
       {question.question_type === 'long_answer' && (

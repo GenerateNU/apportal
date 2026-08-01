@@ -42,9 +42,11 @@ type UpsertAnswersInput struct {
 	ID   string `path:"id" doc:"Application ID"`
 	Body struct {
 		Answers []struct {
-			QuestionID    string          `json:"question_id"`
-			AnswerText    *string         `json:"answer_text,omitempty"`
-			AnswerOptions json.RawMessage `json:"answer_options,omitempty"`
+			QuestionID     string          `json:"question_id"`
+			AnswerText     *string         `json:"answer_text,omitempty"`
+			AnswerOptions  json.RawMessage `json:"answer_options,omitempty"`
+			AnswerFilePath *string         `json:"answer_file_path,omitempty"`
+			AnswerFileName *string         `json:"answer_file_name,omitempty"`
 		} `json:"answers" minItems:"1"`
 	}
 }
@@ -56,9 +58,11 @@ func (h *answerHandler) upsert(ctx context.Context, in *UpsertAnswersInput) (*An
 			return nil, huma.Error422UnprocessableEntity("each answer requires a question_id")
 		}
 		inputs = append(inputs, store.AnswerInput{
-			QuestionID:    a.QuestionID,
-			AnswerText:    a.AnswerText,
-			AnswerOptions: a.AnswerOptions,
+			QuestionID:     a.QuestionID,
+			AnswerText:     a.AnswerText,
+			AnswerOptions:  a.AnswerOptions,
+			AnswerFilePath: a.AnswerFilePath,
+			AnswerFileName: a.AnswerFileName,
 		})
 	}
 

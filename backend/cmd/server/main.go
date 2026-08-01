@@ -11,6 +11,7 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/config"
 	appdb "github.com/GenerateNU/apportal/backend/internal/db"
 	"github.com/GenerateNU/apportal/backend/internal/handlers"
+	"github.com/GenerateNU/apportal/backend/internal/storage"
 )
 
 func main() {
@@ -30,7 +31,13 @@ func main() {
 	}
 	defer database.Close()
 
-	app := handlers.NewRouter(database, cfg.CORSOrigins, cfg.SupabaseURL, cfg.SupabaseAnonKey)
+	storageClient := storage.NewClient(cfg.SupabaseURL, cfg.SupabaseServiceRoleKey)
+	if err := storageClient.EnsureBucket(context.Background()); err != nil {
+		slog.Error("failed to ensure storage bucket", "error", err)
+		os.Exit(1)
+	}
+
+	app := handlers.NewRouter(database, cfg.CORSOrigins, cfg.SupabaseURL, cfg.SupabaseAnonKey, storageClient)
 
 	serverErrors := make(chan error, 1)
 	go func() {

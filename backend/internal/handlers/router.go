@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/GenerateNU/apportal/backend/internal/middleware"
+	"github.com/GenerateNU/apportal/backend/internal/storage"
 	"github.com/GenerateNU/apportal/backend/internal/store"
 )
 
@@ -32,7 +33,7 @@ type Router struct {
 // plain health checks, creates a Huma API over the same app (which auto-serves
 // the OpenAPI spec at /openapi.json|yaml and Scalar docs at /docs), then
 // registers every domain's typed operations.
-func NewRouter(database *pgxpool.Pool, corsOrigins []string, supabaseURL, supabaseAnonKey string) *fiber.App {
+func NewRouter(database *pgxpool.Pool, corsOrigins []string, supabaseURL, supabaseAnonKey string, storageClient *storage.Client) *fiber.App {
 	st := store.New(database)
 	verifier := middleware.NewSupabaseVerifier(supabaseURL, supabaseAnonKey)
 	app := fiber.New(fiber.Config{
@@ -57,7 +58,7 @@ func NewRouter(database *pgxpool.Pool, corsOrigins []string, supabaseURL, supaba
 	// Huma API: OpenAPI 3.1 generated from the typed operations below, rendered
 	// with Scalar (loaded from CDN) at /docs.
 	api := humafiber.New(app, humaConfig())
-	registerHandlers(api, st)
+	registerHandlers(api, st, storageClient)
 
 	return app
 }
@@ -72,7 +73,7 @@ func humaConfig() huma.Config {
 }
 
 // registerHandlers wires every domain's typed operations onto the API.
-func registerHandlers(api huma.API, st *store.Store) {
+func registerHandlers(api huma.API, st *store.Store, storageClient *storage.Client) {
 	(&cycleHandler{store: st}).register(api)
 	(&cycleStageHandler{store: st}).register(api)
 	(&applicationTemplateHandler{store: st}).register(api)
@@ -82,6 +83,7 @@ func registerHandlers(api huma.API, st *store.Store) {
 	(&applicantHandler{store: st}).register(api)
 	(&applicationHandler{store: st}).register(api)
 	(&answerHandler{store: st}).register(api)
+	(&uploadHandler{store: st, storage: storageClient}).register(api)
 	(&codeSubmissionHandler{store: st}).register(api)
 
 	// Review → interview → selection pipeline.
@@ -102,7 +104,7 @@ func registerHandlers(api huma.API, st *store.Store) {
 // cmd/openapi) dump the spec for frontend codegen without a running server.
 func OpenAPIYAML() ([]byte, error) {
 	api := humafiber.New(fiber.New(), humaConfig())
-	registerHandlers(api, store.New(nil))
+	registerHandlers(api, store.New(nil), storage.NewClient("", ""))
 	return api.OpenAPI().YAML()
 }
 

@@ -50,6 +50,20 @@ func (s *Store) CreateQuestion(ctx context.Context, in QuestionCreate) (models.Q
 	return pgx.CollectExactlyOneRow(rows, pgx.RowToStructByPos[models.Question])
 }
 
+// GetQuestion fetches a single question by id, or ErrNotFound.
+func (s *Store) GetQuestion(ctx context.Context, id string) (models.Question, error) {
+	const q = `SELECT ` + questionColumns + ` FROM questions WHERE id = $1`
+	rows, err := s.db.Query(ctx, q, id)
+	if err != nil {
+		return models.Question{}, err
+	}
+	result, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByPos[models.Question])
+	if errors.Is(err, pgx.ErrNoRows) {
+		return result, ErrNotFound
+	}
+	return result, err
+}
+
 // ListQuestions returns a cycle's questions ordered for display. When role is
 // non-nil, it returns that role's questions plus global ones (role IS NULL).
 func (s *Store) ListQuestions(ctx context.Context, cycleID string, role *models.Role) ([]models.Question, error) {

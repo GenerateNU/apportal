@@ -149,7 +149,13 @@ type WrittenAnswer struct {
 	QuestionID    string          `json:"question_id"`
 	AnswerText    *string         `json:"answer_text,omitempty"`
 	AnswerOptions json.RawMessage `json:"answer_options,omitempty"`
-	SubmittedAt   time.Time       `json:"submitted_at"`
+	// AnswerFilePath/AnswerFileName let a `url`-type question be answered by
+	// uploading a PDF instead of typing a link. AnswerFilePath is the opaque
+	// Supabase Storage object key; AnswerFileName is the original filename,
+	// kept separately for display since the storage path doesn't encode it.
+	AnswerFilePath *string   `json:"answer_file_path,omitempty"`
+	AnswerFileName *string   `json:"answer_file_name,omitempty"`
+	SubmittedAt    time.Time `json:"submitted_at"`
 }
 
 type CodeSubmission struct {

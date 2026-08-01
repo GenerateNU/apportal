@@ -61,13 +61,13 @@ CREATE TABLE written_review_answers (
 -- ============================================================
 
 INSERT INTO review_questions (cycle_id, application_role, question_text, question_type, is_required, display_order)
-SELECT DISTINCT a.cycle_id, a.application_role, 'Overall score', 'score', true, 0
+SELECT DISTINCT a.cycle_id, a.application_role, 'Overall score', 'score'::question_type, true, 0
 FROM written_reviews wr
 JOIN applications a ON a.id = wr.application_id
 WHERE wr.overall_score IS NOT NULL;
 
 INSERT INTO review_questions (cycle_id, application_role, question_text, question_type, is_required, display_order)
-SELECT DISTINCT a.cycle_id, a.application_role, 'Reasoning', 'long_answer', true, 1
+SELECT DISTINCT a.cycle_id, a.application_role, 'Reasoning', 'long_answer'::question_type, true, 1
 FROM written_reviews wr
 JOIN applications a ON a.id = wr.application_id
 WHERE wr.reasoning IS NOT NULL;
