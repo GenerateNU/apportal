@@ -276,10 +276,11 @@ func (h *applicationHandler) requireComplete(ctx context.Context, app models.App
 	answered := make(map[string]bool, len(answers))
 	for _, a := range answers {
 		hasText := a.AnswerText != nil && strings.TrimSpace(*a.AnswerText) != ""
+		hasFilePath := a.AnswerFilePath != nil && strings.TrimSpace(*a.AnswerFilePath) != ""
 		var opts []string
 		hasOptions := len(a.AnswerOptions) > 0 &&
 			json.Unmarshal(a.AnswerOptions, &opts) == nil && len(opts) > 0
-		if hasText || hasOptions {
+		if hasText || hasFilePath || hasOptions {
 			answered[a.QuestionID] = true
 		}
 	}

@@ -40,6 +40,24 @@ import { ApplicationFields } from '../../components/ApplicationFields'
 import type { AnswerValue } from '../../components/QuestionField'
 import { QuestionOutline } from './QuestionOutline'
 
+const DEFAULT_SUBMIT_ERROR =
+  'Something went wrong submitting your application. Please try again.'
+
+// Backend validation failures carry a human-readable `detail` (huma's
+// RFC7807 error body, JSON-stringified onto APIError.message by
+// orval-mutator) — surface it instead of the generic fallback so applicants
+// see e.g. "all required questions must be answered" rather than having to
+// guess and retry blindly.
+function apiErrorDetail(err: unknown): string {
+  if (!(err instanceof APIError)) return DEFAULT_SUBMIT_ERROR
+  try {
+    const body = JSON.parse(err.message) as { detail?: string }
+    return body.detail || DEFAULT_SUBMIT_ERROR
+  } catch {
+    return DEFAULT_SUBMIT_ERROR
+  }
+}
+
 function Loading() {
   return (
     <div className="text-text-muted flex items-center gap-2 px-8 py-10 text-sm">
@@ -385,6 +403,20 @@ function Form({
     runSaveRef.current = runSave
   })
 
+  // Single gatekeeper for every save trigger (debounce timer, flush-on-close).
+  // Re-checks savingRef at the moment it actually fires — not just when it
+  // was scheduled — so a save that started after a timer was armed (e.g. a
+  // submit-time runSave) can't be raced by that stale timer going off mid-
+  // flight. If a save is already running, coalesce into the single pending
+  // follow-up runSave's finally block already chains.
+  function scheduleSave() {
+    if (savingRef.current) {
+      pendingRef.current = true
+      return
+    }
+    void runSaveRef.current(snapshotRef.current)
+  }
+
   // Debounce ~1s after the last change, but never run two saves at once —
   // if edits land while a save is in flight, coalesce them into exactly one
   // follow-up save (handled in runSave's finally block above) instead of
@@ -393,13 +425,7 @@ function Form({
     snapshotRef.current = { values, resumeUrl, availability, submissionUrl }
     if (!hasEdited || deadlineClosedRef.current) return
 
-    if (savingRef.current) {
-      pendingRef.current = true
-      return
-    }
-    const timer = setTimeout(() => {
-      void runSaveRef.current(snapshotRef.current)
-    }, 1000)
+    const timer = setTimeout(scheduleSave, 1000)
     return () => clearTimeout(timer)
   }, [values, resumeUrl, availability, submissionUrl, hasEdited])
 
@@ -408,7 +434,7 @@ function Form({
   useEffect(() => {
     function flush() {
       if (hasEditedRef.current && !deadlineClosedRef.current) {
-        void runSaveRef.current(snapshotRef.current)
+        scheduleSave()
       }
     }
     function onVisibilityChange() {
@@ -570,9 +596,13 @@ function Form({
     setSubmitting(true)
     try {
       // Make sure the latest edits are actually persisted before submitting
-      // — wait out any autosave already running rather than racing it.
+      // — wait out any autosave already running rather than racing it. A
+      // second waitForIdle after runSave catches a chained follow-up save
+      // that runSave's own finally block may have kicked off (unawaited) if
+      // an edit landed while it was in flight.
       await waitForIdle()
       await runSave(snapshotRef.current)
+      await waitForIdle()
       const id = applicationIdRef.current
       if (!id) throw new Error('missing application id')
 
@@ -588,9 +618,7 @@ function Form({
           'The application deadline has passed. This application can no longer be submitted.'
         )
       } else {
-        setSubmitError(
-          'Something went wrong submitting your application. Please try again.'
-        )
+        setSubmitError(apiErrorDetail(err))
       }
     } finally {
       setSubmitting(false)
