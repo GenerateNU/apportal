@@ -42,6 +42,10 @@ export function ReviewClient({
   const { data: reviews = [] } = useWrittenReviews(applicationId)
   const upsert = useUpsertWrittenReview()
 
+  const isChief = !!currentUser?.roles.some(
+    (r) => r === 'chief' || r === 'admin'
+  )
+
   const reviewQuestionById = useMemo(
     () => new Map(reviewQuestions.map((q) => [q.id, q])),
     [reviewQuestions]
@@ -141,12 +145,22 @@ export function ReviewClient({
             <p className="text-text-muted text-xs">{ROLE_LABEL[role]}</p>
           </div>
         </div>
-        {submitted && (
-          <span className="bg-status-open/15 text-status-open inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium">
-            <Check size={12} />
-            Review submitted
-          </span>
-        )}
+        <div className="flex items-center gap-3">
+          {isChief && (
+            <Link
+              href={`/reviewer/chief-review/${applicationId}`}
+              className="text-text-muted hover:text-text-default text-sm underline-offset-2 hover:underline"
+            >
+              Chief review
+            </Link>
+          )}
+          {submitted && (
+            <span className="bg-status-open/15 text-status-open inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium">
+              <Check size={12} />
+              Review submitted
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Split: application (left) · review (right) on desktop; stacked on mobile */}
