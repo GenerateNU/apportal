@@ -35,8 +35,8 @@ export function ChiefReviewQueueClient() {
           Chief review
         </h1>
         <p className="text-text-muted mt-1 text-sm">
-          Review each applicant&apos;s lead scores and decide who advances to
-          an interview.
+          Review each applicant&apos;s lead scores and decide who advances to an
+          interview.
         </p>
       </div>
 
@@ -75,7 +75,9 @@ export function ChiefReviewQueueClient() {
                       <Button
                         variant="outline"
                         onClick={() =>
-                          router.push(`/reviewer/chief-review/${application.id}`)
+                          router.push(
+                            `/reviewer/chief-review/${application.id}`
+                          )
                         }
                       >
                         Review

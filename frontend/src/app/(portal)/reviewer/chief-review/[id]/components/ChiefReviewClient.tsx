@@ -70,7 +70,11 @@ export function ChiefReviewClient({
       body: {
         notes,
         advance_to_interview:
-          decision === 'advance' ? true : decision === 'hold' ? false : undefined,
+          decision === 'advance'
+            ? true
+            : decision === 'hold'
+              ? false
+              : undefined,
       },
     })
     setSaved(true)
@@ -145,7 +149,7 @@ export function ChiefReviewClient({
                       </span>
                       <div className="flex items-center gap-2">
                         {avg != null && (
-                          <span className="bg-gray-100 text-text-default rounded-md px-2 py-0.5 text-xs font-medium">
+                          <span className="text-text-default rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium">
                             avg {avg.toFixed(1)}/10
                           </span>
                         )}
@@ -252,7 +256,7 @@ export function ChiefReviewClient({
                         className={`rounded-md px-2 py-0.5 text-xs font-medium ${
                           r.advance_to_interview
                             ? 'bg-status-open/15 text-status-open'
-                            : 'bg-gray-100 text-text-muted'
+                            : 'text-text-muted bg-gray-100'
                         }`}
                       >
                         {r.advance_to_interview
