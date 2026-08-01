@@ -1,18 +1,40 @@
 'use client'
 import { PageContainer } from '@/components/PageContainer'
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import type { Role } from '@/lib/api/types'
 import { useApplicantsByNuids } from '@/lib/queries/applicants'
 import { useApplications } from '@/lib/queries/applications'
+import { useCycles } from '@/lib/queries/cycles'
 import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 
 export function ChiefReviewQueueClient() {
   const router = useRouter()
+  const { data: cycles = [] } = useCycles({})
 
-  const { data: applications = [] } = useApplications({})
+  // Default to the first open cycle, else the first cycle, same as the other
+  // chief-only pipeline pages.
+  const [cycleId, setCycleId] = useState('')
+  if (!cycleId && cycles.length > 0) {
+    setCycleId((cycles.find((c) => c.status === 'open') ?? cycles[0]).id)
+  }
+  const [activeRole, setActiveRole] = useState<Role | 'all'>('all')
+
+  const { data: applications = [] } = useApplications(
+    cycleId
+      ? { cycle_id: cycleId, ...(activeRole !== 'all' && { role: activeRole }) }
+      : undefined
+  )
 
   const nuids = useMemo(
     () => [...new Set(applications.map((a) => a.user_nuid))],
@@ -30,14 +52,46 @@ export function ChiefReviewQueueClient() {
 
   return (
     <PageContainer>
-      <div>
-        <h1 className="text-text-default text-2xl font-semibold">
-          Chief review
-        </h1>
-        <p className="text-text-muted mt-1 text-sm">
-          Review each applicant&apos;s lead scores and decide who advances to an
-          interview.
-        </p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-text-default text-2xl font-semibold">
+            Chief review
+          </h1>
+          <p className="text-text-muted mt-1 text-sm">
+            Review each applicant&apos;s lead scores and decide who advances to
+            an interview.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <Select
+            value={activeRole}
+            onValueChange={(val) => setActiveRole(val as Role | 'all')}
+          >
+            <SelectTrigger className="w-56" aria-label="Filter by role">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All roles</SelectItem>
+              {ROLE_COLUMNS.map((r) => (
+                <SelectItem key={r} value={r}>
+                  {ROLE_LABEL[r]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={cycleId} onValueChange={setCycleId}>
+            <SelectTrigger className="w-40" aria-label="Filter by cycle">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {cycles.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {applications.length === 0 ? (
