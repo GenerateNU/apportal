@@ -8,6 +8,7 @@ import {
   FileText,
   Calendar,
   ClipboardCheck,
+  Video,
   LogOut,
 } from 'lucide-react'
 import NavItem from './NavItem'
@@ -61,6 +62,12 @@ const sectionsByRole: Record<Role, NavSection> = {
         href: '/reviewer/assignments',
         label: 'Assign Reviewers',
         icon: UserPlus,
+        chiefOnly: true,
+      },
+      {
+        href: '/reviewer/interview-assignments',
+        label: 'Interview Assignments',
+        icon: Video,
         chiefOnly: true,
       },
     ],

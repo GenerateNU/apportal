@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query'
 import {
   listChiefReviews,
   upsertChiefReview,
@@ -16,6 +21,21 @@ export function useChiefReviews(applicationId: string, opts?: RequestOptions) {
     queryFn: async () =>
       ((await listChiefReviews(applicationId, opts)) ?? []) as ChiefReview[],
     enabled: !!applicationId,
+  })
+}
+
+// One query per application, sharing cache with useChiefReviews — e.g. to
+// find which applications a chief has marked as advancing to interview.
+export function useChiefReviewsByApplications(
+  applicationIds: string[],
+  opts?: RequestOptions
+) {
+  return useQueries({
+    queries: applicationIds.map((id) => ({
+      queryKey: queryKeys.chiefReviews.list(id),
+      queryFn: async () =>
+        ((await listChiefReviews(id, opts)) ?? []) as ChiefReview[],
+    })),
   })
 }
 
