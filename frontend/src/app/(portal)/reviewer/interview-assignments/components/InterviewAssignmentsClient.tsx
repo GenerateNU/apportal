@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import type { Application, User } from '@/lib/api/types'
+import type { Application, Role, User } from '@/lib/api/types'
 import { useApplicantsByNuids } from '@/lib/queries/applicants'
 import { useApplications } from '@/lib/queries/applications'
 import { useChiefReviewsByApplications } from '@/lib/queries/chief-reviews'
@@ -37,10 +37,16 @@ export function InterviewAssignmentsClient() {
   if (!cycleId && cycles.length > 0) {
     setCycleId((cycles.find((c) => c.status === 'open') ?? cycles[0]).id)
   }
+  const [activeRole, setActiveRole] = useState<Role | 'all'>('all')
 
   const cycleApplications = useMemo(
-    () => allApplications.filter((a) => a.cycle_id === cycleId),
-    [allApplications, cycleId]
+    () =>
+      allApplications.filter(
+        (a) =>
+          a.cycle_id === cycleId &&
+          (activeRole === 'all' || a.role === activeRole)
+      ),
+    [allApplications, cycleId, activeRole]
   )
 
   const cycleAppIds = useMemo(
@@ -121,18 +127,36 @@ export function InterviewAssignmentsClient() {
             chief has advanced.
           </p>
         </div>
-        <Select value={cycleId} onValueChange={setCycleId}>
-          <SelectTrigger className="w-48">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {cycles.map((c) => (
-              <SelectItem key={c.id} value={c.id}>
-                {c.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex flex-wrap items-center gap-3">
+          <Select
+            value={activeRole}
+            onValueChange={(val) => setActiveRole(val as Role | 'all')}
+          >
+            <SelectTrigger className="w-56" aria-label="Filter by role">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All roles</SelectItem>
+              {ROLE_COLUMNS.map((r) => (
+                <SelectItem key={r} value={r}>
+                  {ROLE_LABEL[r]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={cycleId} onValueChange={setCycleId}>
+            <SelectTrigger className="w-40" aria-label="Filter by cycle">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {cycles.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {applications.length === 0 ? (
