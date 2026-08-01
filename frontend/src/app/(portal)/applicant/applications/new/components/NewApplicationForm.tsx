@@ -388,11 +388,17 @@ function Form({
         setDeadlineRejected(true)
         pendingRef.current = false
       }
+      // Rethrown so handleSubmit (which awaits this directly, not via
+      // scheduleSave) knows the save actually failed instead of silently
+      // proceeding to submit against a DB state that's missing this edit —
+      // that mismatch is what previously surfaced as a confusing "answer all
+      // required questions" rejection even though every field looked filled.
+      throw err
     } finally {
       savingRef.current = false
       if (pendingRef.current) {
         pendingRef.current = false
-        void runSaveRef.current(snapshotRef.current)
+        void runSaveRef.current(snapshotRef.current).catch(() => {})
       }
     }
   }
@@ -414,7 +420,9 @@ function Form({
       pendingRef.current = true
       return
     }
-    void runSaveRef.current(snapshotRef.current)
+    // Failure is already reflected via saveStatus; nothing else here needs
+    // to react to it, so swallow rather than leaving an unhandled rejection.
+    void runSaveRef.current(snapshotRef.current).catch(() => {})
   }
 
   // Debounce ~1s after the last change, but never run two saves at once —
