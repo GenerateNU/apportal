@@ -100,6 +100,13 @@ export const queryKeys = {
       [...queryKeys.writtenReviews.lists(), applicationId] as const,
   },
 
+  chiefReviews: {
+    all: ['chief-reviews'] as const,
+    lists: () => [...queryKeys.chiefReviews.all, 'list'] as const,
+    list: (applicationId: string) =>
+      [...queryKeys.chiefReviews.lists(), applicationId] as const,
+  },
+
   leadAssignments: {
     all: ['lead-assignments'] as const,
     lists: () => [...queryKeys.leadAssignments.all, 'list'] as const,

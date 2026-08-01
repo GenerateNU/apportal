@@ -2,7 +2,14 @@
 
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { Users, UserPlus, FileText, Calendar, LogOut } from 'lucide-react'
+import {
+  Users,
+  UserPlus,
+  FileText,
+  Calendar,
+  ClipboardCheck,
+  LogOut,
+} from 'lucide-react'
 import NavItem from './NavItem'
 import { Avatar } from '@/components/ui/avatar'
 import { useAuth } from '@/lib/auth/auth-context'
@@ -44,6 +51,12 @@ const sectionsByRole: Record<Role, NavSection> = {
     items: [
       { href: '/reviewer/applications', label: 'Applications', icon: Users },
       { href: '/reviewer/my-reviews', label: 'Review Queue', icon: FileText },
+      {
+        href: '/reviewer/chief-review',
+        label: 'Chief Review',
+        icon: ClipboardCheck,
+        chiefOnly: true,
+      },
       {
         href: '/reviewer/assignments',
         label: 'Assign Reviewers',
