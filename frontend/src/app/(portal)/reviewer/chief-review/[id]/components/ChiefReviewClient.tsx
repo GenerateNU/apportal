@@ -99,12 +99,20 @@ export function ChiefReviewClient({
             <p className="text-text-muted text-xs">{ROLE_LABEL[role]}</p>
           </div>
         </div>
-        {own?.decided_at && (
-          <span className="bg-status-open/15 text-status-open inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium">
-            <Check size={12} />
-            Decision recorded
-          </span>
-        )}
+        <div className="flex items-center gap-3">
+          <Link
+            href={`/reviewer/my-reviews/${applicationId}`}
+            className="text-text-muted hover:text-text-default text-sm underline-offset-2 hover:underline"
+          >
+            View lead review
+          </Link>
+          {own?.decided_at && (
+            <span className="bg-status-open/15 text-status-open inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium">
+              <Check size={12} />
+              Decision recorded
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-6 sm:px-8">

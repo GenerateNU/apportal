@@ -50,7 +50,7 @@ const sectionsByRole: Record<Role, NavSection> = {
     label: 'Review',
     items: [
       { href: '/reviewer/applications', label: 'Applications', icon: Users },
-      { href: '/reviewer/my-reviews', label: 'Review Queue', icon: FileText },
+      { href: '/reviewer/my-reviews', label: 'Lead Review', icon: FileText },
       {
         href: '/reviewer/chief-review',
         label: 'Chief Review',
