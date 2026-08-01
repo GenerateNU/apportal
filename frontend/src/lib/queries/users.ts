@@ -41,6 +41,16 @@ export function useLeads(opts?: RequestOptions) {
   })
 }
 
+// Users holding the chief role — e.g. to pick an interviewer, which per
+// info.md can be a lead or a chief.
+export function useChiefs(opts?: RequestOptions) {
+  return useQuery({
+    queryKey: [...queryKeys.users.lists(), 'chief'],
+    queryFn: async () =>
+      ((await listUsers({ role: 'chief' }, opts))?.users ?? []) as User[],
+  })
+}
+
 // Paginated member list for admin/members' infinite scroll. `limit` is a
 // fixed page size chosen by the caller.
 export function useMembersInfinite(limit: number, opts?: RequestOptions) {

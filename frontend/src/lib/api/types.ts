@@ -14,6 +14,8 @@ import type {
   Cycle as GenCycle,
   CodeChallenge as GenCodeChallenge,
   CodeSubmission as GenCodeSubmission,
+  InterviewAssignment as GenInterviewAssignment,
+  InterviewReviewAssignment as GenInterviewReviewAssignment,
   Question as GenQuestion,
   ReviewQuestion as GenReviewQuestion,
   User as GenUser,
@@ -115,3 +117,10 @@ export type WrittenReviewDetail = Omit<
 export type CodeSubmission = Omit<GenCodeSubmission, '$schema'>
 
 export type ChiefReview = Omit<GenChiefReview, '$schema'>
+
+export type InterviewAssignment = Omit<GenInterviewAssignment, '$schema'>
+
+export type InterviewReviewAssignment = Omit<
+  GenInterviewReviewAssignment,
+  '$schema'
+>

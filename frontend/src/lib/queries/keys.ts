@@ -114,6 +114,20 @@ export const queryKeys = {
       [...queryKeys.leadAssignments.lists(), applicationId] as const,
   },
 
+  interviewAssignments: {
+    all: ['interview-assignments'] as const,
+    details: () => [...queryKeys.interviewAssignments.all, 'detail'] as const,
+    detail: (applicationId: string) =>
+      [...queryKeys.interviewAssignments.details(), applicationId] as const,
+  },
+
+  interviewReviewAssignments: {
+    all: ['interview-review-assignments'] as const,
+    lists: () => [...queryKeys.interviewReviewAssignments.all, 'list'] as const,
+    list: (applicationId: string) =>
+      [...queryKeys.interviewReviewAssignments.lists(), applicationId] as const,
+  },
+
   reviewGates: {
     all: ['review-gates'] as const,
     lists: () => [...queryKeys.reviewGates.all, 'list'] as const,
