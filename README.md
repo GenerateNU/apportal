@@ -17,6 +17,16 @@ pipeline, see [info.md](info.md).
 - A [Supabase](https://supabase.com/) project (Postgres + auth)
 - Optionally [Docker](https://www.docker.com/) to run the backend in a container
 
+Enable the repo's git hooks once per clone:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+This runs `make format` in `frontend/` before each commit that touches it, so
+formatting matches what [Frontend CI](.github/workflows/frontend-ci.yml)
+checks.
+
 ## Backend
 
 The Go backend connects to Supabase Postgres and can run directly on your
