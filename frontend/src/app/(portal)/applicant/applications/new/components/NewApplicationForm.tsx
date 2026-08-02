@@ -645,7 +645,7 @@ function Form({
       </button>
 
       <header className="mb-8">
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h1 className="text-text-default text-2xl font-semibold">
             {ROLE_LABEL[role]}
           </h1>

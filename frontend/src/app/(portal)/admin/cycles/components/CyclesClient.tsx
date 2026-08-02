@@ -75,7 +75,7 @@ function CycleRow({ cycle }: { cycle: Cycle }) {
   }
 
   return (
-    <div className="flex items-center justify-between gap-4 rounded-xl border border-gray-100 bg-white p-4">
+    <div className="flex flex-col gap-3 rounded-xl border border-gray-100 bg-white p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
       <div className="min-w-0">
         <div className="flex items-center gap-2">
           <span className="text-text-default truncate text-sm font-semibold">

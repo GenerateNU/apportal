@@ -41,7 +41,7 @@ export function ApplicationDetail({
         <div className="flex shrink-0 items-center justify-between py-2 pr-6 pl-2">
           <button
             onClick={onClose}
-            className="text-text-muted hover:text-text-default flex items-center justify-center rounded-md px-1 py-1 transition-colors hover:bg-gray-100"
+            className="text-text-muted hover:text-text-default flex items-center justify-center rounded-md px-1.5 py-1.5 transition-colors hover:bg-gray-100"
             aria-label="Close"
           >
             <ChevronsLeft className="h-5 w-5" />

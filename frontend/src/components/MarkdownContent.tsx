@@ -53,6 +53,9 @@ export function MarkdownContent({
               {children}
             </code>
           ),
+          pre: ({ children }) => (
+            <pre className="overflow-x-auto">{children}</pre>
+          ),
         }}
       >
         {children}

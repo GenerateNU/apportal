@@ -36,7 +36,7 @@ export default function PortalLayout({
           type="button"
           onClick={() => setNavOpen(true)}
           aria-label="Open menu"
-          className="text-text-subtle hover:text-text-default -ml-1.5 rounded-md p-1.5 hover:bg-gray-100"
+          className="text-text-subtle hover:text-text-default -ml-2 rounded-md p-2 hover:bg-gray-100"
         >
           <Menu size={20} />
         </button>
