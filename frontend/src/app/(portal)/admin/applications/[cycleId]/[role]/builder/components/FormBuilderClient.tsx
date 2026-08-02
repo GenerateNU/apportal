@@ -139,7 +139,7 @@ export function FormBuilderClient({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-start justify-between gap-3 border-b-2 border-gray-100 px-4 py-4 sm:px-8 sm:py-6">
+      <div className="flex flex-col gap-3 border-b-2 border-gray-100 px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:px-8 sm:py-6">
         <div className="flex flex-col gap-2">
           <Link
             href="/admin/applications"
@@ -161,7 +161,7 @@ export function FormBuilderClient({
           </span>
         </div>
 
-        <div className="flex items-center gap-6">
+        <div className="flex flex-wrap items-center gap-3 sm:gap-6">
           <div className="flex gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1">
             <button
               type="button"

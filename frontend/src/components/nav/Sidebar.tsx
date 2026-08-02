@@ -112,7 +112,7 @@ function SidebarUser({ fullName }: { fullName: string }) {
           type="button"
           onClick={handleSignOut}
           aria-label="Sign out"
-          className="text-text-subtle hover:text-text-default flex-shrink-0 rounded-md p-1.5 transition-colors hover:bg-gray-100"
+          className="text-text-subtle hover:text-text-default flex-shrink-0 rounded-md p-2 transition-colors hover:bg-gray-100"
         >
           <LogOut size={16} />
         </button>
@@ -151,7 +151,7 @@ export default function Sidebar({ roles, fullName, isChief }: SidebarProps) {
             <p className="text-text-subtle mb-2 px-2 text-xs font-semibold tracking-wider uppercase">
               {section.label}
             </p>
-            <div className="flex flex-col gap-0.5">
+            <div className="flex flex-col gap-1">
               {section.items.map(({ href, label, icon }) => (
                 <NavItem key={href} href={href} label={label} icon={icon} />
               ))}

@@ -118,7 +118,10 @@ function DateTimePicker({
           {value ? formattedValue : placeholder}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-3" align="start">
+      <PopoverContent
+        className="w-80 max-w-[calc(100vw-2rem)] p-3"
+        align="start"
+      >
         <div className="space-y-3">
           {/* Month/Year Navigation */}
           <div className="flex items-center justify-between gap-2">
