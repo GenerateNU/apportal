@@ -236,16 +236,25 @@ func (h *applicationHandler) update(ctx context.Context, in *UpdateApplicationIn
 		}
 	}
 
-	// Applicants self-servicing their own application (as opposed to a
-	// reviewer advancing it through the pipeline) may only flip their own
-	// draft to submitted, and only once it's actually complete — never any
-	// other stage, and never someone else's application.
-	if isOwner && !isReviewer && in.Body.Stage != nil {
-		if current.Stage != models.StageDraft || *in.Body.Stage != models.StageSubmitted {
-			return nil, huma.Error403Forbidden("applicants may only submit their own draft")
+	if in.Body.Stage != nil {
+		// Applicants self-servicing their own application (as opposed to a
+		// reviewer advancing it through the pipeline) may only flip their own
+		// draft to submitted — never any other stage, and never someone
+		// else's application.
+		if isOwner && !isReviewer {
+			if current.Stage != models.StageDraft || *in.Body.Stage != models.StageSubmitted {
+				return nil, huma.Error403Forbidden("applicants may only submit their own draft")
+			}
 		}
-		if err := h.requireComplete(ctx, current); err != nil {
-			return nil, err
+
+		// The draft->submitted completeness check applies regardless of who
+		// initiates it, so a reviewer/admin (or an owner who also holds a
+		// reviewer role) can't move a still-incomplete draft to submitted on
+		// an applicant's behalf and bypass the required-answers validation.
+		if current.Stage == models.StageDraft && *in.Body.Stage == models.StageSubmitted {
+			if err := h.requireComplete(ctx, current); err != nil {
+				return nil, err
+			}
 		}
 	}
 
