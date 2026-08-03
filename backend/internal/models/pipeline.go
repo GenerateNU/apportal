@@ -1,6 +1,9 @@
 package models
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 // Structs for the review → interview → selection pipeline. Field order matches
 // each table's column order so pgx.RowToStructByPos maps them correctly.
@@ -15,31 +18,49 @@ type LeadAssignment struct {
 	AssignedAt    time.Time `json:"assigned_at"`
 }
 
-// WrittenReview: a lead's 1–10 score and reasoning for an application.
+// WrittenReview: a lead's review of an application. The rubric itself (what
+// questions get answered) is dynamic — see ReviewQuestion/WrittenReviewAnswer.
 type WrittenReview struct {
 	ID            string     `json:"id"`
 	ApplicationID string     `json:"application_id"`
 	ReviewerNUID  string     `json:"reviewer_nuid"`
-	OverallScore  *int       `json:"overall_score,omitempty"`
-	Reasoning     *string    `json:"reasoning,omitempty"`
 	SubmittedAt   *time.Time `json:"submitted_at,omitempty"`
 	CreatedAt     time.Time  `json:"created_at"`
 	UpdatedAt     time.Time  `json:"updated_at"`
 }
 
-// WrittenReviewAnswerScore: a per-answer score within a written review.
-type WrittenReviewAnswerScore struct {
-	ID       string  `json:"id"`
-	ReviewID string  `json:"review_id"`
-	AnswerID string  `json:"answer_id"`
-	Score    *int    `json:"score,omitempty"`
-	Comment  *string `json:"comment,omitempty"`
+// ReviewQuestion: a chief-defined rubric question for lead written reviews,
+// scoped to a cycle and (optionally) a specific role — same shape as
+// Question, minus PageTitle (review forms are short; no multi-page need).
+type ReviewQuestion struct {
+	ID           string          `json:"id"`
+	CycleID      string          `json:"cycle_id"`
+	Role         *Role           `json:"role,omitempty"`
+	QuestionText string          `json:"question_text"`
+	QuestionType QuestionType    `json:"question_type"`
+	IsRequired   bool            `json:"is_required"`
+	DisplayOrder int             `json:"display_order"`
+	Options      json.RawMessage `json:"options,omitempty"`
+	CreatedAt    time.Time       `json:"created_at"`
 }
 
-// WrittenReviewDetail bundles a review with its per-answer scores (not a table).
+// WrittenReviewAnswer: a reviewer's answer to one ReviewQuestion within a
+// written review — replaces the old fixed overall_score/reasoning columns.
+type WrittenReviewAnswer struct {
+	ID               string          `json:"id"`
+	ReviewID         string          `json:"review_id"`
+	ReviewQuestionID string          `json:"review_question_id"`
+	AnswerText       *string         `json:"answer_text,omitempty"`
+	AnswerOptions    json.RawMessage `json:"answer_options,omitempty"`
+	Score            *int            `json:"score,omitempty"`
+	SubmittedAt      time.Time       `json:"submitted_at"`
+}
+
+// WrittenReviewDetail bundles a review with its answers to the cycle/role's
+// review questions (not a table).
 type WrittenReviewDetail struct {
 	WrittenReview
-	AnswerScores []WrittenReviewAnswerScore `json:"answer_scores"`
+	Answers []WrittenReviewAnswer `json:"answers"`
 }
 
 // ReviewGate reports the blind-review state of one review kind for one applicant

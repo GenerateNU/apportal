@@ -32,12 +32,18 @@ import {
   useApplicationTemplate,
   useUpdateApplicationTemplate,
 } from '@/lib/queries/application-templates'
-import { useQuestions, useReorderQuestions } from '@/lib/queries/questions'
+import {
+  useDeleteQuestion,
+  useQuestions,
+  useReorderQuestions,
+  useUpdateQuestion,
+} from '@/lib/queries/questions'
 import { ROLE_CHIP_CLASS, ROLE_LABEL } from '@/lib/roles'
 import { BlockPalette } from './BlockPalette'
 import { QuestionCard } from './QuestionCard'
 import { QuestionOutline } from './QuestionOutline'
 import { LivePreview } from './LivePreview'
+import { ReviewQuestionsBuilderClient } from './ReviewQuestionsBuilderClient'
 import { TemplateTextBlock } from './TemplateTextBlock'
 import { TEMPLATE_STATUS_LABEL, TEMPLATE_STATUS_ORDER } from './constants'
 
@@ -52,16 +58,29 @@ export function FormBuilderClient({
 }) {
   const { data: questions = [] } = useQuestions(cycleId, role)
   const reorderQuestions = useReorderQuestions(cycleId, role)
+  const updateQuestion = useUpdateQuestion()
+  const deleteQuestion = useDeleteQuestion()
 
   const { data: template } = useApplicationTemplate(cycleId, role)
   const updateTemplate = useUpdateApplicationTemplate()
 
+  const [mode, setMode] = useState<'application' | 'review'>('application')
+
+  // Applications and reviews each get their own independent status/deadline
+  // (review_status/review_closes_at are purely informational — unlike the
+  // application's own closes_at, nothing enforces them; a lead can still
+  // submit a review after the review deadline passes).
+  const status =
+    mode === 'application' ? template?.status : template?.review_status
+  const closesAt =
+    mode === 'application' ? template?.closes_at : template?.review_closes_at
+
   function changeStatus(next: CycleStatus) {
-    if (!template || next === template.status) return
+    if (!template || next === status) return
     updateTemplate.mutate({
       cycleId,
       role,
-      body: { status: next },
+      body: mode === 'application' ? { status: next } : { review_status: next },
     })
   }
 
@@ -70,7 +89,10 @@ export function FormBuilderClient({
     updateTemplate.mutate({
       cycleId,
       role,
-      body: { closes_at: date.toISOString() },
+      body:
+        mode === 'application'
+          ? { closes_at: date.toISOString() }
+          : { review_closes_at: date.toISOString() },
     })
   }
 
@@ -117,7 +139,7 @@ export function FormBuilderClient({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-start justify-between gap-3 border-b-2 border-gray-100 px-4 py-4 sm:px-8 sm:py-6">
+      <div className="flex flex-col gap-3 border-b-2 border-gray-100 px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:px-8 sm:py-6">
         <div className="flex flex-col gap-2">
           <Link
             href="/admin/applications"
@@ -139,15 +161,42 @@ export function FormBuilderClient({
           </span>
         </div>
 
-        <div className="flex items-center gap-6">
-          {template && (
+        <div className="flex flex-wrap items-center gap-3 sm:gap-6">
+          <div className="flex gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1">
+            <button
+              type="button"
+              onClick={() => setMode('application')}
+              className={cn(
+                'rounded-md px-2.5 py-1 text-sm font-medium transition-colors',
+                mode === 'application'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              )}
+            >
+              Application questions
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode('review')}
+              className={cn(
+                'rounded-md px-2.5 py-1 text-sm font-medium transition-colors',
+                mode === 'review'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              )}
+            >
+              Review questions
+            </button>
+          </div>
+
+          {template && status && (
             <>
               <div className="flex items-center gap-1.5">
                 <AlertCircle className="h-5 w-5 text-gray-500" />
                 <span className="text-sm font-medium whitespace-nowrap text-gray-600">
-                  Status
+                  {mode === 'application' ? 'Status' : 'Review status'}
                 </span>
-                <Select value={template.status} onValueChange={changeStatus}>
+                <Select value={status} onValueChange={changeStatus}>
                   <SelectTrigger className="h-8 w-32 px-2.5 py-1.5 text-sm">
                     <SelectValue />
                   </SelectTrigger>
@@ -164,14 +213,10 @@ export function FormBuilderClient({
               <div className="flex items-center gap-1.5">
                 <Clock className="h-5 w-5 text-gray-500" />
                 <span className="text-sm font-medium whitespace-nowrap text-gray-600">
-                  Deadline
+                  {mode === 'application' ? 'Deadline' : 'Review deadline'}
                 </span>
                 <DateTimePicker
-                  value={
-                    template.closes_at
-                      ? new Date(template.closes_at)
-                      : undefined
-                  }
+                  value={closesAt ? new Date(closesAt) : undefined}
                   onValueChange={changeDeadline}
                   placeholder="Set deadline"
                 />
@@ -179,27 +224,31 @@ export function FormBuilderClient({
             </>
           )}
 
-          <button
-            type="button"
-            onClick={() => setShowPreview((prev) => !prev)}
-            className="text-text-secondary border-input focus-visible:border-ring focus-visible:ring-ring/50 flex h-8 items-center gap-2 rounded-lg border bg-transparent px-2.5 py-1.5 text-sm font-medium transition-all hover:border-gray-300 focus-visible:ring-3"
-          >
-            {showPreview ? (
-              <>
-                <Pencil className="h-5 w-5" />
-                Edit
-              </>
-            ) : (
-              <>
-                <Eye className="h-5 w-5" />
-                Preview
-              </>
-            )}
-          </button>
+          {mode === 'application' && (
+            <button
+              type="button"
+              onClick={() => setShowPreview((prev) => !prev)}
+              className="text-text-secondary border-input focus-visible:border-ring focus-visible:ring-ring/50 flex h-8 items-center gap-2 rounded-lg border bg-transparent px-2.5 py-1.5 text-sm font-medium transition-all hover:border-gray-300 focus-visible:ring-3"
+            >
+              {showPreview ? (
+                <>
+                  <Pencil className="h-5 w-5" />
+                  Edit
+                </>
+              ) : (
+                <>
+                  <Eye className="h-5 w-5" />
+                  Preview
+                </>
+              )}
+            </button>
+          )}
         </div>
       </div>
 
-      {showPreview ? (
+      {mode === 'review' ? (
+        <ReviewQuestionsBuilderClient cycleId={cycleId} role={role} />
+      ) : showPreview ? (
         <div className="flex-1 overflow-y-auto bg-gray-50 p-4 sm:p-10">
           <div className="mx-auto max-w-2xl">
             <LivePreview
@@ -257,7 +306,18 @@ export function FormBuilderClient({
                             <div className="h-px flex-1 bg-gray-200" />
                           </div>
                         )}
-                        <QuestionCard question={question} />
+                        <QuestionCard
+                          question={question}
+                          onUpdate={(body) =>
+                            updateQuestion.mutate({
+                              id: question.id,
+                              body,
+                            })
+                          }
+                          onDelete={() =>
+                            deleteQuestion.mutate({ id: question.id })
+                          }
+                        />
                       </Fragment>
                     ))}
                     {order.length === 0 && (

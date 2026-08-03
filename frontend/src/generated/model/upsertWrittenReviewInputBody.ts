@@ -5,18 +5,12 @@
  * Generate application portal — applications, reviews, and the hiring pipeline.
  * OpenAPI spec version: 0.1.0
  */
-import type { UpsertWrittenReviewInputBodyAnswerScores } from './upsertWrittenReviewInputBodyAnswerScores';
+import type { UpsertWrittenReviewInputBodyAnswers } from './upsertWrittenReviewInputBodyAnswers';
 
 export interface UpsertWrittenReviewInputBody {
   /** A URL to the JSON Schema for this object. */
   readonly $schema?: string;
-  answer_scores?: UpsertWrittenReviewInputBodyAnswerScores;
-  /**
-   * @minimum 1
-   * @maximum 10
-   */
-  overall_score?: number;
-  reasoning?: string;
+  answers?: UpsertWrittenReviewInputBodyAnswers;
   /** When true, marks the review as submitted */
   submit?: boolean;
 }

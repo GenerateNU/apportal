@@ -10,12 +10,18 @@ import type {
   Application as GenApplication,
   ApplicationSummary as GenApplicationSummary,
   ApplicationTemplate as GenApplicationTemplate,
+  ChiefReview as GenChiefReview,
   Cycle as GenCycle,
   CodeChallenge as GenCodeChallenge,
   CodeSubmission as GenCodeSubmission,
+  InterviewAssignment as GenInterviewAssignment,
+  InterviewReviewAssignment as GenInterviewReviewAssignment,
   Question as GenQuestion,
+  ReviewQuestion as GenReviewQuestion,
   User as GenUser,
   WrittenAnswer as GenWrittenAnswer,
+  WrittenReviewAnswer as GenWrittenReviewAnswer,
+  WrittenReviewDetail as GenWrittenReviewDetail,
   ApplicationRole,
   ApplicationStage,
   QuestionQuestionType,
@@ -53,6 +59,17 @@ export type Question = Omit<GenQuestion, '$schema' | 'options' | 'role'> & {
   role: Role | null
 }
 
+// Same shape as Question, minus page_title (review forms are short; no
+// multi-page need) — a chief-defined rubric question for lead written
+// reviews, scoped to a cycle and (optionally) a specific role.
+export type ReviewQuestion = Omit<
+  GenReviewQuestion,
+  '$schema' | 'options' | 'role'
+> & {
+  options: string[] | null
+  role: Role | null
+}
+
 export type CodeChallenge = Omit<GenCodeChallenge, '$schema'>
 
 export type Application = Omit<
@@ -82,4 +99,28 @@ export type WrittenAnswer = Omit<GenWrittenAnswer, 'answer_options'> & {
   answer_options: string[] | null
 }
 
+// A reviewer's answer to one ReviewQuestion within a written review.
+export type WrittenReviewAnswer = Omit<
+  GenWrittenReviewAnswer,
+  'answer_options'
+> & {
+  answer_options: string[] | null
+}
+
+export type WrittenReviewDetail = Omit<
+  GenWrittenReviewDetail,
+  '$schema' | 'answers'
+> & {
+  answers: WrittenReviewAnswer[]
+}
+
 export type CodeSubmission = Omit<GenCodeSubmission, '$schema'>
+
+export type ChiefReview = Omit<GenChiefReview, '$schema'>
+
+export type InterviewAssignment = Omit<GenInterviewAssignment, '$schema'>
+
+export type InterviewReviewAssignment = Omit<
+  GenInterviewReviewAssignment,
+  '$schema'
+>

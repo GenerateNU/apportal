@@ -5,8 +5,17 @@ import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import type { Role } from '@/lib/api/types'
 import { useApplicantsByNuids } from '@/lib/queries/applicants'
 import { useApplications } from '@/lib/queries/applications'
+import { useCycles } from '@/lib/queries/cycles'
 import { useCurrentUser } from '@/lib/queries/users'
 import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 
@@ -16,10 +25,19 @@ export function ReviewQueueClient() {
   const router = useRouter()
   const [scope, setScope] = useState<Scope>('mine')
   const { data: currentUser } = useCurrentUser()
+  const { data: cycles = [] } = useCycles({})
 
-  const { data: applications = [] } = useApplications(
-    scope === 'mine' ? { assigned_to: currentUser?.nuid ?? '' } : {}
-  )
+  // Unlike the chief-only pipeline pages, this is a personal task queue, so
+  // cycle and role default to "all" rather than forcing a single pick —
+  // narrowing is optional, not required to see your work.
+  const [cycleId, setCycleId] = useState<string>('all')
+  const [activeRole, setActiveRole] = useState<Role | 'all'>('all')
+
+  const { data: applications = [] } = useApplications({
+    ...(scope === 'mine' && { assigned_to: currentUser?.nuid ?? '' }),
+    ...(cycleId !== 'all' && { cycle_id: cycleId }),
+    ...(activeRole !== 'all' && { role: activeRole }),
+  })
 
   const nuids = useMemo(
     () => [...new Set(applications.map((a) => a.user_nuid))],
@@ -37,7 +55,7 @@ export function ReviewQueueClient() {
 
   return (
     <PageContainer>
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-text-default text-2xl font-semibold">
             Review queue
@@ -48,21 +66,52 @@ export function ReviewQueueClient() {
               : 'All submitted applications.'}
           </p>
         </div>
-        <div className="flex shrink-0 gap-1 rounded-lg border border-gray-100 bg-white p-1">
-          <Button
-            size="sm"
-            variant={scope === 'mine' ? 'default' : 'ghost'}
-            onClick={() => setScope('mine')}
+        <div className="flex flex-wrap items-center gap-3">
+          <Select
+            value={activeRole}
+            onValueChange={(val) => setActiveRole(val as Role | 'all')}
           >
-            Assigned to me
-          </Button>
-          <Button
-            size="sm"
-            variant={scope === 'all' ? 'default' : 'ghost'}
-            onClick={() => setScope('all')}
-          >
-            All
-          </Button>
+            <SelectTrigger className="w-48" aria-label="Filter by role">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All roles</SelectItem>
+              {ROLE_COLUMNS.map((r) => (
+                <SelectItem key={r} value={r}>
+                  {ROLE_LABEL[r]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={cycleId} onValueChange={setCycleId}>
+            <SelectTrigger className="w-40" aria-label="Filter by cycle">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All cycles</SelectItem>
+              {cycles.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <div className="flex shrink-0 gap-1 rounded-lg border border-gray-100 bg-white p-1">
+            <Button
+              size="sm"
+              variant={scope === 'mine' ? 'default' : 'ghost'}
+              onClick={() => setScope('mine')}
+            >
+              Assigned to me
+            </Button>
+            <Button
+              size="sm"
+              variant={scope === 'all' ? 'default' : 'ghost'}
+              onClick={() => setScope('all')}
+            >
+              All
+            </Button>
+          </div>
         </div>
       </div>
 

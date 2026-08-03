@@ -161,7 +161,7 @@ export function MembersClient() {
 
       <AddMemberDialog open={showAddMember} onOpenChange={setShowAddMember} />
 
-      {members.length === 0 ? (
+      {members.length === 0 && !hasNextPage ? (
         <div className="rounded-xl border border-dashed border-gray-200 bg-white p-10 text-center">
           <p className="text-text-default text-sm font-medium">
             {isFiltered
@@ -182,18 +182,32 @@ export function MembersClient() {
               <span>{view === 'staff' ? 'Role' : 'Status'}</span>
             </div>
             <div className="divide-y divide-gray-100">
-              {members.map((user) =>
-                view === 'staff' ? (
-                  <MemberRow key={user.nuid} user={user} gridCols={gridCols} />
-                ) : (
-                  <ApplicantRow
-                    key={user.nuid}
-                    user={user}
-                    gridCols={gridCols}
-                  />
+              {members.length === 0 ? (
+                <p className="text-text-faint px-4 py-6 text-center text-sm">
+                  Searching more results…
+                </p>
+              ) : (
+                members.map((user) =>
+                  view === 'staff' ? (
+                    <MemberRow
+                      key={user.nuid}
+                      user={user}
+                      gridCols={gridCols}
+                    />
+                  ) : (
+                    <ApplicantRow
+                      key={user.nuid}
+                      user={user}
+                      gridCols={gridCols}
+                    />
+                  )
                 )
               )}
             </div>
+            {/* Rendered whenever more pages remain — even while the current
+                filtered page is empty — so the observer keeps paging through
+                batches that happen to contain no matches for this view/search
+                instead of getting stuck once a page filters down to nothing. */}
             {hasNextPage && (
               <div ref={sentinelRef} className="p-3 text-center">
                 <p className="text-text-faint text-xs">

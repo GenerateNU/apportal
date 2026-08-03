@@ -4,12 +4,12 @@ import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Check, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import type { Role } from '@/lib/api/types'
 import { useAnswers } from '@/lib/queries/answers'
 import { useApplicant } from '@/lib/queries/applicants'
+import { useApplicationTemplate } from '@/lib/queries/application-templates'
 import { useQuestions } from '@/lib/queries/questions'
+import { useReviewQuestions } from '@/lib/queries/review-questions'
 import { useCurrentUser } from '@/lib/queries/users'
 import {
   useUpsertWrittenReview,
@@ -17,11 +17,10 @@ import {
 } from '@/lib/queries/written-reviews'
 import { ROLE_LABEL } from '@/lib/roles'
 import { ResponseField } from '@/app/(portal)/reviewer/applications/components/ResponseField'
-
-const TEXTAREA_CLASS =
-  'border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 min-h-24 w-full rounded-lg border bg-transparent px-2.5 py-2 text-sm outline-none focus-visible:ring-3'
-
-type ScoreEntry = { score: string; comment: string }
+import {
+  QuestionField,
+  type AnswerValue,
+} from '@/app/(portal)/applicant/applications/components/QuestionField'
 
 export function ReviewClient({
   applicationId,
@@ -38,84 +37,93 @@ export function ReviewClient({
   const { data: applicant } = useApplicant(applicantNuid)
   const { data: answers = [] } = useAnswers(applicationId)
   const { data: questions = [] } = useQuestions(cycleId, role)
+  const { data: reviewQuestions = [] } = useReviewQuestions(cycleId, role)
+  const { data: template } = useApplicationTemplate(cycleId, role)
   const { data: reviews = [] } = useWrittenReviews(applicationId)
   const upsert = useUpsertWrittenReview()
+
+  const isChief = !!currentUser?.roles.some(
+    (r) => r === 'chief' || r === 'admin'
+  )
+
+  const reviewQuestionById = useMemo(
+    () => new Map(reviewQuestions.map((q) => [q.id, q])),
+    [reviewQuestions]
+  )
 
   const own = reviews.find((r) => r.reviewer_nuid === currentUser?.nuid)
   const others = reviews.filter((r) => r.reviewer_nuid !== currentUser?.nuid)
 
-  // Applicant answers, ordered by their question's display order.
-  const questionById = useMemo(
-    () => new Map(questions.map((q) => [q.id, q])),
-    [questions]
-  )
-  const orderedAnswers = useMemo(
-    () =>
-      [...answers].sort(
-        (a, b) =>
-          (questionById.get(a.question_id)?.display_order ?? 0) -
-          (questionById.get(b.question_id)?.display_order ?? 0)
-      ),
-    [answers, questionById]
-  )
-
+  // Applicant answers keyed by question id, for the read-only left panel.
   const answersByQuestionId = useMemo(
     () => new Map(answers.map((a) => [a.question_id, a])),
     [answers]
   )
 
-  const [scores, setScores] = useState<Record<string, ScoreEntry>>({})
-  const [overall, setOverall] = useState('')
-  const [reasoning, setReasoning] = useState('')
+  const [reviewValues, setReviewValues] = useState<Record<string, AnswerValue>>(
+    {}
+  )
   const [seeded, setSeeded] = useState(false)
   const [saved, setSaved] = useState(false)
 
   // Seed the form from the reviewer's existing review, once loaded.
   if (!seeded && reviews) {
-    const seededScores: Record<string, ScoreEntry> = {}
-    for (const s of own?.answer_scores ?? []) {
-      seededScores[s.answer_id] = {
-        score: s.score != null ? String(s.score) : '',
-        comment: s.comment ?? '',
+    const seededValues: Record<string, AnswerValue> = {}
+    for (const a of own?.answers ?? []) {
+      if (a.score != null) {
+        seededValues[a.review_question_id] = { text: String(a.score) }
+      } else if (a.answer_options?.length) {
+        seededValues[a.review_question_id] = { options: a.answer_options }
+      } else {
+        seededValues[a.review_question_id] = { text: a.answer_text ?? '' }
       }
     }
-    setScores(seededScores)
-    setOverall(own?.overall_score != null ? String(own.overall_score) : '')
-    setReasoning(own?.reasoning ?? '')
+    setReviewValues(seededValues)
     setSeeded(true)
   }
 
   const submitted = !!own?.submitted_at
 
+  function isMissing(q: (typeof reviewQuestions)[number]) {
+    if (!q.is_required) return false
+    const v = reviewValues[q.id]
+    if (q.question_type === 'checkbox') return !v?.options?.length
+    return !v?.text?.trim()
+  }
+  const missingRequired = reviewQuestions.some(isMissing)
+
   async function save(submit: boolean) {
     setSaved(false)
-    const answerScores = orderedAnswers
-      .map((a) => {
-        const entry = scores[a.id]
-        const score = entry?.score ? Number(entry.score) : undefined
-        const comment = entry?.comment?.trim() || undefined
-        if (score === undefined && !comment) return null
-        return { answer_id: a.id, score, comment }
-      })
-      .filter((x): x is NonNullable<typeof x> => x !== null)
+
+    // Always send one entry per review question (not just the answered
+    // ones) — a question that was cleared needs to actually clear the
+    // stored answer, not leave the stale value in place.
+    const reviewAnswers = reviewQuestions.map((q) => {
+      const v = reviewValues[q.id]
+      if (q.question_type === 'checkbox') {
+        return { review_question_id: q.id, answer_options: v?.options ?? [] }
+      }
+      if (q.question_type === 'score') {
+        return {
+          review_question_id: q.id,
+          score: v?.text ? Number(v.text) : undefined,
+        }
+      }
+      return { review_question_id: q.id, answer_text: v?.text ?? '' }
+    })
 
     await upsert.mutateAsync({
       applicationId,
       body: {
-        overall_score: overall ? Number(overall) : undefined,
-        reasoning: reasoning.trim() || undefined,
         submit,
-        answer_scores: answerScores,
+        answers: reviewAnswers,
       },
     })
     setSaved(true)
   }
 
-  function setScore(answerId: string, patch: Partial<ScoreEntry>) {
-    setScores((prev) => {
-      const current = prev[answerId] ?? { score: '', comment: '' }
-      return { ...prev, [answerId]: { ...current, ...patch } }
-    })
+  function updateReviewValue(id: string, next: AnswerValue) {
+    setReviewValues((prev) => ({ ...prev, [id]: next }))
   }
 
   return (
@@ -137,12 +145,22 @@ export function ReviewClient({
             <p className="text-text-muted text-xs">{ROLE_LABEL[role]}</p>
           </div>
         </div>
-        {submitted && (
-          <span className="bg-status-open/15 text-status-open inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium">
-            <Check size={12} />
-            Review submitted
-          </span>
-        )}
+        <div className="flex items-center gap-3">
+          {isChief && (
+            <Link
+              href={`/reviewer/chief-review/${applicationId}`}
+              className="text-text-muted hover:text-text-default text-sm underline-offset-2 hover:underline"
+            >
+              Chief review
+            </Link>
+          )}
+          {submitted && (
+            <span className="bg-status-open/15 text-status-open inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium">
+              <Check size={12} />
+              Review submitted
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Split: application (left) · review (right) on desktop; stacked on mobile */}
@@ -167,81 +185,38 @@ export function ReviewClient({
         {/* Review */}
         <div className="lg:flex lg:min-h-0 lg:flex-col">
           <div className="px-4 py-4 sm:px-8 sm:py-6 lg:flex-1 lg:overflow-y-auto">
-            <h2 className="text-text-subtle mb-4 text-xs font-medium tracking-wider uppercase">
+            <h2
+              className={`text-text-subtle text-xs font-medium tracking-wider uppercase ${template?.review_closes_at ? 'mb-1' : 'mb-4'}`}
+            >
               Your review
             </h2>
+            {template?.review_closes_at && (
+              <p className="text-text-muted mb-4 text-xs">
+                Reviews are due by{' '}
+                {new Date(template.review_closes_at).toLocaleString(undefined, {
+                  dateStyle: 'medium',
+                  timeStyle: 'short',
+                })}
+                . You can still save and submit after this — it&apos;s just a
+                target.
+              </p>
+            )}
             <div className="flex flex-col gap-4">
-              {orderedAnswers.map((answer, i) => {
-                const question = questionById.get(answer.question_id)
-                const entry = scores[answer.id] ?? { score: '', comment: '' }
-                return (
-                  <div
-                    key={answer.id}
-                    className="rounded-xl border border-gray-100 bg-white p-4"
-                  >
-                    <p className="text-text-muted line-clamp-2 text-xs font-medium">
-                      Q{i + 1}. {question?.question_text ?? 'Question'}
-                    </p>
-                    <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end">
-                      <div className="flex flex-col gap-1.5">
-                        <Label htmlFor={`score-${answer.id}`}>Score</Label>
-                        <Input
-                          id={`score-${answer.id}`}
-                          type="number"
-                          min={1}
-                          max={10}
-                          className="w-20"
-                          value={entry.score}
-                          onChange={(e) =>
-                            setScore(answer.id, { score: e.target.value })
-                          }
-                        />
-                      </div>
-                      <div className="flex flex-1 flex-col gap-1.5">
-                        <Label htmlFor={`comment-${answer.id}`}>Comment</Label>
-                        <Input
-                          id={`comment-${answer.id}`}
-                          value={entry.comment}
-                          onChange={(e) =>
-                            setScore(answer.id, { comment: e.target.value })
-                          }
-                          placeholder="Optional"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-
-              <div className="rounded-xl border border-gray-100 bg-white p-4">
-                <h3 className="text-text-default mb-3 text-sm font-semibold">
-                  Overall
-                </h3>
-                <div className="flex flex-col gap-4">
-                  <div className="flex flex-col gap-1.5">
-                    <Label htmlFor="overall">Overall score (1–10)</Label>
-                    <Input
-                      id="overall"
-                      type="number"
-                      min={1}
-                      max={10}
-                      className="w-20"
-                      value={overall}
-                      onChange={(e) => setOverall(e.target.value)}
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <Label htmlFor="reasoning">Reasoning</Label>
-                    <textarea
-                      id="reasoning"
-                      className={TEXTAREA_CLASS}
-                      value={reasoning}
-                      onChange={(e) => setReasoning(e.target.value)}
-                      placeholder="Your overall assessment of this applicant"
-                    />
-                  </div>
-                </div>
-              </div>
+              {reviewQuestions.length === 0 ? (
+                <p className="text-text-faint text-sm">
+                  No review questions have been set up for this cycle/role yet.
+                </p>
+              ) : (
+                reviewQuestions.map((q, i) => (
+                  <QuestionField
+                    key={q.id}
+                    question={q}
+                    index={i}
+                    value={reviewValues[q.id] ?? {}}
+                    onChange={(next) => updateReviewValue(q.id, next)}
+                  />
+                ))
+              )}
 
               {others.length > 0 && (
                 <div>
@@ -254,21 +229,33 @@ export function ReviewClient({
                         key={r.id}
                         className="rounded-xl border border-gray-100 bg-white p-4"
                       >
-                        <div className="flex items-center justify-between">
-                          <span className="text-text-muted text-xs">
-                            Reviewer {r.reviewer_nuid}
-                          </span>
-                          {r.overall_score != null && (
-                            <span className="text-text-default text-sm font-semibold">
-                              {r.overall_score}/10
-                            </span>
-                          )}
+                        <span className="text-text-muted text-xs">
+                          Reviewer {r.reviewer_nuid}
+                        </span>
+                        <div className="mt-2 flex flex-col gap-2">
+                          {r.answers.map((a) => {
+                            const q = reviewQuestionById.get(
+                              a.review_question_id
+                            )
+                            const display =
+                              a.score != null
+                                ? `${a.score}/10`
+                                : a.answer_options?.length
+                                  ? a.answer_options.join(', ')
+                                  : a.answer_text
+                            if (!display) return null
+                            return (
+                              <div key={a.id}>
+                                <p className="text-text-muted text-xs font-medium">
+                                  {q?.question_text ?? 'Question'}
+                                </p>
+                                <p className="text-text-default text-sm whitespace-pre-wrap">
+                                  {display}
+                                </p>
+                              </div>
+                            )
+                          })}
                         </div>
-                        {r.reasoning && (
-                          <p className="text-text-muted mt-2 text-sm whitespace-pre-wrap">
-                            {r.reasoning}
-                          </p>
-                        )}
                       </div>
                     ))}
                   </div>
@@ -295,7 +282,7 @@ export function ReviewClient({
             </Button>
             <Button
               onClick={() => save(true)}
-              disabled={upsert.isPending || !overall}
+              disabled={upsert.isPending || missingRequired}
               className="w-full sm:w-auto"
             >
               {upsert.isPending ? (

@@ -17,6 +17,16 @@ pipeline, see [info.md](info.md).
 - A [Supabase](https://supabase.com/) project (Postgres + auth)
 - Optionally [Docker](https://www.docker.com/) to run the backend in a container
 
+Enable the repo's git hooks once per clone:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+This runs `make format` in `frontend/` before each commit that touches it, so
+formatting matches what [Frontend CI](.github/workflows/frontend-ci.yml)
+checks.
+
 ## Backend
 
 The Go backend connects to Supabase Postgres and can run directly on your
@@ -58,6 +68,72 @@ From [backend/](backend/):
 ```bash
 make docker-up
 ```
+
+### Local Database
+
+The Supabase project (config, migrations, seed) lives in
+[backend/internal/supabase/](backend/internal/supabase/). Running it locally
+requires [Docker](https://www.docker.com/) and the
+[Supabase CLI](https://supabase.com/docs/guides/local-development/cli/getting-started).
+
+From [backend/](backend/):
+
+```bash
+supabase start --workdir internal   # start Postgres, Studio, Auth, Storage, etc.
+supabase stop --workdir internal    # tear down
+```
+
+`supabase start` prints connection details, including:
+
+- Database: `postgresql://postgres:postgres@127.0.0.1:54322/postgres`
+- Studio (DB browser): <http://127.0.0.1:54323>
+
+Point the backend at it by setting `DATABASE_URL` in `backend/.env` to the
+local database URL above instead of the hosted Supabase Session Pooler URL.
+Note that Supabase auth still requires `SUPABASE_URL` to point at a real
+project — logging in works against that, but any user without a matching row
+in the local `users` table will fail requests that look up the current actor.
+
+### Copying Prod Data Locally
+
+A fresh local database starts empty (aside from `seed.sql`, if present) — no
+users, applications, or cycles. If you need real-shaped data to test against
+(e.g. to reproduce a bug, or to exercise an existing account's roles), you
+can copy data from the hosted project into your local one.
+
+This isn't a maintained script, just a manual recipe — treat
+`DATABASE_URL_DOCKER` in `backend/.env` as the source (it already holds the
+hosted Supabase Session Pooler URL) and the local `supabase_db_internal`
+Docker container as the destination. Run `pg_dump`/`psql` **inside** that
+container rather than with your host's client — the local Postgres image is
+on a specific major version (currently 17), and `pg_dump` refuses to dump
+from a server newer than itself:
+
+```bash
+# from backend/, with the local stack already running (supabase start)
+export PROD_URL=$(grep '^DATABASE_URL_DOCKER=' .env | cut -d'=' -f2-)
+docker exec supabase_db_internal pg_dump "$PROD_URL" --data-only --schema=public -f /tmp/prod_data.sql
+docker exec supabase_db_internal psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f /tmp/prod_data.sql
+```
+
+This dumps every `public` schema table's data (not `auth.*` — Supabase auth
+is untouched) and restores it in one transaction-safe pass, so foreign key
+ordering across tables is handled automatically. Since this reads real user
+data from production, don't run it against a database or machine you
+wouldn't want that data sitting on.
+
+### Testing Migrations
+
+```bash
+supabase migration new <name>          # scaffold a new migration file, from backend/
+supabase db reset --workdir internal   # wipe and replay all migrations from scratch
+```
+
+`supabase db reset` replays every file in
+[backend/internal/supabase/migrations/](backend/internal/supabase/migrations/)
+against a fresh database — the way to confirm a new migration actually
+applies cleanly (not just that it worked once against a database that
+already had earlier state) before merging.
 
 ### Health Endpoints
 

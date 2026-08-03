@@ -5,17 +5,15 @@
  * Generate application portal — applications, reviews, and the hiring pipeline.
  * OpenAPI spec version: 0.1.0
  */
-import type { WrittenReviewDetailAnswerScores } from './writtenReviewDetailAnswerScores';
+import type { WrittenReviewDetailAnswers } from './writtenReviewDetailAnswers';
 
 export interface WrittenReviewDetail {
   /** A URL to the JSON Schema for this object. */
   readonly $schema?: string;
-  answer_scores: WrittenReviewDetailAnswerScores;
+  answers: WrittenReviewDetailAnswers;
   application_id: string;
   created_at: string;
   id: string;
-  overall_score?: number;
-  reasoning?: string;
   reviewer_nuid: string;
   submitted_at?: string;
   updated_at: string;

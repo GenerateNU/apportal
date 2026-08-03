@@ -65,6 +65,13 @@ export const queryKeys = {
       [...queryKeys.questions.lists(), cycleId, role ?? 'any'] as const,
   },
 
+  reviewQuestions: {
+    all: ['review-questions'] as const,
+    lists: () => [...queryKeys.reviewQuestions.all, 'list'] as const,
+    list: (cycleId: string, role?: Role) =>
+      [...queryKeys.reviewQuestions.lists(), cycleId, role ?? 'any'] as const,
+  },
+
   challenges: {
     all: ['challenges'] as const,
     lists: () => [...queryKeys.challenges.all, 'list'] as const,
@@ -93,11 +100,32 @@ export const queryKeys = {
       [...queryKeys.writtenReviews.lists(), applicationId] as const,
   },
 
+  chiefReviews: {
+    all: ['chief-reviews'] as const,
+    lists: () => [...queryKeys.chiefReviews.all, 'list'] as const,
+    list: (applicationId: string) =>
+      [...queryKeys.chiefReviews.lists(), applicationId] as const,
+  },
+
   leadAssignments: {
     all: ['lead-assignments'] as const,
     lists: () => [...queryKeys.leadAssignments.all, 'list'] as const,
     list: (applicationId: string) =>
       [...queryKeys.leadAssignments.lists(), applicationId] as const,
+  },
+
+  interviewAssignments: {
+    all: ['interview-assignments'] as const,
+    details: () => [...queryKeys.interviewAssignments.all, 'detail'] as const,
+    detail: (applicationId: string) =>
+      [...queryKeys.interviewAssignments.details(), applicationId] as const,
+  },
+
+  interviewReviewAssignments: {
+    all: ['interview-review-assignments'] as const,
+    lists: () => [...queryKeys.interviewReviewAssignments.all, 'list'] as const,
+    list: (applicationId: string) =>
+      [...queryKeys.interviewReviewAssignments.lists(), applicationId] as const,
   },
 
   reviewGates: {

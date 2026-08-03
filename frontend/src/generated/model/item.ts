@@ -7,6 +7,8 @@
  */
 
 export interface Item {
+  answer_file_name?: string;
+  answer_file_path?: string;
   answer_options?: unknown;
   answer_text?: string;
   question_id: string;

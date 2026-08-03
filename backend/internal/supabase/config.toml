@@ -112,6 +112,15 @@ file_size_limit = "50MiB"
 # allowed_mime_types = ["image/png", "image/jpeg"]
 # objects_path = "./images"
 
+# Applicant PDF uploads for url-type application questions (see
+# internal/storage). The backend also calls EnsureBucket at startup, which
+# creates this same bucket against a hosted Supabase project; this local
+# block just keeps `supabase start` in parity with it.
+[storage.buckets.application-uploads]
+public = false
+file_size_limit = "10MiB"
+allowed_mime_types = ["application/pdf"]
+
 # Allow connections via S3 compatible clients
 [storage.s3_protocol]
 enabled = true

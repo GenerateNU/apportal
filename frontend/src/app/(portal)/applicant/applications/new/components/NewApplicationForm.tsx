@@ -40,6 +40,24 @@ import { ApplicationFields } from '../../components/ApplicationFields'
 import type { AnswerValue } from '../../components/QuestionField'
 import { QuestionOutline } from './QuestionOutline'
 
+const DEFAULT_SUBMIT_ERROR =
+  'Something went wrong submitting your application. Please try again.'
+
+// Backend validation failures carry a human-readable `detail` (huma's
+// RFC7807 error body, JSON-stringified onto APIError.message by
+// orval-mutator) — surface it instead of the generic fallback so applicants
+// see e.g. "all required questions must be answered" rather than having to
+// guess and retry blindly.
+function apiErrorDetail(err: unknown): string {
+  if (!(err instanceof APIError)) return DEFAULT_SUBMIT_ERROR
+  try {
+    const body = JSON.parse(err.message) as { detail?: string }
+    return body.detail || DEFAULT_SUBMIT_ERROR
+  } catch {
+    return DEFAULT_SUBMIT_ERROR
+  }
+}
+
 function Loading() {
   return (
     <div className="text-text-muted flex items-center gap-2 px-8 py-10 text-sm">
@@ -214,9 +232,16 @@ function Form({
   const [values, setValues] = useState<Record<string, AnswerValue>>(() => {
     const map: Record<string, AnswerValue> = {}
     for (const a of initialAnswers) {
-      map[a.question_id] = a.answer_options?.length
-        ? { options: a.answer_options }
-        : { text: a.answer_text ?? '' }
+      if (a.answer_options?.length) {
+        map[a.question_id] = { options: a.answer_options }
+      } else if (a.answer_file_path) {
+        map[a.question_id] = {
+          filePath: a.answer_file_path,
+          fileName: a.answer_file_name ?? undefined,
+        }
+      } else {
+        map[a.question_id] = { text: a.answer_text ?? '' }
+      }
     }
     return map
   })
@@ -327,7 +352,20 @@ function Form({
         if (q.question_type === 'checkbox') {
           return { question_id: q.id, answer_options: v?.options ?? [] }
         }
-        return { question_id: q.id, answer_text: v?.text ?? '' }
+        if (q.question_type === 'url' && v?.filePath) {
+          return {
+            question_id: q.id,
+            answer_text: '',
+            answer_file_path: v.filePath,
+            answer_file_name: v.fileName ?? '',
+          }
+        }
+        return {
+          question_id: q.id,
+          answer_text: v?.text ?? '',
+          answer_file_path: '',
+          answer_file_name: '',
+        }
       })
       await putAnswers.mutateAsync({
         applicationId: id,
@@ -350,11 +388,17 @@ function Form({
         setDeadlineRejected(true)
         pendingRef.current = false
       }
+      // Rethrown so handleSubmit (which awaits this directly, not via
+      // scheduleSave) knows the save actually failed instead of silently
+      // proceeding to submit against a DB state that's missing this edit —
+      // that mismatch is what previously surfaced as a confusing "answer all
+      // required questions" rejection even though every field looked filled.
+      throw err
     } finally {
       savingRef.current = false
       if (pendingRef.current) {
         pendingRef.current = false
-        void runSaveRef.current(snapshotRef.current)
+        void runSaveRef.current(snapshotRef.current).catch(() => {})
       }
     }
   }
@@ -365,6 +409,22 @@ function Form({
     runSaveRef.current = runSave
   })
 
+  // Single gatekeeper for every save trigger (debounce timer, flush-on-close).
+  // Re-checks savingRef at the moment it actually fires — not just when it
+  // was scheduled — so a save that started after a timer was armed (e.g. a
+  // submit-time runSave) can't be raced by that stale timer going off mid-
+  // flight. If a save is already running, coalesce into the single pending
+  // follow-up runSave's finally block already chains.
+  function scheduleSave() {
+    if (savingRef.current) {
+      pendingRef.current = true
+      return
+    }
+    // Failure is already reflected via saveStatus; nothing else here needs
+    // to react to it, so swallow rather than leaving an unhandled rejection.
+    void runSaveRef.current(snapshotRef.current).catch(() => {})
+  }
+
   // Debounce ~1s after the last change, but never run two saves at once —
   // if edits land while a save is in flight, coalesce them into exactly one
   // follow-up save (handled in runSave's finally block above) instead of
@@ -373,13 +433,7 @@ function Form({
     snapshotRef.current = { values, resumeUrl, availability, submissionUrl }
     if (!hasEdited || deadlineClosedRef.current) return
 
-    if (savingRef.current) {
-      pendingRef.current = true
-      return
-    }
-    const timer = setTimeout(() => {
-      void runSaveRef.current(snapshotRef.current)
-    }, 1000)
+    const timer = setTimeout(scheduleSave, 1000)
     return () => clearTimeout(timer)
   }, [values, resumeUrl, availability, submissionUrl, hasEdited])
 
@@ -388,7 +442,7 @@ function Form({
   useEffect(() => {
     function flush() {
       if (hasEditedRef.current && !deadlineClosedRef.current) {
-        void runSaveRef.current(snapshotRef.current)
+        scheduleSave()
       }
     }
     function onVisibilityChange() {
@@ -494,6 +548,7 @@ function Form({
     if (!q.is_required) return false
     const v = values[q.id]
     if (q.question_type === 'checkbox') return !v?.options?.length
+    if (q.question_type === 'url') return !v?.text?.trim() && !v?.filePath
     return !v?.text?.trim()
   }
 
@@ -549,9 +604,13 @@ function Form({
     setSubmitting(true)
     try {
       // Make sure the latest edits are actually persisted before submitting
-      // — wait out any autosave already running rather than racing it.
+      // — wait out any autosave already running rather than racing it. A
+      // second waitForIdle after runSave catches a chained follow-up save
+      // that runSave's own finally block may have kicked off (unawaited) if
+      // an edit landed while it was in flight.
       await waitForIdle()
       await runSave(snapshotRef.current)
+      await waitForIdle()
       const id = applicationIdRef.current
       if (!id) throw new Error('missing application id')
 
@@ -567,9 +626,7 @@ function Form({
           'The application deadline has passed. This application can no longer be submitted.'
         )
       } else {
-        setSubmitError(
-          'Something went wrong submitting your application. Please try again.'
-        )
+        setSubmitError(apiErrorDetail(err))
       }
     } finally {
       setSubmitting(false)
@@ -588,7 +645,7 @@ function Form({
       </button>
 
       <header className="mb-8">
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h1 className="text-text-default text-2xl font-semibold">
             {ROLE_LABEL[role]}
           </h1>
@@ -662,6 +719,7 @@ function Form({
             challenge={pageIndex === lastPage ? challenge : undefined}
             values={values}
             onValueChange={updateValue}
+            applicationId={applicationId ?? undefined}
             resumeUrl={resumeUrl}
             onResumeChange={updateResumeUrl}
             availability={availability}

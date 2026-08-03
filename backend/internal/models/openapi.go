@@ -50,7 +50,7 @@ func (QuestionType) Schema(huma.Registry) *huma.Schema {
 	return enumSchema(
 		string(QuestionShortAnswer), string(QuestionLongAnswer),
 		string(QuestionMultipleChoice), string(QuestionCheckbox),
-		string(QuestionDropdown), string(QuestionURL),
+		string(QuestionDropdown), string(QuestionURL), string(QuestionScore),
 	)
 }
 

@@ -1,0 +1,13 @@
+#!/bin/sh
+# Formats the frontend with Prettier before each commit, then restages any
+# tracked files it rewrote so the formatted version is what gets committed.
+# Skips entirely if nothing staged touches frontend/, so backend-only
+# contributors aren't required to have node_modules installed.
+set -e
+
+if ! git diff --cached --name-only | grep -q '^frontend/'; then
+  exit 0
+fi
+
+make -C frontend format
+git add -u -- frontend

@@ -5,6 +5,10 @@
  * Generate application portal — applications, reviews, and the hiring pipeline.
  * OpenAPI spec version: 0.1.0
  */
-import type { AnswerScoreSubmission } from './answerScoreSubmission';
 
-export type UpsertWrittenReviewInputBodyAnswerScores = AnswerScoreSubmission[] | null;
+export type ListCycleReviewQuestionsParams = {
+/**
+ * Optional role filter
+ */
+role?: string;
+};

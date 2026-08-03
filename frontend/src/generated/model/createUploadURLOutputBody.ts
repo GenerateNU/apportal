@@ -6,12 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface AnswerScoreSubmission {
-  answer_id: string;
-  comment?: string;
-  /**
-   * @minimum 1
-   * @maximum 10
-   */
-  score?: number;
+export interface CreateUploadURLOutputBody {
+  /** A URL to the JSON Schema for this object. */
+  readonly $schema?: string;
+  path: string;
+  upload_url: string;
 }
