@@ -23,6 +23,10 @@ type ApplicationUpdate struct {
 	Stage        *models.ApplicationStage
 	Availability json.RawMessage
 	ResumeURL    *string
+	// MarkSubmitted stamps submitted_at = NOW() when true. Callers should only
+	// set this on an actual draft->submitted transition, never on later
+	// pipeline-stage changes or plain autosaves.
+	MarkSubmitted bool
 }
 
 // ApplicationFilter holds optional list filters; empty fields are ignored.
@@ -106,7 +110,7 @@ func (s *Store) ListApplications(ctx context.Context, f ApplicationFilter) ([]mo
 	if !f.IncludeDraft {
 		query += ` AND a.stage != 'draft'`
 	}
-	query += ` ORDER BY a.submitted_at DESC`
+	query += ` ORDER BY a.submitted_at DESC NULLS LAST`
 
 	rows, err := s.db.Query(ctx, query, args...)
 	if err != nil {
@@ -137,10 +141,11 @@ func (s *Store) UpdateApplication(ctx context.Context, id string, in Application
 		UPDATE applications SET
 			stage        = COALESCE($2, stage),
 			availability = COALESCE($3::jsonb, availability),
-			resume_url   = COALESCE($4, resume_url)
+			resume_url   = COALESCE($4, resume_url),
+			submitted_at = CASE WHEN $5 THEN NOW() ELSE submitted_at END
 		WHERE id = $1
 		RETURNING ` + applicationColumns
-	rows, err := s.db.Query(ctx, q, id, in.Stage, jsonArg(in.Availability), in.ResumeURL)
+	rows, err := s.db.Query(ctx, q, id, in.Stage, jsonArg(in.Availability), in.ResumeURL, in.MarkSubmitted)
 	if err != nil {
 		return models.Application{}, err
 	}
