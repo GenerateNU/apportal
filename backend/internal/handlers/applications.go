@@ -236,6 +236,7 @@ func (h *applicationHandler) update(ctx context.Context, in *UpdateApplicationIn
 		}
 	}
 
+	markSubmitted := false
 	if in.Body.Stage != nil {
 		// Applicants self-servicing their own application (as opposed to a
 		// reviewer advancing it through the pipeline) may only flip their own
@@ -255,13 +256,15 @@ func (h *applicationHandler) update(ctx context.Context, in *UpdateApplicationIn
 			if err := h.requireComplete(ctx, current); err != nil {
 				return nil, err
 			}
+			markSubmitted = true
 		}
 	}
 
 	app, err := h.store.UpdateApplication(ctx, in.ID, store.ApplicationUpdate{
-		Stage:        in.Body.Stage,
-		Availability: in.Body.Availability,
-		ResumeURL:    in.Body.ResumeURL,
+		Stage:         in.Body.Stage,
+		Availability:  in.Body.Availability,
+		ResumeURL:     in.Body.ResumeURL,
+		MarkSubmitted: markSubmitted,
 	})
 	if err != nil {
 		return nil, storeErr(err)

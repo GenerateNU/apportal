@@ -86,7 +86,6 @@ components:
         - user_nuid
         - role
         - stage
-        - submitted_at
         - updated_at
       type: object
     ApplicationSummary:
@@ -138,7 +137,6 @@ components:
         - user_nuid
         - role
         - stage
-        - submitted_at
         - updated_at
       type: object
     ApplicationTemplate:

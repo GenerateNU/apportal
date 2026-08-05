@@ -17,7 +17,7 @@ export interface Application {
   resume_url?: string;
   role: ApplicationRole;
   stage: ApplicationStage;
-  submitted_at: string;
+  submitted_at?: string;
   updated_at: string;
   user_nuid: string;
 }
