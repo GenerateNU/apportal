@@ -153,3 +153,27 @@ func (s *Store) UpdateUser(ctx context.Context, nuid string, in UserUpdate) (mod
 	}
 	return u, err
 }
+
+// namesByNUIDs batch-resolves nuid -> full_name, e.g. so a review listing can
+// embed each reviewer's display name without exposing the full user-directory
+// endpoints (chief-only) to every reviewer.
+func (s *Store) namesByNUIDs(ctx context.Context, nuids []string) (map[string]string, error) {
+	names := map[string]string{}
+	if len(nuids) == 0 {
+		return names, nil
+	}
+	const q = `SELECT nuid, full_name FROM users WHERE nuid = ANY($1)`
+	rows, err := s.db.Query(ctx, q, nuids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var nuid, name string
+		if err := rows.Scan(&nuid, &name); err != nil {
+			return nil, err
+		}
+		names[nuid] = name
+	}
+	return names, rows.Err()
+}

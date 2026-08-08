@@ -371,18 +371,16 @@ components:
         - teams
         - coverage
       type: object
-    ChiefReview:
+    ChiefReviewDetail:
       additionalProperties: false
       properties:
         $schema:
           description: A URL to the JSON Schema for this object.
           examples:
-            - https://example.com/schemas/ChiefReview.json
+            - https://example.com/schemas/ChiefReviewDetail.json
           format: uri
           readOnly: true
           type: string
-        advance_to_interview:
-          type: boolean
         application_id:
           type: string
         created_at:
@@ -395,10 +393,20 @@ components:
           type: string
         notes:
           type: string
+        reviewer_name:
+          type: string
         reviewer_nuid:
           type: string
         updated_at:
           format: date-time
+          type: string
+        vote:
+          enum:
+            - strong_interview
+            - interview
+            - neutral
+            - no_interview
+            - strong_no_interview
           type: string
       required:
         - id
@@ -1925,9 +1933,15 @@ components:
           format: uri
           readOnly: true
           type: string
-        advance_to_interview:
-          type: boolean
         notes:
+          type: string
+        vote:
+          enum:
+            - strong_interview
+            - interview
+            - neutral
+            - no_interview
+            - strong_no_interview
           type: string
       type: object
     UpsertCodeSubmissionInputBody:
@@ -2180,6 +2194,8 @@ components:
           format: date-time
           type: string
         id:
+          type: string
+        reviewer_name:
           type: string
         reviewer_nuid:
           type: string
@@ -2765,7 +2781,7 @@ paths:
         - Answers
   /applications/{id}/chief-review:
     put:
-      description: Chief only. Setting advance_to_interview records the decision.
+      description: Chief only. Setting vote records this chief's vote.
       operationId: upsert-chief-review
       parameters:
         - description: Application ID
@@ -2786,7 +2802,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ChiefReview"
+                $ref: "#/components/schemas/ChiefReviewDetail"
           description: OK
         "401":
           content:
@@ -2832,7 +2848,7 @@ paths:
             application/json:
               schema:
                 items:
-                  $ref: "#/components/schemas/ChiefReview"
+                  $ref: "#/components/schemas/ChiefReviewDetail"
                 type:
                   - array
                   - "null"

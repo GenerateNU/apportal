@@ -20,7 +20,7 @@ func (h *chiefReviewHandler) register(api huma.API) {
 		Method:      http.MethodPut,
 		Path:        "/applications/{id}/chief-review",
 		Summary:     "Submit or update your chief review",
-		Description: "Chief only. Setting advance_to_interview records the decision.",
+		Description: "Chief only. Setting vote records this chief's vote.",
 		Tags:        []string{"Chief reviews"},
 		Errors:      []int{http.StatusUnauthorized, http.StatusForbidden},
 	}, h.upsert)
@@ -36,18 +36,18 @@ func (h *chiefReviewHandler) register(api huma.API) {
 }
 
 type ChiefReviewOutput struct {
-	Body models.ChiefReview
+	Body models.ChiefReviewDetail
 }
 
 type ChiefReviewsOutput struct {
-	Body []models.ChiefReview
+	Body []models.ChiefReviewDetail
 }
 
 type UpsertChiefReviewInput struct {
 	ID   string `path:"id" doc:"Application ID"`
 	Body struct {
-		Notes              *string `json:"notes,omitempty"`
-		AdvanceToInterview *bool   `json:"advance_to_interview,omitempty"`
+		Notes *string           `json:"notes,omitempty"`
+		Vote  *models.ChiefVote `json:"vote,omitempty"`
 	}
 }
 
@@ -55,11 +55,14 @@ func (h *chiefReviewHandler) upsert(ctx context.Context, in *UpsertChiefReviewIn
 	if err := requireChief(ctx); err != nil {
 		return nil, err
 	}
+	if in.Body.Vote != nil && !in.Body.Vote.Valid() {
+		return nil, huma.Error422UnprocessableEntity("invalid vote")
+	}
 	review, err := h.store.UpsertChiefReview(ctx, store.ChiefReviewUpsert{
-		ApplicationID:      in.ID,
-		ReviewerNUID:       currentActor(ctx).NUID,
-		Notes:              in.Body.Notes,
-		AdvanceToInterview: in.Body.AdvanceToInterview,
+		ApplicationID: in.ID,
+		ReviewerNUID:  currentActor(ctx).NUID,
+		Notes:         in.Body.Notes,
+		Vote:          in.Body.Vote,
 	})
 	if err != nil {
 		return nil, storeErr(err)

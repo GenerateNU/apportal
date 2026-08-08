@@ -13,7 +13,6 @@ import {
 import type { Application, Role, User } from '@/lib/api/types'
 import { useApplicantsByNuids } from '@/lib/queries/applicants'
 import { useApplications } from '@/lib/queries/applications'
-import { useChiefReviewsByApplications } from '@/lib/queries/chief-reviews'
 import { pickDefaultCycleId, useCycles } from '@/lib/queries/cycles'
 import {
   useAssignRecordingReviewer,
@@ -49,20 +48,11 @@ export function InterviewAssignmentsClient() {
     [allApplications, cycleId, activeRole]
   )
 
-  const cycleAppIds = useMemo(
-    () => cycleApplications.map((a) => a.id),
-    [cycleApplications]
-  )
-  const chiefReviewQueries = useChiefReviewsByApplications(cycleAppIds)
-
   // Interview assignment only makes sense for applicants a chief has actually
-  // marked as advancing — everyone else hasn't cleared chief review yet.
+  // advanced to interview — everyone else hasn't cleared chief review yet.
   const applications = useMemo(
-    () =>
-      cycleApplications.filter((_, i) =>
-        chiefReviewQueries[i]?.data?.some((r) => r.advance_to_interview)
-      ),
-    [cycleApplications, chiefReviewQueries]
+    () => cycleApplications.filter((a) => a.stage === 'interview'),
+    [cycleApplications]
   )
 
   const nuids = useMemo(
