@@ -93,7 +93,7 @@ export const getListAnswersQueryKey = (id?: string,) => {
     }
 
     
-export const getListAnswersQueryOptions = <TData = Awaited<ReturnType<typeof listAnswers>>, TError = ErrorModel>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAnswers>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export const getListAnswersQueryOptions = <TData = Awaited<ReturnType<typeof listAnswers>>, TError = ErrorModel | ErrorModel | ErrorModel>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAnswers>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -112,10 +112,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListAnswersQueryResult = NonNullable<Awaited<ReturnType<typeof listAnswers>>>
-export type ListAnswersQueryError = ErrorModel
+export type ListAnswersQueryError = ErrorModel | ErrorModel | ErrorModel
 
 
-export function useListAnswers<TData = Awaited<ReturnType<typeof listAnswers>>, TError = ErrorModel>(
+export function useListAnswers<TData = Awaited<ReturnType<typeof listAnswers>>, TError = ErrorModel | ErrorModel | ErrorModel>(
  id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAnswers>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listAnswers>>,
@@ -125,7 +125,7 @@ export function useListAnswers<TData = Awaited<ReturnType<typeof listAnswers>>, 
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListAnswers<TData = Awaited<ReturnType<typeof listAnswers>>, TError = ErrorModel>(
+export function useListAnswers<TData = Awaited<ReturnType<typeof listAnswers>>, TError = ErrorModel | ErrorModel | ErrorModel>(
  id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAnswers>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listAnswers>>,
@@ -135,7 +135,7 @@ export function useListAnswers<TData = Awaited<ReturnType<typeof listAnswers>>, 
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListAnswers<TData = Awaited<ReturnType<typeof listAnswers>>, TError = ErrorModel>(
+export function useListAnswers<TData = Awaited<ReturnType<typeof listAnswers>>, TError = ErrorModel | ErrorModel | ErrorModel>(
  id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAnswers>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
@@ -143,7 +143,7 @@ export function useListAnswers<TData = Awaited<ReturnType<typeof listAnswers>>, 
  * @summary List an application's written answers
  */
 
-export function useListAnswers<TData = Awaited<ReturnType<typeof listAnswers>>, TError = ErrorModel>(
+export function useListAnswers<TData = Awaited<ReturnType<typeof listAnswers>>, TError = ErrorModel | ErrorModel | ErrorModel>(
  id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAnswers>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -160,7 +160,7 @@ export function useListAnswers<TData = Awaited<ReturnType<typeof listAnswers>>, 
 
 
 /**
- * Bulk upsert keyed on (application, question).
+ * Bulk upsert keyed on (application, question). Owner-only, and only while the application is still a draft.
  * @summary Submit or update written answers
  */
 export const upsertAnswers = (
@@ -179,7 +179,7 @@ export const upsertAnswers = (
   
 
 
-export const getUpsertAnswersMutationOptions = <TError = ErrorModel,
+export const getUpsertAnswersMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upsertAnswers>>, TError,{id: string;data: NonReadonly<UpsertAnswersInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
 ): UseMutationOptions<Awaited<ReturnType<typeof upsertAnswers>>, TError,{id: string;data: NonReadonly<UpsertAnswersInputBody>}, TContext> => {
 
@@ -206,12 +206,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type UpsertAnswersMutationResult = NonNullable<Awaited<ReturnType<typeof upsertAnswers>>>
     export type UpsertAnswersMutationBody = NonReadonly<UpsertAnswersInputBody>
-    export type UpsertAnswersMutationError = ErrorModel
+    export type UpsertAnswersMutationError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel
 
     /**
  * @summary Submit or update written answers
  */
-export const useUpsertAnswers = <TError = ErrorModel,
+export const useUpsertAnswers = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upsertAnswers>>, TError,{id: string;data: NonReadonly<UpsertAnswersInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof upsertAnswers>>,
