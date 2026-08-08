@@ -249,16 +249,24 @@ export function QuestionField({
       )}
 
       {question.question_type === 'score' && (
-        <Input
-          type="number"
-          min={1}
-          max={10}
-          className="h-11 w-24 text-base md:text-base"
-          value={value.text ?? ''}
-          onChange={(e) => onChange({ text: e.target.value })}
-          placeholder="1-10"
-          disabled={disabled}
-        />
+        <div className="flex flex-col gap-1">
+          <Input
+            type="number"
+            min={1}
+            max={10}
+            step={1}
+            className="h-11 w-24 text-base md:text-base"
+            value={value.text ?? ''}
+            onChange={(e) => onChange({ text: e.target.value })}
+            placeholder="1-10"
+            disabled={disabled}
+          />
+          {value.text && !Number.isInteger(Number(value.text)) && (
+            <p className="text-destructive text-xs">
+              Rating must be a whole number.
+            </p>
+          )}
+        </div>
       )}
 
       {question.question_type === 'dropdown' && (
