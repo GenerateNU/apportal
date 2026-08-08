@@ -1,37 +1,18 @@
-import type { ApplicationStage, Question, WrittenAnswer } from '@/lib/api/types'
+import type { Question, WrittenAnswer } from '@/lib/api/types'
 import type { ApplicantApplication } from './types'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { AVAILABILITY_OPTIONS } from '@/lib/availability'
-import { useUpdateApplication } from '@/lib/queries/applications'
 import { formatDate } from '@/lib/utils'
-import {
-  ORDERED_STAGES,
-  stageDot,
-  stageLabel,
-  stageTextColor,
-} from './constants'
 import { AnswerCell } from './AnswerCell'
-
-function availableSlots(
-  availability: Record<string, boolean> | null | undefined
-) {
-  if (!availability) return []
-  return AVAILABILITY_OPTIONS.filter((o) => availability[o.key]).map(
-    (o) => o.label.split(' ')[0]
-  )
-}
+import { StageSelect } from './StageSelect'
 
 export function ApplicantRow({
   applicant,
   columns,
   rowQuestions,
   answers,
+  availabilityDays,
+  selectable,
+  selected,
+  onToggleSelect,
   isSelected,
   onSelect,
 }: {
@@ -39,12 +20,13 @@ export function ApplicantRow({
   columns: Question[]
   rowQuestions: Question[]
   answers: WrittenAnswer[]
+  availabilityDays: string[]
+  selectable: boolean
+  selected: boolean
+  onToggleSelect: () => void
   isSelected: boolean
   onSelect: () => void
 }) {
-  const updateApplication = useUpdateApplication()
-  const slots = availableSlots(applicant.availability)
-
   return (
     <tr
       onClick={onSelect}
@@ -52,6 +34,20 @@ export function ApplicantRow({
         isSelected ? 'bg-blue-50' : 'bg-white hover:bg-gray-50'
       }`}
     >
+      {selectable && (
+        <td
+          className="border-r border-gray-100 px-3 py-2"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <input
+            type="checkbox"
+            className="accent-primary"
+            checked={selected}
+            onChange={onToggleSelect}
+            aria-label={`Select ${applicant.fullName}`}
+          />
+        </td>
+      )}
       {columns.map((q) => {
         const rowQuestion = rowQuestions.find(
           (rq) =>
@@ -75,41 +71,27 @@ export function ApplicantRow({
           </td>
         )
       })}
-      <td
-        className="border-r border-gray-100 px-3 py-2 whitespace-nowrap"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <Select
-          value={applicant.stage}
-          onValueChange={(val) =>
-            updateApplication.mutate({
-              id: applicant.id,
-              body: { stage: val as ApplicationStage },
-            })
-          }
-        >
-          <SelectTrigger
-            className={`h-auto w-auto gap-1.5 border-none bg-transparent px-1.5 py-1 text-sm font-medium shadow-none hover:bg-gray-100 ${stageTextColor[applicant.stage]}`}
-          >
-            <span
-              className={`h-1.5 w-1.5 shrink-0 rounded-full ${stageDot[applicant.stage]}`}
-            />
-            <SelectValue>{stageLabel[applicant.stage]}</SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            {ORDERED_STAGES.map((stage) => (
-              <SelectItem key={stage} value={stage}>
-                {stageLabel[stage]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <td className="border-r border-gray-100 px-3 py-2 whitespace-nowrap">
+        <StageSelect applicationId={applicant.id} stage={applicant.stage} />
       </td>
       <td className="text-text-muted px-3 py-2 text-sm whitespace-nowrap">
         {formatDate(applicant.submittedAt)}
       </td>
-      <td className="text-text-muted px-3 py-2 text-sm whitespace-nowrap">
-        {slots.length > 0 ? slots.join(', ') : '—'}
+      <td className="border-r border-gray-100 px-3 py-2 whitespace-nowrap">
+        {availabilityDays.length > 0 ? (
+          <div className="flex flex-wrap gap-1">
+            {availabilityDays.map((d) => (
+              <span
+                key={d}
+                className="text-text-secondary inline-flex items-center rounded bg-gray-100 px-1.5 py-0.5 text-xs font-medium"
+              >
+                {d}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <span className="text-text-faint text-sm">—</span>
+        )}
       </td>
     </tr>
   )
