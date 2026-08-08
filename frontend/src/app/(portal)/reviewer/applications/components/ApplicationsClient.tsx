@@ -22,7 +22,7 @@ import {
   useApplications,
   useUpdateApplication,
 } from '@/lib/queries/applications'
-import { useCycles } from '@/lib/queries/cycles'
+import { pickDefaultCycleId, useCycles } from '@/lib/queries/cycles'
 import { useQuestionsByCycleRoles } from '@/lib/queries/questions'
 import { useCurrentUser } from '@/lib/queries/users'
 import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
@@ -69,21 +69,12 @@ export function ApplicationsClient() {
 
   const { data: cycles = [] } = useCycles({})
 
-  // Default the cycle filter to the cycle currently accepting applications,
-  // so reviewers land on the current cycle instead of every cycle ever run.
-  // Falls back to whichever cycle opened most recently if none is open
-  // (opens_at is only set on scheduled/draft cycles in practice).
-  const currentCycleId = useMemo(() => {
-    const open = cycles.find((c) => c.status === 'open')
-    if (open) return open.id
-    let latest: { id: string; opens_at: string } | null = null
-    for (const c of cycles) {
-      if (c.opens_at && (!latest || c.opens_at > latest.opens_at)) {
-        latest = { id: c.id, opens_at: c.opens_at }
-      }
-    }
-    return latest?.id ?? null
-  }, [cycles])
+  // Default the cycle filter so reviewers land on a specific cycle instead
+  // of every cycle ever run.
+  const currentCycleId = useMemo(
+    () => pickDefaultCycleId(cycles) ?? null,
+    [cycles]
+  )
 
   if (!cycleDefaulted && currentCycleId) {
     setActiveCycle(currentCycleId)

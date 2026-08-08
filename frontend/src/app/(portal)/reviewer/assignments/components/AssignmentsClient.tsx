@@ -22,7 +22,7 @@ import {
 import type { Application, Role } from '@/lib/api/types'
 import { useApplicantsByNuids } from '@/lib/queries/applicants'
 import { useApplications } from '@/lib/queries/applications'
-import { useCycles } from '@/lib/queries/cycles'
+import { pickDefaultCycleId, useCycles } from '@/lib/queries/cycles'
 import {
   useAssignLead,
   useLeadAssignmentsByApplications,
@@ -47,10 +47,11 @@ export function AssignmentsClient() {
   )
 
   // Scope the page to one cycle so release (which is per cycle × role) is
-  // unambiguous. Default to the first open cycle, else the first cycle.
+  // unambiguous.
   const [cycleId, setCycleId] = useState('')
   if (!cycleId && cycles.length > 0) {
-    setCycleId((cycles.find((c) => c.status === 'open') ?? cycles[0]).id)
+    const defaultId = pickDefaultCycleId(cycles)
+    if (defaultId) setCycleId(defaultId)
   }
   const [activeRole, setActiveRole] = useState<Role | 'all'>('all')
 

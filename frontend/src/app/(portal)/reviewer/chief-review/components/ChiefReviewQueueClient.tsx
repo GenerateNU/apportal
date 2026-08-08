@@ -15,18 +15,18 @@ import {
 import type { Role } from '@/lib/api/types'
 import { useApplicantsByNuids } from '@/lib/queries/applicants'
 import { useApplications } from '@/lib/queries/applications'
-import { useCycles } from '@/lib/queries/cycles'
+import { pickDefaultCycleId, useCycles } from '@/lib/queries/cycles'
 import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 
 export function ChiefReviewQueueClient() {
   const router = useRouter()
   const { data: cycles = [] } = useCycles({})
 
-  // Default to the first open cycle, else the first cycle, same as the other
-  // chief-only pipeline pages.
+  // Default cycle, same as the other chief-only pipeline pages.
   const [cycleId, setCycleId] = useState('')
   if (!cycleId && cycles.length > 0) {
-    setCycleId((cycles.find((c) => c.status === 'open') ?? cycles[0]).id)
+    const defaultId = pickDefaultCycleId(cycles)
+    if (defaultId) setCycleId(defaultId)
   }
   const [activeRole, setActiveRole] = useState<Role | 'all'>('all')
 

@@ -14,7 +14,7 @@ import type { Application, Role, User } from '@/lib/api/types'
 import { useApplicantsByNuids } from '@/lib/queries/applicants'
 import { useApplications } from '@/lib/queries/applications'
 import { useChiefReviewsByApplications } from '@/lib/queries/chief-reviews'
-import { useCycles } from '@/lib/queries/cycles'
+import { pickDefaultCycleId, useCycles } from '@/lib/queries/cycles'
 import {
   useAssignRecordingReviewer,
   useInterviewAssignmentsByApplications,
@@ -31,11 +31,11 @@ export function InterviewAssignmentsClient() {
   const { data: leads = [] } = useLeads()
   const { data: chiefs = [] } = useChiefs()
 
-  // Scope the page to one cycle, same as the lead-assignment page. Default to
-  // the first open cycle, else the first cycle.
+  // Scope the page to one cycle, same as the lead-assignment page.
   const [cycleId, setCycleId] = useState('')
   if (!cycleId && cycles.length > 0) {
-    setCycleId((cycles.find((c) => c.status === 'open') ?? cycles[0]).id)
+    const defaultId = pickDefaultCycleId(cycles)
+    if (defaultId) setCycleId(defaultId)
   }
   const [activeRole, setActiveRole] = useState<Role | 'all'>('all')
 
