@@ -22,7 +22,10 @@ export function useAssignmentPool(
 ) {
   return useQuery({
     queryKey: queryKeys.assignmentPlan.pool(cycleId, role),
-    queryFn: () => getAssignmentPool(cycleId, { role }, opts),
+    queryFn: async () => {
+      const pool = await getAssignmentPool(cycleId, { role }, opts)
+      return { ...pool, applicants: pool.applicants ?? [] }
+    },
     enabled: !!cycleId,
   })
 }

@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { PreviewPlanInputBodyCapOverrides } from './previewPlanInputBodyCapOverrides';
+import type { PreviewPlanInputBodyExcludedApplicationIds } from './previewPlanInputBodyExcludedApplicationIds';
 import type { PreviewPlanInputBodyRole } from './previewPlanInputBodyRole';
 import type { PreviewPlanInputBodyTeams } from './previewPlanInputBodyTeams';
 
@@ -21,6 +22,7 @@ export interface PreviewPlanInputBody {
   cap_overrides?: PreviewPlanInputBodyCapOverrides;
   /** @minimum 1 */
   coverage: number;
+  excluded_application_ids?: PreviewPlanInputBodyExcludedApplicationIds;
   role: PreviewPlanInputBodyRole;
   teams: PreviewPlanInputBodyTeams;
 }

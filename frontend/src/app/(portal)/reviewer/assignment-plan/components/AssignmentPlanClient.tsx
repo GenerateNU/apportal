@@ -4,6 +4,8 @@ import { useMemo, useState } from 'react'
 import {
   Calculator,
   CheckCircle2,
+  ChevronDown,
+  ChevronRight,
   Loader2,
   Sparkles,
   UserPlus,
@@ -57,12 +59,33 @@ export function AssignmentPlanClient() {
   const [teams, setTeams] = useState<DraftTeam[]>([])
   const [coverage, setCoverage] = useState(2)
   const [cap, setCap] = useState(20)
+  // Which applicants to leave out of this planning run — request input, same
+  // as teams, not stored server-side. Reset whenever the pool itself changes.
+  const [excludedIds, setExcludedIds] = useState<Set<string>>(new Set())
+  const [excludeListOpen, setExcludeListOpen] = useState(false)
 
   const { data: pool } = useAssignmentPool(cycleId, role)
   const suggestCapacity = useSuggestCapacity()
   const preview = usePreviewAssignmentPlan()
   const commit = useCommitAssignmentPlan()
   const [confirming, setConfirming] = useState(false)
+
+  const excludedApplicationIds = useMemo(() => [...excludedIds], [excludedIds])
+  // pool.pool_size ignores exclusions (the backend doesn't know about them
+  // until a planning call is made), so the displayed count is adjusted here.
+  const poolAppliedSize = pool
+    ? pool.applicants.length - excludedIds.size
+    : undefined
+
+  function toggleExcluded(applicationId: string) {
+    setExcludedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(applicationId)) next.delete(applicationId)
+      else next.add(applicationId)
+      return next
+    })
+    resetResults()
+  }
 
   // Only teams with at least one lead are meaningful to the planner; an empty
   // team is a half-finished edit, not an input.
@@ -91,7 +114,16 @@ export function AssignmentPlanClient() {
 
   function onCommit() {
     commit.mutate(
-      { cycleId, body: { role, teams: apiTeams, coverage, cap } },
+      {
+        cycleId,
+        body: {
+          role,
+          teams: apiTeams,
+          coverage,
+          cap,
+          excluded_application_ids: excludedApplicationIds,
+        },
+      },
       { onSuccess: () => setConfirming(false) }
     )
   }
@@ -99,7 +131,15 @@ export function AssignmentPlanClient() {
   function onSuggest() {
     preview.reset()
     suggestCapacity.mutate(
-      { cycleId, body: { role, teams: apiTeams, coverage } },
+      {
+        cycleId,
+        body: {
+          role,
+          teams: apiTeams,
+          coverage,
+          excluded_application_ids: excludedApplicationIds,
+        },
+      },
       { onSuccess: (data) => setCap(data.suggested_cap || cap) }
     )
   }
@@ -107,7 +147,13 @@ export function AssignmentPlanClient() {
   function onPreview() {
     preview.mutate({
       cycleId,
-      body: { role, teams: apiTeams, coverage, cap },
+      body: {
+        role,
+        teams: apiTeams,
+        coverage,
+        cap,
+        excluded_application_ids: excludedApplicationIds,
+      },
     })
   }
 
@@ -135,6 +181,7 @@ export function AssignmentPlanClient() {
             value={role}
             onValueChange={(val) => {
               setRole(val as Role)
+              setExcludedIds(new Set())
               resetResults()
             }}
           >
@@ -153,6 +200,7 @@ export function AssignmentPlanClient() {
             value={cycleId}
             onValueChange={(val) => {
               setCycleId(val)
+              setExcludedIds(new Set())
               resetResults()
             }}
           >
@@ -174,10 +222,15 @@ export function AssignmentPlanClient() {
         <div className="flex flex-col">
           <span className="text-text-faint text-xs">Awaiting review</span>
           <span className="text-text-default text-sm font-semibold">
-            {pool?.pool_size ?? '—'} {ROLE_LABEL[role].toLowerCase()}{' '}
+            {poolAppliedSize ?? '—'} {ROLE_LABEL[role].toLowerCase()}{' '}
             application
-            {pool?.pool_size === 1 ? '' : 's'}
+            {poolAppliedSize === 1 ? '' : 's'}
           </span>
+          {excludedIds.size > 0 && (
+            <span className="text-text-faint text-xs">
+              {excludedIds.size} excluded
+            </span>
+          )}
         </div>
         <div className="flex flex-col">
           <span className="text-text-faint text-xs">Leads available</span>
@@ -186,6 +239,54 @@ export function AssignmentPlanClient() {
           </span>
         </div>
       </div>
+
+      {pool && pool.applicants.length > 0 && (
+        <section className="rounded-xl border border-gray-100 bg-white p-4">
+          <button
+            type="button"
+            className="text-text-default flex w-full items-center gap-2 text-sm font-semibold"
+            onClick={() => setExcludeListOpen((open) => !open)}
+          >
+            {excludeListOpen ? (
+              <ChevronDown size={14} />
+            ) : (
+              <ChevronRight size={14} />
+            )}
+            Exclude applicants
+            <span className="text-text-faint font-normal">
+              ({excludedIds.size} of {pool.applicants.length} excluded)
+            </span>
+          </button>
+          {excludeListOpen && (
+            <div className="mt-3 flex max-h-64 flex-col gap-1 overflow-y-auto">
+              {pool.applicants.map((applicant) => {
+                const excluded = excludedIds.has(applicant.application_id)
+                return (
+                  <label
+                    key={applicant.application_id}
+                    className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-gray-50"
+                  >
+                    <input
+                      type="checkbox"
+                      className="accent-primary"
+                      checked={excluded}
+                      onChange={() => toggleExcluded(applicant.application_id)}
+                    />
+                    <span
+                      className={`text-sm ${excluded ? 'text-text-faint line-through' : 'text-text-default'}`}
+                    >
+                      {applicant.full_name}
+                    </span>
+                    <span className="text-text-faint text-xs">
+                      {applicant.email}
+                    </span>
+                  </label>
+                )
+              })}
+            </div>
+          )}
+        </section>
+      )}
 
       <TeamBuilder
         teams={teams}

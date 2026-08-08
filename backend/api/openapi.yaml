@@ -346,6 +346,12 @@ components:
           format: int64
           minimum: 1
           type: integer
+        excluded_application_ids:
+          items:
+            type: string
+          type:
+            - array
+            - "null"
         role:
           description: Applicant role whose pool is being planned
           enum:
@@ -1295,6 +1301,20 @@ components:
         - total
         - applications
       type: object
+    PoolApplicant:
+      additionalProperties: false
+      properties:
+        application_id:
+          type: string
+        email:
+          type: string
+        full_name:
+          type: string
+      required:
+        - application_id
+        - full_name
+        - email
+      type: object
     PoolOutputBody:
       additionalProperties: false
       properties:
@@ -1305,6 +1325,12 @@ components:
           format: uri
           readOnly: true
           type: string
+        applicants:
+          items:
+            $ref: "#/components/schemas/PoolApplicant"
+          type:
+            - array
+            - "null"
         lead_count:
           format: int64
           type: integer
@@ -1314,6 +1340,7 @@ components:
       required:
         - pool_size
         - lead_count
+        - applicants
       type: object
     PreviewPlanInputBody:
       additionalProperties: false
@@ -1340,6 +1367,12 @@ components:
           format: int64
           minimum: 1
           type: integer
+        excluded_application_ids:
+          items:
+            type: string
+          type:
+            - array
+            - "null"
         role:
           enum:
             - software_engineer
