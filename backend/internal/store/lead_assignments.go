@@ -105,6 +105,8 @@ func (s *Store) DeleteLeadAssignmentsForCycle(ctx context.Context, cycleID strin
 		return 0, err
 	}
 	return int(tag.RowsAffected()), nil
+}
+
 // ReviewerProgressRow is one lead's assignment of one application, with that
 // review's submission status if any — the flat join ListReviewerProgressForCycle
 // returns before it's grouped by lead.
