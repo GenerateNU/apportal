@@ -92,6 +92,21 @@ func (s *Store) ListLeadAssignmentsForCycle(ctx context.Context, cycleID string,
 	return pgx.CollectRows(rows, pgx.RowToStructByPos[models.LeadAssignment])
 }
 
+// DeleteLeadAssignmentsForCycle removes every lead assignment for one
+// applicant role in a cycle at once — a chief clearing a botched or outdated
+// assignment run. Returns how many rows were actually removed.
+func (s *Store) DeleteLeadAssignmentsForCycle(ctx context.Context, cycleID string, role models.Role) (int, error) {
+	const q = `
+		DELETE FROM lead_assignments la
+		USING applications a
+		WHERE a.id = la.application_id AND a.cycle_id = $1 AND a.application_role = $2`
+	tag, err := s.db.Exec(ctx, q, cycleID, role)
+	if err != nil {
+		return 0, err
+	}
+	return int(tag.RowsAffected()), nil
+}
+
 // ReviewerProgressRow is one lead's assignment of one application, with that
 // review's submission status if any — the flat join ListReviewerProgressForCycle
 // returns before it's grouped by lead.

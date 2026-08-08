@@ -2,8 +2,16 @@
 import { PageContainer } from '@/components/PageContainer'
 
 import { useMemo, useState } from 'react'
-import { Loader2, Lock, Unlock, X } from 'lucide-react'
+import { Loader2, Lock, Trash2, Unlock, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import {
   Select,
   SelectContent,
@@ -18,6 +26,7 @@ import { useCycles } from '@/lib/queries/cycles'
 import {
   useAssignLead,
   useLeadAssignmentsByApplications,
+  useUnassignAllLeads,
   useUnassignLead,
 } from '@/lib/queries/lead-assignments'
 import {
@@ -88,12 +97,14 @@ export function AssignmentsClient() {
   const { data: gates = [] } = useReviewGates(cycleId)
   const assignLead = useAssignLead()
   const unassignLead = useUnassignLead()
+  const unassignAllLeads = useUnassignAllLeads()
   const setRelease = useSetReviewRelease()
 
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [leadNuid, setLeadNuid] = useState('')
   const [assigning, setAssigning] = useState(false)
   const [failed, setFailed] = useState(0)
+  const [confirmingRole, setConfirmingRole] = useState<Role | null>(null)
 
   function toggle(id: string) {
     setSelected((prev) => {
@@ -239,6 +250,17 @@ export function AssignmentsClient() {
                     <span className="text-text-muted text-xs">
                       {gate.submitted_count}/{gate.assigned_count} reviews in
                     </span>
+                    {gate.assigned_count > 0 && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-destructive hover:text-destructive"
+                        onClick={() => setConfirmingRole(role)}
+                      >
+                        <Trash2 size={14} />
+                        Unassign all
+                      </Button>
+                    )}
                     {gate.released ? (
                       <Button
                         size="sm"
@@ -296,6 +318,61 @@ export function AssignmentsClient() {
           )
         })
       )}
+
+      <Dialog
+        open={!!confirmingRole}
+        onOpenChange={(open) => !open && setConfirmingRole(null)}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Unassign all reviewers?</DialogTitle>
+            <DialogDescription>
+              This removes all{' '}
+              {confirmingRole &&
+                (gates.find(
+                  (g) => g.role === confirmingRole && g.kind === 'written'
+                )?.assigned_count ??
+                  0)}{' '}
+              lead assignment
+              {confirmingRole &&
+              gates.find(
+                (g) => g.role === confirmingRole && g.kind === 'written'
+              )?.assigned_count === 1
+                ? ''
+                : 's'}{' '}
+              for {confirmingRole && ROLE_LABEL[confirmingRole].toLowerCase()}{' '}
+              applicants in this cycle. Any written reviews already submitted
+              are kept, but their assignment link is removed. This cannot be
+              undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setConfirmingRole(null)}
+              disabled={unassignAllLeads.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={unassignAllLeads.isPending}
+              onClick={() => {
+                if (!confirmingRole) return
+                unassignAllLeads.mutate(
+                  { cycleId, role: confirmingRole },
+                  { onSuccess: () => setConfirmingRole(null) }
+                )
+              }}
+            >
+              {unassignAllLeads.isPending && (
+                <Loader2 className="animate-spin" size={14} />
+              )}
+              Unassign all
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PageContainer>
   )
 }
