@@ -7,6 +7,7 @@ import { listCycles } from '@/generated/cycles/cycles'
 import { listReviewerProgress } from '@/generated/review-releases/review-releases'
 import { listUsers } from '@/generated/users/users'
 import { getServerRequestOptions } from '@/lib/api/server-request-options'
+import { pickDefaultCycleId } from '@/lib/queries/cycles'
 import { queryKeys } from '@/lib/queries/keys'
 import { ROLE_COLUMNS } from '@/lib/roles'
 import { ReviewProgressClient } from './components/ReviewProgressClient'
@@ -23,7 +24,7 @@ export default async function ReviewProgressPage() {
     queryKey: queryKeys.cycles.list({}),
     queryFn: async () => (await listCycles({}, requestOptions)) ?? [],
   })
-  const cycleId = (cycles.find((c) => c.status === 'open') ?? cycles[0])?.id
+  const cycleId = pickDefaultCycleId(cycles)
 
   await Promise.all([
     queryClient.prefetchQuery({

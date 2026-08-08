@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/select'
 import type { ReviewerProgressItem } from '@/generated/model'
 import type { Role } from '@/lib/api/types'
-import { useCycles } from '@/lib/queries/cycles'
+import { pickDefaultCycleId, useCycles } from '@/lib/queries/cycles'
 import { useReviewerProgress } from '@/lib/queries/reviewer-progress'
 import { useLeads } from '@/lib/queries/users'
 import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
@@ -21,11 +21,11 @@ export function ReviewProgressClient() {
   const { data: cycles = [] } = useCycles({})
   const { data: leads = [] } = useLeads()
 
-  // Scope the page to one cycle, same default as /reviewer/assignments: the
-  // first open cycle, else the first cycle.
+  // Scope the page to one cycle, same default as /reviewer/assignments.
   const [cycleId, setCycleId] = useState('')
   if (!cycleId && cycles.length > 0) {
-    setCycleId((cycles.find((c) => c.status === 'open') ?? cycles[0]).id)
+    const defaultId = pickDefaultCycleId(cycles)
+    if (defaultId) setCycleId(defaultId)
   }
   const [activeRole, setActiveRole] = useState<Role | 'all'>('all')
 

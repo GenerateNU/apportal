@@ -36,7 +36,7 @@ import {
   usePreviewAssignmentPlan,
   useSuggestCapacity,
 } from '@/lib/queries/assignment-plan'
-import { useCycles } from '@/lib/queries/cycles'
+import { pickDefaultCycleId, useCycles } from '@/lib/queries/cycles'
 import { useLeads } from '@/lib/queries/users'
 import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 import { PlanPreview } from './PlanPreview'
@@ -53,7 +53,8 @@ export function AssignmentPlanClient() {
 
   const [cycleId, setCycleId] = useState('')
   if (!cycleId && cycles.length > 0) {
-    setCycleId((cycles.find((c) => c.status === 'open') ?? cycles[0]).id)
+    const defaultId = pickDefaultCycleId(cycles)
+    if (defaultId) setCycleId(defaultId)
   }
   const [role, setRole] = useState<Role>('software_engineer')
   const [teams, setTeams] = useState<DraftTeam[]>([])

@@ -15,7 +15,7 @@ import {
 import type { Role } from '@/lib/api/types'
 import { useApplicantsByNuids } from '@/lib/queries/applicants'
 import { useApplications } from '@/lib/queries/applications'
-import { useCycles } from '@/lib/queries/cycles'
+import { DEFAULT_CYCLE_ID, useCycles } from '@/lib/queries/cycles'
 import { useCurrentUser } from '@/lib/queries/users'
 import { useWrittenReviewsByApplicationIds } from '@/lib/queries/written-reviews'
 import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
@@ -29,9 +29,18 @@ export function ReviewQueueClient() {
   const { data: cycles = [] } = useCycles({})
 
   // Unlike the chief-only pipeline pages, this is a personal task queue, so
-  // cycle and role default to "all" rather than forcing a single pick —
-  // narrowing is optional, not required to see your work.
+  // role stays "all" rather than forcing a single pick — narrowing is
+  // optional, not required to see your work. Cycle defaults to the pinned
+  // cycle (falling back to "all" if it isn't in the list) but can still be
+  // switched back to "all cycles".
   const [cycleId, setCycleId] = useState<string>('all')
+  const [cycleDefaulted, setCycleDefaulted] = useState(false)
+  if (!cycleDefaulted && cycles.length > 0) {
+    if (cycles.some((c) => c.id === DEFAULT_CYCLE_ID)) {
+      setCycleId(DEFAULT_CYCLE_ID)
+    }
+    setCycleDefaulted(true)
+  }
   const [activeRole, setActiveRole] = useState<Role | 'all'>('all')
 
   const { data: applications = [] } = useApplications({
