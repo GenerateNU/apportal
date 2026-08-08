@@ -38,6 +38,7 @@ import {
   useReorderQuestions,
   useUpdateQuestion,
 } from '@/lib/queries/questions'
+import { useReviewQuestions } from '@/lib/queries/review-questions'
 import { ROLE_CHIP_CLASS, ROLE_LABEL } from '@/lib/roles'
 import { BlockPalette } from './BlockPalette'
 import { QuestionCard } from './QuestionCard'
@@ -60,6 +61,7 @@ export function FormBuilderClient({
   const reorderQuestions = useReorderQuestions(cycleId, role)
   const updateQuestion = useUpdateQuestion()
   const deleteQuestion = useDeleteQuestion()
+  const { data: reviewQuestions = [] } = useReviewQuestions(cycleId, role)
 
   const { data: template } = useApplicationTemplate(cycleId, role)
   const updateTemplate = useUpdateApplicationTemplate()
@@ -224,34 +226,44 @@ export function FormBuilderClient({
             </>
           )}
 
-          {mode === 'application' && (
-            <button
-              type="button"
-              onClick={() => setShowPreview((prev) => !prev)}
-              className="text-text-secondary border-input focus-visible:border-ring focus-visible:ring-ring/50 flex h-8 items-center gap-2 rounded-lg border bg-transparent px-2.5 py-1.5 text-sm font-medium transition-all hover:border-gray-300 focus-visible:ring-3"
-            >
-              {showPreview ? (
-                <>
-                  <Pencil className="h-5 w-5" />
-                  Edit
-                </>
-              ) : (
-                <>
-                  <Eye className="h-5 w-5" />
-                  Preview
-                </>
-              )}
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => setShowPreview((prev) => !prev)}
+            className="text-text-secondary border-input focus-visible:border-ring focus-visible:ring-ring/50 flex h-8 items-center gap-2 rounded-lg border bg-transparent px-2.5 py-1.5 text-sm font-medium transition-all hover:border-gray-300 focus-visible:ring-3"
+          >
+            {showPreview ? (
+              <>
+                <Pencil className="h-5 w-5" />
+                Edit
+              </>
+            ) : (
+              <>
+                <Eye className="h-5 w-5" />
+                Preview
+              </>
+            )}
+          </button>
         </div>
       </div>
 
-      {mode === 'review' ? (
+      {mode === 'review' && showPreview ? (
+        <div className="flex-1 overflow-y-auto bg-gray-50 p-4 sm:p-10">
+          <div className="mx-auto max-w-2xl">
+            <LivePreview
+              kind="review"
+              cycleName={cycleName}
+              role={role}
+              questions={reviewQuestions}
+            />
+          </div>
+        </div>
+      ) : mode === 'review' ? (
         <ReviewQuestionsBuilderClient cycleId={cycleId} role={role} />
       ) : showPreview ? (
         <div className="flex-1 overflow-y-auto bg-gray-50 p-4 sm:p-10">
           <div className="mx-auto max-w-2xl">
             <LivePreview
+              kind="application"
               cycleName={cycleName}
               role={role}
               questions={order}

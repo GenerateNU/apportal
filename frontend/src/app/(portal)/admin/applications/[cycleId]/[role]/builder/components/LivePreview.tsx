@@ -10,11 +10,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import type { Question, Role } from '@/lib/api/types'
+import type { Role } from '@/lib/api/types'
 import { groupQuestionsIntoPages } from '@/lib/applicationPages'
 import { ROLE_LABEL } from '@/lib/roles'
+import type { QuestionCardQuestion } from './QuestionCard'
 
-function PreviewField({ question }: { question: Question }) {
+function PreviewField({ question }: { question: QuestionCardQuestion }) {
   const options = question.options ?? []
 
   return (
@@ -23,6 +24,12 @@ function PreviewField({ question }: { question: Question }) {
         {question.question_text || 'Untitled question'}
         {question.is_required && <span className="text-red-500"> *</span>}
       </label>
+
+      {question.description && (
+        <MarkdownContent className="text-text-muted -mt-1 text-sm">
+          {question.description}
+        </MarkdownContent>
+      )}
 
       {question.question_type === 'short_answer' && (
         <input
@@ -104,24 +111,42 @@ function PreviewField({ question }: { question: Question }) {
           ))}
         </div>
       )}
+
+      {question.question_type === 'score' && (
+        <input
+          type="number"
+          min={1}
+          max={10}
+          placeholder="1-10"
+          className="text-text-default focus:border-brand-blue focus:ring-brand-blue w-24 rounded-md border border-gray-300 px-4 py-2.5 text-base outline-none focus:ring-1"
+        />
+      )}
     </div>
   )
 }
 
 export function LivePreview({
+  kind = 'application',
   cycleName,
   role,
   questions,
   description,
   instructions,
 }: {
+  // Review rubrics have no page breaks and no whole-form description/
+  // instructions text (only per-question description, rendered above) — so
+  // "review" skips pagination and those two blocks entirely.
+  kind?: 'application' | 'review'
   cycleName: string
   role: Role
-  questions: Question[]
+  questions: QuestionCardQuestion[]
   description?: string
   instructions?: string
 }) {
-  const pages = groupQuestionsIntoPages(questions)
+  const pages =
+    kind === 'application'
+      ? groupQuestionsIntoPages(questions)
+      : [{ title: null, questions }]
   const [pageIndex, setPageIndex] = useState(0)
   const lastPage = pages.length - 1
   const currentPage = pages[Math.min(pageIndex, Math.max(lastPage, 0))]
@@ -130,7 +155,7 @@ export function LivePreview({
     <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-8">
       <p className="text-text-subtle text-sm">{ROLE_LABEL[role]}</p>
       <h2 className="text-text-default mb-8 text-xl font-semibold">
-        {cycleName} Application
+        {cycleName} {kind === 'application' ? 'Application' : 'Written Review'}
       </h2>
 
       {description && pageIndex === 0 && (
