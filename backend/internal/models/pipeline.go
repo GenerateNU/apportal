@@ -81,6 +81,25 @@ type ReviewGate struct {
 	ReleasedAt     *time.Time `json:"released_at,omitempty"`
 }
 
+// ReviewerProgress reports one lead's write-review queue for a cycle × role:
+// every application they're assigned, and whether each is submitted (not a
+// table — built by joining lead_assignments with written_reviews).
+type ReviewerProgress struct {
+	LeadNUID string                 `json:"lead_nuid"`
+	FullName string                 `json:"full_name"`
+	Items    []ReviewerProgressItem `json:"items"`
+}
+
+// ReviewerProgressItem is one application within a ReviewerProgress queue.
+type ReviewerProgressItem struct {
+	ApplicationID string     `json:"application_id"`
+	ApplicantNUID string     `json:"applicant_nuid"`
+	FullName      string     `json:"full_name"`
+	Email         string     `json:"email"`
+	AssignedAt    time.Time  `json:"assigned_at"`
+	SubmittedAt   *time.Time `json:"submitted_at,omitempty"`
+}
+
 // ChiefReview: a chief's advance/hold decision after the lead written reviews.
 type ChiefReview struct {
 	ID                 string     `json:"id"`
