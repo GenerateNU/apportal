@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react'
 import { Loader2, Paperclip, X } from 'lucide-react'
 import { FileAnswerLink } from '@/components/FileAnswerLink'
+import { MarkdownContent } from '@/components/MarkdownContent'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -146,13 +147,15 @@ function UrlOrFileAnswer({
 }
 
 // Minimal shape — satisfied by both Question and ReviewQuestion, so this one
-// component renders/edits answers for either.
+// component renders/edits answers for either. description is optional because
+// only ReviewQuestion has one.
 export type FieldQuestion = {
   id: string
   question_text: string
   question_type: QuestionType
   is_required: boolean
   options: string[] | null
+  description?: string | null
 }
 
 const TEXTAREA_CLASS =
@@ -187,6 +190,12 @@ export function QuestionField({
         {index + 1}. {question.question_text}
         {question.is_required && <span className="text-destructive"> *</span>}
       </Label>
+
+      {question.description && (
+        <MarkdownContent className="text-text-muted -mt-2 gap-2 text-sm">
+          {question.description}
+        </MarkdownContent>
+      )}
 
       {question.question_type === 'short_answer' && (
         <Input

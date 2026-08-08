@@ -13,6 +13,7 @@ export interface ReviewQuestion {
   readonly $schema?: string;
   created_at: string;
   cycle_id: string;
+  description?: string;
   display_order: number;
   id: string;
   is_required: boolean;

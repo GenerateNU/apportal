@@ -31,7 +31,8 @@ type WrittenReview struct {
 
 // ReviewQuestion: a chief-defined rubric question for lead written reviews,
 // scoped to a cycle and (optionally) a specific role — same shape as
-// Question, minus PageTitle (review forms are short; no multi-page need).
+// Question, minus PageTitle (review forms are short; no multi-page need)
+// and plus Description.
 type ReviewQuestion struct {
 	ID           string          `json:"id"`
 	CycleID      string          `json:"cycle_id"`
@@ -41,6 +42,7 @@ type ReviewQuestion struct {
 	IsRequired   bool            `json:"is_required"`
 	DisplayOrder int             `json:"display_order"`
 	Options      json.RawMessage `json:"options,omitempty"`
+	Description  *string         `json:"description,omitempty"`
 	CreatedAt    time.Time       `json:"created_at"`
 }
 
