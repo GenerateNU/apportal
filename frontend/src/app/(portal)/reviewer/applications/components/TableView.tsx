@@ -3,7 +3,7 @@ import type { ApplicantApplication, ApplicationStage } from './types'
 import { FILTER_STAGES } from './constants'
 import { ApplicantRow } from './ApplicantRow'
 
-const TRAILING_COLUMNS = ['Stage', 'Submitted']
+const TRAILING_COLUMNS = ['Stage', 'Submitted', 'Availability']
 
 export function TableView({
   applicants,

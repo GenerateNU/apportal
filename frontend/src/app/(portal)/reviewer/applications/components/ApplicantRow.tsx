@@ -1,8 +1,31 @@
-import type { Question, WrittenAnswer } from '@/lib/api/types'
+import type { ApplicationStage, Question, WrittenAnswer } from '@/lib/api/types'
 import type { ApplicantApplication } from './types'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { AVAILABILITY_OPTIONS } from '@/lib/availability'
+import { useUpdateApplication } from '@/lib/queries/applications'
 import { formatDate } from '@/lib/utils'
-import { stageDot, stageLabel, stageTextColor } from './constants'
+import {
+  ORDERED_STAGES,
+  stageDot,
+  stageLabel,
+  stageTextColor,
+} from './constants'
 import { AnswerCell } from './AnswerCell'
+
+function availableSlots(
+  availability: Record<string, boolean> | null | undefined
+) {
+  if (!availability) return []
+  return AVAILABILITY_OPTIONS.filter((o) => availability[o.key]).map(
+    (o) => o.label.split(' ')[0]
+  )
+}
 
 export function ApplicantRow({
   applicant,
@@ -19,6 +42,9 @@ export function ApplicantRow({
   isSelected: boolean
   onSelect: () => void
 }) {
+  const updateApplication = useUpdateApplication()
+  const slots = availableSlots(applicant.availability)
+
   return (
     <tr
       onClick={onSelect}
@@ -49,18 +75,41 @@ export function ApplicantRow({
           </td>
         )
       })}
-      <td className="border-r border-gray-100 px-3 py-2 whitespace-nowrap">
-        <span
-          className={`inline-flex items-center gap-1.5 text-sm font-medium ${stageTextColor[applicant.stage]}`}
+      <td
+        className="border-r border-gray-100 px-3 py-2 whitespace-nowrap"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <Select
+          value={applicant.stage}
+          onValueChange={(val) =>
+            updateApplication.mutate({
+              id: applicant.id,
+              body: { stage: val as ApplicationStage },
+            })
+          }
         >
-          <span
-            className={`h-1.5 w-1.5 rounded-full ${stageDot[applicant.stage]}`}
-          />
-          {stageLabel[applicant.stage]}
-        </span>
+          <SelectTrigger
+            className={`h-auto w-auto gap-1.5 border-none bg-transparent px-1.5 py-1 text-sm font-medium shadow-none hover:bg-gray-100 ${stageTextColor[applicant.stage]}`}
+          >
+            <span
+              className={`h-1.5 w-1.5 shrink-0 rounded-full ${stageDot[applicant.stage]}`}
+            />
+            <SelectValue>{stageLabel[applicant.stage]}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {ORDERED_STAGES.map((stage) => (
+              <SelectItem key={stage} value={stage}>
+                {stageLabel[stage]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </td>
       <td className="text-text-muted px-3 py-2 text-sm whitespace-nowrap">
         {formatDate(applicant.submittedAt)}
+      </td>
+      <td className="text-text-muted px-3 py-2 text-sm whitespace-nowrap">
+        {slots.length > 0 ? slots.join(', ') : '—'}
       </td>
     </tr>
   )

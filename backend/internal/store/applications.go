@@ -148,6 +148,22 @@ func (s *Store) DeleteDraftApplication(ctx context.Context, id, userNUID string)
 	return nil
 }
 
+// AdvanceApplicationsToLeadReview moves applications from submitted into
+// lead_review once a reviewer is assigned. Guarded by stage='submitted' so
+// it's a no-op for applications already past lead_review (or still draft),
+// and safe to call redundantly for every assignment on an application.
+func (s *Store) AdvanceApplicationsToLeadReview(ctx context.Context, applicationIDs []string) (int, error) {
+	if len(applicationIDs) == 0 {
+		return 0, nil
+	}
+	const q = `UPDATE applications SET stage = 'lead_review' WHERE id = ANY($1) AND stage = 'submitted'`
+	tag, err := s.db.Exec(ctx, q, applicationIDs)
+	if err != nil {
+		return 0, err
+	}
+	return int(tag.RowsAffected()), nil
+}
+
 func (s *Store) UpdateApplication(ctx context.Context, id string, in ApplicationUpdate) (models.Application, error) {
 	const q = `
 		UPDATE applications SET

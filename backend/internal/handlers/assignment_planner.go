@@ -323,6 +323,18 @@ func (h *assignmentPlannerHandler) commit(ctx context.Context, in *PreviewPlanIn
 		return nil, storeErr(err)
 	}
 
+	newlyAssigned := make(map[string]bool, len(planned.plan.New))
+	for _, p := range planned.plan.New {
+		newlyAssigned[p.ApplicationID] = true
+	}
+	appIDs := make([]string, 0, len(newlyAssigned))
+	for id := range newlyAssigned {
+		appIDs = append(appIDs, id)
+	}
+	if _, err := h.store.AdvanceApplicationsToLeadReview(ctx, appIDs); err != nil {
+		return nil, storeErr(err)
+	}
+
 	body, err := h.decoratePlan(ctx, planned)
 	if err != nil {
 		return nil, storeErr(err)
