@@ -107,6 +107,9 @@ type CapacityInput struct {
 		Role     models.Role `json:"role" doc:"Applicant role whose pool is being planned"`
 		Teams    []PlanTeam  `json:"teams"`
 		Coverage int         `json:"coverage" minimum:"1" doc:"How many distinct leads should review each application"`
+		// ExcludedApplicationIDs are left out of the pool for this call only —
+		// supplied per request rather than stored, same as Teams.
+		ExcludedApplicationIDs []string `json:"excluded_application_ids,omitempty"`
 	}
 }
 
@@ -126,6 +129,7 @@ func (h *assignmentPlannerHandler) capacity(ctx context.Context, in *CapacityInp
 	if err != nil {
 		return nil, storeErr(err)
 	}
+	pool = excludeApplications(pool, in.Body.ExcludedApplicationIDs)
 
 	out, err := assign.SuggestCapacity(assign.CapacityInput{
 		Applications: len(pool),
@@ -148,6 +152,11 @@ type PreviewPlanInput struct {
 		Coverage     int            `json:"coverage" minimum:"1"`
 		Cap          int            `json:"cap" minimum:"1" doc:"Maximum applications per lead"`
 		CapOverrides map[string]int `json:"cap_overrides,omitempty" doc:"Per-lead cap overrides, keyed by NUID"`
+		// ExcludedApplicationIDs are left out of the pool for this call only —
+		// supplied per request rather than stored, same as Teams. Commit
+		// re-reads this from its own request body, so an excluded application
+		// stays excluded only for as long as the chief keeps sending its ID.
+		ExcludedApplicationIDs []string `json:"excluded_application_ids,omitempty"`
 	}
 }
 
@@ -237,6 +246,7 @@ func (h *assignmentPlannerHandler) buildPlan(ctx context.Context, in *PreviewPla
 	if err != nil {
 		return plannedRun{}, storeErr(err)
 	}
+	pool = excludeApplications(pool, in.Body.ExcludedApplicationIDs)
 	existing, err := h.store.ListLeadAssignmentsForCycle(ctx, in.ID, in.Body.Role)
 	if err != nil {
 		return plannedRun{}, storeErr(err)
@@ -411,11 +421,23 @@ type PoolInput struct {
 	Role models.Role `query:"role" doc:"Applicant role"`
 }
 
+// PoolApplicant identifies one application in the pool, with enough detail to
+// recognise the applicant without a second lookup — used by the chief to pick
+// which applicants to exclude before planning.
+type PoolApplicant struct {
+	ApplicationID string `json:"application_id"`
+	FullName      string `json:"full_name"`
+	Email         string `json:"email"`
+}
+
 type PoolOutput struct {
 	Body struct {
 		PoolSize int `json:"pool_size"`
 		// LeadCount is how many leads exist to draw teams from.
 		LeadCount int `json:"lead_count"`
+		// Applicants is the full pool, unfiltered by any exclusion — the chief
+		// checks some of these off to exclude them from capacity/preview/commit.
+		Applicants []PoolApplicant `json:"applicants"`
 	}
 }
 
@@ -436,9 +458,15 @@ func (h *assignmentPlannerHandler) pool(ctx context.Context, in *PoolInput) (*Po
 		return nil, storeErr(err)
 	}
 
+	applicants := make([]PoolApplicant, len(pool))
+	for i, a := range pool {
+		applicants[i] = PoolApplicant{ApplicationID: a.ID, FullName: a.FullName, Email: a.Email}
+	}
+
 	out := &PoolOutput{}
 	out.Body.PoolSize = len(pool)
 	out.Body.LeadCount = len(names)
+	out.Body.Applicants = applicants
 	return out, nil
 }
 
@@ -452,6 +480,26 @@ func (h *assignmentPlannerHandler) reviewPool(ctx context.Context, cycleID strin
 		Role:    &role,
 		Stages:  reviewPoolStages,
 	})
+}
+
+// excludeApplications drops any pool entries whose ID is in excludeIDs — a
+// chief keeping specific applicants out of this planning run. Supplied per
+// request rather than stored, same as Teams.
+func excludeApplications(pool []models.ApplicationSummary, excludeIDs []string) []models.ApplicationSummary {
+	if len(excludeIDs) == 0 {
+		return pool
+	}
+	excluded := make(map[string]bool, len(excludeIDs))
+	for _, id := range excludeIDs {
+		excluded[id] = true
+	}
+	out := make([]models.ApplicationSummary, 0, len(pool))
+	for _, a := range pool {
+		if !excluded[a.ID] {
+			out = append(out, a)
+		}
+	}
+	return out
 }
 
 func (h *assignmentPlannerHandler) leadNames(ctx context.Context) (map[string]string, error) {
