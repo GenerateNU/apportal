@@ -46,6 +46,13 @@ func (InterviewRating) Schema(huma.Registry) *huma.Schema {
 	)
 }
 
+func (ChiefVote) Schema(huma.Registry) *huma.Schema {
+	return enumSchema(
+		string(VoteStrongInterview), string(VoteInterview), string(VoteNeutral),
+		string(VoteNoInterview), string(VoteStrongNoInterview),
+	)
+}
+
 func (QuestionType) Schema(huma.Registry) *huma.Schema {
 	return enumSchema(
 		string(QuestionShortAnswer), string(QuestionLongAnswer),

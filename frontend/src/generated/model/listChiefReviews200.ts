@@ -5,6 +5,6 @@
  * Generate application portal — applications, reviews, and the hiring pipeline.
  * OpenAPI spec version: 0.1.0
  */
-import type { ChiefReview } from './chiefReview';
+import type { ChiefReviewDetail } from './chiefReviewDetail';
 
-export type ListChiefReviews200 = ChiefReview[] | null;
+export type ListChiefReviews200 = ChiefReviewDetail[] | null;

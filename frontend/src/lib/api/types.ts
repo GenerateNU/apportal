@@ -10,7 +10,8 @@ import type {
   Application as GenApplication,
   ApplicationSummary as GenApplicationSummary,
   ApplicationTemplate as GenApplicationTemplate,
-  ChiefReview as GenChiefReview,
+  ChiefReviewDetail as GenChiefReviewDetail,
+  ChiefReviewDetailVote,
   Cycle as GenCycle,
   CodeChallenge as GenCodeChallenge,
   CodeSubmission as GenCodeSubmission,
@@ -39,6 +40,7 @@ export type {
 export type Role = ApplicationRole
 export type QuestionType = QuestionQuestionType
 export type UserRole = UserRolesAnyOfItem
+export type ChiefVote = ChiefReviewDetailVote
 
 // The reviewer role passed as the list-users filter. Not a standalone backend
 // enum (it's just a query param), so it stays hand-written.
@@ -117,7 +119,7 @@ export type WrittenReviewDetail = Omit<
 
 export type CodeSubmission = Omit<GenCodeSubmission, '$schema'>
 
-export type ChiefReview = Omit<GenChiefReview, '$schema'>
+export type ChiefReview = Omit<GenChiefReviewDetail, '$schema'>
 
 export type InterviewAssignment = Omit<GenInterviewAssignment, '$schema'>
 

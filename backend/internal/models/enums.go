@@ -87,6 +87,28 @@ func (r InterviewRating) Valid() bool {
 	return false
 }
 
+// ChiefVote is a chief's individual read on whether an application should
+// advance to interview — each chief on an application casts their own; the
+// final advance/reject call is a separate step (changing the application's
+// stage) made after discussing the votes.
+type ChiefVote string
+
+const (
+	VoteStrongInterview   ChiefVote = "strong_interview"
+	VoteInterview         ChiefVote = "interview"
+	VoteNeutral           ChiefVote = "neutral"
+	VoteNoInterview       ChiefVote = "no_interview"
+	VoteStrongNoInterview ChiefVote = "strong_no_interview"
+)
+
+func (v ChiefVote) Valid() bool {
+	switch v {
+	case VoteStrongInterview, VoteInterview, VoteNeutral, VoteNoInterview, VoteStrongNoInterview:
+		return true
+	}
+	return false
+}
+
 // ApplicationType is what a cycle is recruiting for.
 type ApplicationType string
 

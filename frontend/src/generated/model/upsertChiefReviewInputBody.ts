@@ -5,10 +5,11 @@
  * Generate application portal — applications, reviews, and the hiring pipeline.
  * OpenAPI spec version: 0.1.0
  */
+import type { UpsertChiefReviewInputBodyVote } from './upsertChiefReviewInputBodyVote';
 
 export interface UpsertChiefReviewInputBody {
   /** A URL to the JSON Schema for this object. */
   readonly $schema?: string;
-  advance_to_interview?: boolean;
   notes?: string;
+  vote?: UpsertChiefReviewInputBodyVote;
 }

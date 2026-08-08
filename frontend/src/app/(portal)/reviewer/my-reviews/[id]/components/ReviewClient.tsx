@@ -322,7 +322,7 @@ export function ReviewClient({
                         className="rounded-xl border border-gray-100 bg-white p-4"
                       >
                         <span className="text-text-muted text-xs">
-                          Reviewer {r.reviewer_nuid}
+                          Reviewer {r.reviewer_name || r.reviewer_nuid}
                         </span>
                         <div className="mt-2 flex flex-col gap-2">
                           {r.answers.map((a) => {
