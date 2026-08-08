@@ -6,9 +6,11 @@ import { KanbanCard } from './KanbanCard'
 export function KanbanColumn({
   stage,
   applicants,
+  availabilityByApplicationId,
 }: {
   stage: ApplicationStage
   applicants: ApplicantApplication[]
+  availabilityByApplicationId: Record<string, string[]>
 }) {
   return (
     <div className="flex w-72 shrink-0 flex-col">
@@ -21,7 +23,11 @@ export function KanbanColumn({
       </div>
       <div className="flex flex-col gap-2">
         {applicants.map((a) => (
-          <KanbanCard key={a.id} applicant={a} />
+          <KanbanCard
+            key={a.id}
+            applicant={a}
+            availabilityDays={availabilityByApplicationId[a.id] ?? []}
+          />
         ))}
         {applicants.length === 0 && (
           <p className="text-text-faint px-1 text-xs">No applicants</p>
