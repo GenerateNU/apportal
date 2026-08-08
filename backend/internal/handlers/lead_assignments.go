@@ -84,6 +84,9 @@ func (h *leadAssignmentHandler) create(ctx context.Context, in *CreateLeadAssign
 	if err != nil {
 		return nil, storeErr(err)
 	}
+	if _, err := h.store.AdvanceApplicationsToLeadReview(ctx, []string{in.ID}); err != nil {
+		return nil, storeErr(err)
+	}
 	return &LeadAssignmentOutput{Body: a}, nil
 }
 

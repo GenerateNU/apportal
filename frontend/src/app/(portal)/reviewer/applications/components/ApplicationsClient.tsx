@@ -16,6 +16,7 @@ import type {
   Role,
   WrittenAnswer,
 } from '@/lib/api/types'
+import { AVAILABILITY_OPTIONS } from '@/lib/availability'
 import { useAnswersByApplicationIds } from '@/lib/queries/answers'
 import { useApplications } from '@/lib/queries/applications'
 import { useCycles } from '@/lib/queries/cycles'
@@ -37,6 +38,9 @@ export function ApplicationsClient() {
   const [activeCycle, setActiveCycle] = useState<string>('')
   const [cycleDefaulted, setCycleDefaulted] = useState(false)
   const [search, setSearch] = useState('')
+  const [activeAvailability, setActiveAvailability] = useState<string | 'all'>(
+    'all'
+  )
   const [selectedApplicationId, setSelectedApplicationId] = useState<
     string | null
   >(null)
@@ -119,6 +123,7 @@ export function ApplicationsClient() {
         cycleId: app.cycle_id,
         stage: app.stage,
         submittedAt: app.submitted_at,
+        availability: app.availability,
       })),
     [applications]
   )
@@ -128,7 +133,11 @@ export function ApplicationsClient() {
   // search instead of always reflecting every application in the cycle+role.
   const filteredExceptStage = rows.filter((a) => {
     const query = search.toLowerCase()
-    return !query || a.nuid.includes(query)
+    if (query && !a.nuid.includes(query)) return false
+    if (activeAvailability !== 'all' && !a.availability?.[activeAvailability]) {
+      return false
+    }
+    return true
   })
 
   const filtered = filteredExceptStage.filter(
@@ -192,6 +201,23 @@ export function ApplicationsClient() {
               {cycles.map((cycle) => (
                 <SelectItem key={cycle.id} value={cycle.id}>
                   {cycle.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={activeAvailability}
+            onValueChange={setActiveAvailability}
+          >
+            <SelectTrigger className="w-56" aria-label="Filter by availability">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Any availability</SelectItem>
+              {AVAILABILITY_OPTIONS.map((option) => (
+                <SelectItem key={option.key} value={option.key}>
+                  {option.label}
                 </SelectItem>
               ))}
             </SelectContent>
