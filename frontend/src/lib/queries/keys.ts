@@ -143,4 +143,11 @@ export const queryKeys = {
     list: (cycleId: string) =>
       [...queryKeys.reviewGates.lists(), cycleId] as const,
   },
+
+  reviewerProgress: {
+    all: ['reviewer-progress'] as const,
+    lists: () => [...queryKeys.reviewerProgress.all, 'list'] as const,
+    list: (cycleId: string, role?: Role) =>
+      [...queryKeys.reviewerProgress.lists(), cycleId, role ?? 'all'] as const,
+  },
 } as const
