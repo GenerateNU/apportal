@@ -18,25 +18,28 @@ type ReviewQuestionCreate struct {
 	IsRequired   bool
 	DisplayOrder int
 	Options      json.RawMessage
+	Description  *string
 }
 
 type ReviewQuestionUpdate struct {
-	QuestionText *string
-	QuestionType *models.QuestionType
-	IsRequired   *bool
-	DisplayOrder *int
-	Options      json.RawMessage
+	QuestionText     *string
+	QuestionType     *models.QuestionType
+	IsRequired       *bool
+	DisplayOrder     *int
+	Options          json.RawMessage
+	Description      *string
+	ClearDescription bool
 }
 
-const reviewQuestionColumns = `id, cycle_id, application_role, question_text, question_type, is_required, display_order, options, created_at`
+const reviewQuestionColumns = `id, cycle_id, application_role, question_text, question_type, is_required, display_order, options, description, created_at`
 
 func (s *Store) CreateReviewQuestion(ctx context.Context, in ReviewQuestionCreate) (models.ReviewQuestion, error) {
 	const q = `
-		INSERT INTO review_questions (cycle_id, application_role, question_text, question_type, is_required, display_order, options)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO review_questions (cycle_id, application_role, question_text, question_type, is_required, display_order, options, description)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING ` + reviewQuestionColumns
 	rows, err := s.db.Query(ctx, q, in.CycleID, in.Role, in.QuestionText,
-		in.QuestionType, in.IsRequired, in.DisplayOrder, jsonArg(in.Options))
+		in.QuestionType, in.IsRequired, in.DisplayOrder, jsonArg(in.Options), in.Description)
 	if err != nil {
 		return models.ReviewQuestion{}, err
 	}
@@ -69,11 +72,16 @@ func (s *Store) UpdateReviewQuestion(ctx context.Context, id string, in ReviewQu
 			question_type = COALESCE($3, question_type),
 			is_required   = COALESCE($4, is_required),
 			display_order = COALESCE($5, display_order),
-			options       = COALESCE($6::jsonb, options)
+			options       = COALESCE($6::jsonb, options),
+			description   = CASE
+				WHEN $7 THEN NULL
+				WHEN $8::text IS NOT NULL THEN $8
+				ELSE description
+			END
 		WHERE id = $1
 		RETURNING ` + reviewQuestionColumns
 	rows, err := s.db.Query(ctx, q, id, in.QuestionText, in.QuestionType,
-		in.IsRequired, in.DisplayOrder, jsonArg(in.Options))
+		in.IsRequired, in.DisplayOrder, jsonArg(in.Options), in.ClearDescription, in.Description)
 	if err != nil {
 		return models.ReviewQuestion{}, err
 	}

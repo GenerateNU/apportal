@@ -110,6 +110,7 @@ export function ReviewQuestionsBuilderClient({
                     key={question.id}
                     question={question}
                     allowPageBreak={false}
+                    allowDescription
                     onUpdate={(body) =>
                       updateReviewQuestion.mutate({
                         id: question.id,
@@ -117,6 +118,8 @@ export function ReviewQuestionsBuilderClient({
                           question_text: body.question_text,
                           is_required: body.is_required,
                           options: body.options,
+                          description: body.description,
+                          clear_description: body.clear_description,
                         },
                       })
                     }

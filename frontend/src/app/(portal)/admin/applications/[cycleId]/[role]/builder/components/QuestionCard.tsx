@@ -11,7 +11,8 @@ import { QUESTION_TYPE_META } from './constants'
 // applicant-facing Question and the reviewer-facing ReviewQuestion types, so
 // this one component edits either. page_title is optional because
 // ReviewQuestion doesn't have the concept at all (allowPageBreak is false
-// wherever a ReviewQuestion is passed in).
+// wherever a ReviewQuestion is passed in); description is optional for the
+// mirror-image reason, so Question passes allowDescription={false}.
 export type QuestionCardQuestion = {
   id: string
   question_text: string
@@ -20,6 +21,7 @@ export type QuestionCardQuestion = {
   options: string[] | null
   role: Role | null
   page_title?: string
+  description?: string | null
 }
 
 export type QuestionCardUpdateBody = {
@@ -28,11 +30,14 @@ export type QuestionCardUpdateBody = {
   options?: string[]
   page_title?: string
   clear_page_title?: boolean
+  description?: string
+  clear_description?: boolean
 }
 
 export function QuestionCard({
   question,
   allowPageBreak = true,
+  allowDescription = false,
   onUpdate,
   onDelete,
 }: {
@@ -43,6 +48,9 @@ export function QuestionCard({
   // can start a page. Review questions don't have pages at all, so their
   // builder passes allowPageBreak={false} regardless of role.
   allowPageBreak?: boolean
+  // Only review questions carry help text; the applicant form's builder
+  // leaves this off.
+  allowDescription?: boolean
   onUpdate: (body: QuestionCardUpdateBody) => void
   onDelete: () => void
 }) {
@@ -81,6 +89,14 @@ export function QuestionCard({
     setOptions(persistedOptions)
   }
 
+  const persistedDescription = question.description ?? ''
+  const [prevDescription, setPrevDescription] = useState(persistedDescription)
+  const [description, setDescription] = useState(persistedDescription)
+  if (persistedDescription !== prevDescription) {
+    setPrevDescription(persistedDescription)
+    setDescription(persistedDescription)
+  }
+
   const [prevPageTitle, setPrevPageTitle] = useState(question.page_title ?? '')
   const [pageTitleDraft, setPageTitleDraft] = useState(
     question.page_title ?? ''
@@ -110,6 +126,12 @@ export function QuestionCard({
     if (trimmed !== question.question_text) {
       onUpdate({ question_text: trimmed })
     }
+  }
+
+  function commitDescription() {
+    const trimmed = description.trim()
+    if (trimmed === persistedDescription) return
+    onUpdate(trimmed ? { description: trimmed } : { clear_description: true })
   }
 
   function toggleRequired() {
@@ -202,6 +224,18 @@ export function QuestionCard({
             placeholder="Untitled question"
             className="text-text-default w-full rounded-md border border-transparent px-1.5 py-1 text-lg font-medium outline-none hover:border-gray-200 focus:border-gray-300"
           />
+
+          {allowDescription && (
+            <textarea
+              aria-label="Help text"
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              onBlur={commitDescription}
+              placeholder="Add help text (optional, supports Markdown)"
+              rows={2}
+              className="text-text-muted -mt-1 w-full resize-y rounded-md border border-transparent px-1.5 py-1 text-sm outline-none hover:border-gray-200 focus:border-gray-300"
+            />
+          )}
 
           {canHavePageBreak && (
             <div className="flex items-center gap-2">
