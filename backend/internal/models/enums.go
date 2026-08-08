@@ -21,10 +21,14 @@ func (r Role) Valid() bool {
 type ApplicationStage string
 
 const (
-	StageDraft              ApplicationStage = "draft"
-	StageSubmitted          ApplicationStage = "submitted"
-	StageLeadReview         ApplicationStage = "lead_review"
-	StageChiefReview        ApplicationStage = "chief_review"
+	StageDraft       ApplicationStage = "draft"
+	StageSubmitted   ApplicationStage = "submitted"
+	StageLeadReview  ApplicationStage = "lead_review"
+	StageChiefReview ApplicationStage = "chief_review"
+	// StageInterview is a generic manual "Interview" bucket, distinct from the
+	// granular interview_scheduled/conducted/review stages that the interview
+	// assignment/recording-review flows drive automatically.
+	StageInterview          ApplicationStage = "interview"
 	StageInterviewScheduled ApplicationStage = "interview_scheduled"
 	StageInterviewConducted ApplicationStage = "interview_conducted"
 	StageInterviewReview    ApplicationStage = "interview_review"
@@ -36,7 +40,7 @@ const (
 
 func (s ApplicationStage) Valid() bool {
 	switch s {
-	case StageDraft, StageSubmitted, StageLeadReview, StageChiefReview, StageInterviewScheduled,
+	case StageDraft, StageSubmitted, StageLeadReview, StageChiefReview, StageInterview, StageInterviewScheduled,
 		StageInterviewConducted, StageInterviewReview, StageSelection,
 		StageAccepted, StageRejected, StageWithdrawn:
 		return true

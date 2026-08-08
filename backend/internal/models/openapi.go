@@ -21,7 +21,7 @@ func (Role) Schema(huma.Registry) *huma.Schema {
 func (ApplicationStage) Schema(huma.Registry) *huma.Schema {
 	return enumSchema(
 		string(StageDraft), string(StageSubmitted), string(StageLeadReview), string(StageChiefReview),
-		string(StageInterviewScheduled), string(StageInterviewConducted),
+		string(StageInterview), string(StageInterviewScheduled), string(StageInterviewConducted),
 		string(StageInterviewReview), string(StageSelection),
 		string(StageAccepted), string(StageRejected), string(StageWithdrawn),
 	)

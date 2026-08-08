@@ -64,6 +64,7 @@ components:
             - submitted
             - lead_review
             - chief_review
+            - interview
             - interview_scheduled
             - interview_conducted
             - interview_review
@@ -113,6 +114,7 @@ components:
             - submitted
             - lead_review
             - chief_review
+            - interview
             - interview_scheduled
             - interview_conducted
             - interview_review
@@ -610,6 +612,7 @@ components:
             - submitted
             - lead_review
             - chief_review
+            - interview
             - interview_scheduled
             - interview_conducted
             - interview_review
@@ -908,6 +911,7 @@ components:
             - submitted
             - lead_review
             - chief_review
+            - interview
             - interview_scheduled
             - interview_conducted
             - interview_review
@@ -1651,6 +1655,7 @@ components:
             - submitted
             - lead_review
             - chief_review
+            - interview
             - interview_scheduled
             - interview_conducted
             - interview_review
