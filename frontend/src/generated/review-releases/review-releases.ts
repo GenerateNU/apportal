@@ -27,6 +27,8 @@ import type {
 import type {
   ErrorModel,
   ListReviewGates200,
+  ListReviewerProgress200,
+  ListReviewerProgressParams,
   ReviewGate,
   SetReviewReleaseInputBody
 } from '.././model';
@@ -222,4 +224,103 @@ export const useSetReviewRelease = <TError = ErrorModel | ErrorModel | ErrorMode
 
       return useMutation(mutationOptions, queryClient);
     }
+    /**
+ * Chief only. One entry per lead with any assignment or role='lead' account, listing every application assigned to them and whether their written review is submitted.
+ * @summary Per-reviewer written-review progress for a cycle
+ */
+export const listReviewerProgress = (
+    id: string,
+    params?: ListReviewerProgressParams,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<ListReviewerProgress200>(
+      {url: `/cycles/${id}/reviewer-progress`, method: 'GET',
+        params, signal
+    },
+      options);
+    }
+  
+
+
+
+export const getListReviewerProgressQueryKey = (id?: string,
+    params?: ListReviewerProgressParams,) => {
+    return [
+    `/cycles/${id}/reviewer-progress`, ...(params ? [params]: [])
+    ] as const;
+    }
+
     
+export const getListReviewerProgressQueryOptions = <TData = Awaited<ReturnType<typeof listReviewerProgress>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(id: string,
+    params?: ListReviewerProgressParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listReviewerProgress>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListReviewerProgressQueryKey(id,params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listReviewerProgress>>> = ({ signal }) => listReviewerProgress(id,params, requestOptions, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listReviewerProgress>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListReviewerProgressQueryResult = NonNullable<Awaited<ReturnType<typeof listReviewerProgress>>>
+export type ListReviewerProgressQueryError = ErrorModel | ErrorModel | ErrorModel | ErrorModel
+
+
+export function useListReviewerProgress<TData = Awaited<ReturnType<typeof listReviewerProgress>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
+ id: string,
+    params: undefined |  ListReviewerProgressParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listReviewerProgress>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listReviewerProgress>>,
+          TError,
+          Awaited<ReturnType<typeof listReviewerProgress>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListReviewerProgress<TData = Awaited<ReturnType<typeof listReviewerProgress>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
+ id: string,
+    params?: ListReviewerProgressParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listReviewerProgress>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listReviewerProgress>>,
+          TError,
+          Awaited<ReturnType<typeof listReviewerProgress>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListReviewerProgress<TData = Awaited<ReturnType<typeof listReviewerProgress>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
+ id: string,
+    params?: ListReviewerProgressParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listReviewerProgress>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Per-reviewer written-review progress for a cycle
+ */
+
+export function useListReviewerProgress<TData = Awaited<ReturnType<typeof listReviewerProgress>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
+ id: string,
+    params?: ListReviewerProgressParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listReviewerProgress>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListReviewerProgressQueryOptions(id,params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+

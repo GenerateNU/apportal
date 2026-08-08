@@ -8,6 +8,7 @@ import {
   FileText,
   Calendar,
   ClipboardCheck,
+  ListChecks,
   Video,
   Wand2,
   LogOut,
@@ -63,6 +64,12 @@ const sectionsByRole: Record<Role, NavSection> = {
         href: '/reviewer/assignments',
         label: 'Assign Reviewers',
         icon: UserPlus,
+        chiefOnly: true,
+      },
+      {
+        href: '/reviewer/review-progress',
+        label: 'Review Progress',
+        icon: ListChecks,
         chiefOnly: true,
       },
       {

@@ -17,6 +17,7 @@ import type {
   InterviewAssignment as GenInterviewAssignment,
   InterviewReviewAssignment as GenInterviewReviewAssignment,
   Question as GenQuestion,
+  ReviewerProgress as GenReviewerProgress,
   ReviewQuestion as GenReviewQuestion,
   User as GenUser,
   WrittenAnswer as GenWrittenAnswer,
@@ -124,3 +125,9 @@ export type InterviewReviewAssignment = Omit<
   GenInterviewReviewAssignment,
   '$schema'
 >
+
+// items is nullable in the generated type (an empty Go slice can encode as
+// `null`); callers always want an array.
+export type ReviewerProgress = Omit<GenReviewerProgress, 'items'> & {
+  items: NonNullable<GenReviewerProgress['items']>
+}
