@@ -29,9 +29,11 @@ import { ReviewBlockPalette } from './ReviewBlockPalette'
 
 // The rubric a lead fills out when reviewing an application — same editing
 // UI as the application-questions builder (drag-reorder QuestionCards + a
-// palette to add new ones), minus the template/status/deadline/live-preview
-// concepts that only make sense for the applicant-facing form, and minus
-// page breaks (review forms are a single short list).
+// palette to add new ones), minus the template/status/deadline concepts that
+// only make sense for the applicant-facing form, and minus page breaks
+// (review forms are a single short list). Live preview is handled by the
+// parent FormBuilderClient, which swaps this component out for <LivePreview
+// kind="review" /> — same toggle as the application form's preview.
 export function ReviewQuestionsBuilderClient({
   cycleId,
   role,
