@@ -35,6 +35,10 @@ type ApplicationFilter struct {
 	UserNUID string
 	Role     *models.Role
 	Stage    *models.ApplicationStage
+	// Stages matches any of several stages, for callers that span more than one
+	// (the review pool covers both submitted and lead_review). Combined with
+	// Stage it narrows further, so callers should set one or the other.
+	Stages []models.ApplicationStage
 	// AssignedTo limits results to applications the given lead is assigned to
 	// write-review (via lead_assignments).
 	AssignedTo string
@@ -100,6 +104,14 @@ func (s *Store) ListApplications(ctx context.Context, f ApplicationFilter) ([]mo
 	if f.Stage != nil {
 		args = append(args, *f.Stage)
 		query += ` AND a.stage = $` + strconv.Itoa(len(args))
+	}
+	if len(f.Stages) > 0 {
+		stages := make([]string, len(f.Stages))
+		for i, s := range f.Stages {
+			stages[i] = string(s)
+		}
+		args = append(args, stages)
+		query += ` AND a.stage = ANY($` + strconv.Itoa(len(args)) + `::application_stage[])`
 	}
 	if f.AssignedTo != "" {
 		args = append(args, f.AssignedTo)
