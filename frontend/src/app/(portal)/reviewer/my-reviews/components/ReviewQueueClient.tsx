@@ -3,7 +3,7 @@ import { PageContainer } from '@/components/PageContainer'
 
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Select,
@@ -17,6 +17,7 @@ import { useApplicantsByNuids } from '@/lib/queries/applicants'
 import { useApplications } from '@/lib/queries/applications'
 import { useCycles } from '@/lib/queries/cycles'
 import { useCurrentUser } from '@/lib/queries/users'
+import { useWrittenReviewsByApplicationIds } from '@/lib/queries/written-reviews'
 import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 
 type Scope = 'mine' | 'all'
@@ -52,6 +53,24 @@ export function ReviewQueueClient() {
     })
     return map
   }, [nuids, applicantQueries])
+
+  // Whether *my* review of each application has been submitted, so the
+  // queue can show which ones are already done.
+  const applicationIds = useMemo(
+    () => applications.map((a) => a.id),
+    [applications]
+  )
+  const reviewQueries = useWrittenReviewsByApplicationIds(applicationIds)
+  const submittedAtByApplicationId = useMemo(() => {
+    const map: Record<string, string | undefined> = {}
+    applicationIds.forEach((id, i) => {
+      const own = reviewQueries[i]?.data?.find(
+        (r) => r.reviewer_nuid === currentUser?.nuid
+      )
+      map[id] = own?.submitted_at
+    })
+    return map
+  }, [applicationIds, reviewQueries, currentUser?.nuid])
 
   return (
     <PageContainer>
@@ -142,26 +161,44 @@ export function ReviewQueueClient() {
                   </span>
                 </h2>
                 <div className="flex flex-col gap-3">
-                  {roleApps.map((application) => (
-                    <div
-                      key={application.id}
-                      className="flex items-center justify-between gap-4 rounded-xl border border-gray-100 bg-white p-4"
-                    >
-                      <span className="text-text-default text-sm font-medium">
-                        {nameByNuid[application.user_nuid] ??
-                          application.user_nuid}
-                      </span>
-                      <Button
-                        variant="outline"
-                        onClick={() =>
-                          router.push(`/reviewer/my-reviews/${application.id}`)
-                        }
+                  {roleApps.map((application) => {
+                    const submittedAt =
+                      submittedAtByApplicationId[application.id]
+                    return (
+                      <div
+                        key={application.id}
+                        className="flex items-center justify-between gap-4 rounded-xl border border-gray-100 bg-white p-4 transition-colors hover:bg-gray-50"
                       >
-                        Review
-                        <ArrowRight data-icon="inline-end" size={14} />
-                      </Button>
-                    </div>
-                  ))}
+                        <div className="flex items-center gap-3">
+                          <span className="text-text-default text-sm font-medium">
+                            {nameByNuid[application.user_nuid] ??
+                              application.user_nuid}
+                          </span>
+                          {submittedAt && (
+                            <span className="bg-status-open/15 text-status-open inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium">
+                              <Check size={12} />
+                              Submitted{' '}
+                              {new Date(submittedAt).toLocaleString(undefined, {
+                                dateStyle: 'medium',
+                                timeStyle: 'short',
+                              })}
+                            </span>
+                          )}
+                        </div>
+                        <Button
+                          variant="outline"
+                          onClick={() =>
+                            router.push(
+                              `/reviewer/my-reviews/${application.id}`
+                            )
+                          }
+                        >
+                          {submittedAt ? 'View' : 'Review'}
+                          <ArrowRight data-icon="inline-end" size={14} />
+                        </Button>
+                      </div>
+                    )
+                  })}
                 </div>
               </section>
             )
