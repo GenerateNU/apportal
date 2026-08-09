@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { ArrowRight, Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { ProgressBar } from '@/components/ProgressBar'
 import {
   Select,
   SelectContent,
@@ -211,14 +212,11 @@ export function ReviewQueueClient() {
       {applications.length > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="h-1.5 w-40 overflow-hidden rounded-full bg-gray-100">
-              <div
-                className="bg-status-open h-full rounded-full transition-[width]"
-                style={{
-                  width: `${(reviewedCount / applications.length) * 100}%`,
-                }}
-              />
-            </div>
+            <ProgressBar
+              value={reviewedCount}
+              total={applications.length}
+              className="w-40"
+            />
             <span className="text-text-muted text-xs">
               {reviewedCount} of {applications.length} reviewed
             </span>
@@ -252,11 +250,12 @@ export function ReviewQueueClient() {
               {roleApplications.map((application) => (
                 <ReviewRow
                   key={application.id}
-                  application={application}
+                  href={`/reviewer/my-reviews/${application.id}`}
+                  name={application.full_name || application.user_nuid}
+                  email={application.email || application.user_nuid}
+                  stage={application.stage}
+                  date={application.submitted_at}
                   state={reviewByApplicationId[application.id]?.state ?? 'none'}
-                  submittedAt={
-                    reviewByApplicationId[application.id]?.submittedAt
-                  }
                 />
               ))}
             </div>
