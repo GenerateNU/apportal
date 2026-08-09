@@ -15,6 +15,7 @@ export const CycleStageStage = {
   submitted: 'submitted',
   lead_review: 'lead_review',
   chief_review: 'chief_review',
+  interview: 'interview',
   interview_scheduled: 'interview_scheduled',
   interview_conducted: 'interview_conducted',
   interview_review: 'interview_review',

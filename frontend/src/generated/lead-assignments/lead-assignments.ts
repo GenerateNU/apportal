@@ -26,9 +26,11 @@ import type {
 
 import type {
   CreateLeadAssignmentInputBody,
+  DeleteAllLeadAssignmentsOutputBody,
   ErrorModel,
   LeadAssignment,
-  ListLeadAssignments200
+  ListLeadAssignments200,
+  UnassignAllLeadsParams
 } from '.././model';
 
 import { customInstance } from '../../lib/api/orval-mutator';
@@ -219,6 +221,70 @@ export const useAssignLead = <TError = ErrorModel | ErrorModel | ErrorModel | Er
       > => {
 
       const mutationOptions = getAssignLeadMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * Chief only. Deletes all written-review lead assignments for one applicant role in a cycle at once. Cannot be undone.
+ * @summary Remove every lead assignment for a cycle's role
+ */
+export const unassignAllLeads = (
+    id: string,
+    params?: UnassignAllLeadsParams,
+ options?: SecondParameter<typeof customInstance>,) => {
+      
+      
+      return customInstance<DeleteAllLeadAssignmentsOutputBody>(
+      {url: `/cycles/${id}/lead-assignments`, method: 'DELETE',
+        params
+    },
+      options);
+    }
+  
+
+
+export const getUnassignAllLeadsMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unassignAllLeads>>, TError,{id: string;params?: UnassignAllLeadsParams}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof unassignAllLeads>>, TError,{id: string;params?: UnassignAllLeadsParams}, TContext> => {
+
+const mutationKey = ['unassignAllLeads'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof unassignAllLeads>>, {id: string;params?: UnassignAllLeadsParams}> = (props) => {
+          const {id,params} = props ?? {};
+
+          return  unassignAllLeads(id,params,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UnassignAllLeadsMutationResult = NonNullable<Awaited<ReturnType<typeof unassignAllLeads>>>
+    
+    export type UnassignAllLeadsMutationError = ErrorModel | ErrorModel | ErrorModel | ErrorModel
+
+    /**
+ * @summary Remove every lead assignment for a cycle's role
+ */
+export const useUnassignAllLeads = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unassignAllLeads>>, TError,{id: string;params?: UnassignAllLeadsParams}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof unassignAllLeads>>,
+        TError,
+        {id: string;params?: UnassignAllLeadsParams},
+        TContext
+      > => {
+
+      const mutationOptions = getUnassignAllLeadsMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }

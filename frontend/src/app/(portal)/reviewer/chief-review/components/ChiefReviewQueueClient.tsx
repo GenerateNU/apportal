@@ -1,9 +1,9 @@
 'use client'
 import { PageContainer } from '@/components/PageContainer'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Select,
@@ -13,21 +13,24 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import type { Role } from '@/lib/api/types'
-import { defaultPipelineCycleId } from '@/lib/cycles'
 import { useApplications } from '@/lib/queries/applications'
-import { useCycles } from '@/lib/queries/cycles'
+import { useChiefReviewsByApplications } from '@/lib/queries/chief-reviews'
+import { pickDefaultCycleId, useCycles } from '@/lib/queries/cycles'
+import { useCurrentUser } from '@/lib/queries/users'
 import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 
 export function ChiefReviewQueueClient() {
   const router = useRouter()
+  const { data: currentUser } = useCurrentUser()
   const { data: cycles = [] } = useCycles({})
 
-  // Shared with the server prefetch in ../page.tsx, which scopes its
-  // application-list prefetch to this same cycle.
+  // Default cycle, same as the other chief-only pipeline pages. Shared with
+  // the server prefetch in ../page.tsx, which scopes its application-list
+  // prefetch to this same cycle.
   const [cycleId, setCycleId] = useState('')
-  const defaultCycleId = defaultPipelineCycleId(cycles)
-  if (!cycleId && defaultCycleId) {
-    setCycleId(defaultCycleId)
+  if (!cycleId && cycles.length > 0) {
+    const defaultId = pickDefaultCycleId(cycles)
+    if (defaultId) setCycleId(defaultId)
   }
   const [activeRole, setActiveRole] = useState<Role | 'all'>('all')
 
@@ -36,6 +39,25 @@ export function ChiefReviewQueueClient() {
       ? { cycle_id: cycleId, ...(activeRole !== 'all' && { role: activeRole }) }
       : undefined
   )
+
+  // Whether *my* review of each application counts as submitted (has a
+  // comment — casting a vote alone doesn't count), so the queue can show
+  // which ones are already done.
+  const applicationIds = useMemo(
+    () => applications.map((a) => a.id),
+    [applications]
+  )
+  const chiefReviewQueries = useChiefReviewsByApplications(applicationIds)
+  const submittedByApplicationId = useMemo(() => {
+    const map: Record<string, boolean> = {}
+    applicationIds.forEach((id, i) => {
+      const own = chiefReviewQueries[i]?.data?.find(
+        (r) => r.reviewer_nuid === currentUser?.nuid
+      )
+      map[id] = !!own?.notes?.trim()
+    })
+    return map
+  }, [applicationIds, chiefReviewQueries, currentUser?.nuid])
 
   return (
     <PageContainer>
@@ -104,27 +126,38 @@ export function ChiefReviewQueueClient() {
                   </span>
                 </h2>
                 <div className="flex flex-col gap-3">
-                  {roleApps.map((application) => (
-                    <div
-                      key={application.id}
-                      className="flex items-center justify-between gap-4 rounded-xl border border-gray-100 bg-white p-4"
-                    >
-                      <span className="text-text-default text-sm font-medium">
-                        {application.full_name || application.user_nuid}
-                      </span>
-                      <Button
-                        variant="outline"
-                        onClick={() =>
-                          router.push(
-                            `/reviewer/chief-review/${application.id}`
-                          )
-                        }
+                  {roleApps.map((application) => {
+                    const submitted = submittedByApplicationId[application.id]
+                    return (
+                      <div
+                        key={application.id}
+                        className="flex items-center justify-between gap-4 rounded-xl border border-gray-100 bg-white p-4 transition-colors hover:bg-gray-50"
                       >
-                        Review
-                        <ArrowRight data-icon="inline-end" size={14} />
-                      </Button>
-                    </div>
-                  ))}
+                        <div className="flex items-center gap-3">
+                          <span className="text-text-default text-sm font-medium">
+                            {application.full_name || application.user_nuid}
+                          </span>
+                          {submitted && (
+                            <span className="bg-status-open/15 text-status-open inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium">
+                              <Check size={12} />
+                              Submitted
+                            </span>
+                          )}
+                        </div>
+                        <Button
+                          variant="outline"
+                          onClick={() =>
+                            router.push(
+                              `/reviewer/chief-review/${application.id}`
+                            )
+                          }
+                        >
+                          {submitted ? 'View' : 'Review'}
+                          <ArrowRight data-icon="inline-end" size={14} />
+                        </Button>
+                      </div>
+                    )
+                  })}
                 </div>
               </section>
             )

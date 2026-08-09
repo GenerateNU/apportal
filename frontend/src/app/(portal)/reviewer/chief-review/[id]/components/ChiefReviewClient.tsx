@@ -4,8 +4,12 @@ import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Check, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import type { Role } from '@/lib/api/types'
+import type { ChiefVote, Role } from '@/lib/api/types'
 import { useApplicant } from '@/lib/queries/applicants'
+import {
+  useApplication,
+  useUpdateApplication,
+} from '@/lib/queries/applications'
 import {
   useChiefReviews,
   useUpsertChiefReview,
@@ -13,9 +17,12 @@ import {
 import { useReviewQuestions } from '@/lib/queries/review-questions'
 import { useCurrentUser } from '@/lib/queries/users'
 import { useWrittenReviews } from '@/lib/queries/written-reviews'
+import {
+  CHIEF_VOTE_BADGE_CLASS,
+  CHIEF_VOTE_LABEL,
+  CHIEF_VOTE_ORDER,
+} from '@/lib/chief-votes'
 import { ROLE_LABEL } from '@/lib/roles'
-
-type Decision = 'advance' | 'hold'
 
 export function ChiefReviewClient({
   applicationId,
@@ -29,11 +36,17 @@ export function ChiefReviewClient({
   applicantNuid: string
 }) {
   const { data: currentUser } = useCurrentUser()
+  const { data: application } = useApplication(applicationId)
   const { data: applicant } = useApplicant(applicantNuid)
   const { data: reviewQuestions = [] } = useReviewQuestions(cycleId, role)
   const { data: writtenReviews = [] } = useWrittenReviews(applicationId)
   const { data: chiefReviews = [] } = useChiefReviews(applicationId)
   const upsert = useUpsertChiefReview()
+  const updateApplication = useUpdateApplication()
+
+  const isChief = !!currentUser?.roles.some(
+    (r) => r === 'chief' || r === 'admin'
+  )
 
   const reviewQuestionById = useMemo(
     () => new Map(reviewQuestions.map((q) => [q.id, q])),
@@ -46,42 +59,32 @@ export function ChiefReviewClient({
   )
 
   const [notes, setNotes] = useState('')
-  const [decision, setDecision] = useState<Decision | undefined>(undefined)
+  const [vote, setVote] = useState<ChiefVote | undefined>(undefined)
   const [seeded, setSeeded] = useState(false)
   const [saved, setSaved] = useState(false)
 
-  // Seed the form from this chief's existing decision, once loaded.
+  // Seed the form from this chief's existing review, once loaded.
   if (!seeded && chiefReviews) {
     setNotes(own?.notes ?? '')
-    setDecision(
-      own?.advance_to_interview === true
-        ? 'advance'
-        : own?.advance_to_interview === false
-          ? 'hold'
-          : undefined
-    )
+    setVote(own?.vote)
     setSeeded(true)
   }
+
+  // Only counts as "submitted" once there's an actual comment — casting a
+  // vote alone isn't enough to say this chief has weighed in.
+  const submitted = !!own?.notes?.trim()
 
   async function save() {
     setSaved(false)
     await upsert.mutateAsync({
       applicationId,
-      body: {
-        notes,
-        advance_to_interview:
-          decision === 'advance'
-            ? true
-            : decision === 'hold'
-              ? false
-              : undefined,
-      },
+      body: { notes, vote },
     })
     setSaved(true)
   }
 
-  function toggleDecision(next: Decision) {
-    setDecision((prev) => (prev === next ? undefined : next))
+  function toggleVote(next: ChiefVote) {
+    setVote((prev) => (prev === next ? undefined : next))
   }
 
   return (
@@ -110,10 +113,10 @@ export function ChiefReviewClient({
           >
             View lead review
           </Link>
-          {own?.decided_at && (
+          {submitted && (
             <span className="bg-status-open/15 text-status-open inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium">
               <Check size={12} />
-              Decision recorded
+              Review submitted
             </span>
           )}
         </div>
@@ -145,7 +148,7 @@ export function ChiefReviewClient({
                   >
                     <div className="mb-2 flex items-center justify-between">
                       <span className="text-text-default text-sm font-medium">
-                        Reviewer {r.reviewer_nuid}
+                        Reviewer {r.reviewer_name || r.reviewer_nuid}
                       </span>
                       <div className="flex items-center gap-2">
                         {avg != null && (
@@ -189,10 +192,10 @@ export function ChiefReviewClient({
           )}
         </section>
 
-        {/* This chief's decision */}
+        {/* This chief's vote */}
         <section>
           <h2 className="text-text-subtle mb-4 text-xs font-medium tracking-wider uppercase">
-            Your decision
+            Your vote
           </h2>
           <textarea
             value={notes}
@@ -202,18 +205,15 @@ export function ChiefReviewClient({
             className="focus:border-brand-blue text-text-default placeholder:text-text-subtle w-full rounded-md border border-gray-200 p-3 text-sm focus:outline-none"
           />
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <Button
-              variant={decision === 'advance' ? 'default' : 'outline'}
-              onClick={() => toggleDecision('advance')}
-            >
-              Advance to interview
-            </Button>
-            <Button
-              variant={decision === 'hold' ? 'default' : 'outline'}
-              onClick={() => toggleDecision('hold')}
-            >
-              Do not advance
-            </Button>
+            {CHIEF_VOTE_ORDER.map((v) => (
+              <Button
+                key={v}
+                variant={vote === v ? 'default' : 'outline'}
+                onClick={() => toggleVote(v)}
+              >
+                {CHIEF_VOTE_LABEL[v]}
+              </Button>
+            ))}
           </div>
           <div className="mt-4 flex items-center gap-3">
             <Button onClick={save} disabled={upsert.isPending}>
@@ -235,11 +235,11 @@ export function ChiefReviewClient({
           </div>
         </section>
 
-        {/* Other chiefs' decisions */}
+        {/* Other chiefs' votes */}
         {others.length > 0 && (
           <section>
             <h2 className="text-text-subtle mb-4 text-xs font-medium tracking-wider uppercase">
-              Other chief decisions
+              Other chiefs&apos; votes
             </h2>
             <div className="flex flex-col gap-3">
               {others.map((r) => (
@@ -249,19 +249,13 @@ export function ChiefReviewClient({
                 >
                   <div className="mb-2 flex items-center justify-between">
                     <span className="text-text-default text-sm font-medium">
-                      Chief {r.reviewer_nuid}
+                      {r.reviewer_name || r.reviewer_nuid}
                     </span>
-                    {r.advance_to_interview != null && (
+                    {r.vote && (
                       <span
-                        className={`rounded-md px-2 py-0.5 text-xs font-medium ${
-                          r.advance_to_interview
-                            ? 'bg-status-open/15 text-status-open'
-                            : 'text-text-muted bg-gray-100'
-                        }`}
+                        className={`rounded-md px-2 py-0.5 text-xs font-medium ${CHIEF_VOTE_BADGE_CLASS[r.vote]}`}
                       >
-                        {r.advance_to_interview
-                          ? 'Advance to interview'
-                          : 'Do not advance'}
+                        {CHIEF_VOTE_LABEL[r.vote]}
                       </span>
                     )}
                   </div>
@@ -272,6 +266,53 @@ export function ChiefReviewClient({
                   )}
                 </div>
               ))}
+            </div>
+          </section>
+        )}
+
+        {/* Final decision */}
+        {isChief && (
+          <section>
+            <h2 className="text-text-subtle mb-4 text-xs font-medium tracking-wider uppercase">
+              Final decision
+            </h2>
+            <p className="text-text-muted mb-3 text-sm">
+              After discussing the votes above, advance this applicant to an
+              interview or reject them. This changes the application&apos;s
+              stage for everyone.
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                disabled={
+                  updateApplication.isPending ||
+                  application?.stage === 'interview'
+                }
+                onClick={() =>
+                  updateApplication.mutate({
+                    id: applicationId,
+                    body: { stage: 'interview' },
+                  })
+                }
+              >
+                {application?.stage === 'interview'
+                  ? 'Advanced to interview'
+                  : 'Advance to interview'}
+              </Button>
+              <Button
+                variant="outline"
+                disabled={
+                  updateApplication.isPending ||
+                  application?.stage === 'rejected'
+                }
+                onClick={() =>
+                  updateApplication.mutate({
+                    id: applicationId,
+                    body: { stage: 'rejected' },
+                  })
+                }
+              >
+                {application?.stage === 'rejected' ? 'Rejected' : 'Reject'}
+              </Button>
             </div>
           </section>
         )}

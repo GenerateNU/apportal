@@ -21,7 +21,7 @@ func (Role) Schema(huma.Registry) *huma.Schema {
 func (ApplicationStage) Schema(huma.Registry) *huma.Schema {
 	return enumSchema(
 		string(StageDraft), string(StageSubmitted), string(StageLeadReview), string(StageChiefReview),
-		string(StageInterviewScheduled), string(StageInterviewConducted),
+		string(StageInterview), string(StageInterviewScheduled), string(StageInterviewConducted),
 		string(StageInterviewReview), string(StageSelection),
 		string(StageAccepted), string(StageRejected), string(StageWithdrawn),
 	)
@@ -43,6 +43,13 @@ func (ApplicationType) Schema(huma.Registry) *huma.Schema {
 func (InterviewRating) Schema(huma.Registry) *huma.Schema {
 	return enumSchema(
 		string(RatingDoNotHire), string(RatingGood), string(RatingGreat), string(RatingMustHire),
+	)
+}
+
+func (ChiefVote) Schema(huma.Registry) *huma.Schema {
+	return enumSchema(
+		string(VoteStrongInterview), string(VoteInterview), string(VoteNeutral),
+		string(VoteNoInterview), string(VoteStrongNoInterview),
 	)
 }
 

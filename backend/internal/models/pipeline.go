@@ -31,7 +31,8 @@ type WrittenReview struct {
 
 // ReviewQuestion: a chief-defined rubric question for lead written reviews,
 // scoped to a cycle and (optionally) a specific role — same shape as
-// Question, minus PageTitle (review forms are short; no multi-page need).
+// Question, minus PageTitle (review forms are short; no multi-page need)
+// and plus Description.
 type ReviewQuestion struct {
 	ID           string          `json:"id"`
 	CycleID      string          `json:"cycle_id"`
@@ -41,6 +42,7 @@ type ReviewQuestion struct {
 	IsRequired   bool            `json:"is_required"`
 	DisplayOrder int             `json:"display_order"`
 	Options      json.RawMessage `json:"options,omitempty"`
+	Description  *string         `json:"description,omitempty"`
 	CreatedAt    time.Time       `json:"created_at"`
 }
 
@@ -57,10 +59,13 @@ type WrittenReviewAnswer struct {
 }
 
 // WrittenReviewDetail bundles a review with its answers to the cycle/role's
-// review questions (not a table).
+// review questions (not a table). ReviewerName is resolved separately (not a
+// join on written_reviews) so callers can display who wrote each review
+// without needing the chief-only user-directory endpoints.
 type WrittenReviewDetail struct {
 	WrittenReview
-	Answers []WrittenReviewAnswer `json:"answers"`
+	Answers      []WrittenReviewAnswer `json:"answers"`
+	ReviewerName string                `json:"reviewer_name,omitempty"`
 }
 
 // ReviewGate reports the blind-review state of one review kind for one applicant
@@ -79,16 +84,46 @@ type ReviewGate struct {
 	ReleasedAt     *time.Time `json:"released_at,omitempty"`
 }
 
-// ChiefReview: a chief's advance/hold decision after the lead written reviews.
+// ReviewerProgress reports one lead's write-review queue for a cycle × role:
+// every application they're assigned, and whether each is submitted (not a
+// table — built by joining lead_assignments with written_reviews).
+type ReviewerProgress struct {
+	LeadNUID string                 `json:"lead_nuid"`
+	FullName string                 `json:"full_name"`
+	Items    []ReviewerProgressItem `json:"items"`
+}
+
+// ReviewerProgressItem is one application within a ReviewerProgress queue.
+type ReviewerProgressItem struct {
+	ApplicationID string     `json:"application_id"`
+	ApplicantNUID string     `json:"applicant_nuid"`
+	FullName      string     `json:"full_name"`
+	Email         string     `json:"email"`
+	AssignedAt    time.Time  `json:"assigned_at"`
+	SubmittedAt   *time.Time `json:"submitted_at,omitempty"`
+}
+
+// ChiefReview: a chief's individual vote and notes on an application, after
+// the lead written reviews are in. One row per chief per application — see
+// ChiefVote for what each chief's vote means; the final advance/reject call
+// is made separately (by changing the application's stage) after discussing
+// everyone's votes.
 type ChiefReview struct {
-	ID                 string     `json:"id"`
-	ApplicationID      string     `json:"application_id"`
-	ReviewerNUID       string     `json:"reviewer_nuid"`
-	Notes              *string    `json:"notes,omitempty"`
-	AdvanceToInterview *bool      `json:"advance_to_interview,omitempty"`
-	DecidedAt          *time.Time `json:"decided_at,omitempty"`
-	CreatedAt          time.Time  `json:"created_at"`
-	UpdatedAt          time.Time  `json:"updated_at"`
+	ID            string     `json:"id"`
+	ApplicationID string     `json:"application_id"`
+	ReviewerNUID  string     `json:"reviewer_nuid"`
+	Notes         *string    `json:"notes,omitempty"`
+	Vote          *ChiefVote `json:"vote,omitempty"`
+	DecidedAt     *time.Time `json:"decided_at,omitempty"`
+	CreatedAt     time.Time  `json:"created_at"`
+	UpdatedAt     time.Time  `json:"updated_at"`
+}
+
+// ChiefReviewDetail bundles a chief review with the chief's resolved display
+// name (not a table column — see WrittenReviewDetail.ReviewerName).
+type ChiefReviewDetail struct {
+	ChiefReview
+	ReviewerName string `json:"reviewer_name,omitempty"`
 }
 
 // InterviewAssignment: the single interviewer assigned to an application.

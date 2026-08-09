@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -89,6 +90,57 @@ func (s *Store) ListLeadAssignmentsForCycle(ctx context.Context, cycleID string,
 		return nil, err
 	}
 	return pgx.CollectRows(rows, pgx.RowToStructByPos[models.LeadAssignment])
+}
+
+// DeleteLeadAssignmentsForCycle removes every lead assignment for one
+// applicant role in a cycle at once — a chief clearing a botched or outdated
+// assignment run. Returns how many rows were actually removed.
+func (s *Store) DeleteLeadAssignmentsForCycle(ctx context.Context, cycleID string, role models.Role) (int, error) {
+	const q = `
+		DELETE FROM lead_assignments la
+		USING applications a
+		WHERE a.id = la.application_id AND a.cycle_id = $1 AND a.application_role = $2`
+	tag, err := s.db.Exec(ctx, q, cycleID, role)
+	if err != nil {
+		return 0, err
+	}
+	return int(tag.RowsAffected()), nil
+}
+
+// ReviewerProgressRow is one lead's assignment of one application, with that
+// review's submission status if any — the flat join ListReviewerProgressForCycle
+// returns before it's grouped by lead.
+type ReviewerProgressRow struct {
+	LeadNUID      string
+	ApplicationID string
+	ApplicantNUID string
+	FullName      string
+	Email         string
+	AssignedAt    time.Time
+	SubmittedAt   *time.Time
+}
+
+// ListReviewerProgressForCycle returns, for every lead assignment in a cycle's
+// applications of one role, whether that lead's written review has been
+// submitted. Left-joining written_reviews (rather than filtering it) is what
+// lets an assigned-but-not-yet-reviewed pair show up with a nil SubmittedAt
+// instead of being silently omitted.
+func (s *Store) ListReviewerProgressForCycle(ctx context.Context, cycleID string, role models.Role) ([]ReviewerProgressRow, error) {
+	const q = `
+		SELECT la.lead_nuid, la.application_id, a.user_nuid, u.full_name, u.email,
+		       la.assigned_at, wr.submitted_at
+		FROM lead_assignments la
+		JOIN applications a ON a.id = la.application_id
+		JOIN users u ON u.nuid = a.user_nuid
+		LEFT JOIN written_reviews wr
+			ON wr.application_id = la.application_id AND wr.reviewer_nuid = la.lead_nuid
+		WHERE a.cycle_id = $1 AND a.application_role = $2
+		ORDER BY la.lead_nuid, la.assigned_at`
+	rows, err := s.db.Query(ctx, q, cycleID, role)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, pgx.RowToStructByPos[ReviewerProgressRow])
 }
 
 func (s *Store) DeleteLeadAssignment(ctx context.Context, id string) error {

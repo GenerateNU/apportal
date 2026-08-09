@@ -1,5 +1,6 @@
 'use client'
 
+import type { Question } from '@/lib/api/types'
 import type { ApplicationPage } from '@/lib/applicationPages'
 import { cn } from '@/lib/utils'
 
@@ -11,7 +12,7 @@ export function QuestionOutline({
   selectedQuestionId,
   onNavigate,
 }: {
-  pages: ApplicationPage[]
+  pages: ApplicationPage<Question>[]
   selectedQuestionId: string | null
   onNavigate: (pageIndex: number, questionId: string) => void
 }) {

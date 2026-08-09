@@ -10,6 +10,10 @@ import type { UpdateReviewQuestionInputBodyQuestionType } from './updateReviewQu
 export interface UpdateReviewQuestionInputBody {
   /** A URL to the JSON Schema for this object. */
   readonly $schema?: string;
+  /** Set true to remove this question's help text */
+  clear_description?: boolean;
+  /** Markdown help text shown under the question's label */
+  description?: string;
   display_order?: number;
   is_required?: boolean;
   options?: unknown;
