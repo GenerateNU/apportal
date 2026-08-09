@@ -289,7 +289,8 @@ export function ReviewClient({
             {submitted && (
               <div className="border-border bg-muted/40 text-text-muted mb-4 flex items-center gap-2 rounded-lg border px-4 py-3 text-sm">
                 <Lock size={14} />
-                You&apos;ve submitted this review. It can no longer be edited.
+                You&apos;ve submitted this review. You can still make changes
+                below.
               </div>
             )}
             <div className="flex flex-col gap-4">
@@ -305,7 +306,6 @@ export function ReviewClient({
                     index={i}
                     value={reviewValues[q.id] ?? {}}
                     onChange={(next) => updateReviewValue(q.id, next)}
-                    disabled={submitted}
                   />
                 ))
               )}
@@ -357,27 +357,17 @@ export function ReviewClient({
           </div>
 
           {/* Action footer */}
-          {!submitted && (
-            <div className="flex flex-col items-stretch gap-3 border-t border-gray-100 bg-white px-4 py-4 sm:flex-row sm:items-center sm:justify-end sm:px-8">
-              {saved && !upsert.isPending && (
-                <span className="text-status-open inline-flex items-center gap-1 text-sm sm:mr-auto">
-                  <Check size={14} />
-                  Saved
-                </span>
-              )}
-              <Button
-                variant="outline"
-                onClick={() => save(false)}
-                disabled={upsert.isPending || hasInvalidScore}
-                className="w-full sm:w-auto"
-              >
-                Save draft
-              </Button>
+          <div className="flex flex-col items-stretch gap-3 border-t border-gray-100 bg-white px-4 py-4 sm:flex-row sm:items-center sm:justify-end sm:px-8">
+            {saved && !upsert.isPending && (
+              <span className="text-status-open inline-flex items-center gap-1 text-sm sm:mr-auto">
+                <Check size={14} />
+                Saved
+              </span>
+            )}
+            {submitted ? (
               <Button
                 onClick={() => save(true)}
-                disabled={
-                  upsert.isPending || missingRequired || hasInvalidScore
-                }
+                disabled={upsert.isPending || hasInvalidScore}
                 className="w-full sm:w-auto"
               >
                 {upsert.isPending ? (
@@ -386,11 +376,38 @@ export function ReviewClient({
                     Saving…
                   </>
                 ) : (
-                  'Submit review'
+                  'Save changes'
                 )}
               </Button>
-            </div>
-          )}
+            ) : (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => save(false)}
+                  disabled={upsert.isPending || hasInvalidScore}
+                  className="w-full sm:w-auto"
+                >
+                  Save draft
+                </Button>
+                <Button
+                  onClick={() => save(true)}
+                  disabled={
+                    upsert.isPending || missingRequired || hasInvalidScore
+                  }
+                  className="w-full sm:w-auto"
+                >
+                  {upsert.isPending ? (
+                    <>
+                      <Loader2 className="animate-spin" size={14} />
+                      Saving…
+                    </>
+                  ) : (
+                    'Submit review'
+                  )}
+                </Button>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>
