@@ -5,6 +5,16 @@ The frontend API client is generated from the backend's OpenAPI spec — after
 changing a handler's inputs or outputs, run `make openapi` in `backend/` and
 `npm run generate:api` in `frontend/`.
 
+## Keep comments short
+
+One or two lines, three at the outside. Comment only what the code can't say —
+a non-obvious *why*, a constraint, a gotcha — and delete the rest. If the
+signature, the class names, or the next line already says it, say nothing.
+
+Don't narrate rejected alternatives, restate design rationale, or explain how a
+CSS or library feature works. A comment that needs a paragraph is usually a
+sign the code needs the work instead.
+
 ## Never fetch per item — batch it
 
 **If a page renders N items and needs data for each one, fetch it in one

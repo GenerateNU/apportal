@@ -27,48 +27,44 @@ function longDate(iso: string) {
   })
 }
 
-// One application in the lead's queue. A lead carries 25–30 of these, and the
-// only things that vary between them are a name and how far along it is — so
-// this is one scannable line rather than a card, and the whole line is the
-// link. Progress is carried twice on purpose: a dot anchors the left edge for
-// scanning straight down the column, and a labelled badge on the right says it
-// in words — which is also what keeps the state legible without relying on the
-// dot's colour. Secondary columns drop away on narrow screens; those two and
-// the name never do.
+// One application in a lead's queue of 25–30. Grid, not flex: flex-1 splits
+// leftover space, so a short badge shifts every other column's left edge.
+// Hidden cells aren't grid items, so each breakpoint lists only its own tracks.
 export function ReviewRow({
   application,
   state,
   submittedAt,
 }: {
   application: ApplicationSummary
-  // How far this lead's own review of it has got.
   state: ReviewState
-  // When they submitted it, if they have.
+  // When this lead submitted their own review, if they have.
   submittedAt?: string
 }) {
   return (
     <Link
       href={`/reviewer/my-reviews/${application.id}`}
-      className="group flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-gray-50"
+      className="group grid grid-cols-[1rem_minmax(0,1fr)_7rem_1rem] items-center gap-3 px-4 py-2.5 transition-colors hover:bg-gray-50 sm:grid-cols-[1rem_minmax(0,1fr)_minmax(0,1.2fr)_5rem_7rem_1rem] lg:grid-cols-[1rem_minmax(0,1fr)_minmax(0,1.2fr)_9.5rem_5rem_7rem_1rem]"
     >
       <span
-        className={`h-4 w-4 shrink-0 rounded-full border-2 ${REVIEW_STATE_DOT[state]}`}
+        className={`h-4 w-4 rounded-full border-2 ${REVIEW_STATE_DOT[state]}`}
       />
 
-      <span className="text-text-default min-w-0 flex-1 truncate text-sm font-medium">
+      <span className="text-text-default min-w-0 truncate text-sm font-medium">
         {application.full_name || application.user_nuid}
       </span>
-      <span className="text-text-subtle hidden min-w-0 flex-1 truncate text-xs sm:block">
+      <span className="text-text-subtle hidden min-w-0 truncate text-xs sm:block">
         {application.email || application.user_nuid}
       </span>
 
-      <span
-        className={`hidden shrink-0 rounded-md px-2 py-0.5 text-xs font-medium md:inline-block ${stageBadge[application.stage]}`}
-      >
-        {stageLabel[application.stage]}
+      <span className="hidden lg:block">
+        <span
+          className={`inline-block rounded-md px-2 py-0.5 text-xs font-medium ${stageBadge[application.stage]}`}
+        >
+          {stageLabel[application.stage]}
+        </span>
       </span>
 
-      <span className="text-text-subtle hidden w-14 shrink-0 justify-end text-xs sm:flex">
+      <span className="text-text-subtle hidden text-xs sm:flex">
         {application.submitted_at && (
           <Tooltip label="Application submitted">
             <span className="flex items-center gap-1">
@@ -79,9 +75,7 @@ export function ReviewRow({
         )}
       </span>
 
-      {/* Fixed width whatever the state, so the badges line up down the list
-          and the chevrons stay in one column. */}
-      <span className="flex w-24 shrink-0 justify-end">
+      <span className="flex">
         <Tooltip
           label={
             submittedAt
@@ -100,11 +94,8 @@ export function ReviewRow({
         </Tooltip>
       </span>
 
-      {/* Same affordance as the applicant's apply card: the arrow warms to
-          brand blue and slides on hover, so the row reads as something you
-          open rather than a static line of data. The status icon on the left
-          deliberately stays put — it reports state, it isn't a control. */}
-      <span className="text-text-faint group-hover:text-brand-blue flex shrink-0 items-center transition-colors">
+      {/* Same hover affordance as the applicant's apply card. */}
+      <span className="text-text-faint group-hover:text-brand-blue flex items-center transition-colors">
         <ArrowRight
           size={16}
           className="transition-transform group-hover:translate-x-1"

@@ -24,8 +24,7 @@ import { ReviewRow } from './ReviewRow'
 
 type Scope = 'mine' | 'all'
 
-// Same settle time as the applications table's search, so typing feels the
-// same on both pages.
+// Same settle time as the applications table's search.
 const SEARCH_DEBOUNCE_MS = 250
 
 export function ReviewQueueClient() {
@@ -48,9 +47,8 @@ export function ReviewQueueClient() {
   }
   const [activeRole, setActiveRole] = useState<Role | 'all'>('all')
 
-  // The box stays instant while the request it drives waits for a pause in
-  // typing. Matched on the server so it narrows the whole queue, not the
-  // rows already in hand.
+  // Matched server-side, so it narrows the whole queue rather than the rows
+  // already in hand.
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   useEffect(() => {
@@ -77,10 +75,8 @@ export function ReviewQueueClient() {
     { enabled: scope === 'all' || !!assignedTo }
   )
 
-  // How far *my* review of each application has got, so the queue can show
-  // which ones are done and which are half-written. A review row exists as
-  // soon as "Save draft" is pressed, so its presence without a submitted_at
-  // is what "in progress" means.
+  // How far *my* review of each application has got. A row with no
+  // submitted_at is a saved draft.
   const applicationIds = useMemo(
     () => applications.map((a) => a.id),
     [applications]
@@ -104,10 +100,8 @@ export function ReviewQueueClient() {
     (id) => reviewByApplicationId[id]?.state === 'submitted'
   ).length
 
-  // Grouped by role, and within a role the ones still owed a review come
-  // first — this is a work queue, so the top of it should be the work.
-  // Half-written ones lead the rest: finishing something started beats
-  // opening something new.
+  // Grouped by role; unfinished first, drafts ahead of untouched. It's a work
+  // queue, so the top of it should be the work.
   const sections = useMemo(() => {
     const rank = { draft: 0, none: 1, submitted: 2 }
     return ROLE_COLUMNS.map((role) => ({
@@ -126,10 +120,8 @@ export function ReviewQueueClient() {
     })).filter((s) => s.applications.length > 0)
   }, [applications, reviewByApplicationId])
 
-  // Reviewing 25–30 applications is a sequential job, not a browsing one, so
-  // the queue's primary action is "pick up where you left off" — the detail
-  // page's own next/previous buttons carry it from there. Sections already
-  // sort unfinished first, so this is the top of the list in reading order.
+  // Reviewing 25–30 is sequential work, so the primary action is "pick up
+  // where you left off" — the top of the list, given the sort above.
   const nextUnreviewed = sections
     .flatMap((s) => s.applications)
     .find((a) => reviewByApplicationId[a.id]?.state !== 'submitted')
