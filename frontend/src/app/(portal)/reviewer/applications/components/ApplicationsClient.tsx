@@ -31,7 +31,6 @@ import {
   AVAILABILITY_DAY_OPTIONS,
   availabilityOptionsFor,
   findAvailabilityQuestionId,
-  isAvailabilityQuestion,
   shortDays,
 } from './meetingAvailability'
 import type { ApplicantApplication } from './types'
@@ -240,14 +239,13 @@ export function ApplicationsClient() {
   // (no separate Name/Email columns sourced from the applicant record).
   // Roles within a cycle each get their own copy of common fields (e.g.
   // "First Name") as separate question rows, so we dedupe by text rather
-  // than id — otherwise every role duplicates its own column. Meeting
-  // availability gets its own dedicated tag column (below) instead of
-  // showing up here as a truncated wall of checkbox text.
+  // than id — otherwise every role duplicates its own column. This is the
+  // full set; the table drops meeting availability on its own, since only it
+  // has somewhere else to show it.
   const columns = useMemo(() => {
     const byText = new Map<string, Question>()
     for (const questions of Object.values(questionsByCycleRole)) {
       for (const q of questions) {
-        if (isAvailabilityQuestion(q.question_text)) continue
         const key = q.question_text.trim().toLowerCase()
         const existing = byText.get(key)
         if (!existing || q.display_order < existing.display_order) {
