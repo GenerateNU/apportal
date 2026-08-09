@@ -68,7 +68,7 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
 /**
- * Reviewer queue; filter by cycle_id, role, and stage. Applicants may list their own by passing user_nuid.
+ * Reviewer queue; filter by cycle_id, role, stage, and answer_filters. Applicants may list their own by passing user_nuid.
  * @summary List applications
  */
 export const listApplications = (

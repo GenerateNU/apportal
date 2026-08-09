@@ -2320,7 +2320,7 @@ paths:
         - Application Templates
   /applications:
     get:
-      description: Reviewer queue; filter by cycle_id, role, and stage. Applicants may list their own by passing user_nuid.
+      description: Reviewer queue; filter by cycle_id, role, stage, and answer_filters. Applicants may list their own by passing user_nuid.
       operationId: list-applications
       parameters:
         - explode: false
@@ -2349,6 +2349,13 @@ paths:
           in: query
           name: stage
           schema:
+            type: string
+        - description: JSON array of answer filters, e.g. [{"question_id":"…","question_type":"checkbox","values":["Yes"]}]. Values may be a string or an array of strings; a filter matches any of them, and separate filters are AND'd.
+          explode: false
+          in: query
+          name: answer_filters
+          schema:
+            description: JSON array of answer filters, e.g. [{"question_id":"…","question_type":"checkbox","values":["Yes"]}]. Values may be a string or an array of strings; a filter matches any of them, and separate filters are AND'd.
             type: string
       responses:
         "200":

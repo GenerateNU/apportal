@@ -44,7 +44,7 @@ func (h *applicationHandler) register(api huma.API) {
 		Method:      http.MethodGet,
 		Path:        "/applications",
 		Summary:     "List applications",
-		Description: "Reviewer queue; filter by cycle_id, role, and stage. Applicants may list their own by passing user_nuid.",
+		Description: "Reviewer queue; filter by cycle_id, role, stage, and answer_filters. Applicants may list their own by passing user_nuid.",
 		Tags:        []string{"Applications"},
 		Errors:      []int{http.StatusUnauthorized},
 	}, h.list)
@@ -145,6 +145,11 @@ type ListApplicationsInput struct {
 	AssignedTo string `query:"assigned_to" doc:"Limit to applications this lead is assigned to review"`
 	Role       string `query:"role"`
 	Stage      string `query:"stage"`
+	// AnswerFilters is a JSON-encoded []AnswerFilterInput rather than a
+	// structured param because huma can only bind primitives from a query
+	// string — a []AnswerFilterInput field silently binds nothing (or panics,
+	// depending on how the client serializes it).
+	AnswerFilters string `query:"answer_filters" doc:"JSON array of answer filters, e.g. [{\"question_id\":\"…\",\"question_type\":\"checkbox\",\"values\":[\"Yes\"]}]. Values may be a string or an array of strings; a filter matches any of them, and separate filters are AND'd."`
 }
 
 func (h *applicationHandler) list(ctx context.Context, in *ListApplicationsInput) (*ApplicationsOutput, error) {
@@ -161,10 +166,16 @@ func (h *applicationHandler) list(ctx context.Context, in *ListApplicationsInput
 	} else if !isReviewer && (!hasActor || actor.NUID != in.UserNUID) {
 		return nil, huma.Error403Forbidden("cannot list another user's applications")
 	}
+	answerFilters, err := parseAnswerFilters(in.AnswerFilters)
+	if err != nil {
+		return nil, err
+	}
+
 	filter := store.ApplicationFilter{
-		CycleID:    in.CycleID,
-		UserNUID:   in.UserNUID,
-		AssignedTo: in.AssignedTo,
+		CycleID:       in.CycleID,
+		UserNUID:      in.UserNUID,
+		AssignedTo:    in.AssignedTo,
+		AnswerFilters: answerFilters,
 		// Only a user listing their own applications by their own identity
 		// ever sees their own draft — the reviewer queue and lookups of
 		// someone else's user_nuid never do.

@@ -7,7 +7,9 @@ import {
   updateApplication,
 } from '@/generated/applications/applications'
 import type { RequestOptions } from '@/lib/api/orval-mutator'
+import type { ListApplicationsParams } from '@/generated/model'
 import type {
+  AnswerFilterParam,
   Application,
   ApplicationStage,
   ApplicationSummary,
@@ -22,6 +24,7 @@ export function useApplications(
     assigned_to?: string
     stage?: ApplicationStage
     role?: Role
+    answer_filters?: AnswerFilterParam[]
   },
   opts?: RequestOptions,
   // `enabled` lets a caller hold the request until its filters are actually
@@ -33,9 +36,23 @@ export function useApplications(
   return useQuery({
     queryKey: queryKeys.applications.list(params),
     queryFn: async () =>
-      ((await listApplications(params, opts)) ?? []) as ApplicationSummary[],
+      ((await listApplications(toListParams(params), opts)) ??
+        []) as ApplicationSummary[],
     enabled,
   })
+}
+
+// answer_filters crosses the wire as a JSON string: it is the one list-of-
+// objects param on this endpoint, and neither axios's bracket encoding nor a
+// repeated key binds to a struct slice server-side. Everything else passes
+// through untouched.
+function toListParams(
+  params?: Parameters<typeof useApplications>[0]
+): ListApplicationsParams | undefined {
+  if (!params) return undefined
+  const { answer_filters, ...rest } = params
+  if (!answer_filters?.length) return rest
+  return { ...rest, answer_filters: JSON.stringify(answer_filters) }
 }
 
 export function useApplication(id: string, opts?: RequestOptions) {

@@ -1,6 +1,11 @@
 // Central query key factory. Keep key shapes here so invalidation stays in
 // sync across hooks — never hand-write a query key in a component.
-import type { ApplicationStage, ReviewerRole, Role } from '@/lib/api/types'
+import type {
+  AnswerFilterParam,
+  ApplicationStage,
+  ReviewerRole,
+  Role,
+} from '@/lib/api/types'
 
 export const queryKeys = {
   users: {
@@ -33,6 +38,7 @@ export const queryKeys = {
       assigned_to?: string
       stage?: ApplicationStage
       role?: Role
+      answer_filters?: AnswerFilterParam[]
     }) => [...queryKeys.applications.lists(), params ?? {}] as const,
     details: () => [...queryKeys.applications.all, 'detail'] as const,
     detail: (id: string) => [...queryKeys.applications.details(), id] as const,
