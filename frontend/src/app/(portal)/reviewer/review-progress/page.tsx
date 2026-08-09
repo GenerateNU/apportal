@@ -5,7 +5,6 @@ import {
 } from '@tanstack/react-query'
 import { listCycles } from '@/generated/cycles/cycles'
 import { listReviewerProgress } from '@/generated/review-releases/review-releases'
-import { listUsers } from '@/generated/users/users'
 import { getServerRequestOptions } from '@/lib/api/server-request-options'
 import { pickDefaultCycleId } from '@/lib/queries/cycles'
 import { queryKeys } from '@/lib/queries/keys'
@@ -26,13 +25,8 @@ export default async function ReviewProgressPage() {
   })
   const cycleId = pickDefaultCycleId(cycles)
 
-  await Promise.all([
-    queryClient.prefetchQuery({
-      queryKey: [...queryKeys.users.lists(), 'lead'],
-      queryFn: async () =>
-        (await listUsers({ role: 'lead' }, requestOptions))?.users ?? [],
-    }),
-    ...(cycleId
+  await Promise.all(
+    cycleId
       ? ROLE_COLUMNS.map((role) =>
           queryClient.prefetchQuery({
             queryKey: queryKeys.reviewerProgress.list(cycleId, role),
@@ -41,8 +35,8 @@ export default async function ReviewProgressPage() {
               [],
           })
         )
-      : []),
-  ])
+      : []
+  )
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
