@@ -7,6 +7,7 @@ import {
   ArrowLeft,
   ArrowRight,
   Check,
+  CheckCircle2,
   ChevronLeft,
   Loader2,
   Lock,
@@ -25,7 +26,8 @@ import {
   useWrittenReviews,
   useWrittenReviewsByApplicationIds,
 } from '@/lib/queries/written-reviews'
-import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
+import { ROLE_CHIP_CLASS, ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
+import { REVIEW_STATE_BADGE, REVIEWED_TEXT } from '../../constants'
 import { ResponseField } from '@/app/(portal)/reviewer/applications/components/ResponseField'
 import {
   QuestionField,
@@ -190,20 +192,24 @@ export function ReviewClient({
   return (
     <div className="flex min-h-full flex-col lg:h-full">
       {/* Top bar */}
-      <div className="flex items-center justify-between gap-3 border-b border-gray-100 bg-white px-4 py-3 sm:px-8">
+      <div className="flex items-center justify-between gap-3 border-b border-gray-200 bg-white px-4 py-3 sm:px-8">
         <div className="flex items-center gap-4">
           <Link
             href="/reviewer/my-reviews"
             className="text-text-muted hover:text-text-default inline-flex items-center gap-1 text-sm"
           >
             <ArrowLeft size={14} />
-            Queue
+            Back to Lead review
           </Link>
-          <div className="border-l border-gray-100 pl-4">
-            <h1 className="text-text-default text-base font-semibold">
+          <div className="flex items-center gap-3 border-l border-gray-200 pl-4">
+            <h1 className="text-text-default text-lg font-semibold">
               {applicant?.full_name ?? 'Applicant'}
             </h1>
-            <p className="text-text-muted text-xs">{ROLE_LABEL[role]}</p>
+            <span
+              className={`w-fit rounded-md px-2 py-0.5 text-xs font-medium ${ROLE_CHIP_CLASS[role]}`}
+            >
+              {ROLE_LABEL[role]}
+            </span>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -216,8 +222,10 @@ export function ReviewClient({
             </Link>
           )}
           {submitted && (
-            <span className="bg-status-open/15 text-status-open inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium">
-              <Check size={12} />
+            <span
+              className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium ${REVIEW_STATE_BADGE.submitted}`}
+            >
+              <CheckCircle2 size={12} />
               Review submitted
             </span>
           )}
@@ -251,8 +259,8 @@ export function ReviewClient({
       {/* Split: application (left) · review (right) on desktop; stacked on mobile */}
       <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-2 lg:overflow-hidden">
         {/* Application */}
-        <div className="border-b border-gray-100 px-4 py-4 sm:px-8 sm:py-6 lg:overflow-y-auto lg:border-r lg:border-b-0">
-          <h2 className="text-text-subtle mb-4 text-xs font-medium tracking-wider uppercase">
+        <div className="border-b border-gray-200 px-4 py-4 sm:px-8 sm:py-6 lg:overflow-y-auto lg:border-r lg:border-b-0">
+          <h2 className="text-text-faint mb-4 text-xs font-semibold tracking-wide uppercase">
             Application
           </h2>
           <div className="space-y-4">
@@ -271,7 +279,7 @@ export function ReviewClient({
         <div className="lg:flex lg:min-h-0 lg:flex-col">
           <div className="px-4 py-4 sm:px-8 sm:py-6 lg:flex-1 lg:overflow-y-auto">
             <h2
-              className={`text-text-subtle text-xs font-medium tracking-wider uppercase ${template?.review_closes_at ? 'mb-1' : 'mb-4'}`}
+              className={`text-text-faint text-xs font-semibold tracking-wide uppercase ${template?.review_closes_at ? 'mb-1' : 'mb-4'}`}
             >
               Your review
             </h2>
@@ -312,14 +320,14 @@ export function ReviewClient({
 
               {others.length > 0 && (
                 <div>
-                  <h3 className="text-text-default mt-2 mb-3 text-sm font-semibold">
+                  <h3 className="text-text-faint mt-2 mb-3 text-xs font-semibold tracking-wide uppercase">
                     Other reviews
                   </h3>
                   <div className="flex flex-col gap-3">
                     {others.map((r) => (
                       <div
                         key={r.id}
-                        className="rounded-xl border border-gray-100 bg-white p-4"
+                        className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm"
                       >
                         <span className="text-text-muted text-xs">
                           Reviewer {r.reviewer_name || r.reviewer_nuid}
@@ -357,9 +365,11 @@ export function ReviewClient({
           </div>
 
           {/* Action footer */}
-          <div className="flex flex-col items-stretch gap-3 border-t border-gray-100 bg-white px-4 py-4 sm:flex-row sm:items-center sm:justify-end sm:px-8">
+          <div className="flex flex-col items-stretch gap-3 border-t border-gray-200 bg-white px-4 py-4 sm:flex-row sm:items-center sm:justify-end sm:px-8">
             {saved && !upsert.isPending && (
-              <span className="text-status-open inline-flex items-center gap-1 text-sm sm:mr-auto">
+              <span
+                className={`inline-flex items-center gap-1 text-sm sm:mr-auto ${REVIEWED_TEXT}`}
+              >
                 <Check size={14} />
                 Saved
               </span>
