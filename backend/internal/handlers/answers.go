@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/danielgtaylor/huma/v2"
 
@@ -35,6 +36,50 @@ func (h *answerHandler) register(api huma.API) {
 		Tags:        []string{"Answers"},
 		Errors:      []int{http.StatusNotFound},
 	}, h.list)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "list-answers-bulk",
+		Method:      http.MethodGet,
+		Path:        "/answers",
+		Summary:     "List written answers for several applications",
+		Description: "One request for a page of applications, instead of one per application. Reviewer-only; draft answers are never included.",
+		Tags:        []string{"Answers"},
+		Errors:      []int{http.StatusUnauthorized, http.StatusUnprocessableEntity},
+	}, h.listBulk)
+}
+
+// maxBulkApplications bounds both the query string and the fan-out of the
+// underlying `= ANY(...)`. Comfortably above any page size the UI uses.
+const maxBulkApplications = 200
+
+type ListAnswersBulkInput struct {
+	// Comma-separated rather than a repeated/array param because huma splits
+	// this form itself, while the browser client serializes arrays as
+	// `application_ids[]=…`, which binds to nothing server-side.
+	ApplicationIDs string `query:"application_ids" doc:"Comma-separated application IDs"`
+}
+
+func (h *answerHandler) listBulk(ctx context.Context, in *ListAnswersBulkInput) (*AnswersOutput, error) {
+	if err := requireReviewer(ctx); err != nil {
+		return nil, err
+	}
+	ids := make([]string, 0, 8)
+	for _, id := range strings.Split(in.ApplicationIDs, ",") {
+		if id = strings.TrimSpace(id); id != "" {
+			ids = append(ids, id)
+		}
+	}
+	if len(ids) == 0 {
+		return &AnswersOutput{Body: []models.WrittenAnswer{}}, nil
+	}
+	if len(ids) > maxBulkApplications {
+		return nil, huma.Error422UnprocessableEntity("too many application_ids")
+	}
+	answers, err := h.store.ListAnswersForApplications(ctx, ids)
+	if err != nil {
+		return nil, storeErr(err)
+	}
+	return &AnswersOutput{Body: answers}, nil
 }
 
 type AnswersOutput struct {

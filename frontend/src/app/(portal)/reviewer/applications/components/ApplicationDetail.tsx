@@ -11,12 +11,16 @@ export function ApplicationDetail({
   columns,
   rowQuestions,
   answers,
+  answersLoading,
   onClose,
 }: {
   applicant: ApplicantApplication
   columns: Question[]
   rowQuestions: Question[]
   answers: WrittenAnswer[]
+  // Same reason as the table's cells: an answer that hasn't loaded isn't an
+  // answer the applicant didn't give.
+  answersLoading?: boolean
   onClose: () => void
 }) {
   const router = useRouter()
@@ -27,14 +31,16 @@ export function ApplicationDetail({
 
   return (
     <>
-      {/* Backdrop */}
+      {/* Backdrop. Both layers need an explicit z-index: being `fixed` alone
+          leaves them at z-auto, which the table's sticky header (z-20) paints
+          straight over. */}
       <div
-        className="animate-in fade-in fixed inset-0 bg-black/30 duration-300"
+        className="animate-in fade-in fixed inset-0 z-40 bg-black/30 duration-300"
         onClick={onClose}
       />
       {/* Drawer */}
       <div
-        className="animate-in slide-in-from-right-full fixed inset-y-0 right-0 flex w-full max-w-2xl flex-col border-l border-gray-200 bg-white duration-300"
+        className="animate-in slide-in-from-right-full fixed inset-y-0 right-0 z-50 flex w-full max-w-2xl flex-col border-l border-gray-200 bg-white duration-300"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -89,6 +95,7 @@ export function ApplicationDetail({
                     question={q}
                     answer={answer}
                     applicable={!!rowQuestion}
+                    loading={answersLoading}
                   />
                 )
               })}

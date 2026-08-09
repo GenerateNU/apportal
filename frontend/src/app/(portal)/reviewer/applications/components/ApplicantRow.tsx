@@ -9,6 +9,7 @@ export function ApplicantRow({
   columns,
   rowQuestions,
   answers,
+  answersLoading,
   availabilityDays,
   selectable,
   selected,
@@ -20,6 +21,9 @@ export function ApplicantRow({
   columns: Question[]
   rowQuestions: Question[]
   answers: WrittenAnswer[]
+  // This row's answers haven't arrived yet, so its cells stay blank instead of
+  // asserting "No response".
+  answersLoading: boolean
   availabilityDays: string[]
   selectable: boolean
   selected: boolean
@@ -28,9 +32,12 @@ export function ApplicantRow({
   onSelect: () => void
 }) {
   return (
+    // A row's content lands in three waves — the application, then its
+    // cycle's questions, then its answers — so its height is pinned up front.
+    // Without that, every wave reflows the row and the whole list jumps.
     <tr
       onClick={onSelect}
-      className={`cursor-pointer border-b border-gray-100 transition-colors ${
+      className={`h-12 cursor-pointer border-b border-gray-100 transition-colors ${
         isSelected ? 'bg-blue-50' : 'bg-white hover:bg-gray-50'
       }`}
     >
@@ -67,6 +74,7 @@ export function ApplicantRow({
               }
               applicable={!!rowQuestion}
               questionType={q.question_type}
+              loading={answersLoading}
             />
           </td>
         )
@@ -79,7 +87,11 @@ export function ApplicantRow({
       </td>
       <td className="border-r border-gray-100 px-3 py-2 whitespace-nowrap">
         {availabilityDays.length > 0 ? (
-          <div className="flex flex-wrap gap-1">
+          // Four day chips are wider than the "Availability" header, so
+          // wrapping would put them on two lines and make this the tallest
+          // cell in the row — and they arrive last, so the row would grow
+          // after everything else had settled.
+          <div className="flex flex-nowrap gap-1">
             {availabilityDays.map((d) => (
               <span
                 key={d}

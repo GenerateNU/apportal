@@ -1,7 +1,7 @@
 'use client'
 import { PageContainer } from '@/components/PageContainer'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Search, List, Columns } from 'lucide-react'
 import {
   Select,
@@ -16,15 +16,16 @@ import type {
   Role,
   WrittenAnswer,
 } from '@/lib/api/types'
-import { useAnswersByApplicationIds } from '@/lib/queries/answers'
+import { useAnswersByApplicationIdBatches } from '@/lib/queries/answers'
 import {
-  useApplications,
+  useInfiniteApplications,
   useUpdateApplication,
 } from '@/lib/queries/applications'
 import { pickDefaultCycleId, useCycles } from '@/lib/queries/cycles'
 import { useQuestionsByCycleRoles } from '@/lib/queries/questions'
 import { useCurrentUser } from '@/lib/queries/users'
 import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
+import { PAGE_SIZE } from './constants'
 import { BulkActionBar } from './BulkActionBar'
 import {
   AVAILABILITY_DAY_OPTIONS,
@@ -39,6 +40,10 @@ import { KanbanView } from './KanbanView'
 import { ApplicationDetail } from './ApplicationDetail'
 
 type View = 'table' | 'kanban'
+
+// How long typing settles before the search hits the server. Long enough that
+// a typed word is one request, short enough to still feel live.
+const SEARCH_DEBOUNCE_MS = 250
 
 export function ApplicationsClient() {
   const { data: currentUser } = useCurrentUser()
@@ -67,6 +72,17 @@ export function ApplicationsClient() {
   const [bulkFailed, setBulkFailed] = useState(0)
   const updateApplication = useUpdateApplication()
 
+  // The search box stays instant while the request it drives waits for a
+  // pause in typing.
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  useEffect(() => {
+    const timer = setTimeout(
+      () => setDebouncedSearch(search),
+      SEARCH_DEBOUNCE_MS
+    )
+    return () => clearTimeout(timer)
+  }, [search])
+
   const { data: cycles = [] } = useCycles({})
 
   // Default the cycle filter so reviewers land on a specific cycle instead
@@ -81,28 +97,6 @@ export function ApplicationsClient() {
     setActiveCycle(currentCycleId)
     setCycleDefaulted(true)
   }
-
-  // Scoped server-side to the selected cycle+role (both required, so this is
-  // always exactly what's on screen) — keeps the question/answer batch below
-  // limited to applications actually in view instead of every application.
-  const { data: applications = [] } = useApplications(
-    activeCycle
-      ? {
-          cycle_id: activeCycle,
-          role: activeRole,
-          // Omitted entirely when unfiltered, so the key matches the server
-          // prefetch in ../page.tsx — an extra `answer_filters: []` would make
-          // the first paint a cache miss.
-          ...(filters.length > 0 && {
-            answer_filters: filters.map((f) => ({
-              question_id: f.question_id,
-              question_type: f.question_type,
-              values: f.values,
-            })),
-          }),
-        }
-      : undefined
-  )
 
   // Taken from the selected cycle+role rather than from the results, since a
   // filter that matches nothing would otherwise empty the question list the
@@ -122,19 +116,119 @@ export function ApplicationsClient() {
     return map
   }, [uniquePairs, questionQueries])
 
-  const applicationIds = useMemo(
-    () => applications.map((a) => a.id),
-    [applications]
+  // "Meeting Availability for the Fall Semester" is a regular checkbox
+  // question authored per cycle/role in the admin builder, not a dedicated
+  // field — every application on screen shares one cycle+role, so there's at
+  // most one such question in view at a time.
+  const availabilityQuestionId = useMemo(
+    () =>
+      findAvailabilityQuestionId(
+        questionsByCycleRole[`${activeCycle}:${activeRole}`]
+      ),
+    [questionsByCycleRole, activeCycle, activeRole]
   )
-  const answerQueries = useAnswersByApplicationIds(applicationIds)
+
+  // The availability dropdown filters by day, but the stored answer holds the
+  // full option label ("Monday 6:00-7:30 PM") and the wording drifts between
+  // cycles. Expanding the day to the matching labels here — where the options
+  // are already loaded — keeps the server filter an exact any-of match and
+  // keeps it consistent with the day tags in the table, which come from the
+  // same list.
+  const availabilityFilter = useMemo(() => {
+    if (activeAvailability === 'all' || !availabilityQuestionId) return null
+    const day = AVAILABILITY_DAY_OPTIONS.find(
+      (d) => d.code === activeAvailability
+    )
+    const options =
+      questionsByCycleRole[`${activeCycle}:${activeRole}`]?.find(
+        (q) => q.id === availabilityQuestionId
+      )?.options ?? []
+    const values = options.filter((o) =>
+      o.toLowerCase().includes(day?.day ?? '')
+    )
+    if (!day || values.length === 0) return null
+    return {
+      question_id: availabilityQuestionId,
+      question_type: 'checkbox' as const,
+      values,
+    }
+  }, [
+    activeAvailability,
+    availabilityQuestionId,
+    questionsByCycleRole,
+    activeCycle,
+    activeRole,
+  ])
+
+  // Every filter is applied in SQL, so the page the table renders is already
+  // the answer — nothing below narrows it further. That is what makes the
+  // totals and the stage counts trustworthy: they describe the same match,
+  // counted server-side over every row rather than the page in hand.
+  const listParams = useMemo(() => {
+    if (!activeCycle) return undefined
+    const answerFilters = [
+      ...filters.map((f) => ({
+        question_id: f.question_id,
+        question_type: f.question_type,
+        values: f.values,
+      })),
+      ...(availabilityFilter ? [availabilityFilter] : []),
+    ]
+    return {
+      cycle_id: activeCycle,
+      role: activeRole,
+      ...(debouncedSearch && { search: debouncedSearch }),
+      // Each of these is omitted when inactive so an unfiltered first page
+      // keys identically to the server prefetch in ../page.tsx.
+      ...(answerFilters.length > 0 && { answer_filters: answerFilters }),
+      // Kanban lays every stage out side by side, so it can neither filter by
+      // one stage nor take a page — it asks for the whole set instead.
+      ...(view === 'table' && {
+        ...(activeStage !== 'all' && { stage: activeStage }),
+        limit: PAGE_SIZE,
+      }),
+    }
+  }, [
+    activeCycle,
+    activeRole,
+    activeStage,
+    debouncedSearch,
+    filters,
+    availabilityFilter,
+    view,
+  ])
+
+  const {
+    applications,
+    applicationIdPages,
+    stageCounts,
+    isFetching: fetchingApplications,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteApplications(listParams)
+
+  // One request per loaded page rather than one per row.
+  const answerQueries = useAnswersByApplicationIdBatches(applicationIdPages)
   const answersByApplicationId = useMemo(() => {
     const map: Record<string, WrittenAnswer[]> = {}
-    applicationIds.forEach((id, i) => {
-      const data = answerQueries[i]?.data
-      if (data) map[id] = data
+    for (const query of answerQueries) {
+      Object.assign(map, query.data ?? {})
+    }
+    return map
+  }, [answerQueries])
+
+  // A whole page's answers land at once, so every row in it shares its
+  // batch's state. Cells read this to stay blank until then rather than
+  // reporting "No response" for an answer nobody has looked up yet.
+  const answersLoadingByApplicationId = useMemo(() => {
+    const map: Record<string, boolean> = {}
+    applicationIdPages.forEach((ids, i) => {
+      const pending = answerQueries[i]?.isPending ?? true
+      for (const id of ids) map[id] = pending
     })
     return map
-  }, [applicationIds, answerQueries])
+  }, [applicationIdPages, answerQueries])
 
   const rows: ApplicantApplication[] = useMemo(
     () =>
@@ -151,17 +245,6 @@ export function ApplicationsClient() {
     [applications]
   )
 
-  // "Meeting Availability for the Fall Semester" is a regular checkbox
-  // question authored per cycle/role in the admin builder, not a dedicated
-  // field — every application on screen shares one cycle+role, so there's at
-  // most one such question in view at a time.
-  const availabilityQuestionId = useMemo(
-    () =>
-      findAvailabilityQuestionId(
-        questionsByCycleRole[`${activeCycle}:${activeRole}`]
-      ),
-    [questionsByCycleRole, activeCycle, activeRole]
-  )
   const availabilityByApplicationId = useMemo(() => {
     const map: Record<string, string[]> = {}
     for (const app of applications) {
@@ -175,30 +258,11 @@ export function ApplicationsClient() {
     return map
   }, [applications, answersByApplicationId, availabilityQuestionId])
 
-  // Everything but the stage filter — used both as the base for `filtered`
-  // and as the denominator for the stage tab counts, so those counts track
-  // search instead of always reflecting every application in the cycle+role.
-  const filteredExceptStage = rows.filter((a) => {
-    const query = search.toLowerCase()
-    if (
-      query &&
-      !a.fullName.toLowerCase().includes(query) &&
-      !a.nuid.toLowerCase().includes(query)
-    ) {
-      return false
-    }
-    if (
-      activeAvailability !== 'all' &&
-      !availabilityByApplicationId[a.id]?.includes(activeAvailability)
-    ) {
-      return false
-    }
-    return true
-  })
-
-  const filtered = filteredExceptStage.filter(
-    (a) => view === 'kanban' || activeStage === 'all' || a.stage === activeStage
-  )
+  // No client-side narrowing left: search, availability, and stage are all in
+  // the query above, so these rows are the page as the database returned it.
+  // Kanban is the exception — it groups by stage itself, so it asks for the
+  // unpaged set separately below.
+  const filtered = rows
 
   function toggleSelect(id: string) {
     setSelectedIds((prev) => {
@@ -267,8 +331,12 @@ export function ApplicationsClient() {
     )
   }, [questionsByCycleRole])
 
+  // min-h-0 is what makes the table's own pane the scroll container: without
+  // it this flex item can't shrink below its content, so it grows to the
+  // table's full height and the ancestor in (portal)/layout.tsx scrolls
+  // instead — which leaves the sticky header with no scrollport to pin against.
   return (
-    <PageContainer className="flex-1">
+    <PageContainer className="min-h-0 flex-1 overflow-hidden">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <h1 className="text-text-default text-2xl font-semibold">
           Applications
@@ -363,12 +431,13 @@ export function ApplicationsClient() {
         {view === 'table' ? (
           <TableView
             applicants={filtered}
-            allApplicants={filteredExceptStage}
+            stageCounts={stageCounts}
             activeStage={activeStage}
             onStageChange={setActiveStage}
             columns={columns}
             questionsByCycleRole={questionsByCycleRole}
             answersByApplicationId={answersByApplicationId}
+            answersLoadingByApplicationId={answersLoadingByApplicationId}
             availabilityByApplicationId={availabilityByApplicationId}
             selectable={isChief}
             selectedIds={selectedIds}
@@ -399,6 +468,12 @@ export function ApplicationsClient() {
                 />
               ) : undefined
             }
+            // Only dim for a fresh query, not for the append — the rows
+            // already on screen stay put while the next chunk loads.
+            loading={fetchingApplications && !isFetchingNextPage}
+            hasMore={hasNextPage}
+            loadingMore={isFetchingNextPage}
+            onLoadMore={fetchNextPage}
           />
         ) : (
           <KanbanView
@@ -421,6 +496,9 @@ export function ApplicationsClient() {
                 ] ?? []
               }
               answers={answersByApplicationId[selectedApplicationId] ?? []}
+              answersLoading={
+                !!answersLoadingByApplicationId[selectedApplicationId]
+              }
               onClose={() => setSelectedApplicationId(null)}
             />
           ) : null

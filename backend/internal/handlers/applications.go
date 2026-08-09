@@ -75,8 +75,19 @@ type ApplicationOutput struct {
 	Body models.Application
 }
 
+// ApplicationsOutput is an envelope rather than a bare array because paging
+// happens in SQL: a page of rows says nothing about how many matched, and the
+// stage tabs need their own counts. Unpaged callers read `applications` and
+// ignore the rest.
 type ApplicationsOutput struct {
-	Body []models.ApplicationSummary
+	Body struct {
+		Applications []models.ApplicationSummary `json:"applications"`
+		// Total is every row matching the filter, not just this page.
+		Total int `json:"total"`
+		// StageCounts is the same match broken down by stage, ignoring any
+		// stage filter, so each tab can show a live count.
+		StageCounts map[string]int `json:"stage_counts"`
+	}
 }
 
 type CreateApplicationInput struct {
@@ -150,6 +161,9 @@ type ListApplicationsInput struct {
 	// string — a []AnswerFilterInput field silently binds nothing (or panics,
 	// depending on how the client serializes it).
 	AnswerFilters string `query:"answer_filters" doc:"JSON array of answer filters, e.g. [{\"question_id\":\"…\",\"question_type\":\"checkbox\",\"values\":[\"Yes\"]}]. Values may be a string or an array of strings; a filter matches any of them, and separate filters are AND'd."`
+	Search        string `query:"search" doc:"Case-insensitive substring match on the applicant's name, NUID, or email"`
+	Limit         int    `query:"limit" doc:"Max results per page; omit (or 0) to return every match" minimum:"0" maximum:"200"`
+	Offset        int    `query:"offset" doc:"Number of results to skip" minimum:"0"`
 }
 
 func (h *applicationHandler) list(ctx context.Context, in *ListApplicationsInput) (*ApplicationsOutput, error) {
@@ -176,6 +190,8 @@ func (h *applicationHandler) list(ctx context.Context, in *ListApplicationsInput
 		UserNUID:      in.UserNUID,
 		AssignedTo:    in.AssignedTo,
 		AnswerFilters: answerFilters,
+		Search:        in.Search,
+		Offset:        in.Offset,
 		// Only a user listing their own applications by their own identity
 		// ever sees their own draft — the reviewer queue and lookups of
 		// someone else's user_nuid never do.
@@ -196,11 +212,24 @@ func (h *applicationHandler) list(ctx context.Context, in *ListApplicationsInput
 		filter.Stage = &parsed
 	}
 
-	apps, err := h.store.ListApplications(ctx, filter)
+	if in.Limit > 0 {
+		filter.Limit = &in.Limit
+	}
+
+	// The totals cost a full scan each and are invariant for a given filter, so
+	// only the first page pays for them; later pages reuse what it returned.
+	page, err := h.store.ListApplicationsPage(ctx, filter, in.Offset == 0)
 	if err != nil {
 		return nil, storeErr(err)
 	}
-	return &ApplicationsOutput{Body: apps}, nil
+	out := &ApplicationsOutput{}
+	out.Body.Applications = page.Items
+	out.Body.Total = page.Total
+	out.Body.StageCounts = make(map[string]int, len(page.StageCounts))
+	for stage, n := range page.StageCounts {
+		out.Body.StageCounts[string(stage)] = n
+	}
+	return out, nil
 }
 
 type UpdateApplicationInput struct {

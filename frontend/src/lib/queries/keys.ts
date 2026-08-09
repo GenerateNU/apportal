@@ -40,6 +40,20 @@ export const queryKeys = {
       role?: Role
       answer_filters?: AnswerFilterParam[]
     }) => [...queryKeys.applications.lists(), params ?? {}] as const,
+    // Namespaced away from `list` because an infinite query caches
+    // `{ pages, pageParams }` rather than a single response — sharing a key
+    // with a plain list would put two different shapes in one entry.
+    infiniteList: (params?: {
+      cycle_id?: string
+      user_nuid?: string
+      assigned_to?: string
+      stage?: ApplicationStage
+      role?: Role
+      answer_filters?: AnswerFilterParam[]
+      search?: string
+      limit?: number
+    }) =>
+      [...queryKeys.applications.lists(), 'infinite', params ?? {}] as const,
     details: () => [...queryKeys.applications.all, 'detail'] as const,
     detail: (id: string) => [...queryKeys.applications.details(), id] as const,
   },
@@ -90,6 +104,10 @@ export const queryKeys = {
     lists: () => [...queryKeys.answers.all, 'list'] as const,
     list: (applicationId: string) =>
       [...queryKeys.answers.lists(), applicationId] as const,
+    // One entry per batch of applications fetched together. Keyed by the exact
+    // id list so a batch stays cached as more are loaded alongside it.
+    bulk: (applicationIds: string[]) =>
+      [...queryKeys.answers.all, 'bulk', applicationIds] as const,
   },
 
   submissions: {
