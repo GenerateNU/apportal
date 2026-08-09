@@ -45,6 +45,17 @@ func (h *leadAssignmentHandler) register(api huma.API) {
 		DefaultStatus: http.StatusNoContent,
 		Errors:        []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound},
 	}, h.delete)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "unassign-all-leads",
+		Method:      http.MethodDelete,
+		Path:        "/cycles/{id}/lead-assignments",
+		Summary:     "Remove every lead assignment for a cycle's role",
+		Description: "Chief only. Deletes all written-review lead assignments " +
+			"for one applicant role in a cycle at once. Cannot be undone.",
+		Tags:   []string{"Lead assignments"},
+		Errors: []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusUnprocessableEntity},
+	}, h.deleteAll)
 }
 
 type LeadAssignmentOutput struct {
@@ -71,6 +82,9 @@ func (h *leadAssignmentHandler) create(ctx context.Context, in *CreateLeadAssign
 	}
 	a, err := h.store.CreateLeadAssignment(ctx, in.ID, in.Body.LeadNUID, currentActor(ctx).NUID)
 	if err != nil {
+		return nil, storeErr(err)
+	}
+	if _, err := h.store.AdvanceApplicationsToLeadReview(ctx, []string{in.ID}); err != nil {
 		return nil, storeErr(err)
 	}
 	return &LeadAssignmentOutput{Body: a}, nil
@@ -106,4 +120,31 @@ func (h *leadAssignmentHandler) delete(ctx context.Context, in *IDInput) (*struc
 		return nil, storeErr(err)
 	}
 	return nil, nil
+}
+
+type DeleteAllLeadAssignmentsInput struct {
+	ID   string      `path:"id" doc:"Cycle ID"`
+	Role models.Role `query:"role" doc:"Applicant role"`
+}
+
+type DeleteAllLeadAssignmentsOutput struct {
+	Body struct {
+		Deleted int `json:"deleted" doc:"Number of lead assignments removed"`
+	}
+}
+
+func (h *leadAssignmentHandler) deleteAll(ctx context.Context, in *DeleteAllLeadAssignmentsInput) (*DeleteAllLeadAssignmentsOutput, error) {
+	if err := requireChief(ctx); err != nil {
+		return nil, err
+	}
+	if !in.Role.Valid() {
+		return nil, huma.Error422UnprocessableEntity("role is invalid")
+	}
+	deleted, err := h.store.DeleteLeadAssignmentsForCycle(ctx, in.ID, in.Role)
+	if err != nil {
+		return nil, storeErr(err)
+	}
+	out := &DeleteAllLeadAssignmentsOutput{}
+	out.Body.Deleted = deleted
+	return out, nil
 }

@@ -101,6 +101,7 @@ type CreateReviewQuestionInput struct {
 		IsRequired   *bool               `json:"is_required,omitempty"`
 		DisplayOrder int                 `json:"display_order,omitempty"`
 		Options      json.RawMessage     `json:"options,omitempty"`
+		Description  *string             `json:"description,omitempty" doc:"Markdown help text shown under the question's label"`
 	}
 }
 
@@ -131,6 +132,7 @@ func (h *reviewQuestionHandler) create(ctx context.Context, in *CreateReviewQues
 		IsRequired:   required,
 		DisplayOrder: in.Body.DisplayOrder,
 		Options:      in.Body.Options,
+		Description:  in.Body.Description,
 	})
 	if err != nil {
 		return nil, storeErr(err)
@@ -141,11 +143,13 @@ func (h *reviewQuestionHandler) create(ctx context.Context, in *CreateReviewQues
 type UpdateReviewQuestionInput struct {
 	ID   string `path:"id" doc:"Review question ID"`
 	Body struct {
-		QuestionText *string              `json:"question_text,omitempty"`
-		QuestionType *models.QuestionType `json:"question_type,omitempty"`
-		IsRequired   *bool                `json:"is_required,omitempty"`
-		DisplayOrder *int                 `json:"display_order,omitempty"`
-		Options      json.RawMessage      `json:"options,omitempty"`
+		QuestionText     *string              `json:"question_text,omitempty"`
+		QuestionType     *models.QuestionType `json:"question_type,omitempty"`
+		IsRequired       *bool                `json:"is_required,omitempty"`
+		DisplayOrder     *int                 `json:"display_order,omitempty"`
+		Options          json.RawMessage      `json:"options,omitempty"`
+		Description      *string              `json:"description,omitempty" doc:"Markdown help text shown under the question's label"`
+		ClearDescription bool                 `json:"clear_description,omitempty" doc:"Set true to remove this question's help text"`
 	}
 }
 
@@ -158,11 +162,13 @@ func (h *reviewQuestionHandler) update(ctx context.Context, in *UpdateReviewQues
 	}
 
 	q, err := h.store.UpdateReviewQuestion(ctx, in.ID, store.ReviewQuestionUpdate{
-		QuestionText: in.Body.QuestionText,
-		QuestionType: in.Body.QuestionType,
-		IsRequired:   in.Body.IsRequired,
-		DisplayOrder: in.Body.DisplayOrder,
-		Options:      in.Body.Options,
+		QuestionText:     in.Body.QuestionText,
+		QuestionType:     in.Body.QuestionType,
+		IsRequired:       in.Body.IsRequired,
+		DisplayOrder:     in.Body.DisplayOrder,
+		Options:          in.Body.Options,
+		Description:      in.Body.Description,
+		ClearDescription: in.Body.ClearDescription,
 	})
 	if err != nil {
 		return nil, storeErr(err)

@@ -14,6 +14,7 @@ export interface WrittenReviewDetail {
   application_id: string;
   created_at: string;
   id: string;
+  reviewer_name?: string;
   reviewer_nuid: string;
   submitted_at?: string;
   updated_at: string;

@@ -10,5 +10,5 @@ export type ApplicantApplication = {
   role: Role
   cycleId: string
   stage: ApplicationStage
-  submittedAt: string
+  submittedAt?: string
 }

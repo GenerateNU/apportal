@@ -25,7 +25,7 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
-  ChiefReview,
+  ChiefReviewDetail,
   ErrorModel,
   ListChiefReviews200,
   UpsertChiefReviewInputBody
@@ -66,7 +66,7 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
 /**
- * Chief only. Setting advance_to_interview records the decision.
+ * Chief only. Setting vote records this chief's vote.
  * @summary Submit or update your chief review
  */
 export const upsertChiefReview = (
@@ -75,7 +75,7 @@ export const upsertChiefReview = (
  options?: SecondParameter<typeof customInstance>,) => {
       
       
-      return customInstance<ChiefReview>(
+      return customInstance<ChiefReviewDetail>(
       {url: `/applications/${id}/chief-review`, method: 'PUT',
       headers: {'Content-Type': 'application/json', },
       data: upsertChiefReviewInputBody

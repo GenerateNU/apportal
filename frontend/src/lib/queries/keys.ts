@@ -114,6 +114,15 @@ export const queryKeys = {
       [...queryKeys.leadAssignments.lists(), applicationId] as const,
   },
 
+  // Assignment planning is read-only and driven by teams the chief types in,
+  // so only the pool size (cycle × role) is cached; capacity and preview are
+  // mutations keyed by the in-flight team layout rather than queries.
+  assignmentPlan: {
+    all: ['assignment-plan'] as const,
+    pool: (cycleId: string, role: Role) =>
+      [...queryKeys.assignmentPlan.all, 'pool', cycleId, role] as const,
+  },
+
   interviewAssignments: {
     all: ['interview-assignments'] as const,
     details: () => [...queryKeys.interviewAssignments.all, 'detail'] as const,
@@ -133,5 +142,12 @@ export const queryKeys = {
     lists: () => [...queryKeys.reviewGates.all, 'list'] as const,
     list: (cycleId: string) =>
       [...queryKeys.reviewGates.lists(), cycleId] as const,
+  },
+
+  reviewerProgress: {
+    all: ['reviewer-progress'] as const,
+    lists: () => [...queryKeys.reviewerProgress.all, 'list'] as const,
+    list: (cycleId: string, role?: Role) =>
+      [...queryKeys.reviewerProgress.lists(), cycleId, role ?? 'all'] as const,
   },
 } as const

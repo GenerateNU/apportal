@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query'
 import {
   listWrittenReviews,
   upsertWrittenReview,
@@ -19,6 +24,23 @@ export function useWrittenReviews(
       ((await listWrittenReviews(applicationId, opts)) ??
         []) as WrittenReviewDetail[],
     enabled: !!applicationId,
+  })
+}
+
+// Fetches written reviews for a batch of applications, e.g. to show each
+// row's submitted state in a review queue. Each id gets its own cache entry,
+// shared with useWrittenReviews.
+export function useWrittenReviewsByApplicationIds(
+  applicationIds: string[],
+  opts?: RequestOptions
+) {
+  return useQueries({
+    queries: applicationIds.map((applicationId) => ({
+      queryKey: queryKeys.writtenReviews.list(applicationId),
+      queryFn: async () =>
+        ((await listWrittenReviews(applicationId, opts)) ??
+          []) as WrittenReviewDetail[],
+    })),
   })
 }
 

@@ -2,8 +2,16 @@
 import { PageContainer } from '@/components/PageContainer'
 
 import { useMemo, useState } from 'react'
-import { Loader2, Lock, Unlock, X } from 'lucide-react'
+import { Loader2, Lock, Trash2, Unlock, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import {
   Select,
   SelectContent,
@@ -12,12 +20,12 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import type { Application, Role } from '@/lib/api/types'
-import { useApplicantsByNuids } from '@/lib/queries/applicants'
 import { useApplications } from '@/lib/queries/applications'
-import { useCycles } from '@/lib/queries/cycles'
+import { pickDefaultCycleId, useCycles } from '@/lib/queries/cycles'
 import {
   useAssignLead,
   useLeadAssignmentsByApplications,
+  useUnassignAllLeads,
   useUnassignLead,
 } from '@/lib/queries/lead-assignments'
 import {
@@ -38,10 +46,11 @@ export function AssignmentsClient() {
   )
 
   // Scope the page to one cycle so release (which is per cycle × role) is
-  // unambiguous. Default to the first open cycle, else the first cycle.
+  // unambiguous.
   const [cycleId, setCycleId] = useState('')
   if (!cycleId && cycles.length > 0) {
-    setCycleId((cycles.find((c) => c.status === 'open') ?? cycles[0]).id)
+    const defaultId = pickDefaultCycleId(cycles)
+    if (defaultId) setCycleId(defaultId)
   }
   const [activeRole, setActiveRole] = useState<Role | 'all'>('all')
 
@@ -54,20 +63,6 @@ export function AssignmentsClient() {
       ),
     [allApplications, cycleId, activeRole]
   )
-
-  const nuids = useMemo(
-    () => [...new Set(applications.map((a) => a.user_nuid))],
-    [applications]
-  )
-  const applicantQueries = useApplicantsByNuids(nuids)
-  const nameByNuid = useMemo(() => {
-    const map: Record<string, string> = {}
-    nuids.forEach((nuid, i) => {
-      const data = applicantQueries[i]?.data
-      if (data) map[nuid] = data.full_name
-    })
-    return map
-  }, [nuids, applicantQueries])
 
   const leadName = useMemo(() => {
     const map: Record<string, string> = {}
@@ -88,12 +83,14 @@ export function AssignmentsClient() {
   const { data: gates = [] } = useReviewGates(cycleId)
   const assignLead = useAssignLead()
   const unassignLead = useUnassignLead()
+  const unassignAllLeads = useUnassignAllLeads()
   const setRelease = useSetReviewRelease()
 
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [leadNuid, setLeadNuid] = useState('')
   const [assigning, setAssigning] = useState(false)
   const [failed, setFailed] = useState(0)
+  const [confirmingRole, setConfirmingRole] = useState<Role | null>(null)
 
   function toggle(id: string) {
     setSelected((prev) => {
@@ -239,6 +236,17 @@ export function AssignmentsClient() {
                     <span className="text-text-muted text-xs">
                       {gate.submitted_count}/{gate.assigned_count} reviews in
                     </span>
+                    {gate.assigned_count > 0 && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-destructive hover:text-destructive"
+                        onClick={() => setConfirmingRole(role)}
+                      >
+                        <Trash2 size={14} />
+                        Unassign all
+                      </Button>
+                    )}
                     {gate.released ? (
                       <Button
                         size="sm"
@@ -274,10 +282,7 @@ export function AssignmentsClient() {
                     <AssignmentRow
                       key={application.id}
                       application={application}
-                      name={
-                        nameByNuid[application.user_nuid] ??
-                        application.user_nuid
-                      }
+                      name={application.full_name || application.user_nuid}
                       assignments={assignmentsByApp[application.id] ?? []}
                       leadName={leadName}
                       selected={selected.has(application.id)}
@@ -296,6 +301,61 @@ export function AssignmentsClient() {
           )
         })
       )}
+
+      <Dialog
+        open={!!confirmingRole}
+        onOpenChange={(open) => !open && setConfirmingRole(null)}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Unassign all reviewers?</DialogTitle>
+            <DialogDescription>
+              This removes all{' '}
+              {confirmingRole &&
+                (gates.find(
+                  (g) => g.role === confirmingRole && g.kind === 'written'
+                )?.assigned_count ??
+                  0)}{' '}
+              lead assignment
+              {confirmingRole &&
+              gates.find(
+                (g) => g.role === confirmingRole && g.kind === 'written'
+              )?.assigned_count === 1
+                ? ''
+                : 's'}{' '}
+              for {confirmingRole && ROLE_LABEL[confirmingRole].toLowerCase()}{' '}
+              applicants in this cycle. Any written reviews already submitted
+              are kept, but their assignment link is removed. This cannot be
+              undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setConfirmingRole(null)}
+              disabled={unassignAllLeads.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={unassignAllLeads.isPending}
+              onClick={() => {
+                if (!confirmingRole) return
+                unassignAllLeads.mutate(
+                  { cycleId, role: confirmingRole },
+                  { onSuccess: () => setConfirmingRole(null) }
+                )
+              }}
+            >
+              {unassignAllLeads.isPending && (
+                <Loader2 className="animate-spin" size={14} />
+              )}
+              Unassign all
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PageContainer>
   )
 }

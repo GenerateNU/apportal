@@ -23,21 +23,29 @@ type ApplicationUpdate struct {
 	Stage        *models.ApplicationStage
 	Availability json.RawMessage
 	ResumeURL    *string
+	// MarkSubmitted stamps submitted_at = NOW() when true. Callers should only
+	// set this on an actual draft->submitted transition, never on later
+	// pipeline-stage changes or plain autosaves.
+	MarkSubmitted bool
 }
 
 // AnswerFilter holds a filter for a specific question's answers.
 type AnswerFilter struct {
 	QuestionID   string
 	QuestionType string
-	Values any // string for text/url, []any for checkbox/dropdown
+	Values       any // string for text/url, []any for checkbox/dropdown
 }
 
 // ApplicationFilter holds optional list filters; empty fields are ignored.
 type ApplicationFilter struct {
-	CycleID       string
-	UserNUID      string
-	Role          *models.Role
-	Stage         *models.ApplicationStage
+	CycleID  string
+	UserNUID string
+	Role     *models.Role
+	Stage    *models.ApplicationStage
+	// Stages matches any of several stages, for callers that span more than one
+	// (the review pool covers both submitted and lead_review). Combined with
+	// Stage it narrows further, so callers should set one or the other.
+	Stages        []models.ApplicationStage
 	AnswerFilters []AnswerFilter
 	// AssignedTo limits results to applications the given lead is assigned to
 	// write-review (via lead_assignments).
@@ -114,6 +122,14 @@ func (s *Store) ListApplications(ctx context.Context, f ApplicationFilter) ([]mo
 		args = append(args, *f.Stage)
 		query += ` AND a.stage = $` + strconv.Itoa(len(args))
 	}
+	if len(f.Stages) > 0 {
+		stages := make([]string, len(f.Stages))
+		for i, s := range f.Stages {
+			stages[i] = string(s)
+		}
+		args = append(args, stages)
+		query += ` AND a.stage = ANY($` + strconv.Itoa(len(args)) + `::application_stage[])`
+	}
 	if f.AssignedTo != "" {
 		args = append(args, f.AssignedTo)
 		query += ` AND EXISTS (SELECT 1 FROM lead_assignments la` +
@@ -144,7 +160,7 @@ func (s *Store) ListApplications(ctx context.Context, f ApplicationFilter) ([]mo
 		}
 	}
 
-	query += ` ORDER BY a.submitted_at DESC`
+	query += ` ORDER BY a.submitted_at DESC NULLS LAST`
 
 	rows, err := s.db.Query(ctx, query, args...)
 	if err != nil {
@@ -170,15 +186,32 @@ func (s *Store) DeleteDraftApplication(ctx context.Context, id, userNUID string)
 	return nil
 }
 
+// AdvanceApplicationsToLeadReview moves applications from submitted into
+// lead_review once a reviewer is assigned. Guarded by stage='submitted' so
+// it's a no-op for applications already past lead_review (or still draft),
+// and safe to call redundantly for every assignment on an application.
+func (s *Store) AdvanceApplicationsToLeadReview(ctx context.Context, applicationIDs []string) (int, error) {
+	if len(applicationIDs) == 0 {
+		return 0, nil
+	}
+	const q = `UPDATE applications SET stage = 'lead_review' WHERE id = ANY($1) AND stage = 'submitted'`
+	tag, err := s.db.Exec(ctx, q, applicationIDs)
+	if err != nil {
+		return 0, err
+	}
+	return int(tag.RowsAffected()), nil
+}
+
 func (s *Store) UpdateApplication(ctx context.Context, id string, in ApplicationUpdate) (models.Application, error) {
 	const q = `
 		UPDATE applications SET
 			stage        = COALESCE($2, stage),
 			availability = COALESCE($3::jsonb, availability),
-			resume_url   = COALESCE($4, resume_url)
+			resume_url   = COALESCE($4, resume_url),
+			submitted_at = CASE WHEN $5 THEN NOW() ELSE submitted_at END
 		WHERE id = $1
 		RETURNING ` + applicationColumns
-	rows, err := s.db.Query(ctx, q, id, in.Stage, jsonArg(in.Availability), in.ResumeURL)
+	rows, err := s.db.Query(ctx, q, id, in.Stage, jsonArg(in.Availability), in.ResumeURL, in.MarkSubmitted)
 	if err != nil {
 		return models.Application{}, err
 	}

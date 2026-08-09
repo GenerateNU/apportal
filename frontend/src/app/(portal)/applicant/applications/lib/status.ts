@@ -23,6 +23,10 @@ export const APPLICANT_STATUS: Record<
     label: 'Under review',
     className: 'bg-chip-3-bg text-chip-3-text',
   },
+  interview: {
+    label: 'Under review',
+    className: 'bg-chip-3-bg text-chip-3-text',
+  },
   interview_scheduled: {
     label: 'Interview scheduled',
     className: 'bg-chip-4-bg text-chip-4-text',

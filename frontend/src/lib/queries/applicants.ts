@@ -1,9 +1,4 @@
-import {
-  useMutation,
-  useQueries,
-  useQuery,
-  useQueryClient,
-} from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   getApplicant,
   upsertApplicant,
@@ -20,17 +15,10 @@ export function useApplicant(nuid: string, opts?: RequestOptions) {
   })
 }
 
-// Fetches a batch of applicants by nuid, e.g. to hydrate rows derived from
-// an applications list. Each nuid gets its own cache entry, shared with
-// useApplicant.
-export function useApplicantsByNuids(nuids: string[], opts?: RequestOptions) {
-  return useQueries({
-    queries: nuids.map((nuid) => ({
-      queryKey: queryKeys.applicants.detail(nuid),
-      queryFn: () => getApplicant(nuid, opts) as Promise<Applicant>,
-    })),
-  })
-}
+// Deliberately no batch-by-nuid hook: listApplications already joins the
+// applicant's full_name and email onto every row, so fanning out one request
+// per nuid to hydrate a list is a round trip per applicant for data the list
+// response already carried. Read app.full_name instead.
 
 export function useUpsertApplicant() {
   const queryClient = useQueryClient()

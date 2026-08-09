@@ -3,7 +3,7 @@ import { PageContainer } from '@/components/PageContainer'
 
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Select,
@@ -13,10 +13,10 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import type { Role } from '@/lib/api/types'
-import { useApplicantsByNuids } from '@/lib/queries/applicants'
 import { useApplications } from '@/lib/queries/applications'
-import { useCycles } from '@/lib/queries/cycles'
+import { DEFAULT_CYCLE_ID, useCycles } from '@/lib/queries/cycles'
 import { useCurrentUser } from '@/lib/queries/users'
+import { useWrittenReviewsByApplicationIds } from '@/lib/queries/written-reviews'
 import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 
 type Scope = 'mine' | 'all'
@@ -28,30 +28,52 @@ export function ReviewQueueClient() {
   const { data: cycles = [] } = useCycles({})
 
   // Unlike the chief-only pipeline pages, this is a personal task queue, so
-  // cycle and role default to "all" rather than forcing a single pick —
-  // narrowing is optional, not required to see your work.
+  // role stays "all" rather than forcing a single pick — narrowing is
+  // optional, not required to see your work. Cycle defaults to the pinned
+  // cycle (falling back to "all" if it isn't in the list) but can still be
+  // switched back to "all cycles".
   const [cycleId, setCycleId] = useState<string>('all')
+  const [cycleDefaulted, setCycleDefaulted] = useState(false)
+  if (!cycleDefaulted && cycles.length > 0) {
+    if (cycles.some((c) => c.id === DEFAULT_CYCLE_ID)) {
+      setCycleId(DEFAULT_CYCLE_ID)
+    }
+    setCycleDefaulted(true)
+  }
   const [activeRole, setActiveRole] = useState<Role | 'all'>('all')
 
-  const { data: applications = [] } = useApplications({
-    ...(scope === 'mine' && { assigned_to: currentUser?.nuid ?? '' }),
-    ...(cycleId !== 'all' && { cycle_id: cycleId }),
-    ...(activeRole !== 'all' && { role: activeRole }),
-  })
+  const assignedTo = scope === 'mine' ? currentUser?.nuid : undefined
 
-  const nuids = useMemo(
-    () => [...new Set(applications.map((a) => a.user_nuid))],
+  const { data: applications = [] } = useApplications(
+    {
+      ...(assignedTo && { assigned_to: assignedTo }),
+      ...(cycleId !== 'all' && { cycle_id: cycleId }),
+      ...(activeRole !== 'all' && { role: activeRole }),
+    },
+    undefined,
+    // Hold the request until we know who "me" is. The backend skips empty
+    // filter values, so firing early with no assigned_to reads as "every
+    // application" and flashes the whole queue before narrowing.
+    { enabled: scope === 'all' || !!assignedTo }
+  )
+
+  // Whether *my* review of each application has been submitted, so the
+  // queue can show which ones are already done.
+  const applicationIds = useMemo(
+    () => applications.map((a) => a.id),
     [applications]
   )
-  const applicantQueries = useApplicantsByNuids(nuids)
-  const nameByNuid = useMemo(() => {
-    const map: Record<string, string> = {}
-    nuids.forEach((nuid, i) => {
-      const data = applicantQueries[i]?.data
-      if (data) map[nuid] = data.full_name
+  const reviewQueries = useWrittenReviewsByApplicationIds(applicationIds)
+  const submittedAtByApplicationId = useMemo(() => {
+    const map: Record<string, string | undefined> = {}
+    applicationIds.forEach((id, i) => {
+      const own = reviewQueries[i]?.data?.find(
+        (r) => r.reviewer_nuid === currentUser?.nuid
+      )
+      map[id] = own?.submitted_at
     })
     return map
-  }, [nuids, applicantQueries])
+  }, [applicationIds, reviewQueries, currentUser?.nuid])
 
   return (
     <PageContainer>
@@ -142,26 +164,43 @@ export function ReviewQueueClient() {
                   </span>
                 </h2>
                 <div className="flex flex-col gap-3">
-                  {roleApps.map((application) => (
-                    <div
-                      key={application.id}
-                      className="flex items-center justify-between gap-4 rounded-xl border border-gray-100 bg-white p-4"
-                    >
-                      <span className="text-text-default text-sm font-medium">
-                        {nameByNuid[application.user_nuid] ??
-                          application.user_nuid}
-                      </span>
-                      <Button
-                        variant="outline"
-                        onClick={() =>
-                          router.push(`/reviewer/my-reviews/${application.id}`)
-                        }
+                  {roleApps.map((application) => {
+                    const submittedAt =
+                      submittedAtByApplicationId[application.id]
+                    return (
+                      <div
+                        key={application.id}
+                        className="flex items-center justify-between gap-4 rounded-xl border border-gray-100 bg-white p-4 transition-colors hover:bg-gray-50"
                       >
-                        Review
-                        <ArrowRight data-icon="inline-end" size={14} />
-                      </Button>
-                    </div>
-                  ))}
+                        <div className="flex items-center gap-3">
+                          <span className="text-text-default text-sm font-medium">
+                            {application.full_name || application.user_nuid}
+                          </span>
+                          {submittedAt && (
+                            <span className="bg-status-open/15 text-status-open inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium">
+                              <Check size={12} />
+                              Submitted{' '}
+                              {new Date(submittedAt).toLocaleString(undefined, {
+                                dateStyle: 'medium',
+                                timeStyle: 'short',
+                              })}
+                            </span>
+                          )}
+                        </div>
+                        <Button
+                          variant="outline"
+                          onClick={() =>
+                            router.push(
+                              `/reviewer/my-reviews/${application.id}`
+                            )
+                          }
+                        >
+                          {submittedAt ? 'View' : 'Review'}
+                          <ArrowRight data-icon="inline-end" size={14} />
+                        </Button>
+                      </div>
+                    )
+                  })}
                 </div>
               </section>
             )

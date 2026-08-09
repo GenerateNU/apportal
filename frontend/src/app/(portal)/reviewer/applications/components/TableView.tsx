@@ -5,7 +5,7 @@ import { FILTER_STAGES } from './constants'
 import { ApplicantRow } from './ApplicantRow'
 import { FilterChips } from './FilterButton'
 
-const TRAILING_COLUMNS = ['Stage', 'Submitted']
+const TRAILING_COLUMNS = ['Stage', 'Submitted', 'Availability']
 
 export function TableView({
   applicants,
@@ -15,6 +15,11 @@ export function TableView({
   columns,
   questionsByCycleRole,
   answersByApplicationId,
+  availabilityByApplicationId,
+  selectable,
+  selectedIds,
+  onToggleSelect,
+  onToggleSelectAll,
   selectedApplicationId,
   onSelectApplication,
   filters,
@@ -27,6 +32,13 @@ export function TableView({
   columns: Question[]
   questionsByCycleRole: Record<string, Question[]>
   answersByApplicationId: Record<string, WrittenAnswer[]>
+  availabilityByApplicationId: Record<string, string[]>
+  // Row/select-all checkboxes only make sense alongside the bulk-move
+  // toolbar, which is chief/admin-only — other reviewers never see them.
+  selectable: boolean
+  selectedIds: Set<string>
+  onToggleSelect: (id: string) => void
+  onToggleSelectAll: () => void
   selectedApplicationId: string | null
   onSelectApplication: (id: string) => void
   filters: AnswerFilter[]
@@ -39,6 +51,12 @@ export function TableView({
     stage === 'all'
       ? allApplicants.length
       : allApplicants.filter((a) => a.stage === stage).length
+
+  const allSelected =
+    applicants.length > 0 && applicants.every((a) => selectedIds.has(a.id))
+  const someSelected = applicants.some((a) => selectedIds.has(a.id))
+  const columnCount =
+    columns.length + TRAILING_COLUMNS.length + (selectable ? 1 : 0)
 
   return (
     <div className="flex min-h-0 flex-1 flex-col rounded-lg border border-gray-200 bg-white">
@@ -72,6 +90,20 @@ export function TableView({
         <table className="h-full w-full min-w-180">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50">
+              {selectable && (
+                <th className="w-10 border-r border-gray-100 px-3 py-2">
+                  <input
+                    type="checkbox"
+                    className="accent-primary"
+                    checked={allSelected}
+                    ref={(el) => {
+                      if (el) el.indeterminate = !allSelected && someSelected
+                    }}
+                    onChange={onToggleSelectAll}
+                    aria-label="Select all"
+                  />
+                </th>
+              )}
               {columns.map((q) => (
                 <th
                   key={q.id}
@@ -102,6 +134,10 @@ export function TableView({
                     questionsByCycleRole[`${a.cycleId}:${a.role}`] ?? []
                   }
                   answers={answersByApplicationId[a.id] ?? []}
+                  availabilityDays={availabilityByApplicationId[a.id] ?? []}
+                  selectable={selectable}
+                  selected={selectedIds.has(a.id)}
+                  onToggleSelect={() => onToggleSelect(a.id)}
                   isSelected={selectedApplicationId === a.id}
                   onSelect={() => onSelectApplication(a.id)}
                 />
@@ -109,7 +145,7 @@ export function TableView({
             ) : (
               <tr>
                 <td
-                  colSpan={columns.length + TRAILING_COLUMNS.length}
+                  colSpan={columnCount}
                   className="text-text-subtle px-4 py-10 text-center text-sm"
                 >
                   No applicants found.
@@ -121,7 +157,7 @@ export function TableView({
                 right after the last real row. */}
             <tr className="h-full">
               {Array.from({
-                length: columns.length + TRAILING_COLUMNS.length,
+                length: columnCount,
               }).map((_, i) => (
                 <td
                   key={i}

@@ -130,8 +130,10 @@ type Application struct {
 	Stage        ApplicationStage `json:"stage"`
 	Availability json.RawMessage  `json:"availability,omitempty"`
 	ResumeURL    *string          `json:"resume_url,omitempty"`
-	SubmittedAt  time.Time        `json:"submitted_at"`
-	UpdatedAt    time.Time        `json:"updated_at"`
+	// SubmittedAt is nil until the applicant actually submits (draft ->
+	// submitted); it is not the row's creation time.
+	SubmittedAt *time.Time `json:"submitted_at,omitempty"`
+	UpdatedAt   time.Time  `json:"updated_at"`
 }
 
 // ApplicationSummary bundles an application with its applicant's display name

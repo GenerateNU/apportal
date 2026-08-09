@@ -5,16 +5,18 @@
  * Generate application portal — applications, reviews, and the hiring pipeline.
  * OpenAPI spec version: 0.1.0
  */
+import type { ChiefReviewDetailVote } from './chiefReviewDetailVote';
 
-export interface ChiefReview {
+export interface ChiefReviewDetail {
   /** A URL to the JSON Schema for this object. */
   readonly $schema?: string;
-  advance_to_interview?: boolean;
   application_id: string;
   created_at: string;
   decided_at?: string;
   id: string;
   notes?: string;
+  reviewer_name?: string;
   reviewer_nuid: string;
   updated_at: string;
+  vote?: ChiefReviewDetailVote;
 }

@@ -88,10 +88,12 @@ func registerHandlers(api huma.API, st *store.Store, storageClient *storage.Clie
 
 	// Review → interview → selection pipeline.
 	(&leadAssignmentHandler{store: st}).register(api)
+	(&assignmentPlannerHandler{store: st}).register(api)
 	(&reviewQuestionHandler{store: st}).register(api)
 	(&writtenReviewHandler{store: st}).register(api)
 	(&chiefReviewHandler{store: st}).register(api)
 	(&reviewReleaseHandler{store: st}).register(api)
+	(&reviewerProgressHandler{store: st}).register(api)
 	(&interviewAssignmentHandler{store: st}).register(api)
 	(&interviewHandler{store: st}).register(api)
 	(&recordingReviewHandler{store: st}).register(api)

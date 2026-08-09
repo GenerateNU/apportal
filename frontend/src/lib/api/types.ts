@@ -10,13 +10,15 @@ import type {
   Application as GenApplication,
   ApplicationSummary as GenApplicationSummary,
   ApplicationTemplate as GenApplicationTemplate,
-  ChiefReview as GenChiefReview,
+  ChiefReviewDetail as GenChiefReviewDetail,
+  ChiefReviewDetailVote,
   Cycle as GenCycle,
   CodeChallenge as GenCodeChallenge,
   CodeSubmission as GenCodeSubmission,
   InterviewAssignment as GenInterviewAssignment,
   InterviewReviewAssignment as GenInterviewReviewAssignment,
   Question as GenQuestion,
+  ReviewerProgress as GenReviewerProgress,
   ReviewQuestion as GenReviewQuestion,
   User as GenUser,
   WrittenAnswer as GenWrittenAnswer,
@@ -38,6 +40,7 @@ export type {
 export type Role = ApplicationRole
 export type QuestionType = QuestionQuestionType
 export type UserRole = UserRolesAnyOfItem
+export type ChiefVote = ChiefReviewDetailVote
 
 // The reviewer role passed as the list-users filter. Not a standalone backend
 // enum (it's just a query param), so it stays hand-written.
@@ -116,7 +119,7 @@ export type WrittenReviewDetail = Omit<
 
 export type CodeSubmission = Omit<GenCodeSubmission, '$schema'>
 
-export type ChiefReview = Omit<GenChiefReview, '$schema'>
+export type ChiefReview = Omit<GenChiefReviewDetail, '$schema'>
 
 export type InterviewAssignment = Omit<GenInterviewAssignment, '$schema'>
 
@@ -124,3 +127,9 @@ export type InterviewReviewAssignment = Omit<
   GenInterviewReviewAssignment,
   '$schema'
 >
+
+// items is nullable in the generated type (an empty Go slice can encode as
+// `null`); callers always want an array.
+export type ReviewerProgress = Omit<GenReviewerProgress, 'items'> & {
+  items: NonNullable<GenReviewerProgress['items']>
+}

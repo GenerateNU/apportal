@@ -11,6 +11,8 @@ import type { CreateReviewQuestionInputBodyRole } from './createReviewQuestionIn
 export interface CreateReviewQuestionInputBody {
   /** A URL to the JSON Schema for this object. */
   readonly $schema?: string;
+  /** Markdown help text shown under the question's label */
+  description?: string;
   display_order?: number;
   is_required?: boolean;
   options?: unknown;

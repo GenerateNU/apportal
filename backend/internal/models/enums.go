@@ -21,10 +21,14 @@ func (r Role) Valid() bool {
 type ApplicationStage string
 
 const (
-	StageDraft              ApplicationStage = "draft"
-	StageSubmitted          ApplicationStage = "submitted"
-	StageLeadReview         ApplicationStage = "lead_review"
-	StageChiefReview        ApplicationStage = "chief_review"
+	StageDraft       ApplicationStage = "draft"
+	StageSubmitted   ApplicationStage = "submitted"
+	StageLeadReview  ApplicationStage = "lead_review"
+	StageChiefReview ApplicationStage = "chief_review"
+	// StageInterview is a generic manual "Interview" bucket, distinct from the
+	// granular interview_scheduled/conducted/review stages that the interview
+	// assignment/recording-review flows drive automatically.
+	StageInterview          ApplicationStage = "interview"
 	StageInterviewScheduled ApplicationStage = "interview_scheduled"
 	StageInterviewConducted ApplicationStage = "interview_conducted"
 	StageInterviewReview    ApplicationStage = "interview_review"
@@ -36,7 +40,7 @@ const (
 
 func (s ApplicationStage) Valid() bool {
 	switch s {
-	case StageDraft, StageSubmitted, StageLeadReview, StageChiefReview, StageInterviewScheduled,
+	case StageDraft, StageSubmitted, StageLeadReview, StageChiefReview, StageInterview, StageInterviewScheduled,
 		StageInterviewConducted, StageInterviewReview, StageSelection,
 		StageAccepted, StageRejected, StageWithdrawn:
 		return true
@@ -78,6 +82,28 @@ const (
 func (r InterviewRating) Valid() bool {
 	switch r {
 	case RatingDoNotHire, RatingGood, RatingGreat, RatingMustHire:
+		return true
+	}
+	return false
+}
+
+// ChiefVote is a chief's individual read on whether an application should
+// advance to interview — each chief on an application casts their own; the
+// final advance/reject call is a separate step (changing the application's
+// stage) made after discussing the votes.
+type ChiefVote string
+
+const (
+	VoteStrongInterview   ChiefVote = "strong_interview"
+	VoteInterview         ChiefVote = "interview"
+	VoteNeutral           ChiefVote = "neutral"
+	VoteNoInterview       ChiefVote = "no_interview"
+	VoteStrongNoInterview ChiefVote = "strong_no_interview"
+)
+
+func (v ChiefVote) Valid() bool {
+	switch v {
+	case VoteStrongInterview, VoteInterview, VoteNeutral, VoteNoInterview, VoteStrongNoInterview:
 		return true
 	}
 	return false

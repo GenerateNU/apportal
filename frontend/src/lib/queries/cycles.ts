@@ -25,6 +25,20 @@ export function useCycles(
   })
 }
 
+// Pinned cycle every table/list defaults to for now. Swap this out (or make
+// it a real per-org setting) once Fall 2026 is no longer the cycle everyone
+// cares about by default.
+//TODO: This is a temporary hack to make the default cycle be the pinned cycle. Once we have a better way to determine the default cycle, we can remove this.
+export const DEFAULT_CYCLE_ID = '94dde9fe-a069-4178-90db-282b611e2904'
+
+// Picks which cycle a page should default to when no cycle has been chosen
+// yet: the pinned default if it's in the list, otherwise the open cycle,
+// otherwise the first one.
+export function pickDefaultCycleId(cycles: Cycle[]): string | undefined {
+  if (cycles.some((c) => c.id === DEFAULT_CYCLE_ID)) return DEFAULT_CYCLE_ID
+  return (cycles.find((c) => c.status === 'open') ?? cycles[0])?.id
+}
+
 // Per-role question/challenge/submission counts for a cycle, computed
 // server-side (COUNT queries) so the caller never has to fetch full row sets
 // just to count them.

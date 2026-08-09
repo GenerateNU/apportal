@@ -11,10 +11,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import type { Application, Role, User } from '@/lib/api/types'
-import { useApplicantsByNuids } from '@/lib/queries/applicants'
 import { useApplications } from '@/lib/queries/applications'
-import { useChiefReviewsByApplications } from '@/lib/queries/chief-reviews'
-import { useCycles } from '@/lib/queries/cycles'
+import { pickDefaultCycleId, useCycles } from '@/lib/queries/cycles'
 import {
   useAssignRecordingReviewer,
   useInterviewAssignmentsByApplications,
@@ -31,11 +29,11 @@ export function InterviewAssignmentsClient() {
   const { data: leads = [] } = useLeads()
   const { data: chiefs = [] } = useChiefs()
 
-  // Scope the page to one cycle, same as the lead-assignment page. Default to
-  // the first open cycle, else the first cycle.
+  // Scope the page to one cycle, same as the lead-assignment page.
   const [cycleId, setCycleId] = useState('')
   if (!cycleId && cycles.length > 0) {
-    setCycleId((cycles.find((c) => c.status === 'open') ?? cycles[0]).id)
+    const defaultId = pickDefaultCycleId(cycles)
+    if (defaultId) setCycleId(defaultId)
   }
   const [activeRole, setActiveRole] = useState<Role | 'all'>('all')
 
@@ -49,35 +47,12 @@ export function InterviewAssignmentsClient() {
     [allApplications, cycleId, activeRole]
   )
 
-  const cycleAppIds = useMemo(
-    () => cycleApplications.map((a) => a.id),
+  // Interview assignment only makes sense for applicants a chief has actually
+  // advanced to interview — everyone else hasn't cleared chief review yet.
+  const applications = useMemo(
+    () => cycleApplications.filter((a) => a.stage === 'interview'),
     [cycleApplications]
   )
-  const chiefReviewQueries = useChiefReviewsByApplications(cycleAppIds)
-
-  // Interview assignment only makes sense for applicants a chief has actually
-  // marked as advancing — everyone else hasn't cleared chief review yet.
-  const applications = useMemo(
-    () =>
-      cycleApplications.filter((_, i) =>
-        chiefReviewQueries[i]?.data?.some((r) => r.advance_to_interview)
-      ),
-    [cycleApplications, chiefReviewQueries]
-  )
-
-  const nuids = useMemo(
-    () => [...new Set(applications.map((a) => a.user_nuid))],
-    [applications]
-  )
-  const applicantQueries = useApplicantsByNuids(nuids)
-  const nameByNuid = useMemo(() => {
-    const map: Record<string, string> = {}
-    nuids.forEach((nuid, i) => {
-      const data = applicantQueries[i]?.data
-      if (data) map[nuid] = data.full_name
-    })
-    return map
-  }, [nuids, applicantQueries])
 
   // Interviewer can be a lead or a chief (info.md), deduped in case someone
   // somehow holds both roles.
@@ -185,9 +160,7 @@ export function InterviewAssignmentsClient() {
                   <InterviewAssignmentRow
                     key={application.id}
                     application={application}
-                    name={
-                      nameByNuid[application.user_nuid] ?? application.user_nuid
-                    }
+                    name={application.full_name || application.user_nuid}
                     interviewers={interviewers}
                     leads={leads}
                     userName={userName}

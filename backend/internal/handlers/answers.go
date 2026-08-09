@@ -7,6 +7,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
+	"github.com/GenerateNU/apportal/backend/internal/middleware"
 	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/store"
 )
@@ -21,8 +22,9 @@ func (h *answerHandler) register(api huma.API) {
 		Method:      http.MethodPut,
 		Path:        "/applications/{id}/answers",
 		Summary:     "Submit or update written answers",
-		Description: "Bulk upsert keyed on (application, question).",
+		Description: "Bulk upsert keyed on (application, question). Owner-only, and only while the application is still a draft.",
 		Tags:        []string{"Answers"},
+		Errors:      []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound},
 	}, h.upsert)
 
 	huma.Register(api, huma.Operation{
@@ -31,6 +33,7 @@ func (h *answerHandler) register(api huma.API) {
 		Path:        "/applications/{id}/answers",
 		Summary:     "List an application's written answers",
 		Tags:        []string{"Answers"},
+		Errors:      []int{http.StatusNotFound},
 	}, h.list)
 }
 
@@ -52,6 +55,27 @@ type UpsertAnswersInput struct {
 }
 
 func (h *answerHandler) upsert(ctx context.Context, in *UpsertAnswersInput) (*AnswersOutput, error) {
+	actor, hasActor := middleware.ActorFrom(ctx)
+	if !hasActor || actor.NUID == "" {
+		return nil, huma.Error401Unauthorized("authentication required")
+	}
+
+	app, err := h.store.GetApplication(ctx, in.ID)
+	if err != nil {
+		return nil, storeErr(err)
+	}
+	if actor.NUID != app.UserNUID {
+		return nil, huma.Error403Forbidden("cannot edit another applicant's answers")
+	}
+	// Once submitted, answers are frozen — otherwise a stale autosave from a
+	// second tab/session (whose local form state predates the submit) can
+	// silently overwrite or delete already-submitted answers, since a bulk
+	// upsert always writes every question including ones the stale session
+	// never saw filled in.
+	if app.Stage != models.StageDraft {
+		return nil, huma.Error403Forbidden("answers can only be edited while the application is a draft")
+	}
+
 	inputs := make([]store.AnswerInput, 0, len(in.Body.Answers))
 	for _, a := range in.Body.Answers {
 		if a.QuestionID == "" {
@@ -78,6 +102,21 @@ type ListAnswersInput struct {
 }
 
 func (h *answerHandler) list(ctx context.Context, in *ListAnswersInput) (*AnswersOutput, error) {
+	app, err := h.store.GetApplication(ctx, in.ID)
+	if err != nil {
+		return nil, storeErr(err)
+	}
+	// A draft's answers are private autosave content — only its owner can
+	// list them. Mirrors get-application: reject the same way as a missing
+	// row so a guessed/shared draft ID can't be distinguished from one that
+	// doesn't exist.
+	if app.Stage == models.StageDraft {
+		actor, hasActor := middleware.ActorFrom(ctx)
+		if !hasActor || actor.NUID != app.UserNUID {
+			return nil, huma.Error404NotFound("not found")
+		}
+	}
+
 	answers, err := h.store.ListAnswers(ctx, in.ID)
 	if err != nil {
 		return nil, storeErr(err)

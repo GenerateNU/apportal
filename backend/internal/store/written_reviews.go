@@ -108,11 +108,16 @@ func (s *Store) UpsertWrittenReview(ctx context.Context, in WrittenReviewUpsert)
 	if err != nil {
 		return detail, err
 	}
+	names, err := s.namesByNUIDs(ctx, []string{review.ReviewerNUID})
+	if err != nil {
+		return detail, err
+	}
 	detail.WrittenReview = review
 	detail.Answers = answers[review.ID]
 	if detail.Answers == nil {
 		detail.Answers = []models.WrittenReviewAnswer{}
 	}
+	detail.ReviewerName = names[review.ReviewerNUID]
 	return detail, nil
 }
 
@@ -139,10 +144,16 @@ func (s *Store) ListWrittenReviews(ctx context.Context, applicationID, onlyRevie
 	}
 
 	ids := make([]string, len(reviews))
+	reviewerNUIDs := make([]string, len(reviews))
 	for i, r := range reviews {
 		ids[i] = r.ID
+		reviewerNUIDs[i] = r.ReviewerNUID
 	}
 	answers, err := s.listReviewAnswers(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+	names, err := s.namesByNUIDs(ctx, reviewerNUIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -154,6 +165,7 @@ func (s *Store) ListWrittenReviews(ctx context.Context, applicationID, onlyRevie
 		if details[i].Answers == nil {
 			details[i].Answers = []models.WrittenReviewAnswer{}
 		}
+		details[i].ReviewerName = names[r.ReviewerNUID]
 	}
 	return details, nil
 }
