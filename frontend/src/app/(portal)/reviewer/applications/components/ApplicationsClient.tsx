@@ -16,6 +16,7 @@ import type {
   Role,
   WrittenAnswer,
 } from '@/lib/api/types'
+import { defaultApplicationsCycleId } from '@/lib/cycles'
 import { useAnswersByApplicationIds } from '@/lib/queries/answers'
 import { useApplications } from '@/lib/queries/applications'
 import { useCycles } from '@/lib/queries/cycles'
@@ -43,21 +44,12 @@ export function ApplicationsClient() {
 
   const { data: cycles = [] } = useCycles({})
 
-  // Default the cycle filter to the cycle currently accepting applications,
-  // so reviewers land on the current cycle instead of every cycle ever run.
-  // Falls back to whichever cycle opened most recently if none is open
-  // (opens_at is only set on scheduled/draft cycles in practice).
-  const currentCycleId = useMemo(() => {
-    const open = cycles.find((c) => c.status === 'open')
-    if (open) return open.id
-    let latest: { id: string; opens_at: string } | null = null
-    for (const c of cycles) {
-      if (c.opens_at && (!latest || c.opens_at > latest.opens_at)) {
-        latest = { id: c.id, opens_at: c.opens_at }
-      }
-    }
-    return latest?.id ?? null
-  }, [cycles])
+  // Shared with the server prefetch in ../page.tsx, which scopes its
+  // application-list prefetch to this same cycle.
+  const currentCycleId = useMemo(
+    () => defaultApplicationsCycleId(cycles),
+    [cycles]
+  )
 
   if (!cycleDefaulted && currentCycleId) {
     setActiveCycle(currentCycleId)

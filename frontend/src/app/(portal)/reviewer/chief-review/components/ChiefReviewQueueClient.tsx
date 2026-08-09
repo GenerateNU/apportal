@@ -1,7 +1,7 @@
 'use client'
 import { PageContainer } from '@/components/PageContainer'
 
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import type { Role } from '@/lib/api/types'
-import { useApplicantsByNuids } from '@/lib/queries/applicants'
+import { defaultPipelineCycleId } from '@/lib/cycles'
 import { useApplications } from '@/lib/queries/applications'
 import { useCycles } from '@/lib/queries/cycles'
 import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
@@ -22,11 +22,12 @@ export function ChiefReviewQueueClient() {
   const router = useRouter()
   const { data: cycles = [] } = useCycles({})
 
-  // Default to the first open cycle, else the first cycle, same as the other
-  // chief-only pipeline pages.
+  // Shared with the server prefetch in ../page.tsx, which scopes its
+  // application-list prefetch to this same cycle.
   const [cycleId, setCycleId] = useState('')
-  if (!cycleId && cycles.length > 0) {
-    setCycleId((cycles.find((c) => c.status === 'open') ?? cycles[0]).id)
+  const defaultCycleId = defaultPipelineCycleId(cycles)
+  if (!cycleId && defaultCycleId) {
+    setCycleId(defaultCycleId)
   }
   const [activeRole, setActiveRole] = useState<Role | 'all'>('all')
 
@@ -35,20 +36,6 @@ export function ChiefReviewQueueClient() {
       ? { cycle_id: cycleId, ...(activeRole !== 'all' && { role: activeRole }) }
       : undefined
   )
-
-  const nuids = useMemo(
-    () => [...new Set(applications.map((a) => a.user_nuid))],
-    [applications]
-  )
-  const applicantQueries = useApplicantsByNuids(nuids)
-  const nameByNuid = useMemo(() => {
-    const map: Record<string, string> = {}
-    nuids.forEach((nuid, i) => {
-      const data = applicantQueries[i]?.data
-      if (data) map[nuid] = data.full_name
-    })
-    return map
-  }, [nuids, applicantQueries])
 
   return (
     <PageContainer>
@@ -123,8 +110,7 @@ export function ChiefReviewQueueClient() {
                       className="flex items-center justify-between gap-4 rounded-xl border border-gray-100 bg-white p-4"
                     >
                       <span className="text-text-default text-sm font-medium">
-                        {nameByNuid[application.user_nuid] ??
-                          application.user_nuid}
+                        {application.full_name || application.user_nuid}
                       </span>
                       <Button
                         variant="outline"

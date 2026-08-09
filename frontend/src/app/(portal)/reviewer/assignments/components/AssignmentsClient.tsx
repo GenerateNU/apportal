@@ -12,7 +12,6 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import type { Application, Role } from '@/lib/api/types'
-import { useApplicantsByNuids } from '@/lib/queries/applicants'
 import { useApplications } from '@/lib/queries/applications'
 import { useCycles } from '@/lib/queries/cycles'
 import {
@@ -54,20 +53,6 @@ export function AssignmentsClient() {
       ),
     [allApplications, cycleId, activeRole]
   )
-
-  const nuids = useMemo(
-    () => [...new Set(applications.map((a) => a.user_nuid))],
-    [applications]
-  )
-  const applicantQueries = useApplicantsByNuids(nuids)
-  const nameByNuid = useMemo(() => {
-    const map: Record<string, string> = {}
-    nuids.forEach((nuid, i) => {
-      const data = applicantQueries[i]?.data
-      if (data) map[nuid] = data.full_name
-    })
-    return map
-  }, [nuids, applicantQueries])
 
   const leadName = useMemo(() => {
     const map: Record<string, string> = {}
@@ -274,10 +259,7 @@ export function AssignmentsClient() {
                     <AssignmentRow
                       key={application.id}
                       application={application}
-                      name={
-                        nameByNuid[application.user_nuid] ??
-                        application.user_nuid
-                      }
+                      name={application.full_name || application.user_nuid}
                       assignments={assignmentsByApp[application.id] ?? []}
                       leadName={leadName}
                       selected={selected.has(application.id)}

@@ -11,7 +11,6 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import type { Application, Role, User } from '@/lib/api/types'
-import { useApplicantsByNuids } from '@/lib/queries/applicants'
 import { useApplications } from '@/lib/queries/applications'
 import { useChiefReviewsByApplications } from '@/lib/queries/chief-reviews'
 import { useCycles } from '@/lib/queries/cycles'
@@ -64,20 +63,6 @@ export function InterviewAssignmentsClient() {
       ),
     [cycleApplications, chiefReviewQueries]
   )
-
-  const nuids = useMemo(
-    () => [...new Set(applications.map((a) => a.user_nuid))],
-    [applications]
-  )
-  const applicantQueries = useApplicantsByNuids(nuids)
-  const nameByNuid = useMemo(() => {
-    const map: Record<string, string> = {}
-    nuids.forEach((nuid, i) => {
-      const data = applicantQueries[i]?.data
-      if (data) map[nuid] = data.full_name
-    })
-    return map
-  }, [nuids, applicantQueries])
 
   // Interviewer can be a lead or a chief (info.md), deduped in case someone
   // somehow holds both roles.
@@ -185,9 +170,7 @@ export function InterviewAssignmentsClient() {
                   <InterviewAssignmentRow
                     key={application.id}
                     application={application}
-                    name={
-                      nameByNuid[application.user_nuid] ?? application.user_nuid
-                    }
+                    name={application.full_name || application.user_nuid}
                     interviewers={interviewers}
                     leads={leads}
                     userName={userName}

@@ -3,9 +3,11 @@ import {
   HydrationBoundary,
   QueryClient,
 } from '@tanstack/react-query'
-import { getApplicant } from '@/generated/applicants/applicants'
 import { listApplications } from '@/generated/applications/applications'
+import { listCycles } from '@/generated/cycles/cycles'
 import { getServerRequestOptions } from '@/lib/api/server-request-options'
+import type { Cycle } from '@/lib/api/types'
+import { defaultPipelineCycleId } from '@/lib/cycles'
 import { queryKeys } from '@/lib/queries/keys'
 import { ChiefReviewQueueClient } from './components/ChiefReviewQueueClient'
 
@@ -17,20 +19,24 @@ export default async function ChiefReviewQueuePage() {
   const queryClient = new QueryClient()
   const requestOptions = await getServerRequestOptions()
 
-  const applications = await queryClient.fetchQuery({
-    queryKey: queryKeys.applications.list({}),
-    queryFn: async () => (await listApplications({}, requestOptions)) ?? [],
+  // Prefetch under the exact keys the client mounts with: the cycle list, then
+  // the application list scoped to the cycle it defaults to. The role filter
+  // starts at "all", which the client omits from the params entirely.
+  const cycles = await queryClient.fetchQuery({
+    queryKey: queryKeys.cycles.list({}),
+    queryFn: async () =>
+      ((await listCycles({}, requestOptions)) ?? []) as Cycle[],
   })
 
-  const uniqueNUIDs = [...new Set(applications.map((a) => a.user_nuid))]
-  await Promise.all(
-    uniqueNUIDs.map((nuid) =>
-      queryClient.prefetchQuery({
-        queryKey: queryKeys.applicants.detail(nuid),
-        queryFn: () => getApplicant(nuid, requestOptions),
-      })
-    )
-  )
+  const cycleId = defaultPipelineCycleId(cycles)
+  if (cycleId) {
+    const params = { cycle_id: cycleId }
+    await queryClient.prefetchQuery({
+      queryKey: queryKeys.applications.list(params),
+      queryFn: async () =>
+        (await listApplications(params, requestOptions)) ?? [],
+    })
+  }
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>

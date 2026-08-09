@@ -1,7 +1,7 @@
 'use client'
 import { PageContainer } from '@/components/PageContainer'
 
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -13,7 +13,6 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import type { Role } from '@/lib/api/types'
-import { useApplicantsByNuids } from '@/lib/queries/applicants'
 import { useApplications } from '@/lib/queries/applications'
 import { useCycles } from '@/lib/queries/cycles'
 import { useCurrentUser } from '@/lib/queries/users'
@@ -33,25 +32,20 @@ export function ReviewQueueClient() {
   const [cycleId, setCycleId] = useState<string>('all')
   const [activeRole, setActiveRole] = useState<Role | 'all'>('all')
 
-  const { data: applications = [] } = useApplications({
-    ...(scope === 'mine' && { assigned_to: currentUser?.nuid ?? '' }),
-    ...(cycleId !== 'all' && { cycle_id: cycleId }),
-    ...(activeRole !== 'all' && { role: activeRole }),
-  })
+  const assignedTo = scope === 'mine' ? currentUser?.nuid : undefined
 
-  const nuids = useMemo(
-    () => [...new Set(applications.map((a) => a.user_nuid))],
-    [applications]
+  const { data: applications = [] } = useApplications(
+    {
+      ...(assignedTo && { assigned_to: assignedTo }),
+      ...(cycleId !== 'all' && { cycle_id: cycleId }),
+      ...(activeRole !== 'all' && { role: activeRole }),
+    },
+    undefined,
+    // Hold the request until we know who "me" is. The backend skips empty
+    // filter values, so firing early with no assigned_to reads as "every
+    // application" and flashes the whole queue before narrowing.
+    { enabled: scope === 'all' || !!assignedTo }
   )
-  const applicantQueries = useApplicantsByNuids(nuids)
-  const nameByNuid = useMemo(() => {
-    const map: Record<string, string> = {}
-    nuids.forEach((nuid, i) => {
-      const data = applicantQueries[i]?.data
-      if (data) map[nuid] = data.full_name
-    })
-    return map
-  }, [nuids, applicantQueries])
 
   return (
     <PageContainer>
@@ -148,8 +142,7 @@ export function ReviewQueueClient() {
                       className="flex items-center justify-between gap-4 rounded-xl border border-gray-100 bg-white p-4"
                     >
                       <span className="text-text-default text-sm font-medium">
-                        {nameByNuid[application.user_nuid] ??
-                          application.user_nuid}
+                        {application.full_name || application.user_nuid}
                       </span>
                       <Button
                         variant="outline"

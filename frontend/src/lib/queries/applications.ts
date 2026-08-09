@@ -23,12 +23,18 @@ export function useApplications(
     stage?: ApplicationStage
     role?: Role
   },
-  opts?: RequestOptions
+  opts?: RequestOptions,
+  // `enabled` lets a caller hold the request until its filters are actually
+  // known. Omitting a filter isn't the same as not having it yet: the backend
+  // ignores empty filter values, so a half-built params object silently
+  // fetches every application.
+  { enabled = true }: { enabled?: boolean } = {}
 ) {
   return useQuery({
     queryKey: queryKeys.applications.list(params),
     queryFn: async () =>
       ((await listApplications(params, opts)) ?? []) as ApplicationSummary[],
+    enabled,
   })
 }
 
