@@ -13,7 +13,6 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import type { Role } from '@/lib/api/types'
-import { useApplicantsByNuids } from '@/lib/queries/applicants'
 import { useApplications } from '@/lib/queries/applications'
 import { useChiefReviewsByApplications } from '@/lib/queries/chief-reviews'
 import { pickDefaultCycleId, useCycles } from '@/lib/queries/cycles'
@@ -25,7 +24,9 @@ export function ChiefReviewQueueClient() {
   const { data: currentUser } = useCurrentUser()
   const { data: cycles = [] } = useCycles({})
 
-  // Default cycle, same as the other chief-only pipeline pages.
+  // Default cycle, same as the other chief-only pipeline pages. Shared with
+  // the server prefetch in ../page.tsx, which scopes its application-list
+  // prefetch to this same cycle.
   const [cycleId, setCycleId] = useState('')
   if (!cycleId && cycles.length > 0) {
     const defaultId = pickDefaultCycleId(cycles)
@@ -38,20 +39,6 @@ export function ChiefReviewQueueClient() {
       ? { cycle_id: cycleId, ...(activeRole !== 'all' && { role: activeRole }) }
       : undefined
   )
-
-  const nuids = useMemo(
-    () => [...new Set(applications.map((a) => a.user_nuid))],
-    [applications]
-  )
-  const applicantQueries = useApplicantsByNuids(nuids)
-  const nameByNuid = useMemo(() => {
-    const map: Record<string, string> = {}
-    nuids.forEach((nuid, i) => {
-      const data = applicantQueries[i]?.data
-      if (data) map[nuid] = data.full_name
-    })
-    return map
-  }, [nuids, applicantQueries])
 
   // Whether *my* review of each application counts as submitted (has a
   // comment — casting a vote alone doesn't count), so the queue can show
@@ -148,8 +135,7 @@ export function ChiefReviewQueueClient() {
                       >
                         <div className="flex items-center gap-3">
                           <span className="text-text-default text-sm font-medium">
-                            {nameByNuid[application.user_nuid] ??
-                              application.user_nuid}
+                            {application.full_name || application.user_nuid}
                           </span>
                           {submitted && (
                             <span className="bg-status-open/15 text-status-open inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium">

@@ -13,7 +13,6 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import type { Role } from '@/lib/api/types'
-import { useApplicantsByNuids } from '@/lib/queries/applicants'
 import { useApplications } from '@/lib/queries/applications'
 import { DEFAULT_CYCLE_ID, useCycles } from '@/lib/queries/cycles'
 import { useCurrentUser } from '@/lib/queries/users'
@@ -43,25 +42,20 @@ export function ReviewQueueClient() {
   }
   const [activeRole, setActiveRole] = useState<Role | 'all'>('all')
 
-  const { data: applications = [] } = useApplications({
-    ...(scope === 'mine' && { assigned_to: currentUser?.nuid ?? '' }),
-    ...(cycleId !== 'all' && { cycle_id: cycleId }),
-    ...(activeRole !== 'all' && { role: activeRole }),
-  })
+  const assignedTo = scope === 'mine' ? currentUser?.nuid : undefined
 
-  const nuids = useMemo(
-    () => [...new Set(applications.map((a) => a.user_nuid))],
-    [applications]
+  const { data: applications = [] } = useApplications(
+    {
+      ...(assignedTo && { assigned_to: assignedTo }),
+      ...(cycleId !== 'all' && { cycle_id: cycleId }),
+      ...(activeRole !== 'all' && { role: activeRole }),
+    },
+    undefined,
+    // Hold the request until we know who "me" is. The backend skips empty
+    // filter values, so firing early with no assigned_to reads as "every
+    // application" and flashes the whole queue before narrowing.
+    { enabled: scope === 'all' || !!assignedTo }
   )
-  const applicantQueries = useApplicantsByNuids(nuids)
-  const nameByNuid = useMemo(() => {
-    const map: Record<string, string> = {}
-    nuids.forEach((nuid, i) => {
-      const data = applicantQueries[i]?.data
-      if (data) map[nuid] = data.full_name
-    })
-    return map
-  }, [nuids, applicantQueries])
 
   // Whether *my* review of each application has been submitted, so the
   // queue can show which ones are already done.
@@ -180,8 +174,7 @@ export function ReviewQueueClient() {
                       >
                         <div className="flex items-center gap-3">
                           <span className="text-text-default text-sm font-medium">
-                            {nameByNuid[application.user_nuid] ??
-                              application.user_nuid}
+                            {application.full_name || application.user_nuid}
                           </span>
                           {submittedAt && (
                             <span className="bg-status-open/15 text-status-open inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium">

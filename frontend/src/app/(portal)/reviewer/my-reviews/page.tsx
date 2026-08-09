@@ -3,9 +3,11 @@ import {
   HydrationBoundary,
   QueryClient,
 } from '@tanstack/react-query'
-import { getApplicant } from '@/generated/applicants/applicants'
 import { listApplications } from '@/generated/applications/applications'
+import { listCycles } from '@/generated/cycles/cycles'
+import { getCurrentUser } from '@/generated/users/users'
 import { getServerRequestOptions } from '@/lib/api/server-request-options'
+import type { Cycle } from '@/lib/api/types'
 import { queryKeys } from '@/lib/queries/keys'
 import { ReviewQueueClient } from './components/ReviewQueueClient'
 
@@ -17,20 +19,23 @@ export default async function ReviewQueuePage() {
   const queryClient = new QueryClient()
   const requestOptions = await getServerRequestOptions()
 
-  const applications = await queryClient.fetchQuery({
-    queryKey: queryKeys.applications.list({}),
-    queryFn: async () => (await listApplications({}, requestOptions)) ?? [],
-  })
+  // The client mounts scoped to "assigned to me", so the list it asks for is
+  // keyed by the caller's own nuid — resolve that here so the prefetch lands
+  // under the same key instead of one the browser has to refetch.
+  const [me] = await Promise.all([
+    getCurrentUser(requestOptions),
+    queryClient.prefetchQuery({
+      queryKey: queryKeys.cycles.list({}),
+      queryFn: async () =>
+        ((await listCycles({}, requestOptions)) ?? []) as Cycle[],
+    }),
+  ])
 
-  const uniqueNUIDs = [...new Set(applications.map((a) => a.user_nuid))]
-  await Promise.all(
-    uniqueNUIDs.map((nuid) =>
-      queryClient.prefetchQuery({
-        queryKey: queryKeys.applicants.detail(nuid),
-        queryFn: () => getApplicant(nuid, requestOptions),
-      })
-    )
-  )
+  const params = { assigned_to: me.nuid }
+  await queryClient.prefetchQuery({
+    queryKey: queryKeys.applications.list(params),
+    queryFn: async () => (await listApplications(params, requestOptions)) ?? [],
+  })
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>

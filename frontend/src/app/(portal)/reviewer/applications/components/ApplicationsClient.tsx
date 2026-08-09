@@ -70,7 +70,8 @@ export function ApplicationsClient() {
   const { data: cycles = [] } = useCycles({})
 
   // Default the cycle filter so reviewers land on a specific cycle instead
-  // of every cycle ever run.
+  // of every cycle ever run. Shared with the server prefetch in ../page.tsx,
+  // which scopes its application-list prefetch to this same cycle.
   const currentCycleId = useMemo(
     () => pickDefaultCycleId(cycles) ?? null,
     [cycles]
