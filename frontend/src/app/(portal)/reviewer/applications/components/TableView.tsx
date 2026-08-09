@@ -1,7 +1,9 @@
+import { useMemo } from 'react'
 import type { Question, WrittenAnswer } from '@/lib/api/types'
 import type { ApplicantApplication, ApplicationStage } from './types'
 import type { AnswerFilter } from './FilterButton'
 import { FILTER_STAGES } from './constants'
+import { isAvailabilityQuestion } from './meetingAvailability'
 import { ApplicantRow } from './ApplicantRow'
 import { FilterChips } from './FilterButton'
 
@@ -55,8 +57,17 @@ export function TableView({
   const allSelected =
     applicants.length > 0 && applicants.every((a) => selectedIds.has(a.id))
   const someSelected = applicants.some((a) => selectedIds.has(a.id))
+
+  // Meeting availability is already a trailing column, rendered as compact day
+  // tags — as a regular column it would be a truncated wall of checkbox text.
+  // That's a fact about this grid, so the exclusion lives here rather than in
+  // the shared `columns` the filter menu and the detail panel also read.
+  const tableColumns = useMemo(
+    () => columns.filter((q) => !isAvailabilityQuestion(q.question_text)),
+    [columns]
+  )
   const columnCount =
-    columns.length + TRAILING_COLUMNS.length + (selectable ? 1 : 0)
+    tableColumns.length + TRAILING_COLUMNS.length + (selectable ? 1 : 0)
 
   return (
     <div className="flex min-h-0 flex-1 flex-col rounded-lg border border-gray-200 bg-white">
@@ -104,7 +115,7 @@ export function TableView({
                   />
                 </th>
               )}
-              {columns.map((q) => (
+              {tableColumns.map((q) => (
                 <th
                   key={q.id}
                   title={q.question_text}
@@ -129,7 +140,7 @@ export function TableView({
                 <ApplicantRow
                   key={a.id}
                   applicant={a}
-                  columns={columns}
+                  columns={tableColumns}
                   rowQuestions={
                     questionsByCycleRole[`${a.cycleId}:${a.role}`] ?? []
                   }
