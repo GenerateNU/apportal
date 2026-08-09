@@ -3,7 +3,7 @@ import {
   HydrationBoundary,
   QueryClient,
 } from '@tanstack/react-query'
-import { listApplications } from '@/generated/applications/applications'
+import { fetchApplicationPage } from '@/lib/queries/applications'
 import { listCycles } from '@/generated/cycles/cycles'
 import { getCurrentUser } from '@/generated/users/users'
 import { getServerRequestOptions } from '@/lib/api/server-request-options'
@@ -34,7 +34,7 @@ export default async function ReviewQueuePage() {
   const params = { assigned_to: me.nuid }
   await queryClient.prefetchQuery({
     queryKey: queryKeys.applications.list(params),
-    queryFn: async () => (await listApplications(params, requestOptions)) ?? [],
+    queryFn: () => fetchApplicationPage(params, requestOptions),
   })
 
   return (

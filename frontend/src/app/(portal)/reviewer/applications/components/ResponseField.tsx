@@ -6,10 +6,12 @@ export function ResponseField({
   question,
   answer,
   applicable,
+  loading,
 }: {
   question: Question
   answer: WrittenAnswer | undefined
   applicable: boolean
+  loading?: boolean
 }) {
   return (
     <div className="flex scroll-mt-6 flex-col gap-3 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
@@ -21,6 +23,7 @@ export function ResponseField({
           applicable={applicable}
           questionType={question.question_type}
           truncate={false}
+          loading={loading}
         />
       </div>
     </div>

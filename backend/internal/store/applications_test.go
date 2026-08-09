@@ -2,6 +2,8 @@ package store
 
 import (
 	"reflect"
+	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -115,9 +117,7 @@ func TestListApplicationsQueryAnswerFilters(t *testing.T) {
 			if !reflect.DeepEqual(args, tc.wantArgs) {
 				t.Errorf("args = %#v, want %#v", args, tc.wantArgs)
 			}
-			if n := strings.Count(query, "$"); n != len(args) {
-				t.Errorf("query has %d placeholders but %d args\ngot: %s", n, len(args), query)
-			}
+			assertPlaceholdersMatchArgs(t, query, args)
 		})
 	}
 }
@@ -143,5 +143,121 @@ func TestListApplicationsQueryStages(t *testing.T) {
 	want := []any{[]string{"submitted", "lead_review"}}
 	if !reflect.DeepEqual(args, want) {
 		t.Fatalf("args = %#v, want %#v", args, want)
+	}
+}
+
+func TestListApplicationsQueryPaging(t *testing.T) {
+	limit := 50
+	query, args := listApplicationsQuery(ApplicationFilter{
+		CycleID: "c1",
+		Limit:   &limit,
+		Offset:  100,
+	})
+	// LIMIT/OFFSET come last, so their placeholders follow every filter's.
+	if !strings.Contains(query, `ORDER BY a.submitted_at DESC NULLS LAST LIMIT $2 OFFSET $3`) {
+		t.Fatalf("paging clause wrong: %s", query)
+	}
+	if want := []any{"c1", 50, 100}; !reflect.DeepEqual(args, want) {
+		t.Fatalf("args = %#v, want %#v", args, want)
+	}
+}
+
+func TestListApplicationsQueryUnpagedByDefault(t *testing.T) {
+	query, _ := listApplicationsQuery(ApplicationFilter{CycleID: "c1"})
+	if strings.Contains(query, "LIMIT") || strings.Contains(query, "OFFSET") {
+		t.Fatalf("no limit set should not page: %s", query)
+	}
+}
+
+// The page, the total, and the stage tabs must agree about what matched, which
+// only holds if they share a predicate. These assert the shared part is
+// identical and that only the intended pieces differ.
+func TestCountAndStageCountsShareThePredicate(t *testing.T) {
+	limit := 25
+	f := ApplicationFilter{
+		CycleID: "c1",
+		Search:  "ho",
+		Stage:   stagePtr(models.StageSubmitted),
+		AnswerFilters: []AnswerFilter{
+			{QuestionID: "q1", Match: MatchContains, Values: []string{"boston"}},
+		},
+		Limit:  &limit,
+		Offset: 50,
+	}
+
+	countQuery, countArgs := countApplicationsQuery(f)
+	if !strings.HasPrefix(countQuery, `SELECT COUNT(DISTINCT a.id) FROM applications a`) {
+		t.Fatalf("count query shape: %s", countQuery)
+	}
+	// The total is of every match, so paging must not leak into it.
+	if strings.Contains(countQuery, "LIMIT") || strings.Contains(countQuery, "OFFSET") {
+		t.Fatalf("count must ignore paging: %s", countQuery)
+	}
+	if !strings.Contains(countQuery, `a.stage = $`) {
+		t.Fatalf("count must honour the stage filter: %s", countQuery)
+	}
+
+	stageQuery, stageArgs := stageCountsQuery(f)
+	// Dropping the stage predicate is the whole point: with it applied every
+	// other tab would read zero.
+	if strings.Contains(stageQuery, `a.stage = $`) {
+		t.Fatalf("stage counts must ignore the stage filter: %s", stageQuery)
+	}
+	if !strings.HasSuffix(stageQuery, ` GROUP BY a.stage`) {
+		t.Fatalf("stage counts must group by stage: %s", stageQuery)
+	}
+	// Every other predicate still applies, so the tabs track the live filters.
+	for _, want := range []string{`a.cycle_id = $`, `u.full_name ILIKE $`, `wa0.answer_text ILIKE $`} {
+		if !strings.Contains(stageQuery, want) {
+			t.Errorf("stage counts missing %q\ngot: %s", want, stageQuery)
+		}
+	}
+	// One fewer arg than the count query: the dropped stage predicate.
+	if len(stageArgs) != len(countArgs)-1 {
+		t.Errorf("stage args = %#v, count args = %#v", stageArgs, countArgs)
+	}
+	assertPlaceholdersMatchArgs(t, countQuery, countArgs)
+	assertPlaceholdersMatchArgs(t, stageQuery, stageArgs)
+}
+
+func TestSearchMatchesNameNuidAndEmail(t *testing.T) {
+	query, args := listApplicationsQuery(ApplicationFilter{Search: "50%"})
+	for _, want := range []string{
+		`u.full_name ILIKE $1 ESCAPE '\'`,
+		`a.user_nuid ILIKE $1 ESCAPE '\'`,
+		`u.email ILIKE $1 ESCAPE '\'`,
+	} {
+		if !strings.Contains(query, want) {
+			t.Errorf("query missing %q\ngot: %s", want, query)
+		}
+	}
+	// One argument reused across all three columns, with LIKE's own
+	// metacharacters escaped.
+	if want := []any{`%50\%%`}; !reflect.DeepEqual(args, want) {
+		t.Fatalf("args = %#v, want %#v", args, want)
+	}
+}
+
+func stagePtr(s models.ApplicationStage) *models.ApplicationStage { return &s }
+
+var placeholderPattern = regexp.MustCompile(`\$(\d+)`)
+
+// assertPlaceholdersMatchArgs checks the highest $N in the query equals the
+// number of args. Counting occurrences instead would miscount the search
+// predicate, which deliberately reuses one placeholder across three columns.
+func assertPlaceholdersMatchArgs(t *testing.T, query string, args []any) {
+	t.Helper()
+	highest := 0
+	for _, m := range placeholderPattern.FindAllStringSubmatch(query, -1) {
+		n, err := strconv.Atoi(m[1])
+		if err != nil {
+			t.Fatalf("unparsable placeholder %q", m[0])
+		}
+		if n > highest {
+			highest = n
+		}
+	}
+	if highest != len(args) {
+		t.Errorf("highest placeholder is $%d but there are %d args\ngot: %s", highest, len(args), query)
 	}
 }

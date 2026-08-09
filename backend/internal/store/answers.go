@@ -45,6 +45,10 @@ func (in AnswerInput) isEmpty() bool {
 
 const answerColumns = `id, application_id, question_id, answer_text, answer_options, answer_file_path, answer_file_name, submitted_at`
 
+// prefixedAnswerColumns is answerColumns qualified for queries that join
+// applications, where the bare names would be ambiguous.
+const prefixedAnswerColumns = `wa.id, wa.application_id, wa.question_id, wa.answer_text, wa.answer_options, wa.answer_file_path, wa.answer_file_name, wa.submitted_at`
+
 // UpsertAnswers writes all answers for an application in a single transaction,
 // keyed on the (application_id, question_id) unique constraint, and returns the
 // full current answer set.
@@ -85,6 +89,29 @@ func (s *Store) UpsertAnswers(ctx context.Context, applicationID string, inputs 
 		return nil, err
 	}
 	return s.ListAnswers(ctx, applicationID)
+}
+
+// ListAnswersForApplications fetches answers for many applications in one
+// round trip, for callers rendering a page of applications at once — the
+// per-application ListAnswers below turns into a request per row there.
+//
+// Draft answers are private autosave content, so they are excluded outright
+// rather than filtered per caller: this exists for reviewer-facing lists,
+// which never show drafts anyway.
+func (s *Store) ListAnswersForApplications(ctx context.Context, applicationIDs []string) ([]models.WrittenAnswer, error) {
+	if len(applicationIDs) == 0 {
+		return nil, nil
+	}
+	const q = `SELECT ` + prefixedAnswerColumns + `
+		FROM written_answers wa
+		JOIN applications a ON a.id = wa.application_id
+		WHERE wa.application_id = ANY($1::uuid[]) AND a.stage != 'draft'
+		ORDER BY wa.application_id, wa.submitted_at`
+	rows, err := s.db.Query(ctx, q, applicationIDs)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, pgx.RowToStructByPos[models.WrittenAnswer])
 }
 
 func (s *Store) ListAnswers(ctx context.Context, applicationID string) ([]models.WrittenAnswer, error) {

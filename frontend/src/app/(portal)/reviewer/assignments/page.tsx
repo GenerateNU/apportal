@@ -3,7 +3,7 @@ import {
   HydrationBoundary,
   QueryClient,
 } from '@tanstack/react-query'
-import { listApplications } from '@/generated/applications/applications'
+import { fetchApplicationPage } from '@/lib/queries/applications'
 import { listUsers } from '@/generated/users/users'
 import { getServerRequestOptions } from '@/lib/api/server-request-options'
 import { queryKeys } from '@/lib/queries/keys'
@@ -22,7 +22,7 @@ export default async function AssignmentsPage() {
   await Promise.all([
     queryClient.prefetchQuery({
       queryKey: queryKeys.applications.list({}),
-      queryFn: async () => (await listApplications({}, requestOptions)) ?? [],
+      queryFn: () => fetchApplicationPage({}, requestOptions),
     }),
     queryClient.prefetchQuery({
       queryKey: [...queryKeys.users.lists(), 'lead'],

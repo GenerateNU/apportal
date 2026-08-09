@@ -5,6 +5,5 @@
  * Generate application portal — applications, reviews, and the hiring pipeline.
  * OpenAPI spec version: 0.1.0
  */
-import type { ApplicationSummary } from './applicationSummary';
 
-export type ListApplications200 = ApplicationSummary[] | null;
+export type ApplicationsOutputBodyStageCounts = {[key: string]: number};

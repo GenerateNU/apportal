@@ -30,6 +30,8 @@ import type {
   CreateUploadURLOutputBody,
   ErrorModel,
   ListAnswers200,
+  ListAnswersBulk200,
+  ListAnswersBulkParams,
   UpsertAnswers200,
   UpsertAnswersInputBody
 } from '.././model';
@@ -65,6 +67,99 @@ type NonReadonly<T> = [T] extends [UnionToIntersection<T>] ? {
 
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
+
+
+
+/**
+ * One request for a page of applications, instead of one per application. Reviewer-only; draft answers are never included.
+ * @summary List written answers for several applications
+ */
+export const listAnswersBulk = (
+    params?: ListAnswersBulkParams,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<ListAnswersBulk200>(
+      {url: `/answers`, method: 'GET',
+        params, signal
+    },
+      options);
+    }
+  
+
+
+
+export const getListAnswersBulkQueryKey = (params?: ListAnswersBulkParams,) => {
+    return [
+    `/answers`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getListAnswersBulkQueryOptions = <TData = Awaited<ReturnType<typeof listAnswersBulk>>, TError = ErrorModel | ErrorModel | ErrorModel>(params?: ListAnswersBulkParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAnswersBulk>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAnswersBulkQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAnswersBulk>>> = ({ signal }) => listAnswersBulk(params, requestOptions, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAnswersBulk>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListAnswersBulkQueryResult = NonNullable<Awaited<ReturnType<typeof listAnswersBulk>>>
+export type ListAnswersBulkQueryError = ErrorModel | ErrorModel | ErrorModel
+
+
+export function useListAnswersBulk<TData = Awaited<ReturnType<typeof listAnswersBulk>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+ params: undefined |  ListAnswersBulkParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAnswersBulk>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listAnswersBulk>>,
+          TError,
+          Awaited<ReturnType<typeof listAnswersBulk>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListAnswersBulk<TData = Awaited<ReturnType<typeof listAnswersBulk>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+ params?: ListAnswersBulkParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAnswersBulk>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listAnswersBulk>>,
+          TError,
+          Awaited<ReturnType<typeof listAnswersBulk>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListAnswersBulk<TData = Awaited<ReturnType<typeof listAnswersBulk>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+ params?: ListAnswersBulkParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAnswersBulk>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List written answers for several applications
+ */
+
+export function useListAnswersBulk<TData = Awaited<ReturnType<typeof listAnswersBulk>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+ params?: ListAnswersBulkParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAnswersBulk>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListAnswersBulkQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
 
 
 

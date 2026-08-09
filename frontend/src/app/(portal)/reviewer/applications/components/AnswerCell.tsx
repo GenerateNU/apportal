@@ -16,14 +16,24 @@ export function AnswerCell({
   applicable,
   questionType,
   truncate = true,
+  loading = false,
 }: {
   answer: WrittenAnswer | undefined
   applicable: boolean
   questionType?: QuestionType
   truncate?: boolean
+  // The answers for this application are still in flight. Distinct from
+  // having none, which is what an absent `answer` means once they land.
+  loading?: boolean
 }) {
   if (!applicable) {
     return <span className="text-text-faint text-sm">—</span>
+  }
+
+  // Blank rather than "No response": until the answers arrive we don't know
+  // whether there is one, and claiming there isn't reads as a real answer.
+  if (loading && !answer) {
+    return null
   }
 
   const text = formatAnswer(answer)

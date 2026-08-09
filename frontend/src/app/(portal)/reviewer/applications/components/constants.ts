@@ -1,5 +1,11 @@
 import type { ApplicationStage } from '@/lib/api/types'
 
+// Rows fetched per scroll step in the applications table. Paging happens in
+// SQL, so this is the size of each request as well as of each append — the
+// server prefetch in ../page.tsx has to use it too, or its cache entry keys
+// differently from the one the client mounts with.
+export const PAGE_SIZE = 25
+
 export const ORDERED_STAGES: ApplicationStage[] = [
   'submitted',
   'lead_review',

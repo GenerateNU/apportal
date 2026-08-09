@@ -19,4 +19,19 @@ stage?: string;
  * JSON array of answer filters, e.g. [{"question_id":"…","question_type":"checkbox","values":["Yes"]}]. Values may be a string or an array of strings; a filter matches any of them, and separate filters are AND'd.
  */
 answer_filters?: string;
+/**
+ * Case-insensitive substring match on the applicant's name, NUID, or email
+ */
+search?: string;
+/**
+ * Max results per page; omit (or 0) to return every match
+ * @minimum 0
+ * @maximum 200
+ */
+limit?: number;
+/**
+ * Number of results to skip
+ * @minimum 0
+ */
+offset?: number;
 };

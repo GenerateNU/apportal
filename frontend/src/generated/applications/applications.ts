@@ -26,9 +26,9 @@ import type {
 
 import type {
   Application,
+  ApplicationsOutputBody,
   CreateApplicationInputBody,
   ErrorModel,
-  ListApplications200,
   ListApplicationsParams,
   UpdateApplicationInputBody
 } from '.././model';
@@ -77,7 +77,7 @@ export const listApplications = (
 ) => {
       
       
-      return customInstance<ListApplications200>(
+      return customInstance<ApplicationsOutputBody>(
       {url: `/applications`, method: 'GET',
         params, signal
     },

@@ -75,6 +75,16 @@ type ApplicationFilter struct {
 	// identity — drafts are otherwise invisible (reviewer queues, admin
 	// counts, etc.).
 	IncludeDraft bool
+	// Search matches the applicant's name, NUID, or email, case-insensitively
+	// and by substring.
+	Search string
+	// Limit caps the page size. Nil returns every matching row — most callers
+	// (assignment planning, review queues) need the whole set, so paging is
+	// opt-in rather than the default.
+	Limit *int
+	// Offset is the 0-based index of the first row of the page. Ignored unless
+	// Limit is set.
+	Offset int
 }
 
 const applicationColumns = `id, cycle_id, user_nuid, application_role, stage, availability, resume_url, submitted_at, updated_at`
@@ -114,7 +124,25 @@ func (s *Store) GetApplication(ctx context.Context, id string) (models.Applicati
 // joined applicant's full_name and email.
 const applicationSummaryColumns = `a.id, a.cycle_id, a.user_nuid, a.application_role, a.stage, a.availability, a.resume_url, a.submitted_at, a.updated_at, u.full_name, u.email`
 
+// ApplicationPage is one page of the list plus, when asked for, the totals a
+// caller needs to size the scroll and label the stage tabs without a second
+// request. Both counts are zero-valued when ListApplicationsPage runs without
+// them, so read them from the first page rather than the latest.
+type ApplicationPage struct {
+	Items []models.ApplicationSummary
+	// Total counts every row matching the filter, ignoring Limit/Offset.
+	Total int
+	// StageCounts breaks the same match down by stage, ignoring the Stage and
+	// Stages filters — the tabs need to show what each stage *would* hold, so
+	// counting with the active stage applied would zero out the others.
+	StageCounts map[models.ApplicationStage]int
+}
+
+// ListApplications returns every row matching the filter. Paging callers want
+// ListApplicationsPage instead; this stays unpaged for the queues and planners
+// that need the whole set.
 func (s *Store) ListApplications(ctx context.Context, f ApplicationFilter) ([]models.ApplicationSummary, error) {
+	f.Limit, f.Offset = nil, 0
 	query, args := listApplicationsQuery(f)
 	rows, err := s.db.Query(ctx, query, args...)
 	if err != nil {
@@ -123,11 +151,98 @@ func (s *Store) ListApplications(ctx context.Context, f ApplicationFilter) ([]mo
 	return pgx.CollectRows(rows, pgx.RowToStructByPos[models.ApplicationSummary])
 }
 
+// ListApplicationsPage runs the list and, when withCounts is set, its total
+// and per-stage counts off the same predicate — so the page, the result count,
+// and the stage tabs can never disagree about what the filter matched.
+//
+// The two count queries scan the whole match rather than a page of it, so they
+// dominate the request. They also can't change while the filter doesn't, which
+// is why a scroll-to-load caller asks for them once on the first page and
+// leaves withCounts off for the rest.
+func (s *Store) ListApplicationsPage(ctx context.Context, f ApplicationFilter, withCounts bool) (ApplicationPage, error) {
+	var page ApplicationPage
+
+	query, args := listApplicationsQuery(f)
+	rows, err := s.db.Query(ctx, query, args...)
+	if err != nil {
+		return page, err
+	}
+	page.Items, err = pgx.CollectRows(rows, pgx.RowToStructByPos[models.ApplicationSummary])
+	if err != nil {
+		return page, err
+	}
+	if !withCounts {
+		return page, nil
+	}
+
+	countQuery, countArgs := countApplicationsQuery(f)
+	if err := s.db.QueryRow(ctx, countQuery, countArgs...).Scan(&page.Total); err != nil {
+		return page, err
+	}
+
+	stageQuery, stageArgs := stageCountsQuery(f)
+	stageRows, err := s.db.Query(ctx, stageQuery, stageArgs...)
+	if err != nil {
+		return page, err
+	}
+	defer stageRows.Close()
+	page.StageCounts = map[models.ApplicationStage]int{}
+	for stageRows.Next() {
+		var stage models.ApplicationStage
+		var n int
+		if err := stageRows.Scan(&stage, &n); err != nil {
+			return page, err
+		}
+		page.StageCounts[stage] = n
+	}
+	return page, stageRows.Err()
+}
+
 // listApplicationsQuery builds the list statement and its arguments. It is
 // separate from the call above so the generated SQL — the placeholder
 // numbering in particular, which shifts with every optional filter — can be
 // asserted without a database.
 func listApplicationsQuery(f ApplicationFilter) (string, []any) {
+	query, args := applicationsFrom(f, applicationFilterAll)
+	query = `SELECT DISTINCT ` + applicationSummaryColumns + query +
+		` ORDER BY a.submitted_at DESC NULLS LAST`
+	if f.Limit != nil {
+		args = append(args, *f.Limit)
+		query += ` LIMIT $` + strconv.Itoa(len(args))
+		args = append(args, f.Offset)
+		query += ` OFFSET $` + strconv.Itoa(len(args))
+	}
+	return query, args
+}
+
+// countApplicationsQuery counts what the list would return unpaged. It counts
+// distinct application ids rather than rows so an answer filter's join can
+// never inflate the total.
+func countApplicationsQuery(f ApplicationFilter) (string, []any) {
+	query, args := applicationsFrom(f, applicationFilterAll)
+	return `SELECT COUNT(DISTINCT a.id)` + query, args
+}
+
+// stageCountsQuery counts the same match per stage, with the stage predicate
+// itself dropped so every tab shows a live count.
+func stageCountsQuery(f ApplicationFilter) (string, []any) {
+	query, args := applicationsFrom(f, applicationFilterExceptStage)
+	return `SELECT a.stage, COUNT(DISTINCT a.id)` + query + ` GROUP BY a.stage`, args
+}
+
+// applicationFilterScope selects which predicates applicationsFrom emits.
+type applicationFilterScope int
+
+const (
+	applicationFilterAll applicationFilterScope = iota
+	// applicationFilterExceptStage omits Stage/Stages, for the per-stage counts.
+	applicationFilterExceptStage
+)
+
+// applicationsFrom builds everything from FROM through WHERE — the part the
+// list, the total, and the stage counts must share exactly, since a predicate
+// applied to one and not the others would make them contradict each other.
+func applicationsFrom(f ApplicationFilter, scope applicationFilterScope) (string, []any) {
 	// A valueless filter can't narrow anything and would emit an empty OR list
 	// below, so drop those before they reach the query.
 	answerFilters := make([]AnswerFilter, 0, len(f.AnswerFilters))
@@ -138,7 +253,7 @@ func listApplicationsQuery(f ApplicationFilter) (string, []any) {
 		answerFilters = append(answerFilters, af)
 	}
 
-	query := `SELECT DISTINCT ` + applicationSummaryColumns + ` FROM applications a JOIN users u ON u.nuid = a.user_nuid`
+	query := ` FROM applications a JOIN users u ON u.nuid = a.user_nuid`
 	args := []any{}
 
 	// One join per answer filter, each pinned to that filter's question. The
@@ -165,17 +280,26 @@ func listApplicationsQuery(f ApplicationFilter) (string, []any) {
 		args = append(args, *f.Role)
 		query += ` AND a.application_role = $` + strconv.Itoa(len(args))
 	}
-	if f.Stage != nil {
-		args = append(args, *f.Stage)
-		query += ` AND a.stage = $` + strconv.Itoa(len(args))
-	}
-	if len(f.Stages) > 0 {
-		stages := make([]string, len(f.Stages))
-		for i, s := range f.Stages {
-			stages[i] = string(s)
+	if scope != applicationFilterExceptStage {
+		if f.Stage != nil {
+			args = append(args, *f.Stage)
+			query += ` AND a.stage = $` + strconv.Itoa(len(args))
 		}
-		args = append(args, stages)
-		query += ` AND a.stage = ANY($` + strconv.Itoa(len(args)) + `::application_stage[])`
+		if len(f.Stages) > 0 {
+			stages := make([]string, len(f.Stages))
+			for i, s := range f.Stages {
+				stages[i] = string(s)
+			}
+			args = append(args, stages)
+			query += ` AND a.stage = ANY($` + strconv.Itoa(len(args)) + `::application_stage[])`
+		}
+	}
+	if f.Search != "" {
+		args = append(args, "%"+escapeLike(f.Search)+"%")
+		n := strconv.Itoa(len(args))
+		query += ` AND (u.full_name ILIKE $` + n + ` ESCAPE '\'` +
+			` OR a.user_nuid ILIKE $` + n + ` ESCAPE '\'` +
+			` OR u.email ILIKE $` + n + ` ESCAPE '\')`
 	}
 	if f.AssignedTo != "" {
 		args = append(args, f.AssignedTo)
@@ -213,8 +337,6 @@ func listApplicationsQuery(f ApplicationFilter) (string, []any) {
 			query += ` AND (` + strings.Join(clauses, ` OR `) + `)`
 		}
 	}
-
-	query += ` ORDER BY a.submitted_at DESC NULLS LAST`
 
 	return query, args
 }

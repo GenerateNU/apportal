@@ -3,7 +3,7 @@ import {
   HydrationBoundary,
   QueryClient,
 } from '@tanstack/react-query'
-import { listApplications } from '@/generated/applications/applications'
+import { fetchApplicationPage } from '@/lib/queries/applications'
 import { getServerRequestOptions } from '@/lib/api/server-request-options'
 import { queryKeys } from '@/lib/queries/keys'
 import { InterviewAssignmentsClient } from './components/InterviewAssignmentsClient'
@@ -20,7 +20,7 @@ export default async function InterviewAssignmentsPage() {
   // users), so there's nothing to fetch per applicant here.
   await queryClient.prefetchQuery({
     queryKey: queryKeys.applications.list({}),
-    queryFn: async () => (await listApplications({}, requestOptions)) ?? [],
+    queryFn: () => fetchApplicationPage({}, requestOptions),
   })
 
   return (

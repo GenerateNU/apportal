@@ -3,13 +3,14 @@ import {
   HydrationBoundary,
   QueryClient,
 } from '@tanstack/react-query'
-import { listApplications } from '@/generated/applications/applications'
+import { fetchApplicationPage } from '@/lib/queries/applications'
 import { listCycles } from '@/generated/cycles/cycles'
 import { getServerRequestOptions } from '@/lib/api/server-request-options'
 import type { Cycle } from '@/lib/api/types'
 import { defaultApplicationsCycleId } from '@/lib/cycles'
 import { queryKeys } from '@/lib/queries/keys'
 import { ROLE_COLUMNS } from '@/lib/roles'
+import { PAGE_SIZE } from './components/constants'
 import { ApplicationsClient } from './components/ApplicationsClient'
 
 // Auth-gated, live data fetched per request from the backend — never prerender
@@ -32,11 +33,20 @@ export default async function ApplicationsPage() {
 
   const cycleId = defaultApplicationsCycleId(cycles)
   if (cycleId) {
-    const params = { cycle_id: cycleId, role: ROLE_COLUMNS[0] }
-    await queryClient.prefetchQuery({
-      queryKey: queryKeys.applications.list(params),
-      queryFn: async () =>
-        (await listApplications(params, requestOptions)) ?? [],
+    // The table scrolls to load, so this has to be an infinite prefetch: a
+    // plain one caches a bare response where the client expects
+    // `{ pages, pageParams }`, and the mismatch costs the round trip it was
+    // meant to save. Offset is the page param, so it stays out of the key.
+    const params = {
+      cycle_id: cycleId,
+      role: ROLE_COLUMNS[0],
+      limit: PAGE_SIZE,
+    }
+    await queryClient.prefetchInfiniteQuery({
+      queryKey: queryKeys.applications.infiniteList(params),
+      queryFn: ({ pageParam }) =>
+        fetchApplicationPage({ ...params, offset: pageParam }, requestOptions),
+      initialPageParam: 0,
     })
   }
 
