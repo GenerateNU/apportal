@@ -92,27 +92,27 @@ export function ApplicationsClient() {
       ? {
           cycle_id: activeCycle,
           role: activeRole,
-          answer_filters: filters.map((f) => ({
-            question_id: f.question_id,
-            question_type: f.question_type,
-            values: f.values,
-          })),
+          // Omitted entirely when unfiltered, so the key matches the server
+          // prefetch in ../page.tsx — an extra `answer_filters: []` would make
+          // the first paint a cache miss.
+          ...(filters.length > 0 && {
+            answer_filters: filters.map((f) => ({
+              question_id: f.question_id,
+              question_type: f.question_type,
+              values: f.values,
+            })),
+          }),
         }
       : undefined
   )
 
-  const uniquePairs = useMemo(() => {
-    const seen = new Set<string>()
-    const pairs: { cycleId: string; role: Role }[] = []
-    for (const app of applications) {
-      const key = `${app.cycle_id}:${app.role}`
-      if (!seen.has(key)) {
-        seen.add(key)
-        pairs.push({ cycleId: app.cycle_id, role: app.role })
-      }
-    }
-    return pairs
-  }, [applications])
+  // Taken from the selected cycle+role rather than from the results, since a
+  // filter that matches nothing would otherwise empty the question list the
+  // filter UI itself is built from. Every application in view is this pair.
+  const uniquePairs = useMemo(
+    () => (activeCycle ? [{ cycleId: activeCycle, role: activeRole }] : []),
+    [activeCycle, activeRole]
+  )
 
   const questionQueries = useQuestionsByCycleRoles(uniquePairs)
   const questionsByCycleRole = useMemo(() => {

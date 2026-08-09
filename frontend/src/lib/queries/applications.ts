@@ -9,21 +9,13 @@ import {
 import type { RequestOptions } from '@/lib/api/orval-mutator'
 import type { ListApplicationsParams } from '@/generated/model'
 import type {
+  AnswerFilterParam,
   Application,
   ApplicationStage,
   ApplicationSummary,
-  QuestionType,
   Role,
 } from '@/lib/api/types'
 import { queryKeys } from './keys'
-
-// One answer-based filter. `values` matches any of the given strings; a
-// question with several filters is AND'd against the others.
-export interface AnswerFilterParam {
-  question_id: string
-  question_type: QuestionType
-  values: string | string[]
-}
 
 export function useApplications(
   params?: {

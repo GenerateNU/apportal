@@ -57,15 +57,6 @@ export function FilterChips({
   columns,
   onFilterChange,
 }: FilterChipsProps) {
-  // Check for duplicate question IDs
-  const questionIds = columns.map((q) => q.id)
-  const duplicates = questionIds.filter(
-    (id, idx) => questionIds.indexOf(id) !== idx
-  )
-  if (duplicates.length > 0) {
-    console.warn('Duplicate question IDs found:', duplicates)
-  }
-
   const [isOpen, setIsOpen] = useState(false)
   const [filterValues, setFilterValues] = useState<Record<string, FilterValue>>(
     {}
@@ -85,9 +76,9 @@ export function FilterChips({
     }
   }, [activeQuestionId])
 
-  const filterableColumns = columns
-
-  const availableColumns = filterableColumns.filter(
+  // One filter per question, so anything already filtered on drops off the
+  // list of things you can add.
+  const availableColumns = columns.filter(
     (q) => !filters.some((f) => f.question_id === q.id)
   )
 
