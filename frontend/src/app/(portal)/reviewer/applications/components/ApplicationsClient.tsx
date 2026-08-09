@@ -2,8 +2,7 @@
 import { PageContainer } from '@/components/PageContainer'
 
 import { useMemo, useState } from 'react'
-import { Loader2, Search, List, Columns } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Search, List, Columns } from 'lucide-react'
 import {
   Select,
   SelectContent,
@@ -26,7 +25,7 @@ import { pickDefaultCycleId, useCycles } from '@/lib/queries/cycles'
 import { useQuestionsByCycleRoles } from '@/lib/queries/questions'
 import { useCurrentUser } from '@/lib/queries/users'
 import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
-import { ORDERED_STAGES, stageLabel } from './constants'
+import { BulkActionBar } from './BulkActionBar'
 import {
   AVAILABILITY_DAY_OPTIONS,
   availabilityOptionsFor,
@@ -218,6 +217,14 @@ export function ApplicationsClient() {
     })
   }
 
+  // Dropping the selection also drops the bar's transient state, so a failure
+  // notice from a previous batch can't linger into the next one.
+  function clearSelection() {
+    setSelectedIds(new Set())
+    setBulkStage('')
+    setBulkFailed(0)
+  }
+
   async function applyBulkStage() {
     if (!bulkStage || selectedIds.size === 0) return
     setApplyingBulk(true)
@@ -352,49 +359,6 @@ export function ApplicationsClient() {
         </div>
       </div>
 
-      {view === 'table' && isChief && (
-        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-gray-100 bg-white p-4">
-          <span className="text-text-faint text-sm">
-            {selectedIds.size} selected
-          </span>
-          {bulkFailed > 0 && (
-            <span className="text-destructive text-sm">
-              {bulkFailed} update{bulkFailed === 1 ? '' : 's'} failed
-            </span>
-          )}
-          <div className="ml-auto flex items-center gap-2">
-            <Select
-              value={bulkStage}
-              onValueChange={(val) => setBulkStage(val as ApplicationStage)}
-            >
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Move to stage…" />
-              </SelectTrigger>
-              <SelectContent>
-                {ORDERED_STAGES.map((stage) => (
-                  <SelectItem key={stage} value={stage}>
-                    {stageLabel[stage]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button
-              onClick={applyBulkStage}
-              disabled={!bulkStage || selectedIds.size === 0 || applyingBulk}
-            >
-              {applyingBulk ? (
-                <>
-                  <Loader2 className="animate-spin" size={14} />
-                  Updating…
-                </>
-              ) : (
-                `Move ${selectedIds.size || ''} selected`
-              )}
-            </Button>
-          </div>
-        </div>
-      )}
-
       <div className="flex min-h-0 flex-1 flex-col">
         {view === 'table' ? (
           <TableView
@@ -422,6 +386,19 @@ export function ApplicationsClient() {
                 )
               }
             }}
+            bulkBar={
+              isChief && selectedIds.size > 0 ? (
+                <BulkActionBar
+                  selectedCount={selectedIds.size}
+                  stage={bulkStage}
+                  onStageChange={setBulkStage}
+                  onApply={applyBulkStage}
+                  onClear={clearSelection}
+                  applying={applyingBulk}
+                  failedCount={bulkFailed}
+                />
+              ) : undefined
+            }
           />
         ) : (
           <KanbanView
