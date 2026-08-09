@@ -26,6 +26,7 @@ export function TableView({
   onSelectApplication,
   filters,
   onFilterChange,
+  bulkBar,
 }: {
   applicants: ApplicantApplication[]
   allApplicants: ApplicantApplication[]
@@ -48,6 +49,9 @@ export function TableView({
     filter: AnswerFilter | null,
     action: 'add' | 'remove'
   ) => void
+  // Rendered in the filter row's place while a selection is active. Owned by
+  // the parent, which holds the selection and the bulk mutation.
+  bulkBar?: React.ReactNode
 }) {
   const countByStage = (stage: ApplicationStage | 'all') =>
     stage === 'all'
@@ -72,11 +76,13 @@ export function TableView({
   return (
     <div className="flex min-h-0 flex-1 flex-col rounded-lg border border-gray-200 bg-white">
       <div className="space-y-3 border-b border-gray-100 px-4 py-3">
-        <FilterChips
-          filters={filters}
-          columns={columns}
-          onFilterChange={onFilterChange}
-        />
+        {bulkBar ?? (
+          <FilterChips
+            filters={filters}
+            columns={columns}
+            onFilterChange={onFilterChange}
+          />
+        )}
         <div className="flex shrink-0 items-center gap-1 overflow-x-auto">
           {FILTER_STAGES.map(({ label, value }) => (
             <button
