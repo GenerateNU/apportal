@@ -44,7 +44,7 @@ func (h *applicationHandler) register(api huma.API) {
 		Method:      http.MethodGet,
 		Path:        "/applications",
 		Summary:     "List applications",
-		Description: "Reviewer queue; filter by cycle_id, role, and stage. Applicants may list their own by passing user_nuid.",
+		Description: "Reviewer queue; filter by cycle_id, role, stage, and answer_filters. Applicants may list their own by passing user_nuid.",
 		Tags:        []string{"Applications"},
 		Errors:      []int{http.StatusUnauthorized},
 	}, h.list)
@@ -140,18 +140,103 @@ func (h *applicationHandler) get(ctx context.Context, in *ApplicationIDInput) (*
 }
 
 type ListApplicationsInput struct {
-	CycleID       string            `query:"cycle_id"`
-	UserNUID      string            `query:"user_nuid"`
-	AssignedTo    string            `query:"assigned_to" doc:"Limit to applications this lead is assigned to review"`
-	Role          string            `query:"role"`
-	Stage         string            `query:"stage"`
-	AnswerFilters []AnswerFilterInput `query:"answer_filters"`
+	CycleID    string `query:"cycle_id"`
+	UserNUID   string `query:"user_nuid"`
+	AssignedTo string `query:"assigned_to" doc:"Limit to applications this lead is assigned to review"`
+	Role       string `query:"role"`
+	Stage      string `query:"stage"`
+	// AnswerFilters is a JSON-encoded []AnswerFilterInput rather than a
+	// structured param because huma can only bind primitives from a query
+	// string — a []AnswerFilterInput field silently binds nothing (or panics,
+	// depending on how the client serializes it).
+	AnswerFilters string `query:"answer_filters" doc:"JSON array of answer filters, e.g. [{\"question_id\":\"…\",\"question_type\":\"checkbox\",\"values\":[\"Yes\"]}]. Values may be a string or an array of strings; a filter matches any of them, and separate filters are AND'd."`
 }
 
+// maxAnswerFilters caps the filter list because each one adds a join.
+const maxAnswerFilters = 25
+
+// AnswerFilterInput is one decoded entry of the answer_filters query param.
+// Values is deliberately loose — a single string for free-text questions, an
+// array for choice questions — so the UI can send the shape it already holds.
 type AnswerFilterInput struct {
-	QuestionID   string `json:"question_id"`
-	QuestionType string `json:"question_type"`
-	Values       any    `json:"values"`
+	QuestionID   string              `json:"question_id"`
+	QuestionType models.QuestionType `json:"question_type"`
+	Values       json.RawMessage     `json:"values"`
+}
+
+// parseAnswerFilters decodes the query param and maps each question type onto
+// the match the store should run, which is what decides whether the answer is
+// read from answer_options (checkbox) or answer_text (everything else).
+func parseAnswerFilters(raw string) ([]store.AnswerFilter, error) {
+	if strings.TrimSpace(raw) == "" {
+		return nil, nil
+	}
+	var in []AnswerFilterInput
+	if err := json.Unmarshal([]byte(raw), &in); err != nil {
+		return nil, huma.Error422UnprocessableEntity("answer_filters must be a JSON array of filters")
+	}
+	if len(in) > maxAnswerFilters {
+		return nil, huma.Error422UnprocessableEntity("too many answer_filters")
+	}
+	out := make([]store.AnswerFilter, 0, len(in))
+	for _, f := range in {
+		if f.QuestionID == "" {
+			return nil, huma.Error422UnprocessableEntity("answer_filters entries need a question_id")
+		}
+		if !f.QuestionType.Valid() {
+			return nil, huma.Error422UnprocessableEntity("invalid question_type in answer_filters")
+		}
+		values, err := decodeFilterValues(f.Values)
+		if err != nil {
+			return nil, err
+		}
+		// An empty value isn't a narrowing — the UI can hold a half-built
+		// filter — so it's dropped rather than rejected.
+		if len(values) == 0 {
+			continue
+		}
+		match := store.MatchContains
+		switch f.QuestionType {
+		case models.QuestionCheckbox:
+			match = store.MatchAnyOption
+		case models.QuestionDropdown, models.QuestionMultipleChoice:
+			match = store.MatchAnyOf
+		}
+		out = append(out, store.AnswerFilter{
+			QuestionID: f.QuestionID,
+			Match:      match,
+			Values:     values,
+		})
+	}
+	return out, nil
+}
+
+// decodeFilterValues accepts either "text" or ["a","b"], normalizing both to a
+// slice. Blank entries are dropped so an empty text box doesn't match every
+// answer via `%%`.
+func decodeFilterValues(raw json.RawMessage) ([]string, error) {
+	if len(raw) == 0 {
+		return nil, nil
+	}
+	var one string
+	if err := json.Unmarshal(raw, &one); err == nil {
+		if strings.TrimSpace(one) == "" {
+			return nil, nil
+		}
+		return []string{one}, nil
+	}
+	var many []string
+	if err := json.Unmarshal(raw, &many); err != nil {
+		return nil, huma.Error422UnprocessableEntity("answer_filters values must be a string or an array of strings")
+	}
+	out := make([]string, 0, len(many))
+	for _, v := range many {
+		if strings.TrimSpace(v) == "" {
+			continue
+		}
+		out = append(out, v)
+	}
+	return out, nil
 }
 
 func (h *applicationHandler) list(ctx context.Context, in *ListApplicationsInput) (*ApplicationsOutput, error) {
@@ -168,14 +253,9 @@ func (h *applicationHandler) list(ctx context.Context, in *ListApplicationsInput
 	} else if !isReviewer && (!hasActor || actor.NUID != in.UserNUID) {
 		return nil, huma.Error403Forbidden("cannot list another user's applications")
 	}
-	// Convert AnswerFilterInput to store.AnswerFilter
-	answerFilters := make([]store.AnswerFilter, 0, len(in.AnswerFilters))
-	for _, af := range in.AnswerFilters {
-		answerFilters = append(answerFilters, store.AnswerFilter{
-			QuestionID:   af.QuestionID,
-			QuestionType: af.QuestionType,
-			Values:       af.Values,
-		})
+	answerFilters, err := parseAnswerFilters(in.AnswerFilters)
+	if err != nil {
+		return nil, err
 	}
 
 	filter := store.ApplicationFilter{

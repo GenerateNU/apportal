@@ -4,6 +4,7 @@ package store
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -23,3 +24,11 @@ type Store struct {
 func New(db *pgxpool.Pool) *Store {
 	return &Store{db: db}
 }
+
+// likeEscaper neutralizes LIKE's own metacharacters so a user searching for
+// "100%" or "snake_case" gets a literal match instead of a wildcard one.
+var likeEscaper = strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`)
+
+// escapeLike prepares user input for a LIKE/ILIKE pattern. Callers must pair it
+// with `ESCAPE '\'` so the backslashes it inserts are read as escapes.
+func escapeLike(s string) string { return likeEscaper.Replace(s) }

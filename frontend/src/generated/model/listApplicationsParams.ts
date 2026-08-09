@@ -15,4 +15,8 @@ user_nuid?: string;
 assigned_to?: string;
 role?: string;
 stage?: string;
+/**
+ * JSON array of answer filters, e.g. [{"question_id":"…","question_type":"checkbox","values":["Yes"]}]. Values may be a string or an array of strings; a filter matches any of them, and separate filters are AND'd.
+ */
+answer_filters?: string;
 };

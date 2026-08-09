@@ -9,7 +9,6 @@ import {
   CheckSquare,
   MoreHorizontal,
   Star,
-  Calendar,
   MessageSquare,
   ChevronRight,
 } from 'lucide-react'
@@ -25,13 +24,23 @@ import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
 import type { Question, QuestionType } from '@/lib/api/types'
 
-type FilterValue = string | { options: string[] }
+// The wire shape the backend expects: a substring for free-text questions, a
+// list of chosen labels for choice questions.
+type FilterValue = string | string[]
 
 export interface AnswerFilter {
   question_id: string
   question_text: string
   question_type: QuestionType
   values: FilterValue
+}
+
+// Question types whose answers are picked from a fixed option list, so the
+// filter offers checkboxes instead of a text box.
+const CHOICE_TYPES: QuestionType[] = ['checkbox', 'dropdown', 'multiple_choice']
+
+function isChoiceQuestion(type: QuestionType) {
+  return CHOICE_TYPES.includes(type)
 }
 
 interface FilterChipsProps {
@@ -49,14 +58,18 @@ export function FilterChips({
   onFilterChange,
 }: FilterChipsProps) {
   // Check for duplicate question IDs
-  const questionIds = columns.map(q => q.id)
-  const duplicates = questionIds.filter((id, idx) => questionIds.indexOf(id) !== idx)
+  const questionIds = columns.map((q) => q.id)
+  const duplicates = questionIds.filter(
+    (id, idx) => questionIds.indexOf(id) !== idx
+  )
   if (duplicates.length > 0) {
     console.warn('Duplicate question IDs found:', duplicates)
   }
 
   const [isOpen, setIsOpen] = useState(false)
-  const [filterValues, setFilterValues] = useState<Record<string, FilterValue>>({})
+  const [filterValues, setFilterValues] = useState<Record<string, FilterValue>>(
+    {}
+  )
   const [searchTerm, setSearchTerm] = useState('')
   const [activeQuestionId, setActiveQuestionId] = useState<string | null>(null)
 
@@ -82,50 +95,76 @@ export function FilterChips({
     q.question_text.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  const getDisplayValue = (filter: AnswerFilter): string => {
-    if (typeof filter.values === 'string') {
-      return filter.values
-    } else if (
-      typeof filter.values === 'object' &&
-      'options' in filter.values
-    ) {
-      return filter.values.options.join(', ')
-    }
-    return ''
+  const getDisplayValue = (filter: AnswerFilter): string =>
+    typeof filter.values === 'string' ? filter.values : filter.values.join(', ')
+
+  // Clearing the entry outright, rather than setting it to undefined, keeps
+  // the map's values non-nullable.
+  const clearFilterValue = (questionId: string) => {
+    setFilterValues((prev) => {
+      const next = { ...prev }
+      delete next[questionId]
+      return next
+    })
+  }
+
+  // An empty string or an empty selection would match everything, so neither
+  // counts as a filter worth sending.
+  const hasValue = (value: FilterValue | undefined): value is FilterValue =>
+    typeof value === 'string' ? value.trim() !== '' : !!value?.length
+
+  const commitFilter = (q: Question) => {
+    const values = filterValues[q.id]
+    if (!hasValue(values)) return
+    onFilterChange(
+      {
+        question_id: q.id,
+        question_text: q.question_text,
+        question_type: q.question_type,
+        values,
+      },
+      'add'
+    )
+    setIsOpen(false)
+    setActiveQuestionId(null)
+    clearFilterValue(q.id)
   }
 
   return (
     <div className="flex flex-wrap items-center gap-2">
       {filters.map((filter) => {
-        const middleText =
-          ['short_answer', 'long_answer', 'url'].includes(filter.question_type)
-            ? 'contains'
-            : 'is'
+        // Mirrors how the backend matches: choice answers are compared whole,
+        // everything else by substring.
+        const middleText = isChoiceQuestion(filter.question_type)
+          ? 'is'
+          : 'contains'
         return (
+          // Segments size to their content and are separated by hairlines, so
+          // a chip stays as narrow as what it says. Long question text and
+          // long values truncate rather than stretching the row.
           <div
             key={filter.question_id}
-            className="inline-flex items-center rounded-md border border-gray-200 bg-gray-50"
+            className="inline-flex h-7 items-center overflow-hidden rounded-md border border-gray-200 bg-gray-50 text-sm"
           >
-            <div className="flex items-center gap-2 px-3 py-1.5 w-40">
-              <span className="text-text-default truncate text-sm">
+            <div className="flex items-center gap-1.5 px-2">
+              {getIconForQuestionType(filter.question_type, 'h-3.5 w-3.5')}
+              <span className="text-text-default max-w-[11rem] truncate">
                 {filter.question_text}
               </span>
             </div>
-            <div className="border-l border-gray-200 px-2 py-1.5 w-20 flex justify-center">
-              <span className="text-text-muted text-sm">{middleText}</span>
+            <div className="text-text-muted h-full border-l border-gray-200 px-2 leading-7">
+              {middleText}
             </div>
-            <div className="flex items-center gap-2 border-l border-gray-200 px-3 py-1.5 w-40">
-              <span className="text-text-default truncate text-sm">
-                {getDisplayValue(filter)}
-              </span>
-              <button
-                onClick={() => onFilterChange(filter, 'remove')}
-                className="text-text-muted hover:text-text-default shrink-0 transition-colors"
-                title="Remove filter"
-              >
-                <X className="h-4 w-4" />
-              </button>
+            <div className="text-text-default h-full max-w-[12rem] truncate border-l border-gray-200 px-2 leading-7">
+              {getDisplayValue(filter)}
             </div>
+            <button
+              onClick={() => onFilterChange(filter, 'remove')}
+              className="text-text-muted hover:text-text-default flex h-full items-center border-l border-gray-200 px-1.5 transition-colors hover:bg-gray-100"
+              title="Remove filter"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
           </div>
         )
       })}
@@ -138,10 +177,10 @@ export function FilterChips({
               setFilterValues({})
               setSearchTerm('')
             }}
-            className="text-text-muted inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 bg-white transition-colors hover:bg-gray-50"
+            className="text-text-muted inline-flex h-7 w-7 items-center justify-center rounded-md border border-gray-200 bg-white transition-colors hover:bg-gray-50"
             title="Add filter"
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="h-3.5 w-3.5" />
           </button>
         </DropdownMenuTrigger>
 
@@ -151,7 +190,10 @@ export function FilterChips({
           onKeyDown={(e) => {
             // Prevent dropdown navigation keys except when in inputs
             const target = e.target as HTMLElement
-            if (target.tagName !== 'INPUT' && ['ArrowUp', 'ArrowDown', 'Home', 'End'].includes(e.key)) {
+            if (
+              target.tagName !== 'INPUT' &&
+              ['ArrowUp', 'ArrowDown', 'Home', 'End'].includes(e.key)
+            ) {
               e.preventDefault()
             }
           }}
@@ -183,43 +225,38 @@ export function FilterChips({
                       </div>
                     </div>
                   </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent className="w-72 p-0">
+                  {/* Radix leaves submenus flush against the parent panel, so
+                      this offset is what separates the two surfaces. */}
+                  <DropdownMenuSubContent sideOffset={8} className="w-72 p-0">
                     <div className="border-b border-gray-200 px-2 py-1.5">
                       <div className="text-text-default truncate text-xs font-medium">
                         {q.question_text}
                       </div>
                     </div>
                     <div className="px-2 py-1.5">
-                      {q.question_type === 'checkbox' ||
-                      q.question_type === 'dropdown' ? (
+                      {isChoiceQuestion(q.question_type) ? (
                         <div className="max-h-56 space-y-2 overflow-y-auto">
                           {getOptionsForQuestion(q).map((option) => {
                             const currentValue = filterValues[q.id]
-                            const isChecked =
-                              typeof currentValue === 'object' &&
-                              'options' in currentValue &&
-                              currentValue.options.includes(option)
+                            const selected = Array.isArray(currentValue)
+                              ? currentValue
+                              : []
+                            const isChecked = selected.includes(option)
                             const checkboxId = `filter-${q.id}-${option}`
                             return (
-                              <div key={option} className="flex items-center gap-2">
+                              <div
+                                key={option}
+                                className="flex items-center gap-2"
+                              >
                                 <Checkbox
                                   id={checkboxId}
                                   checked={isChecked}
                                   onCheckedChange={(checked) => {
-                                    const current =
-                                      typeof filterValues[q.id] === 'object' &&
-                                      'options' in filterValues[q.id]
-                                        ? [...filterValues[q.id].options]
-                                        : []
-                                    if (checked && !current.includes(option)) {
-                                      current.push(option)
-                                    } else {
-                                      const idx = current.indexOf(option)
-                                      if (idx > -1) current.splice(idx, 1)
-                                    }
                                     setFilterValues({
                                       ...filterValues,
-                                      [q.id]: { options: current },
+                                      [q.id]: checked
+                                        ? [...selected, option]
+                                        : selected.filter((o) => o !== option),
                                     })
                                   }}
                                 />
@@ -240,9 +277,9 @@ export function FilterChips({
                             placeholder="Contains..."
                             data-question-id={q.id}
                             value={
-                              typeof filterValues[q.id] === 'string'
-                                ? filterValues[q.id]
-                                : ''
+                              Array.isArray(filterValues[q.id])
+                                ? ''
+                                : (filterValues[q.id] ?? '')
                             }
                             onChange={(e) => {
                               if (activeQuestionId !== q.id) {
@@ -255,74 +292,26 @@ export function FilterChips({
                             }}
                             onKeyDown={(e) => {
                               e.stopPropagation()
-                              if (e.key === 'Enter') {
-                                const value = filterValues[q.id]
-                                if (value) {
-                                  onFilterChange(
-                                    {
-                                      question_id: q.id,
-                                      question_text: q.question_text,
-                                      question_type: q.question_type,
-                                      values: value,
-                                    },
-                                    'add'
-                                  )
-                                  setIsOpen(false)
-                                  setActiveQuestionId(null)
-                                  setFilterValues({ ...filterValues, [q.id]: undefined })
-                                }
-                              }
+                              if (e.key === 'Enter') commitFilter(q)
                             }}
                             autoFocus
                             className="h-6 flex-1 border-0 px-2 !text-xs outline-none focus:ring-0 focus:outline-none focus-visible:ring-0"
                           />
                           <button
-                            onClick={() => {
-                              const value = filterValues[q.id]
-                              if (value) {
-                                onFilterChange(
-                                  {
-                                    question_id: q.id,
-                                    question_text: q.question_text,
-                                    question_type: q.question_type,
-                                    values: value,
-                                  },
-                                  'add'
-                                )
-                                setIsOpen(false)
-                                setActiveQuestionId(null)
-                                setFilterValues({ ...filterValues, [q.id]: undefined })
-                              }
-                            }}
-                            disabled={!filterValues[q.id]}
-                            className="bg-gray-100 hover:bg-gray-200 text-text-muted hover:text-text-default shrink-0 rounded px-2 py-1 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                            onClick={() => commitFilter(q)}
+                            disabled={!hasValue(filterValues[q.id])}
+                            className="text-text-muted hover:text-text-default shrink-0 rounded bg-gray-100 px-2 py-1 transition-colors hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             <ChevronRight className="h-4 w-4" />
                           </button>
                         </div>
                       )}
                     </div>
-                    {(q.question_type === 'checkbox' || q.question_type === 'dropdown') && (
+                    {isChoiceQuestion(q.question_type) && (
                       <div className="flex border-t border-gray-200 px-2 py-1">
                         <button
-                          onClick={() => {
-                            const value = filterValues[q.id]
-                            if (value) {
-                              onFilterChange(
-                                {
-                                  question_id: q.id,
-                                  question_text: q.question_text,
-                                  question_type: q.question_type,
-                                  values: value,
-                                },
-                                'add'
-                              )
-                              setIsOpen(false)
-                              setActiveQuestionId(null)
-                              setFilterValues({ ...filterValues, [q.id]: undefined })
-                            }
-                          }}
-                          disabled={!filterValues[q.id]}
+                          onClick={() => commitFilter(q)}
+                          disabled={!hasValue(filterValues[q.id])}
                           className="bg-text-default hover:bg-text-emphasis w-full rounded px-2 py-0.5 text-xs font-medium text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           Add
@@ -345,36 +334,28 @@ export function FilterChips({
 }
 
 function getOptionsForQuestion(question: Question): string[] {
-  if (
-    question.question_type === 'checkbox' ||
-    question.question_type === 'dropdown'
-  ) {
-    try {
-      const parsed = JSON.parse(question.question_options || '[]')
-      return Array.isArray(parsed) ? parsed : []
-    } catch {
-      return []
-    }
-  }
-  return []
+  if (!isChoiceQuestion(question.question_type)) return []
+  return question.options ?? []
 }
 
-function getIconForQuestionType(questionType: QuestionType): React.ReactNode {
-  const iconProps = { className: 'h-4 w-4 text-text-muted shrink-0' }
+function getIconForQuestionType(
+  questionType: QuestionType,
+  size = 'h-4 w-4'
+): React.ReactNode {
+  const iconProps = { className: `${size} text-text-muted shrink-0` }
 
   switch (questionType) {
-    case 'text':
+    case 'short_answer':
       return <Type {...iconProps} />
     case 'url':
       return <Link {...iconProps} />
     case 'checkbox':
       return <CheckSquare {...iconProps} />
     case 'dropdown':
+    case 'multiple_choice':
       return <MoreHorizontal {...iconProps} />
-    case 'rating':
+    case 'score':
       return <Star {...iconProps} />
-    case 'date':
-      return <Calendar {...iconProps} />
     default:
       return <MessageSquare {...iconProps} />
   }

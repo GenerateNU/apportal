@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"strconv"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -29,11 +30,30 @@ type ApplicationUpdate struct {
 	MarkSubmitted bool
 }
 
-// AnswerFilter holds a filter for a specific question's answers.
+// AnswerMatch is how an AnswerFilter compares its values against an answer.
+// Which one applies is decided by the caller from the question's type, since
+// where an answer lands depends on it: checkbox answers are a JSONB array in
+// answer_options, every other type is a scalar in answer_text.
+type AnswerMatch string
+
+const (
+	// MatchContains is a case-insensitive substring match on answer_text, for
+	// free-text questions.
+	MatchContains AnswerMatch = "contains"
+	// MatchAnyOf matches answer_text exactly against any of the values, for
+	// single-choice questions (dropdown, multiple_choice).
+	MatchAnyOf AnswerMatch = "any_of"
+	// MatchAnyOption matches when answer_options holds any of the values, for
+	// checkbox questions.
+	MatchAnyOption AnswerMatch = "any_option"
+)
+
+// AnswerFilter narrows the list to applications whose answer to one question
+// matches. Values is OR'd within a filter; separate filters are AND'd.
 type AnswerFilter struct {
-	QuestionID   string
-	QuestionType string
-	Values       any // string for text/url, []any for checkbox/dropdown
+	QuestionID string
+	Match      AnswerMatch
+	Values     []string
 }
 
 // ApplicationFilter holds optional list filters; empty fields are ignored.
@@ -95,14 +115,41 @@ func (s *Store) GetApplication(ctx context.Context, id string) (models.Applicati
 const applicationSummaryColumns = `a.id, a.cycle_id, a.user_nuid, a.application_role, a.stage, a.availability, a.resume_url, a.submitted_at, a.updated_at, u.full_name, u.email`
 
 func (s *Store) ListApplications(ctx context.Context, f ApplicationFilter) ([]models.ApplicationSummary, error) {
+	query, args := listApplicationsQuery(f)
+	rows, err := s.db.Query(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, pgx.RowToStructByPos[models.ApplicationSummary])
+}
+
+// listApplicationsQuery builds the list statement and its arguments. It is
+// separate from the call above so the generated SQL — the placeholder
+// numbering in particular, which shifts with every optional filter — can be
+// asserted without a database.
+func listApplicationsQuery(f ApplicationFilter) (string, []any) {
+	// A valueless filter can't narrow anything and would emit an empty OR list
+	// below, so drop those before they reach the query.
+	answerFilters := make([]AnswerFilter, 0, len(f.AnswerFilters))
+	for _, af := range f.AnswerFilters {
+		if af.QuestionID == "" || len(af.Values) == 0 {
+			continue
+		}
+		answerFilters = append(answerFilters, af)
+	}
+
 	query := `SELECT DISTINCT ` + applicationSummaryColumns + ` FROM applications a JOIN users u ON u.nuid = a.user_nuid`
 	args := []any{}
 
-	// Add JOINs for each answer filter
-	for i, af := range f.AnswerFilters {
+	// One join per answer filter, each pinned to that filter's question. The
+	// match itself goes in the WHERE clause below, which is what turns these
+	// into inner joins: an application with no answer to a filtered question
+	// drops out.
+	for i, af := range answerFilters {
 		joinAlias := `wa` + strconv.Itoa(i)
-		query += ` LEFT JOIN written_answers ` + joinAlias + ` ON ` + joinAlias + `.application_id = a.id AND ` + joinAlias + `.question_id = $` + strconv.Itoa(len(args)+1)
 		args = append(args, af.QuestionID)
+		query += ` LEFT JOIN written_answers ` + joinAlias + ` ON ` + joinAlias +
+			`.application_id = a.id AND ` + joinAlias + `.question_id = $` + strconv.Itoa(len(args))
 	}
 
 	query += ` WHERE 1 = 1`
@@ -140,33 +187,36 @@ func (s *Store) ListApplications(ctx context.Context, f ApplicationFilter) ([]mo
 		query += ` AND a.stage != 'draft'`
 	}
 
-	// Add WHERE conditions for answer filters
-	for i, af := range f.AnswerFilters {
+	for i, af := range answerFilters {
 		joinAlias := `wa` + strconv.Itoa(i)
-		if af.QuestionType == "checkbox" || af.QuestionType == "dropdown" {
-			// For checkbox/dropdown, Values should be []any
-			if options, ok := af.Values.([]any); ok {
-				for _, opt := range options {
-					args = append(args, opt)
-					query += ` AND ` + joinAlias + `.answer_options @> jsonb_build_array($` + strconv.Itoa(len(args)) + `)`
-				}
+		switch af.Match {
+		case MatchAnyOption:
+			// Containment per value rather than `?|` so no `?` reaches the
+			// driver, where it risks being read as a placeholder.
+			clauses := make([]string, 0, len(af.Values))
+			for _, v := range af.Values {
+				args = append(args, v)
+				clauses = append(clauses, joinAlias+`.answer_options @> jsonb_build_array($`+strconv.Itoa(len(args))+`::text)`)
 			}
-		} else {
-			// For text/url, Values should be string - use ILIKE for case-insensitive search
-			if text, ok := af.Values.(string); ok {
-				args = append(args, "%"+text+"%")
-				query += ` AND ` + joinAlias + `.answer_text ILIKE $` + strconv.Itoa(len(args))
+			query += ` AND (` + strings.Join(clauses, ` OR `) + `)`
+		case MatchAnyOf:
+			args = append(args, af.Values)
+			query += ` AND ` + joinAlias + `.answer_text = ANY($` + strconv.Itoa(len(args)) + `::text[])`
+		default:
+			// Each value is its own substring match, OR'd together, so a
+			// multi-value text filter widens rather than contradicts itself.
+			clauses := make([]string, 0, len(af.Values))
+			for _, v := range af.Values {
+				args = append(args, "%"+escapeLike(v)+"%")
+				clauses = append(clauses, joinAlias+`.answer_text ILIKE $`+strconv.Itoa(len(args))+` ESCAPE '\'`)
 			}
+			query += ` AND (` + strings.Join(clauses, ` OR `) + `)`
 		}
 	}
 
 	query += ` ORDER BY a.submitted_at DESC NULLS LAST`
 
-	rows, err := s.db.Query(ctx, query, args...)
-	if err != nil {
-		return nil, err
-	}
-	return pgx.CollectRows(rows, pgx.RowToStructByPos[models.ApplicationSummary])
+	return query, args
 }
 
 // DeleteDraftApplication discards an applicant's own in-progress draft. The

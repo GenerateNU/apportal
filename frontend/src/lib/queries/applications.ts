@@ -7,18 +7,22 @@ import {
   updateApplication,
 } from '@/generated/applications/applications'
 import type { RequestOptions } from '@/lib/api/orval-mutator'
+import type { ListApplicationsParams } from '@/generated/model'
 import type {
   Application,
   ApplicationStage,
   ApplicationSummary,
+  QuestionType,
   Role,
 } from '@/lib/api/types'
 import { queryKeys } from './keys'
 
+// One answer-based filter. `values` matches any of the given strings; a
+// question with several filters is AND'd against the others.
 export interface AnswerFilterParam {
   question_id: string
-  question_type: string
-  values: string | { options: string[] } | { min: number; max: number }
+  question_type: QuestionType
+  values: string | string[]
 }
 
 export function useApplications(
@@ -40,9 +44,23 @@ export function useApplications(
   return useQuery({
     queryKey: queryKeys.applications.list(params),
     queryFn: async () =>
-      ((await listApplications(params, opts)) ?? []) as ApplicationSummary[],
+      ((await listApplications(toListParams(params), opts)) ??
+        []) as ApplicationSummary[],
     enabled,
   })
+}
+
+// answer_filters crosses the wire as a JSON string: it is the one list-of-
+// objects param on this endpoint, and neither axios's bracket encoding nor a
+// repeated key binds to a struct slice server-side. Everything else passes
+// through untouched.
+function toListParams(
+  params?: Parameters<typeof useApplications>[0]
+): ListApplicationsParams | undefined {
+  if (!params) return undefined
+  const { answer_filters, ...rest } = params
+  if (!answer_filters?.length) return rest
+  return { ...rest, answer_filters: JSON.stringify(answer_filters) }
 }
 
 export function useApplication(id: string, opts?: RequestOptions) {
