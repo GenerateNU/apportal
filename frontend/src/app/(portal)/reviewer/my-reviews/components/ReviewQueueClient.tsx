@@ -1,9 +1,10 @@
 'use client'
 import { PageContainer } from '@/components/PageContainer'
 
-import { useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { ArrowRight, Check } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
+import { ArrowRight, Search } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
   Select,
@@ -18,11 +19,16 @@ import { DEFAULT_CYCLE_ID, useCycles } from '@/lib/queries/cycles'
 import { useCurrentUser } from '@/lib/queries/users'
 import { useWrittenReviewsByApplicationIds } from '@/lib/queries/written-reviews'
 import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
+import type { ReviewState } from '../constants'
+import { ReviewRow } from './ReviewRow'
 
 type Scope = 'mine' | 'all'
 
+// Same settle time as the applications table's search, so typing feels the
+// same on both pages.
+const SEARCH_DEBOUNCE_MS = 250
+
 export function ReviewQueueClient() {
-  const router = useRouter()
   const [scope, setScope] = useState<Scope>('mine')
   const { data: currentUser } = useCurrentUser()
   const { data: cycles = [] } = useCycles({})
@@ -42,6 +48,19 @@ export function ReviewQueueClient() {
   }
   const [activeRole, setActiveRole] = useState<Role | 'all'>('all')
 
+  // The box stays instant while the request it drives waits for a pause in
+  // typing. Matched on the server so it narrows the whole queue, not the
+  // rows already in hand.
+  const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  useEffect(() => {
+    const timer = setTimeout(
+      () => setDebouncedSearch(search),
+      SEARCH_DEBOUNCE_MS
+    )
+    return () => clearTimeout(timer)
+  }, [search])
+
   const assignedTo = scope === 'mine' ? currentUser?.nuid : undefined
 
   const { data: applications = [] } = useApplications(
@@ -49,6 +68,7 @@ export function ReviewQueueClient() {
       ...(assignedTo && { assigned_to: assignedTo }),
       ...(cycleId !== 'all' && { cycle_id: cycleId }),
       ...(activeRole !== 'all' && { role: activeRole }),
+      ...(debouncedSearch && { search: debouncedSearch }),
     },
     undefined,
     // Hold the request until we know who "me" is. The backend skips empty
@@ -57,30 +77,69 @@ export function ReviewQueueClient() {
     { enabled: scope === 'all' || !!assignedTo }
   )
 
-  // Whether *my* review of each application has been submitted, so the
-  // queue can show which ones are already done.
+  // How far *my* review of each application has got, so the queue can show
+  // which ones are done and which are half-written. A review row exists as
+  // soon as "Save draft" is pressed, so its presence without a submitted_at
+  // is what "in progress" means.
   const applicationIds = useMemo(
     () => applications.map((a) => a.id),
     [applications]
   )
   const reviewQueries = useWrittenReviewsByApplicationIds(applicationIds)
-  const submittedAtByApplicationId = useMemo(() => {
-    const map: Record<string, string | undefined> = {}
+  const reviewByApplicationId = useMemo(() => {
+    const map: Record<string, { state: ReviewState; submittedAt?: string }> = {}
     applicationIds.forEach((id, i) => {
       const own = reviewQueries[i]?.data?.find(
         (r) => r.reviewer_nuid === currentUser?.nuid
       )
-      map[id] = own?.submitted_at
+      map[id] = {
+        state: own?.submitted_at ? 'submitted' : own ? 'draft' : 'none',
+        submittedAt: own?.submitted_at,
+      }
     })
     return map
   }, [applicationIds, reviewQueries, currentUser?.nuid])
 
+  const reviewedCount = applicationIds.filter(
+    (id) => reviewByApplicationId[id]?.state === 'submitted'
+  ).length
+
+  // Grouped by role, and within a role the ones still owed a review come
+  // first — this is a work queue, so the top of it should be the work.
+  // Half-written ones lead the rest: finishing something started beats
+  // opening something new.
+  const sections = useMemo(() => {
+    const rank = { draft: 0, none: 1, submitted: 2 }
+    return ROLE_COLUMNS.map((role) => ({
+      role,
+      applications: applications
+        .filter((a) => a.role === role)
+        .sort((a, b) => {
+          const byState =
+            rank[reviewByApplicationId[a.id]?.state ?? 'none'] -
+            rank[reviewByApplicationId[b.id]?.state ?? 'none']
+          if (byState !== 0) return byState
+          return (a.full_name || a.user_nuid).localeCompare(
+            b.full_name || b.user_nuid
+          )
+        }),
+    })).filter((s) => s.applications.length > 0)
+  }, [applications, reviewByApplicationId])
+
+  // Reviewing 25–30 applications is a sequential job, not a browsing one, so
+  // the queue's primary action is "pick up where you left off" — the detail
+  // page's own next/previous buttons carry it from there. Sections already
+  // sort unfinished first, so this is the top of the list in reading order.
+  const nextUnreviewed = sections
+    .flatMap((s) => s.applications)
+    .find((a) => reviewByApplicationId[a.id]?.state !== 'submitted')
+
   return (
     <PageContainer>
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h1 className="text-text-default text-2xl font-semibold">
-            Review queue
+            Lead review
           </h1>
           <p className="text-text-muted mt-1 text-sm">
             {scope === 'mine'
@@ -88,6 +147,7 @@ export function ReviewQueueClient() {
               : 'All submitted applications.'}
           </p>
         </div>
+
         <div className="flex flex-wrap items-center gap-3">
           <Select
             value={activeRole}
@@ -105,6 +165,7 @@ export function ReviewQueueClient() {
               ))}
             </SelectContent>
           </Select>
+
           <Select value={cycleId} onValueChange={setCycleId}>
             <SelectTrigger className="w-40" aria-label="Filter by cycle">
               <SelectValue />
@@ -118,94 +179,97 @@ export function ReviewQueueClient() {
               ))}
             </SelectContent>
           </Select>
-          <div className="flex shrink-0 gap-1 rounded-lg border border-gray-100 bg-white p-1">
-            <Button
-              size="sm"
-              variant={scope === 'mine' ? 'default' : 'ghost'}
-              onClick={() => setScope('mine')}
-            >
-              Assigned to me
-            </Button>
-            <Button
-              size="sm"
-              variant={scope === 'all' ? 'default' : 'ghost'}
-              onClick={() => setScope('all')}
-            >
-              All
-            </Button>
+
+          <div className="relative w-full sm:w-60">
+            <Search className="text-text-subtle absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Search name or NUID..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="focus:border-brand-blue text-text-default placeholder:text-text-subtle w-full rounded-md border border-gray-200 py-1.5 pr-3 pl-9 text-sm focus:outline-none"
+            />
+          </div>
+
+          <div className="flex shrink-0 gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1">
+            {(
+              [
+                { value: 'mine', label: 'Assigned to me' },
+                { value: 'all', label: 'All' },
+              ] as const
+            ).map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setScope(option.value)}
+                className={cn(
+                  'rounded-md px-2.5 py-1 text-sm font-medium transition-colors',
+                  scope === option.value
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700'
+                )}
+              >
+                {option.label}
+              </button>
+            ))}
           </div>
         </div>
       </div>
 
-      {applications.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-gray-200 bg-white p-10 text-center">
-          <p className="text-text-default text-sm font-medium">
-            {scope === 'mine'
-              ? 'Nothing assigned to you yet'
-              : 'Nothing to review yet'}
-          </p>
-          <p className="text-text-muted mt-1 text-sm">
-            {scope === 'mine'
-              ? 'A chief assigns applications for you to review.'
-              : 'Submitted applications will show up here.'}
-          </p>
+      {applications.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="h-1.5 w-40 overflow-hidden rounded-full bg-gray-100">
+              <div
+                className="bg-status-open h-full rounded-full transition-[width]"
+                style={{
+                  width: `${(reviewedCount / applications.length) * 100}%`,
+                }}
+              />
+            </div>
+            <span className="text-text-muted text-xs">
+              {reviewedCount} of {applications.length} reviewed
+            </span>
+          </div>
+          {nextUnreviewed && (
+            <Button asChild>
+              <Link href={`/reviewer/my-reviews/${nextUnreviewed.id}`}>
+                {reviewedCount === 0 ? 'Start reviewing' : 'Continue reviewing'}
+                <ArrowRight data-icon="inline-end" size={14} />
+              </Link>
+            </Button>
+          )}
         </div>
+      )}
+
+      {sections.length === 0 ? (
+        <p className="text-text-faint px-1 text-sm">
+          {debouncedSearch
+            ? 'No applications match that search.'
+            : scope === 'mine'
+              ? 'Nothing assigned to you yet — a chief assigns applications for you to review.'
+              : 'Nothing to review yet — submitted applications will show up here.'}
+        </p>
       ) : (
-        <div className="flex flex-col gap-8">
-          {ROLE_COLUMNS.map((role) => {
-            const roleApps = applications.filter((a) => a.role === role)
-            if (roleApps.length === 0) return null
-            return (
-              <section key={role}>
-                <h2 className="text-text-default mb-3 text-sm font-semibold">
-                  {ROLE_LABEL[role]}{' '}
-                  <span className="text-text-faint font-normal">
-                    ({roleApps.length})
-                  </span>
-                </h2>
-                <div className="flex flex-col gap-3">
-                  {roleApps.map((application) => {
-                    const submittedAt =
-                      submittedAtByApplicationId[application.id]
-                    return (
-                      <div
-                        key={application.id}
-                        className="flex items-center justify-between gap-4 rounded-xl border border-gray-100 bg-white p-4 transition-colors hover:bg-gray-50"
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className="text-text-default text-sm font-medium">
-                            {application.full_name || application.user_nuid}
-                          </span>
-                          {submittedAt && (
-                            <span className="bg-status-open/15 text-status-open inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium">
-                              <Check size={12} />
-                              Submitted{' '}
-                              {new Date(submittedAt).toLocaleString(undefined, {
-                                dateStyle: 'medium',
-                                timeStyle: 'short',
-                              })}
-                            </span>
-                          )}
-                        </div>
-                        <Button
-                          variant="outline"
-                          onClick={() =>
-                            router.push(
-                              `/reviewer/my-reviews/${application.id}`
-                            )
-                          }
-                        >
-                          {submittedAt ? 'View' : 'Review'}
-                          <ArrowRight data-icon="inline-end" size={14} />
-                        </Button>
-                      </div>
-                    )
-                  })}
-                </div>
-              </section>
-            )
-          })}
-        </div>
+        sections.map(({ role, applications: roleApplications }) => (
+          <div key={role} className="flex flex-col gap-2">
+            <h2 className="text-text-faint text-xs font-semibold tracking-wide uppercase">
+              {ROLE_LABEL[role]} ({roleApplications.length})
+            </h2>
+            <div className="divide-y divide-gray-100 overflow-hidden rounded-lg border border-gray-200 bg-white">
+              {roleApplications.map((application) => (
+                <ReviewRow
+                  key={application.id}
+                  application={application}
+                  state={reviewByApplicationId[application.id]?.state ?? 'none'}
+                  submittedAt={
+                    reviewByApplicationId[application.id]?.submittedAt
+                  }
+                />
+              ))}
+            </div>
+          </div>
+        ))
       )}
     </PageContainer>
   )
