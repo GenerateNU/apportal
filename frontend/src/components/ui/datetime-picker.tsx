@@ -231,6 +231,7 @@ function DateTimePicker({
                       handleHourChange(parsed)
                     }
                   }}
+                  onWheel={(e) => e.currentTarget.blur()}
                   className="focus:border-primary focus:ring-primary/20 h-8 w-10 rounded-md border border-gray-300 text-center text-sm font-medium focus:ring-2 focus:outline-none"
                 />
                 <span className="font-medium text-gray-400">:</span>
@@ -255,6 +256,7 @@ function DateTimePicker({
                       handleMinutesChange(String(parsed).padStart(2, '0'))
                     }
                   }}
+                  onWheel={(e) => e.currentTarget.blur()}
                   className="focus:border-primary focus:ring-primary/20 h-8 w-10 rounded-md border border-gray-300 text-center text-sm font-medium focus:ring-2 focus:outline-none"
                 />
                 <div className="ml-1 flex gap-1">

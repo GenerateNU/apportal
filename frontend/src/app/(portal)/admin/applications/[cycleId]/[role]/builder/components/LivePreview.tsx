@@ -119,6 +119,7 @@ function PreviewField({ question }: { question: QuestionCardQuestion }) {
           max={10}
           placeholder="1-10"
           className="text-text-default focus:border-brand-blue focus:ring-brand-blue w-24 rounded-md border border-gray-300 px-4 py-2.5 text-base outline-none focus:ring-1"
+          onWheel={(e) => e.currentTarget.blur()}
         />
       )}
     </div>
