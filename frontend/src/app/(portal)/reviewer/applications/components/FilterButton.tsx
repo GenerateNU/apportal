@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import {
+  ListFilter,
   Plus,
   X,
   Type,
@@ -168,9 +169,17 @@ export function FilterChips({
               setFilterValues({})
               setSearchTerm('')
             }}
-            className="text-text-muted inline-flex h-7 w-7 items-center justify-center rounded-md border border-gray-200 bg-white transition-colors hover:bg-gray-50"
+            className={`text-text-muted inline-flex h-7 items-center justify-center rounded-md border border-gray-200 bg-white transition-colors hover:bg-gray-50 ${
+              filters.length === 0 ? 'gap-1.5 px-2 text-sm' : 'w-7'
+            }`}
             title="Add filter"
           >
+            {filters.length === 0 && (
+              <>
+                <ListFilter className="h-3.5 w-3.5" />
+                Filter
+              </>
+            )}
             <Plus className="h-3.5 w-3.5" />
           </button>
         </DropdownMenuTrigger>
