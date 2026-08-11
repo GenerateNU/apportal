@@ -16,7 +16,9 @@ import type { Role } from '@/lib/api/types'
 import { useApplications } from '@/lib/queries/applications'
 import { useChiefReviewsByApplications } from '@/lib/queries/chief-reviews'
 import { pickDefaultCycleId, useCycles } from '@/lib/queries/cycles'
+import { useLeadAssignmentsByApplications } from '@/lib/queries/lead-assignments'
 import { useCurrentUser } from '@/lib/queries/users'
+import { useWrittenReviewsByApplicationIds } from '@/lib/queries/written-reviews'
 import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 
 export function ChiefReviewQueueClient() {
@@ -58,6 +60,25 @@ export function ChiefReviewQueueClient() {
     })
     return map
   }, [applicationIds, chiefReviewQueries, currentUser?.nuid])
+
+  // How many of the leads assigned to each application have submitted their
+  // written review, so the queue can show "x/x reviews completed".
+  const leadAssignmentQueries = useLeadAssignmentsByApplications(applicationIds)
+  const writtenReviewQueries = useWrittenReviewsByApplicationIds(applicationIds)
+  const leadReviewProgressByApplicationId = useMemo(() => {
+    const map: Record<string, { completed: number; total: number }> = {}
+    applicationIds.forEach((id, i) => {
+      const assignedNuids = new Set(
+        leadAssignmentQueries[i]?.data?.map((a) => a.lead_nuid) ?? []
+      )
+      const reviews = writtenReviewQueries[i]?.data ?? []
+      const completed = reviews.filter(
+        (r) => assignedNuids.has(r.reviewer_nuid) && r.submitted_at
+      ).length
+      map[id] = { completed, total: assignedNuids.size }
+    })
+    return map
+  }, [applicationIds, leadAssignmentQueries, writtenReviewQueries])
 
   return (
     <PageContainer>
@@ -128,6 +149,8 @@ export function ChiefReviewQueueClient() {
                 <div className="flex flex-col gap-3">
                   {roleApps.map((application) => {
                     const submitted = submittedByApplicationId[application.id]
+                    const leadProgress =
+                      leadReviewProgressByApplicationId[application.id]
                     return (
                       <div
                         key={application.id}
@@ -137,6 +160,18 @@ export function ChiefReviewQueueClient() {
                           <span className="text-text-default text-sm font-medium">
                             {application.full_name || application.user_nuid}
                           </span>
+                          {leadProgress && leadProgress.total > 0 && (
+                            <span
+                              className={`rounded-md px-2 py-0.5 text-xs font-medium ${
+                                leadProgress.completed === leadProgress.total
+                                  ? 'bg-status-open/15 text-status-open'
+                                  : 'bg-gray-100 text-gray-600'
+                              }`}
+                            >
+                              {leadProgress.completed}/{leadProgress.total}{' '}
+                              reviews completed
+                            </span>
+                          )}
                           {submitted && (
                             <span className="bg-status-open/15 text-status-open inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium">
                               <Check size={12} />
