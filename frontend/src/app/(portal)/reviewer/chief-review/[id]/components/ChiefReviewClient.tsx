@@ -2,13 +2,21 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Check, Loader2 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import {
+  ArrowLeft,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { ChiefVote, Role } from '@/lib/api/types'
 import { useAnswers } from '@/lib/queries/answers'
 import { useApplicant } from '@/lib/queries/applicants'
 import {
   useApplication,
+  useApplications,
   useUpdateApplication,
 } from '@/lib/queries/applications'
 import {
@@ -24,7 +32,7 @@ import {
   CHIEF_VOTE_LABEL,
   CHIEF_VOTE_ORDER,
 } from '@/lib/chief-votes'
-import { ROLE_LABEL } from '@/lib/roles'
+import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 import { ResponseField } from '@/app/(portal)/reviewer/applications/components/ResponseField'
 
 export function ChiefReviewClient({
@@ -38,6 +46,7 @@ export function ChiefReviewClient({
   role: Role
   applicantNuid: string
 }) {
+  const router = useRouter()
   const { data: currentUser } = useCurrentUser()
   const { data: application } = useApplication(applicationId)
   const { data: applicant } = useApplicant(applicantNuid)
@@ -52,6 +61,28 @@ export function ChiefReviewClient({
   const isChief = !!currentUser?.roles.some(
     (r) => r === 'chief' || r === 'admin'
   )
+
+  // The same queue the chief review list shows by default — every
+  // applicant in chief_review, grouped by role in the list's order — so
+  // "next"/"previous" here retraces exactly the list this was opened from.
+  const { data: queueApplications = [] } = useApplications({
+    cycle_id: cycleId,
+    stage: 'chief_review',
+  })
+  const orderedQueue = useMemo(
+    () =>
+      ROLE_COLUMNS.flatMap((r) =>
+        queueApplications.filter((a) => a.role === r)
+      ),
+    [queueApplications]
+  )
+  const queueIndex = orderedQueue.findIndex((a) => a.id === applicationId)
+  const previousApplicationId =
+    queueIndex > 0 ? orderedQueue[queueIndex - 1].id : null
+  const nextApplicationId =
+    queueIndex !== -1 && queueIndex < orderedQueue.length - 1
+      ? orderedQueue[queueIndex + 1].id
+      : null
 
   const reviewQuestionById = useMemo(
     () => new Map(reviewQuestions.map((q) => [q.id, q])),
@@ -130,6 +161,30 @@ export function ChiefReviewClient({
               Review submitted
             </span>
           )}
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!previousApplicationId}
+            onClick={() =>
+              previousApplicationId &&
+              router.push(`/reviewer/chief-review/${previousApplicationId}`)
+            }
+          >
+            <ChevronLeft data-icon="inline-start" size={14} />
+            Previous
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!nextApplicationId}
+            onClick={() =>
+              nextApplicationId &&
+              router.push(`/reviewer/chief-review/${nextApplicationId}`)
+            }
+          >
+            Next
+            <ChevronRight data-icon="inline-end" size={14} />
+          </Button>
         </div>
       </div>
 

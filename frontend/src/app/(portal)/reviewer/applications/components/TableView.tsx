@@ -28,6 +28,8 @@ export function TableView({
   selectedIds,
   onToggleSelect,
   onToggleSelectAll,
+  selectedApplicationId,
+  onSelectApplication,
   filters,
   onFilterChange,
   bulkBar,
@@ -54,6 +56,8 @@ export function TableView({
   selectedIds: Set<string>
   onToggleSelect: (id: string) => void
   onToggleSelectAll: () => void
+  selectedApplicationId: string | null
+  onSelectApplication: (id: string) => void
   filters: AnswerFilter[]
   onFilterChange: (
     filter: AnswerFilter | null,
@@ -204,6 +208,8 @@ export function TableView({
                     selectable={selectable}
                     selected={selectedIds.has(a.id)}
                     onToggleSelect={() => onToggleSelect(a.id)}
+                    isSelected={selectedApplicationId === a.id}
+                    onSelect={() => onSelectApplication(a.id)}
                   />
                   {i === triggerIndex && (
                     // 1px rather than 0: a zero-area target is an edge case

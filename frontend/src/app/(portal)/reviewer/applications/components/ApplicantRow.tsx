@@ -1,4 +1,3 @@
-import { useRouter } from 'next/navigation'
 import type { Question, WrittenAnswer } from '@/lib/api/types'
 import type { ApplicantApplication } from './types'
 import { formatDate } from '@/lib/utils'
@@ -15,6 +14,8 @@ export function ApplicantRow({
   selectable,
   selected,
   onToggleSelect,
+  isSelected,
+  onSelect,
 }: {
   applicant: ApplicantApplication
   columns: Question[]
@@ -27,18 +28,24 @@ export function ApplicantRow({
   selectable: boolean
   selected: boolean
   onToggleSelect: () => void
+  isSelected: boolean
+  onSelect: () => void
 }) {
-  const router = useRouter()
-  const href = `/reviewer/applications/${applicant.id}`
-
-  // Not a real <a>, so cmd/ctrl-click and middle-click need their own
-  // new-tab handling — a plain onClick router.push only ever navigates in
-  // this tab.
-  function open(e: React.MouseEvent) {
-    if (e.metaKey || e.ctrlKey || e.button === 1) {
-      window.open(href, '_blank')
+  // Cmd/ctrl-click and middle-click bypass the side peek and open the
+  // standalone /reviewer/applications/[id] page in a new tab instead — a
+  // real page, not a real <a>, so it needs its own handling rather than
+  // relying on the browser's native new-tab behavior.
+  function handleClick(e: React.MouseEvent) {
+    if (e.metaKey || e.ctrlKey) {
+      window.open(`/reviewer/applications/${applicant.id}`, '_blank')
     } else {
-      router.push(href)
+      onSelect()
+    }
+  }
+
+  function handleAuxClick(e: React.MouseEvent) {
+    if (e.button === 1) {
+      window.open(`/reviewer/applications/${applicant.id}`, '_blank')
     }
   }
 
@@ -47,9 +54,11 @@ export function ApplicantRow({
     // cycle's questions, then its answers — so its height is pinned up front.
     // Without that, every wave reflows the row and the whole list jumps.
     <tr
-      onClick={open}
-      onAuxClick={open}
-      className="h-12 cursor-pointer border-b border-gray-100 bg-white transition-colors hover:bg-gray-50"
+      onClick={handleClick}
+      onAuxClick={handleAuxClick}
+      className={`h-12 cursor-pointer border-b border-gray-100 transition-colors ${
+        isSelected ? 'bg-blue-50' : 'bg-white hover:bg-gray-50'
+      }`}
     >
       {selectable && (
         <td
