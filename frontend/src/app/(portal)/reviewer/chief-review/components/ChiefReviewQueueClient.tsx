@@ -12,13 +12,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import type { Role } from '@/lib/api/types'
+import type { ApplicationStage, Role } from '@/lib/api/types'
 import { useApplications } from '@/lib/queries/applications'
 import { useChiefReviewsByApplications } from '@/lib/queries/chief-reviews'
 import { pickDefaultCycleId, useCycles } from '@/lib/queries/cycles'
 import { useLeadAssignmentsByApplications } from '@/lib/queries/lead-assignments'
 import { useCurrentUser } from '@/lib/queries/users'
 import { useWrittenReviewsByApplicationIds } from '@/lib/queries/written-reviews'
+import { FILTER_STAGES } from '@/app/(portal)/reviewer/applications/components/constants'
 import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 
 export function ChiefReviewQueueClient() {
@@ -35,10 +36,20 @@ export function ChiefReviewQueueClient() {
     if (defaultId) setCycleId(defaultId)
   }
   const [activeRole, setActiveRole] = useState<Role | 'all'>('all')
+  // Chief review is only actionable once a lead's finished with it, so the
+  // queue starts scoped to that stage instead of every stage an application
+  // ever passes through.
+  const [activeStage, setActiveStage] = useState<ApplicationStage | 'all'>(
+    'chief_review'
+  )
 
   const { data: applications = [] } = useApplications(
     cycleId
-      ? { cycle_id: cycleId, ...(activeRole !== 'all' && { role: activeRole }) }
+      ? {
+          cycle_id: cycleId,
+          ...(activeRole !== 'all' && { role: activeRole }),
+          ...(activeStage !== 'all' && { stage: activeStage }),
+        }
       : undefined
   )
 
@@ -93,6 +104,23 @@ export function ChiefReviewQueueClient() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
+          <Select
+            value={activeStage}
+            onValueChange={(val) =>
+              setActiveStage(val as ApplicationStage | 'all')
+            }
+          >
+            <SelectTrigger className="w-56" aria-label="Filter by stage">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {FILTER_STAGES.map(({ label, value }) => (
+                <SelectItem key={value} value={value}>
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Select
             value={activeRole}
             onValueChange={(val) => setActiveRole(val as Role | 'all')}
