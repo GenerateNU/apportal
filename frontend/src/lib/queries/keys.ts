@@ -135,6 +135,13 @@ export const queryKeys = {
       [...queryKeys.chiefReviews.all, 'bulk', applicationIds] as const,
   },
 
+  chiefReviewComments: {
+    all: ['chief-review-comments'] as const,
+    lists: () => [...queryKeys.chiefReviewComments.all, 'list'] as const,
+    list: (applicationId: string) =>
+      [...queryKeys.chiefReviewComments.lists(), applicationId] as const,
+  },
+
   leadAssignments: {
     all: ['lead-assignments'] as const,
     lists: () => [...queryKeys.leadAssignments.all, 'list'] as const,

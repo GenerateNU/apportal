@@ -400,6 +400,40 @@ components:
         - teams
         - coverage
       type: object
+    ChiefReviewCommentDetail:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/ChiefReviewCommentDetail.json
+          format: uri
+          readOnly: true
+          type: string
+        application_id:
+          type: string
+        author_name:
+          type: string
+        author_nuid:
+          type: string
+        body:
+          type: string
+        created_at:
+          format: date-time
+          type: string
+        id:
+          type: string
+        updated_at:
+          format: date-time
+          type: string
+      required:
+        - id
+        - application_id
+        - author_nuid
+        - body
+        - created_at
+        - updated_at
+      type: object
     ChiefReviewDetail:
       additionalProperties: false
       properties:
@@ -419,8 +453,6 @@ components:
           format: date-time
           type: string
         id:
-          type: string
-        notes:
           type: string
         reviewer_name:
           type: string
@@ -588,6 +620,22 @@ components:
       required:
         - role
         - name
+      type: object
+    CreateChiefReviewCommentInputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/CreateChiefReviewCommentInputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        body:
+          minLength: 1
+          type: string
+      required:
+        - body
       type: object
     CreateCycleInputBody:
       additionalProperties: false
@@ -1742,6 +1790,22 @@ components:
         title:
           type: string
       type: object
+    UpdateChiefReviewCommentInputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/UpdateChiefReviewCommentInputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        body:
+          minLength: 1
+          type: string
+      required:
+        - body
+      type: object
     UpdateCycleInputBody:
       additionalProperties: false
       properties:
@@ -1961,8 +2025,6 @@ components:
             - https://example.com/schemas/UpsertChiefReviewInputBody.json
           format: uri
           readOnly: true
-          type: string
-        notes:
           type: string
         vote:
           enum:
@@ -2931,6 +2993,165 @@ paths:
                 $ref: "#/components/schemas/ErrorModel"
           description: Internal Server Error
       summary: Submit or update your chief review
+      tags:
+        - Chief reviews
+  /applications/{id}/chief-review-comments:
+    get:
+      operationId: list-chief-review-comments
+      parameters:
+        - description: Application ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Application ID
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/ChiefReviewCommentDetail"
+                type:
+                  - array
+                  - "null"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: List an application's chief review comments
+      tags:
+        - Chief reviews
+    post:
+      description: Chief only. A chief may leave any number of comments on an application.
+      operationId: create-chief-review-comment
+      parameters:
+        - description: Application ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Application ID
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateChiefReviewCommentInputBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChiefReviewCommentDetail"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Add a chief review comment
+      tags:
+        - Chief reviews
+  /applications/{id}/chief-review-comments/{commentId}:
+    put:
+      description: Chief only, and only the comment's own author.
+      operationId: update-chief-review-comment
+      parameters:
+        - description: Application ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Application ID
+            type: string
+        - description: Comment ID
+          in: path
+          name: commentId
+          required: true
+          schema:
+            description: Comment ID
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateChiefReviewCommentInputBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChiefReviewCommentDetail"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Edit a chief review comment
       tags:
         - Chief reviews
   /applications/{id}/chief-reviews:

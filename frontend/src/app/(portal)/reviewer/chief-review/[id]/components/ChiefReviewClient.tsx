@@ -8,10 +8,13 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
+  Eye,
+  EyeOff,
   Loader2,
+  Pencil,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import type { ChiefVote, Role } from '@/lib/api/types'
+import type { ChiefReviewComment, ChiefVote, Role } from '@/lib/api/types'
 import { useAnswers } from '@/lib/queries/answers'
 import { useApplicant } from '@/lib/queries/applicants'
 import {
@@ -19,6 +22,11 @@ import {
   useApplications,
   useUpdateApplication,
 } from '@/lib/queries/applications'
+import {
+  useChiefReviewComments,
+  useCreateChiefReviewComment,
+  useUpdateChiefReviewComment,
+} from '@/lib/queries/chief-review-comments'
 import {
   useChiefReviews,
   useUpsertChiefReview,
@@ -55,7 +63,11 @@ export function ChiefReviewClient({
   const { data: reviewQuestions = [] } = useReviewQuestions(cycleId, role)
   const { data: writtenReviews = [] } = useWrittenReviews(applicationId)
   const { data: chiefReviews = [] } = useChiefReviews(applicationId)
+  const { data: chiefReviewComments = [] } =
+    useChiefReviewComments(applicationId)
   const upsert = useUpsertChiefReview()
+  const createComment = useCreateChiefReviewComment()
+  const updateComment = useUpdateChiefReviewComment()
   const updateApplication = useUpdateApplication()
 
   const isChief = !!currentUser?.roles.some(
@@ -99,19 +111,45 @@ export function ChiefReviewClient({
   const others = chiefReviews.filter(
     (r) => r.reviewer_nuid !== currentUser?.nuid
   )
+  const ownComments = chiefReviewComments.filter(
+    (c) => c.author_nuid === currentUser?.nuid
+  )
+  // Every other chief who has voted or commented — the union, since a chief
+  // can do either independently of the other.
+  const otherAuthors = useMemo(() => {
+    const names = new Map<string, string>()
+    for (const r of others) {
+      names.set(r.reviewer_nuid, r.reviewer_name || r.reviewer_nuid)
+    }
+    for (const c of chiefReviewComments) {
+      if (c.author_nuid !== currentUser?.nuid && !names.has(c.author_nuid)) {
+        names.set(c.author_nuid, c.author_name || c.author_nuid)
+      }
+    }
+    return Array.from(names, ([nuid, name]) => ({ nuid, name }))
+  }, [others, chiefReviewComments, currentUser?.nuid])
 
-  const [notes, setNotes] = useState('')
   const [vote, setVote] = useState<ChiefVote | undefined>(undefined)
   const [saved, setSaved] = useState(false)
+  const [newComment, setNewComment] = useState('')
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(
+    null
+  )
+  const [editingBody, setEditingBody] = useState('')
+  // Off by default so a chief votes and comments before seeing what everyone
+  // else said, rather than anchoring on the first opinion in the thread.
+  const [revealOthers, setRevealOthers] = useState(false)
 
   // Re-seed whenever we land on a different application (Next/Previous swap
   // applicationId in place rather than remounting this component), so the
   // form doesn't keep showing the previous applicant's draft.
   useEffect(() => {
-    setNotes(own?.notes ?? '')
     setVote(own?.vote)
     setSaved(false)
-  }, [applicationId, own?.notes, own?.vote])
+    setNewComment('')
+    setEditingCommentId(null)
+    setRevealOthers(false)
+  }, [applicationId, own?.vote])
 
   // Reset scroll on both panels — Next/Previous swap applicationId in place,
   // so without this the new applicant opens scrolled to wherever the last
@@ -131,13 +169,36 @@ export function ChiefReviewClient({
     setSaved(false)
     await upsert.mutateAsync({
       applicationId,
-      body: { notes, vote },
+      body: { vote },
     })
     setSaved(true)
   }
 
   function toggleVote(next: ChiefVote) {
     setVote((prev) => (prev === next ? undefined : next))
+  }
+
+  async function postComment() {
+    const body = newComment.trim()
+    if (!body) return
+    await createComment.mutateAsync({ applicationId, body: { body } })
+    setNewComment('')
+  }
+
+  function startEditingComment(comment: ChiefReviewComment) {
+    setEditingCommentId(comment.id)
+    setEditingBody(comment.body)
+  }
+
+  async function saveEditedComment() {
+    const body = editingBody.trim()
+    if (!editingCommentId || !body) return
+    await updateComment.mutateAsync({
+      applicationId,
+      commentId: editingCommentId,
+      body: { body },
+    })
+    setEditingCommentId(null)
   }
 
   return (
@@ -329,20 +390,6 @@ export function ChiefReviewClient({
                 })}
               </div>
 
-              <label className="text-text-muted mt-4 mb-1.5 block text-xs font-medium">
-                Notes{' '}
-                <span className="text-text-faint font-normal">
-                  (optional)
-                </span>
-              </label>
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Notes on this applicant…"
-                rows={4}
-                className="focus:border-brand-blue text-text-default placeholder:text-text-subtle w-full rounded-md border border-gray-200 p-3 text-sm focus:outline-none"
-              />
-
               <div className="mt-4 flex items-center gap-3">
                 <Button onClick={save} disabled={upsert.isPending}>
                   {upsert.isPending ? (
@@ -370,38 +417,166 @@ export function ChiefReviewClient({
             </div>
           </section>
 
-          {/* Other chiefs' votes */}
-          {others.length > 0 && (
-            <section>
-              <h2 className="text-text-subtle mb-4 text-xs font-medium tracking-wider uppercase">
-                Other chiefs&apos; votes
-              </h2>
-              <div className="flex flex-col gap-3">
-                {others.map((r) => (
+          {/* Your comments */}
+          <section>
+            <h2 className="text-text-subtle mb-4 text-xs font-medium tracking-wider uppercase">
+              Your comments
+            </h2>
+            <div className="flex flex-col gap-3">
+              {ownComments.map((c) => {
+                const editing = editingCommentId === c.id
+                const edited = c.updated_at !== c.created_at
+                return (
                   <div
-                    key={r.id}
+                    key={c.id}
                     className="rounded-xl border border-gray-100 bg-white p-4"
                   >
-                    <div className="mb-2 flex items-center justify-between">
-                      <span className="text-text-default text-sm font-medium">
-                        {r.reviewer_name || r.reviewer_nuid}
-                      </span>
-                      {r.vote && (
-                        <span
-                          className={`rounded-md px-2 py-0.5 text-xs font-medium ${CHIEF_VOTE_BADGE_CLASS[r.vote]}`}
+                    {editing ? (
+                      <div className="flex flex-col gap-2">
+                        <textarea
+                          value={editingBody}
+                          onChange={(e) => setEditingBody(e.target.value)}
+                          rows={3}
+                          autoFocus
+                          className="focus:border-brand-blue text-text-default placeholder:text-text-subtle w-full rounded-md border border-gray-200 p-3 text-sm focus:outline-none"
+                        />
+                        <div className="flex items-center gap-2">
+                          <Button
+                            onClick={saveEditedComment}
+                            disabled={
+                              updateComment.isPending || !editingBody.trim()
+                            }
+                          >
+                            Save
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => setEditingCommentId(null)}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-text-default text-sm whitespace-pre-wrap">
+                            {c.body}
+                          </p>
+                          <p className="text-text-faint mt-1.5 text-xs">
+                            {new Date(c.created_at).toLocaleString()}
+                            {edited && ' · edited'}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => startEditingComment(c)}
+                          className="text-text-faint hover:text-text-muted shrink-0"
+                          aria-label="Edit comment"
                         >
-                          {CHIEF_VOTE_LABEL[r.vote]}
-                        </span>
-                      )}
-                    </div>
-                    {r.notes && (
-                      <p className="text-text-default text-sm whitespace-pre-wrap">
-                        {r.notes}
-                      </p>
+                          <Pencil size={14} />
+                        </button>
+                      </div>
                     )}
                   </div>
-                ))}
+                )
+              })}
+
+              <div className="rounded-xl border border-gray-100 bg-white p-4">
+                <textarea
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  placeholder="Add a comment on this applicant…"
+                  rows={3}
+                  className="focus:border-brand-blue text-text-default placeholder:text-text-subtle w-full rounded-md border border-gray-200 p-3 text-sm focus:outline-none"
+                />
+                <div className="mt-3">
+                  <Button
+                    onClick={postComment}
+                    disabled={createComment.isPending || !newComment.trim()}
+                  >
+                    {createComment.isPending ? (
+                      <>
+                        <Loader2 className="animate-spin" size={14} />
+                        Posting…
+                      </>
+                    ) : (
+                      'Post comment'
+                    )}
+                  </Button>
+                </div>
               </div>
+            </div>
+          </section>
+
+          {/* Other chiefs' votes & comments */}
+          {otherAuthors.length > 0 && (
+            <section>
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-text-subtle text-xs font-medium tracking-wider uppercase">
+                  Other chiefs&apos; votes &amp; comments
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => setRevealOthers((prev) => !prev)}
+                  className="text-text-muted hover:text-text-default inline-flex items-center gap-1.5 text-xs font-medium"
+                >
+                  {revealOthers ? (
+                    <>
+                      <EyeOff size={14} />
+                      Hide
+                    </>
+                  ) : (
+                    <>
+                      <Eye size={14} />
+                      Show all chiefs&apos; votes &amp; comments
+                    </>
+                  )}
+                </button>
+              </div>
+              {revealOthers && (
+                <div className="flex flex-col gap-3">
+                  {otherAuthors.map(({ nuid, name }) => {
+                    const review = others.find((r) => r.reviewer_nuid === nuid)
+                    const comments = chiefReviewComments
+                      .filter((c) => c.author_nuid === nuid)
+                      .sort(
+                        (a, b) =>
+                          new Date(a.created_at).getTime() -
+                          new Date(b.created_at).getTime()
+                      )
+                    return (
+                      <div
+                        key={nuid}
+                        className="rounded-xl border border-gray-100 bg-white p-4"
+                      >
+                        <div className="mb-2 flex items-center justify-between">
+                          <span className="text-text-default text-sm font-medium">
+                            {name}
+                          </span>
+                          {review?.vote && (
+                            <span
+                              className={`rounded-md px-2 py-0.5 text-xs font-medium ${CHIEF_VOTE_BADGE_CLASS[review.vote]}`}
+                            >
+                              {CHIEF_VOTE_LABEL[review.vote]}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex flex-col gap-2">
+                          {comments.map((c) => (
+                            <p
+                              key={c.id}
+                              className="text-text-default text-sm whitespace-pre-wrap"
+                            >
+                              {c.body}
+                            </p>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </section>
           )}
 

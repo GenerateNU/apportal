@@ -92,6 +92,7 @@ func registerHandlers(api huma.API, st *store.Store, storageClient *storage.Clie
 	(&reviewQuestionHandler{store: st}).register(api)
 	(&writtenReviewHandler{store: st}).register(api)
 	(&chiefReviewHandler{store: st}).register(api)
+	(&chiefReviewCommentHandler{store: st}).register(api)
 	(&reviewReleaseHandler{store: st}).register(api)
 	(&reviewerProgressHandler{store: st}).register(api)
 	(&interviewAssignmentHandler{store: st}).register(api)

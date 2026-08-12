@@ -87,8 +87,7 @@ type ChiefReviewsOutput struct {
 type UpsertChiefReviewInput struct {
 	ID   string `path:"id" doc:"Application ID"`
 	Body struct {
-		Notes *string           `json:"notes,omitempty"`
-		Vote  *models.ChiefVote `json:"vote,omitempty"`
+		Vote *models.ChiefVote `json:"vote,omitempty"`
 	}
 }
 
@@ -102,7 +101,6 @@ func (h *chiefReviewHandler) upsert(ctx context.Context, in *UpsertChiefReviewIn
 	review, err := h.store.UpsertChiefReview(ctx, store.ChiefReviewUpsert{
 		ApplicationID: in.ID,
 		ReviewerNUID:  currentActor(ctx).NUID,
-		Notes:         in.Body.Notes,
 		Vote:          in.Body.Vote,
 	})
 	if err != nil {

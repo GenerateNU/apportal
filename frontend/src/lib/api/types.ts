@@ -10,6 +10,7 @@ import type {
   Application as GenApplication,
   ApplicationSummary as GenApplicationSummary,
   ApplicationTemplate as GenApplicationTemplate,
+  ChiefReviewCommentDetail as GenChiefReviewCommentDetail,
   ChiefReviewDetail as GenChiefReviewDetail,
   ChiefReviewDetailVote,
   Cycle as GenCycle,
@@ -131,6 +132,8 @@ export type WrittenReviewDetail = Omit<
 export type CodeSubmission = Omit<GenCodeSubmission, '$schema'>
 
 export type ChiefReview = Omit<GenChiefReviewDetail, '$schema'>
+
+export type ChiefReviewComment = Omit<GenChiefReviewCommentDetail, '$schema'>
 
 export type InterviewAssignment = Omit<GenInterviewAssignment, '$schema'>
 
