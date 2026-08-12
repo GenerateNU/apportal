@@ -37,7 +37,6 @@ import type { ApplicantApplication } from './types'
 import type { AnswerFilter } from './FilterButton'
 import { TableView } from './TableView'
 import { KanbanView } from './KanbanView'
-import { ApplicationDetail } from './ApplicationDetail'
 
 type View = 'table' | 'kanban'
 
@@ -62,9 +61,6 @@ export function ApplicationsClient() {
   const [activeAvailability, setActiveAvailability] = useState<string | 'all'>(
     'all'
   )
-  const [selectedApplicationId, setSelectedApplicationId] = useState<
-    string | null
-  >(null)
   const [filters, setFilters] = useState<AnswerFilter[]>([])
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [bulkStage, setBulkStage] = useState<ApplicationStage | ''>('')
@@ -443,8 +439,6 @@ export function ApplicationsClient() {
             selectedIds={selectedIds}
             onToggleSelect={toggleSelect}
             onToggleSelectAll={toggleSelectAll}
-            selectedApplicationId={selectedApplicationId}
-            onSelectApplication={setSelectedApplicationId}
             filters={filters}
             onFilterChange={(filter, action) => {
               if (action === 'add' && filter) {
@@ -482,27 +476,6 @@ export function ApplicationsClient() {
           />
         )}
       </div>
-
-      {selectedApplicationId &&
-        (() => {
-          const selectedApp = rows.find((a) => a.id === selectedApplicationId)
-          return selectedApp ? (
-            <ApplicationDetail
-              applicant={selectedApp}
-              columns={columns}
-              rowQuestions={
-                questionsByCycleRole[
-                  `${selectedApp.cycleId}:${selectedApp.role}`
-                ] ?? []
-              }
-              answers={answersByApplicationId[selectedApplicationId] ?? []}
-              answersLoading={
-                !!answersLoadingByApplicationId[selectedApplicationId]
-              }
-              onClose={() => setSelectedApplicationId(null)}
-            />
-          ) : null
-        })()}
     </PageContainer>
   )
 }

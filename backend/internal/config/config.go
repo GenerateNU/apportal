@@ -19,7 +19,7 @@ func Load() (Config, error) {
 	cfg := Config{
 		Port:                   getEnv("PORT", "8080"),
 		DatabaseURL:            os.Getenv("DATABASE_URL"),
-		CORSOrigins:            getEnvList("APP_CORS_ORIGINS", "http://localhost:3000"),
+		CORSOrigins:            getEnvList("APP_CORS_ORIGINS", "http://localhost:3001"),
 		SupabaseURL:            os.Getenv("SUPABASE_URL"),
 		SupabaseAnonKey:        os.Getenv("SUPABASE_ANON_KEY"),
 		SupabaseServiceRoleKey: os.Getenv("SUPABASE_SERVICE_ROLE_KEY"),

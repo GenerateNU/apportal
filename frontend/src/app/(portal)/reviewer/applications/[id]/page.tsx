@@ -7,20 +7,17 @@ import {
 import { listAnswers } from '@/generated/answers/answers'
 import { getApplicant } from '@/generated/applicants/applicants'
 import { getApplication } from '@/generated/applications/applications'
-import { listChiefReviews } from '@/generated/chief-reviews/chief-reviews'
 import { listCycleQuestions } from '@/generated/questions/questions'
-import { listCycleReviewQuestions } from '@/generated/review-questions/review-questions'
-import { listWrittenReviews } from '@/generated/written-reviews/written-reviews'
 import type { Application, Role } from '@/lib/api/types'
 import { getServerRequestOptions } from '@/lib/api/server-request-options'
 import { queryKeys } from '@/lib/queries/keys'
-import { ChiefReviewClient } from './components/ChiefReviewClient'
+import { ApplicationDetailClient } from './components/ApplicationDetailClient'
 
 // Auth-gated, live data fetched per request from the backend — never prerender
 // this at build time (the backend isn't running then).
 export const dynamic = 'force-dynamic'
 
-export default async function ChiefReviewPage({
+export default async function ApplicationPage({
   params,
 }: {
   params: Promise<{ id: string }>
@@ -52,23 +49,6 @@ export default async function ChiefReviewPage({
         listCycleQuestions(application.cycle_id, { role }, requestOptions),
     }),
     queryClient.prefetchQuery({
-      queryKey: queryKeys.writtenReviews.list(id),
-      queryFn: () => listWrittenReviews(id, requestOptions),
-    }),
-    queryClient.prefetchQuery({
-      queryKey: queryKeys.reviewQuestions.list(application.cycle_id, role),
-      queryFn: () =>
-        listCycleReviewQuestions(
-          application.cycle_id,
-          { role },
-          requestOptions
-        ),
-    }),
-    queryClient.prefetchQuery({
-      queryKey: queryKeys.chiefReviews.list(id),
-      queryFn: () => listChiefReviews(id, requestOptions),
-    }),
-    queryClient.prefetchQuery({
       queryKey: queryKeys.applicants.detail(application.user_nuid),
       queryFn: () => getApplicant(application.user_nuid, requestOptions),
     }),
@@ -76,7 +56,7 @@ export default async function ChiefReviewPage({
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <ChiefReviewClient
+      <ApplicationDetailClient
         applicationId={id}
         cycleId={application.cycle_id}
         role={role}
