@@ -48,6 +48,40 @@ func (s *Store) UpsertChiefReview(ctx context.Context, in ChiefReviewUpsert) (mo
 	return detail, nil
 }
 
+// ListChiefReviewsForApplications fetches chief reviews for many applications
+// in one round trip, for callers rendering a page of applications at once —
+// the per-application ListChiefReviews above turns into a request per row there.
+func (s *Store) ListChiefReviewsForApplications(ctx context.Context, applicationIDs []string) ([]models.ChiefReviewDetail, error) {
+	if len(applicationIDs) == 0 {
+		return nil, nil
+	}
+	const q = `SELECT ` + chiefReviewColumns + ` FROM chief_reviews WHERE application_id = ANY($1::uuid[]) ORDER BY application_id, created_at`
+	rows, err := s.db.Query(ctx, q, applicationIDs)
+	if err != nil {
+		return nil, err
+	}
+	reviews, err := pgx.CollectRows(rows, pgx.RowToStructByPos[models.ChiefReview])
+	if err != nil {
+		return nil, err
+	}
+
+	nuids := make([]string, len(reviews))
+	for i, r := range reviews {
+		nuids[i] = r.ReviewerNUID
+	}
+	names, err := s.namesByNUIDs(ctx, nuids)
+	if err != nil {
+		return nil, err
+	}
+
+	details := make([]models.ChiefReviewDetail, len(reviews))
+	for i, r := range reviews {
+		details[i].ChiefReview = r
+		details[i].ReviewerName = names[r.ReviewerNUID]
+	}
+	return details, nil
+}
+
 func (s *Store) ListChiefReviews(ctx context.Context, applicationID string) ([]models.ChiefReviewDetail, error) {
 	const q = `SELECT ` + chiefReviewColumns + ` FROM chief_reviews WHERE application_id = $1 ORDER BY created_at`
 	rows, err := s.db.Query(ctx, q, applicationID)

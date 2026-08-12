@@ -1,11 +1,7 @@
-import {
-  useMutation,
-  useQueries,
-  useQuery,
-  useQueryClient,
-} from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   listChiefReviews,
+  listChiefReviewsBulk,
   upsertChiefReview,
 } from '@/generated/chief-reviews/chief-reviews'
 import type { RequestOptions } from '@/lib/api/orval-mutator'
@@ -24,18 +20,35 @@ export function useChiefReviews(applicationId: string, opts?: RequestOptions) {
   })
 }
 
-// One query per application, sharing cache with useChiefReviews — e.g. to
-// find which applications a chief has marked as advancing to interview.
-export function useChiefReviewsByApplications(
+// Fetches chief reviews for a batch of applications in one request instead of
+// one per application — e.g. to show each row's vote count in the chief
+// review queue. Also writes each application's reviews back into the
+// per-application cache entry that useChiefReviews reads, so opening one
+// afterwards is a cache hit rather than a fresh request.
+export function useChiefReviewsByApplicationIdBatch(
   applicationIds: string[],
   opts?: RequestOptions
 ) {
-  return useQueries({
-    queries: applicationIds.map((id) => ({
-      queryKey: queryKeys.chiefReviews.list(id),
-      queryFn: async () =>
-        ((await listChiefReviews(id, opts)) ?? []) as ChiefReview[],
-    })),
+  const queryClient = useQueryClient()
+  return useQuery({
+    queryKey: queryKeys.chiefReviews.bulk(applicationIds),
+    queryFn: async () => {
+      const reviews = ((await listChiefReviewsBulk(
+        { application_ids: applicationIds.join(',') },
+        opts
+      )) ?? []) as ChiefReview[]
+
+      const byApplicationId: Record<string, ChiefReview[]> = {}
+      for (const id of applicationIds) byApplicationId[id] = []
+      for (const review of reviews) {
+        byApplicationId[review.application_id]?.push(review)
+      }
+      for (const [id, list] of Object.entries(byApplicationId)) {
+        queryClient.setQueryData(queryKeys.chiefReviews.list(id), list)
+      }
+      return byApplicationId
+    },
+    enabled: applicationIds.length > 0,
   })
 }
 

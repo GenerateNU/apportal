@@ -28,6 +28,8 @@ import type {
   ChiefReviewDetail,
   ErrorModel,
   ListChiefReviews200,
+  ListChiefReviewsBulk200,
+  ListChiefReviewsBulkParams,
   UpsertChiefReviewInputBody
 } from '.././model';
 
@@ -218,6 +220,26 @@ export function useListChiefReviews<TData = Awaited<ReturnType<typeof listChiefR
 
   return query;
 }
+
+
+
+/**
+ * One request for a page of applications, instead of one per application.
+ * @summary List chief reviews for several applications
+ */
+export const listChiefReviewsBulk = (
+    params?: ListChiefReviewsBulkParams,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+
+
+      return customInstance<ListChiefReviewsBulk200>(
+      {url: `/chief-reviews`, method: 'GET',
+        params, signal
+    },
+      options);
+    }
+
 
 
 

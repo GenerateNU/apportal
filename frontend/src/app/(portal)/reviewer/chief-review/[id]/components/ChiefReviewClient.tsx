@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
@@ -102,19 +102,30 @@ export function ChiefReviewClient({
 
   const [notes, setNotes] = useState('')
   const [vote, setVote] = useState<ChiefVote | undefined>(undefined)
-  const [seeded, setSeeded] = useState(false)
   const [saved, setSaved] = useState(false)
 
-  // Seed the form from this chief's existing review, once loaded.
-  if (!seeded && chiefReviews) {
+  // Re-seed whenever we land on a different application (Next/Previous swap
+  // applicationId in place rather than remounting this component), so the
+  // form doesn't keep showing the previous applicant's draft.
+  useEffect(() => {
     setNotes(own?.notes ?? '')
     setVote(own?.vote)
-    setSeeded(true)
-  }
+    setSaved(false)
+  }, [applicationId, own?.notes, own?.vote])
 
-  // Only counts as "submitted" once there's an actual comment — casting a
-  // vote alone isn't enough to say this chief has weighed in.
-  const submitted = !!own?.notes?.trim()
+  // Reset scroll on both panels — Next/Previous swap applicationId in place,
+  // so without this the new applicant opens scrolled to wherever the last
+  // one was left.
+  const applicationPanelRef = useRef<HTMLDivElement>(null)
+  const reviewPanelRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    applicationPanelRef.current?.scrollTo(0, 0)
+    reviewPanelRef.current?.scrollTo(0, 0)
+  }, [applicationId])
+
+  // A review is a cast vote — a comment is optional and doesn't by itself
+  // count as having reviewed.
+  const submitted = !!own?.vote
 
   async function save() {
     setSaved(false)
@@ -161,37 +172,47 @@ export function ChiefReviewClient({
               Review submitted
             </span>
           )}
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={!previousApplicationId}
-            onClick={() =>
-              previousApplicationId &&
-              router.push(`/reviewer/chief-review/${previousApplicationId}`)
-            }
-          >
-            <ChevronLeft data-icon="inline-start" size={14} />
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={!nextApplicationId}
-            onClick={() =>
-              nextApplicationId &&
-              router.push(`/reviewer/chief-review/${nextApplicationId}`)
-            }
-          >
-            Next
-            <ChevronRight data-icon="inline-end" size={14} />
-          </Button>
+          <div className="flex items-center gap-2 border-l border-gray-100 pl-3">
+            {queueIndex !== -1 && (
+              <span className="text-text-faint text-xs tabular-nums">
+                {queueIndex + 1} / {orderedQueue.length}
+              </span>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!previousApplicationId}
+              onClick={() =>
+                previousApplicationId &&
+                router.push(`/reviewer/chief-review/${previousApplicationId}`)
+              }
+            >
+              <ChevronLeft data-icon="inline-start" size={14} />
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!nextApplicationId}
+              onClick={() =>
+                nextApplicationId &&
+                router.push(`/reviewer/chief-review/${nextApplicationId}`)
+              }
+            >
+              Next
+              <ChevronRight data-icon="inline-end" size={14} />
+            </Button>
+          </div>
         </div>
       </div>
 
       {/* Split: application (left) · lead reviews + vote (right) on desktop; stacked on mobile */}
       <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-2 lg:overflow-hidden">
         {/* Application */}
-        <div className="border-b border-gray-100 px-4 py-4 sm:px-8 sm:py-6 lg:overflow-y-auto lg:border-r lg:border-b-0">
+        <div
+          ref={applicationPanelRef}
+          className="border-b border-gray-100 px-4 py-4 sm:px-8 sm:py-6 lg:overflow-y-auto lg:border-r lg:border-b-0"
+        >
           <h2 className="text-text-subtle mb-4 text-xs font-medium tracking-wider uppercase">
             Application
           </h2>
@@ -207,7 +228,10 @@ export function ChiefReviewClient({
           </div>
         </div>
 
-        <div className="flex flex-col gap-8 px-4 py-4 sm:px-8 sm:py-6 lg:overflow-y-auto">
+        <div
+          ref={reviewPanelRef}
+          className="flex flex-col gap-8 px-4 py-4 sm:px-8 sm:py-6 lg:overflow-y-auto"
+        >
           {/* Lead written reviews */}
           <section>
             <h2 className="text-text-subtle mb-4 text-xs font-medium tracking-wider uppercase">
@@ -282,41 +306,67 @@ export function ChiefReviewClient({
             <h2 className="text-text-subtle mb-4 text-xs font-medium tracking-wider uppercase">
               Your vote
             </h2>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Notes on this applicant…"
-              rows={5}
-              className="focus:border-brand-blue text-text-default placeholder:text-text-subtle w-full rounded-md border border-gray-200 p-3 text-sm focus:outline-none"
-            />
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              {CHIEF_VOTE_ORDER.map((v) => (
-                <Button
-                  key={v}
-                  variant={vote === v ? 'default' : 'outline'}
-                  onClick={() => toggleVote(v)}
-                >
-                  {CHIEF_VOTE_LABEL[v]}
-                </Button>
-              ))}
-            </div>
-            <div className="mt-4 flex items-center gap-3">
-              <Button onClick={save} disabled={upsert.isPending}>
-                {upsert.isPending ? (
-                  <>
-                    <Loader2 className="animate-spin" size={14} />
-                    Saving…
-                  </>
-                ) : (
-                  'Save'
-                )}
-              </Button>
-              {saved && !upsert.isPending && (
-                <span className="text-status-open inline-flex items-center gap-1 text-sm">
-                  <Check size={14} />
-                  Saved
+            <div className="rounded-xl border border-gray-100 bg-white p-4">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-5">
+                {CHIEF_VOTE_ORDER.map((v) => {
+                  const selected = vote === v
+                  return (
+                    <button
+                      key={v}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() => toggleVote(v)}
+                      className={`flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-center text-sm font-medium transition-colors ${
+                        selected
+                          ? `border-current ${CHIEF_VOTE_BADGE_CLASS[v]}`
+                          : 'text-text-muted border-gray-200 hover:bg-gray-50'
+                      }`}
+                    >
+                      {selected && <Check size={14} />}
+                      {CHIEF_VOTE_LABEL[v]}
+                    </button>
+                  )
+                })}
+              </div>
+
+              <label className="text-text-muted mt-4 mb-1.5 block text-xs font-medium">
+                Notes{' '}
+                <span className="text-text-faint font-normal">
+                  (optional)
                 </span>
-              )}
+              </label>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Notes on this applicant…"
+                rows={4}
+                className="focus:border-brand-blue text-text-default placeholder:text-text-subtle w-full rounded-md border border-gray-200 p-3 text-sm focus:outline-none"
+              />
+
+              <div className="mt-4 flex items-center gap-3">
+                <Button onClick={save} disabled={upsert.isPending}>
+                  {upsert.isPending ? (
+                    <>
+                      <Loader2 className="animate-spin" size={14} />
+                      Saving…
+                    </>
+                  ) : (
+                    'Save'
+                  )}
+                </Button>
+                {saved && !upsert.isPending ? (
+                  <span className="text-status-open inline-flex items-center gap-1 text-sm">
+                    <Check size={14} />
+                    Saved
+                  </span>
+                ) : (
+                  !vote && (
+                    <span className="text-text-faint text-xs">
+                      Pick a vote above to record your review
+                    </span>
+                  )
+                )}
+              </div>
             </div>
           </section>
 

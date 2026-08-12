@@ -3608,6 +3608,50 @@ paths:
       summary: List an application's written reviews
       tags:
         - Written reviews
+  /chief-reviews:
+    get:
+      description: One request for a page of applications, instead of one per application.
+      operationId: list-chief-reviews-bulk
+      parameters:
+        - description: Comma-separated application IDs
+          explode: false
+          in: query
+          name: application_ids
+          schema:
+            description: Comma-separated application IDs
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/ChiefReviewDetail"
+                type:
+                  - array
+                  - "null"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: List chief reviews for several applications
+      tags:
+        - Chief reviews
   /cycle-stages/{id}:
     patch:
       description: Chief only.
