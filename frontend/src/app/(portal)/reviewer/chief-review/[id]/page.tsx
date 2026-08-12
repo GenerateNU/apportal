@@ -4,9 +4,11 @@ import {
   HydrationBoundary,
   QueryClient,
 } from '@tanstack/react-query'
+import { listAnswers } from '@/generated/answers/answers'
 import { getApplicant } from '@/generated/applicants/applicants'
 import { getApplication } from '@/generated/applications/applications'
 import { listChiefReviews } from '@/generated/chief-reviews/chief-reviews'
+import { listCycleQuestions } from '@/generated/questions/questions'
 import { listCycleReviewQuestions } from '@/generated/review-questions/review-questions'
 import { listWrittenReviews } from '@/generated/written-reviews/written-reviews'
 import type { Application, Role } from '@/lib/api/types'
@@ -40,6 +42,15 @@ export default async function ChiefReviewPage({
   const role = application.role as Role
 
   await Promise.all([
+    queryClient.prefetchQuery({
+      queryKey: queryKeys.answers.list(id),
+      queryFn: () => listAnswers(id, requestOptions),
+    }),
+    queryClient.prefetchQuery({
+      queryKey: queryKeys.questions.list(application.cycle_id, role),
+      queryFn: () =>
+        listCycleQuestions(application.cycle_id, { role }, requestOptions),
+    }),
     queryClient.prefetchQuery({
       queryKey: queryKeys.writtenReviews.list(id),
       queryFn: () => listWrittenReviews(id, requestOptions),
