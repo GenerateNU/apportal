@@ -27,11 +27,22 @@ export async function proxy(request: NextRequest) {
     }
   )
 
-  // Always use getUser() here, never getSession() — it revalidates the
-  // JWT against Supabase instead of trusting the (spoofable) cookie.
+  // getSession() (not getUser()) deliberately: Proxy runs on every request —
+  // including prefetches, which Next.js strips the distinguishing headers
+  // from before Proxy sees them, so there's no way to skip them here. Two
+  // independent Supabase clients (this one and the browser's, which
+  // refreshes on every API call) racing to redeem the same one-time-use
+  // rotating refresh token was bouncing actively-used sessions to /login.
+  // getSession() only reads/refreshes the local cookie, no extra network
+  // hop to revalidate — Proxy is a UX/routing decision here, not the real
+  // security boundary: the backend independently re-verifies every bearer
+  // token against Supabase on every API call regardless of what Proxy
+  // decides, so a forged cookie that fooled this check would still fail
+  // every real data request.
   const {
-    data: { user },
-  } = await supabase.auth.getUser()
+    data: { session },
+  } = await supabase.auth.getSession()
+  const user = session?.user ?? null
 
   const isPublicPath = PUBLIC_PATHS.some((path) =>
     request.nextUrl.pathname.startsWith(path)
