@@ -3,7 +3,10 @@ import {
   HydrationBoundary,
   QueryClient,
 } from '@tanstack/react-query'
-import { fetchApplicationPage } from '@/lib/queries/applications'
+import {
+  fetchApplicationPage,
+  type ApplicationListParams,
+} from '@/lib/queries/applications'
 import { listCycles } from '@/generated/cycles/cycles'
 import { getServerRequestOptions } from '@/lib/api/server-request-options'
 import type { Cycle } from '@/lib/api/types'
@@ -34,7 +37,10 @@ export default async function ChiefReviewQueuePage() {
 
   const cycleId = pickDefaultCycleId(cycles)
   if (cycleId) {
-    const params = { cycle_id: cycleId, stage: 'chief_review' }
+    const params: ApplicationListParams = {
+      cycle_id: cycleId,
+      stage: 'chief_review',
+    }
     await queryClient.prefetchQuery({
       queryKey: queryKeys.applications.list(params),
       queryFn: () => fetchApplicationPage(params, requestOptions),
