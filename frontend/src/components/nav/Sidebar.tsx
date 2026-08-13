@@ -7,6 +7,8 @@ import {
   UserPlus,
   FileText,
   Calendar,
+  ChevronsLeft,
+  ChevronsRight,
   ClipboardCheck,
   ListChecks,
   Scale,
@@ -16,6 +18,7 @@ import {
 } from 'lucide-react'
 import NavItem from './NavItem'
 import { Avatar } from '@/components/ui/avatar'
+import { Tooltip } from '@/components/Tooltip'
 import { useAuth } from '@/lib/auth/auth-context'
 import type { Role } from '@/types/roles'
 
@@ -25,6 +28,11 @@ interface SidebarProps {
   // Whether the user can act as a chief (holds the chief or admin role). Some
   // reviewer nav items are chief-only actions.
   isChief?: boolean
+  // Icon-only rail, with labels as hover tooltips. Omit both props (as the
+  // mobile nav sheet does) to always render expanded with no toggle — a
+  // slide-out drawer has no reason to collapse further.
+  collapsed?: boolean
+  onToggleCollapsed?: () => void
 }
 
 type NavItemConfig = {
@@ -110,7 +118,13 @@ const sectionsByRole: Record<Role, NavSection> = {
 // Display order: applicant, then reviewer, then admin
 const roleOrder: Role[] = ['applicant', 'reviewer', 'admin']
 
-function SidebarUser({ fullName }: { fullName: string }) {
+function SidebarUser({
+  fullName,
+  collapsed,
+}: {
+  fullName: string
+  collapsed?: boolean
+}) {
   const router = useRouter()
   const { signOut } = useAuth()
 
@@ -118,6 +132,28 @@ function SidebarUser({ fullName }: { fullName: string }) {
     await signOut()
     router.push('/login')
     router.refresh()
+  }
+
+  const signOutButton = (
+    <button
+      type="button"
+      onClick={handleSignOut}
+      aria-label="Sign out"
+      className="text-text-subtle hover:text-text-default flex-shrink-0 rounded-md p-2 transition-colors hover:bg-gray-100"
+    >
+      <LogOut size={16} />
+    </button>
+  )
+
+  if (collapsed) {
+    return (
+      <div className="-mx-3 flex flex-col items-center gap-2 border-t border-gray-200 px-3 py-2 pb-6">
+        <Tooltip label={fullName}>
+          <Avatar name={fullName} size="sm" />
+        </Tooltip>
+        {signOutButton}
+      </div>
+    )
   }
 
   return (
@@ -129,20 +165,19 @@ function SidebarUser({ fullName }: { fullName: string }) {
             {fullName}
           </span>
         </div>
-        <button
-          type="button"
-          onClick={handleSignOut}
-          aria-label="Sign out"
-          className="text-text-subtle hover:text-text-default flex-shrink-0 rounded-md p-2 transition-colors hover:bg-gray-100"
-        >
-          <LogOut size={16} />
-        </button>
+        {signOutButton}
       </div>
     </div>
   )
 }
 
-export default function Sidebar({ roles, fullName, isChief }: SidebarProps) {
+export default function Sidebar({
+  roles,
+  fullName,
+  isChief,
+  collapsed,
+  onToggleCollapsed,
+}: SidebarProps) {
   const sections = roleOrder
     .filter((role) => roles.includes(role))
     .map((role) => sectionsByRole[role])
@@ -152,9 +187,13 @@ export default function Sidebar({ roles, fullName, isChief }: SidebarProps) {
     }))
 
   return (
-    <aside className="flex h-screen w-60 flex-col bg-gray-50">
+    <aside
+      className={`flex h-screen flex-col bg-gray-50 transition-[width] duration-200 ${collapsed ? 'w-16' : 'w-60'}`}
+    >
       {/* Logo */}
-      <div className="flex flex-shrink-0 items-center gap-3 px-3 py-3">
+      <div
+        className={`flex flex-shrink-0 items-center gap-3 px-3 py-3 ${collapsed ? 'justify-center' : ''}`}
+      >
         <Image
           src="/GenerateNU Logo.png"
           alt="GenerateNU"
@@ -162,19 +201,50 @@ export default function Sidebar({ roles, fullName, isChief }: SidebarProps) {
           height={32}
           className="object-contain"
         />
-        <span className="text-brand-blue text-xl font-semibold">Generate</span>
+        {!collapsed && (
+          <span className="text-brand-blue flex-1 text-xl font-semibold">
+            Generate
+          </span>
+        )}
       </div>
+
+      {onToggleCollapsed && (
+        <div
+          className={`flex flex-shrink-0 px-3 pb-2 ${collapsed ? 'justify-center' : 'justify-end'}`}
+        >
+          <button
+            type="button"
+            onClick={onToggleCollapsed}
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            className="text-text-subtle hover:text-text-default rounded-md p-1.5 transition-colors hover:bg-gray-100"
+          >
+            {collapsed ? (
+              <ChevronsRight size={16} />
+            ) : (
+              <ChevronsLeft size={16} />
+            )}
+          </button>
+        </div>
+      )}
 
       {/* Nav sections */}
       <nav className="flex flex-1 flex-col gap-4 overflow-y-auto px-3 py-4">
         {sections.map((section) => (
           <div key={section.label}>
-            <p className="text-text-subtle mb-2 px-2 text-xs font-semibold tracking-wider uppercase">
-              {section.label}
-            </p>
+            {!collapsed && (
+              <p className="text-text-subtle mb-2 px-2 text-xs font-semibold tracking-wider uppercase">
+                {section.label}
+              </p>
+            )}
             <div className="flex flex-col gap-1">
               {section.items.map(({ href, label, icon }) => (
-                <NavItem key={href} href={href} label={label} icon={icon} />
+                <NavItem
+                  key={href}
+                  href={href}
+                  label={label}
+                  icon={icon}
+                  collapsed={collapsed}
+                />
               ))}
             </div>
           </div>
@@ -182,7 +252,7 @@ export default function Sidebar({ roles, fullName, isChief }: SidebarProps) {
       </nav>
 
       {/* User */}
-      {fullName && <SidebarUser fullName={fullName} />}
+      {fullName && <SidebarUser fullName={fullName} collapsed={collapsed} />}
     </aside>
   )
 }
