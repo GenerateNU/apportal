@@ -4,9 +4,11 @@ import { StageSelect } from './StageSelect'
 export function KanbanCard({
   applicant,
   availabilityDays,
+  editable,
 }: {
   applicant: ApplicantApplication
   availabilityDays: string[]
+  editable: boolean
 }) {
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-3 shadow-sm transition-shadow hover:shadow-md">
@@ -27,7 +29,11 @@ export function KanbanCard({
         ))}
       </div>
       <div className="mt-2.5">
-        <StageSelect applicationId={applicant.id} stage={applicant.stage} />
+        <StageSelect
+          applicationId={applicant.id}
+          stage={applicant.stage}
+          editable={editable}
+        />
       </div>
     </div>
   )
