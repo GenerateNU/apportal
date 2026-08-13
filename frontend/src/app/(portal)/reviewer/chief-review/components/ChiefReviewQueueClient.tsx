@@ -40,7 +40,9 @@ const SEARCH_DEBOUNCE_MS = 250
 // review an applicant and coming back doesn't reset the filters.
 // v2: bumped so a stage: 'chief_review' saved under the old default doesn't
 // resurrect it — that default hid almost everything (see activeStage below).
-const FILTERS_STORAGE_KEY = 'chief-review-queue-filters-v2'
+// v3: bumped so a voteScope: 'needsVote' saved under the old default doesn't
+// resurrect it now that the default is 'all'.
+const FILTERS_STORAGE_KEY = 'chief-review-queue-filters-v3'
 
 type StoredFilters = {
   cycleId?: string
@@ -84,10 +86,10 @@ export function ChiefReviewQueueClient() {
   const [activeStage, setActiveStageState] = useState<ApplicationStage | 'all'>(
     'all'
   )
-  // Defaults to the chief's own outstanding work, same as the lead queue
-  // defaulting to "assigned to me" — the point of this queue is finding
-  // applicants that still need a vote, not re-showing everyone every visit.
-  const [voteScope, setVoteScopeState] = useState<VoteScope>('needsVote')
+  // Starts unfiltered — the "needs my vote" scope stays available via the
+  // select below, but defaulting to it hid every already-voted applicant a
+  // chief still wanted to see (e.g. to revisit or compare votes).
+  const [voteScope, setVoteScopeState] = useState<VoteScope>('all')
   // Independent of voteScope — narrows to a specific vote value regardless
   // of the scope toggle above.
   const [voteValue, setVoteValueState] = useState<VoteValueFilter>('all')
