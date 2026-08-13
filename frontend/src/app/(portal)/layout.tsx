@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { Menu } from 'lucide-react'
@@ -8,6 +8,11 @@ import { MobileNavSheet } from '@/components/nav/MobileNavSheet'
 import Sidebar from '@/components/nav/Sidebar'
 import { useCurrentUser } from '@/lib/queries/users'
 import { getRoles } from '@/types/roles'
+
+// Desktop-only — the mobile nav is a slide-out drawer, not a persistent rail,
+// so there's no reason to collapse it further. Persisted across visits like
+// the other per-user layout preferences in this app.
+const SIDEBAR_COLLAPSED_KEY = 'sidebar-collapsed'
 
 export default function PortalLayout({
   children,
@@ -27,6 +32,24 @@ export default function PortalLayout({
   if (pathname !== prevPathname) {
     setPrevPathname(pathname)
     setNavOpen(false)
+  }
+
+  // Restored once on mount — done in an effect (rather than a useState
+  // initializer) so the server-rendered markup and the first client render
+  // match before localStorage is consulted.
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  useEffect(() => {
+    if (localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === 'true') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSidebarCollapsed(true)
+    }
+  }, [])
+  function toggleSidebarCollapsed() {
+    setSidebarCollapsed((prev) => {
+      const next = !prev
+      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(next))
+      return next
+    })
   }
 
   return (
@@ -55,6 +78,8 @@ export default function PortalLayout({
           roles={roles}
           fullName={currentUser?.full_name}
           isChief={isChief}
+          collapsed={sidebarCollapsed}
+          onToggleCollapsed={toggleSidebarCollapsed}
         />
       </div>
 
