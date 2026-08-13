@@ -5,7 +5,6 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ArrowRight, Check, Loader2, Search } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { ProgressBar } from '@/components/ProgressBar'
 import {
@@ -18,14 +17,20 @@ import {
 import type { ApplicationStage, ChiefVote, Role } from '@/lib/api/types'
 import { useApplications } from '@/lib/queries/applications'
 import { useChiefReviewsByApplicationIdBatch } from '@/lib/queries/chief-reviews'
-import { CHIEF_VOTE_BADGE_CLASS, CHIEF_VOTE_LABEL } from '@/lib/chief-votes'
+import {
+  CHIEF_VOTE_BADGE_CLASS,
+  CHIEF_VOTE_LABEL,
+  CHIEF_VOTE_ORDER,
+} from '@/lib/chief-votes'
 import { pickDefaultCycleId, useCycles } from '@/lib/queries/cycles'
 import { useReviewerProgress } from '@/lib/queries/reviewer-progress'
 import { useChiefReviewers, useCurrentUser } from '@/lib/queries/users'
 import { FILTER_STAGES } from '@/app/(portal)/reviewer/applications/components/constants'
 import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 
-type VoteFilter = 'needsVote' | 'all'
+// 'needsVote' and 'all' are my-queue scopes; a ChiefVote value narrows to
+// applicants I gave that specific vote.
+type VoteFilter = 'needsVote' | 'all' | ChiefVote
 
 // Same settle time as the applications table's and the lead queue's search.
 const SEARCH_DEBOUNCE_MS = 250
@@ -190,13 +195,21 @@ export function ChiefReviewQueueClient() {
   // "Continue reviewing".
   const nextUnvoted = applications.find((a) => !submittedByApplicationId[a.id])
 
-  const visibleApplications = useMemo(
-    () =>
-      voteFilter === 'needsVote'
-        ? applications.filter((a) => !submittedByApplicationId[a.id])
-        : applications,
-    [applications, voteFilter, submittedByApplicationId]
-  )
+  const visibleApplications = useMemo(() => {
+    if (voteFilter === 'all') return applications
+    if (voteFilter === 'needsVote') {
+      return applications.filter((a) => !submittedByApplicationId[a.id])
+    }
+    // A specific ChiefVote — narrow to applicants I gave exactly that vote.
+    return applications.filter(
+      (a) => ownVoteByApplicationId[a.id] === voteFilter
+    )
+  }, [
+    applications,
+    voteFilter,
+    submittedByApplicationId,
+    ownVoteByApplicationId,
+  ])
 
   // How many of the leads assigned to each application have submitted their
   // written review, so the queue can show "x/x reviews completed". Fetched
@@ -301,28 +314,23 @@ export function ChiefReviewQueueClient() {
               className="focus:border-brand-blue text-text-default placeholder:text-text-subtle w-full rounded-md border border-gray-200 py-1.5 pr-3 pl-9 text-sm focus:outline-none"
             />
           </div>
-          <div className="flex shrink-0 gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1">
-            {(
-              [
-                { value: 'needsVote', label: 'Needs my vote' },
-                { value: 'all', label: 'All' },
-              ] as const
-            ).map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => setVoteFilter(option.value)}
-                className={cn(
-                  'rounded-md px-2.5 py-1 text-sm font-medium transition-colors',
-                  voteFilter === option.value
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-500 hover:text-gray-700'
-                )}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
+          <Select
+            value={voteFilter}
+            onValueChange={(val) => setVoteFilter(val as VoteFilter)}
+          >
+            <SelectTrigger className="w-64" aria-label="Filter by vote">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="needsVote">Needs my vote</SelectItem>
+              <SelectItem value="all">All</SelectItem>
+              {CHIEF_VOTE_ORDER.map((vote) => (
+                <SelectItem key={vote} value={vote}>
+                  My vote: {CHIEF_VOTE_LABEL[vote]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -370,11 +378,14 @@ export function ChiefReviewQueueClient() {
       ) : visibleApplications.length === 0 ? (
         <div className="rounded-xl border border-dashed border-gray-200 bg-white p-10 text-center">
           <p className="text-text-default text-sm font-medium">
-            You&apos;re all caught up
+            {voteFilter === 'needsVote'
+              ? "You're all caught up"
+              : 'No applicants match this vote'}
           </p>
           <p className="text-text-muted mt-1 text-sm">
-            Every applicant in this filter already has your vote — switch to
-            &quot;All&quot; to see them.
+            {voteFilter === 'needsVote'
+              ? 'Every applicant in this filter already has your vote — switch to "All" to see them.'
+              : 'Switch to "All" to see every applicant.'}
           </p>
         </div>
       ) : (
