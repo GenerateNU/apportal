@@ -36,12 +36,28 @@ function errorMessage(error: unknown): string {
 export function StageSelect({
   applicationId,
   stage,
+  editable,
 }: {
   applicationId: string
   stage: ApplicationStage
+  // Changing stage is a chief decision (advance to interview, reject, etc.)
+  // enforced by the backend — this only avoids showing a control that would
+  // just 403 for anyone else. Required, not defaulted, so every call site
+  // has to say explicitly who this is being rendered for.
+  editable: boolean
 }) {
   const updateApplication = useUpdateApplication()
   const [error, setError] = useState<string | null>(null)
+
+  if (!editable) {
+    return (
+      <span
+        className={`inline-block rounded-full px-2.5 py-1 text-xs font-semibold ${stageBadge[stage]}`}
+      >
+        {stageLabel[stage]}
+      </span>
+    )
+  }
 
   return (
     <div

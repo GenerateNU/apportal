@@ -7,6 +7,7 @@ require (
 	github.com/gofiber/fiber/v3 v3.2.0
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.7.6
+	golang.org/x/sync v0.20.0
 )
 
 require (
@@ -28,7 +29,6 @@ require (
 	github.com/valyala/fasthttp v1.70.0 // indirect
 	golang.org/x/crypto v0.50.0 // indirect
 	golang.org/x/net v0.53.0 // indirect
-	golang.org/x/sync v0.20.0 // indirect
 	golang.org/x/sys v0.43.0 // indirect
 	golang.org/x/text v0.36.0 // indirect
 )
