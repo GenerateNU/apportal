@@ -521,7 +521,7 @@ export function ChiefReviewClient({
                 <button
                   type="button"
                   onClick={() => setRevealOthers((prev) => !prev)}
-                  className="text-text-muted hover:text-text-default inline-flex items-center gap-1.5 text-xs font-medium"
+                  className="text-text-muted hover:text-text-default inline-flex items-center gap-1.5 rounded-md border border-gray-200 px-2.5 py-1 text-xs font-medium"
                 >
                   {revealOthers ? (
                     <>
@@ -531,7 +531,8 @@ export function ChiefReviewClient({
                   ) : (
                     <>
                       <Eye size={14} />
-                      Show all chiefs&apos; votes &amp; comments
+                      Show {otherAuthors.length}{' '}
+                      {otherAuthors.length === 1 ? 'chief' : 'chiefs'}
                     </>
                   )}
                 </button>
