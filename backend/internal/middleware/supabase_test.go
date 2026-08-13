@@ -3,7 +3,9 @@ package middleware
 import (
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
+	"time"
 )
 
 func TestSupabaseVerifierValidToken(t *testing.T) {
@@ -36,6 +38,59 @@ func TestSupabaseVerifierValidToken(t *testing.T) {
 	}
 	if calls != 1 {
 		t.Fatalf("calls = %d, want 1 (second lookup should be cached)", calls)
+	}
+}
+
+// A page firing several requests at once (e.g. the chief review queue) sends
+// several concurrent Verify calls for the same bearer token before any of
+// them has cached a result. Without in-flight de-duplication, each one would
+// independently pay for a full Supabase round trip.
+func TestSupabaseVerifierDeduplicatesConcurrentCalls(t *testing.T) {
+	var calls int
+	var mu sync.Mutex
+	release := make(chan struct{})
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		calls++
+		mu.Unlock()
+		<-release
+		_, _ = w.Write([]byte(`{"email":"person@example.com"}`))
+	}))
+	defer server.Close()
+
+	v := NewSupabaseVerifier(server.URL, "anon-key")
+
+	const n = 5
+	var wg sync.WaitGroup
+	errs := make([]error, n)
+	emails := make([]string, n)
+	for i := range n {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			emails[i], errs[i] = v.Verify(t.Context(), "good-token")
+		}(i)
+	}
+
+	// Give every goroutine a chance to reach the server before any response
+	// is released, so they're genuinely concurrent rather than serialized.
+	time.Sleep(50 * time.Millisecond)
+	close(release)
+	wg.Wait()
+
+	for i := range n {
+		if errs[i] != nil {
+			t.Fatalf("call %d: unexpected error: %v", i, errs[i])
+		}
+		if emails[i] != "person@example.com" {
+			t.Fatalf("call %d: email = %q, want person@example.com", i, emails[i])
+		}
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+	if calls != 1 {
+		t.Fatalf("calls = %d, want 1 (concurrent calls should be deduplicated)", calls)
 	}
 }
 

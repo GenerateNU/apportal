@@ -8,6 +8,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"golang.org/x/sync/singleflight"
 )
 
 // verifyCacheTTL bounds how long a verified token is trusted without
@@ -28,6 +30,12 @@ type SupabaseVerifier struct {
 
 	mu    sync.Mutex
 	cache map[string]cachedIdentity
+
+	// Collapses concurrent Verify calls for the same token into one
+	// Supabase round trip — a page that fires several requests at once
+	// would otherwise pay for one /auth/v1/user call per request before
+	// any of them has a chance to populate the cache.
+	group singleflight.Group
 }
 
 type cachedIdentity struct {
@@ -58,32 +66,44 @@ func (v *SupabaseVerifier) Verify(ctx context.Context, token string) (string, er
 		return email, nil
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, v.baseURL+"/auth/v1/user", nil)
+	email, err, _ := v.group.Do(token, func() (any, error) {
+		// Re-check the cache: a sibling call may have populated it while
+		// this one waited to become the leader of its singleflight group.
+		if email, ok := v.cached(token); ok {
+			return email, nil
+		}
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, v.baseURL+"/auth/v1/user", nil)
+		if err != nil {
+			return "", err
+		}
+		req.Header.Set("Authorization", "Bearer "+token)
+		req.Header.Set("apikey", v.anonKey)
+
+		resp, err := v.http.Do(req)
+		if err != nil {
+			return "", err
+		}
+		defer func() { _ = resp.Body.Close() }()
+
+		if resp.StatusCode != http.StatusOK {
+			return "", errInvalidToken
+		}
+
+		var body struct {
+			Email string `json:"email"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&body); err != nil || body.Email == "" {
+			return "", errInvalidToken
+		}
+
+		v.store(token, body.Email)
+		return body.Email, nil
+	})
 	if err != nil {
 		return "", err
 	}
-	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("apikey", v.anonKey)
-
-	resp, err := v.http.Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode != http.StatusOK {
-		return "", errInvalidToken
-	}
-
-	var body struct {
-		Email string `json:"email"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil || body.Email == "" {
-		return "", errInvalidToken
-	}
-
-	v.store(token, body.Email)
-	return body.Email, nil
+	return email.(string), nil
 }
 
 func (v *SupabaseVerifier) cached(token string) (string, bool) {

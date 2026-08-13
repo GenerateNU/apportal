@@ -2,9 +2,12 @@
 import { PageContainer } from '@/components/PageContainer'
 
 import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowRight, Check, Loader2 } from 'lucide-react'
+import { ArrowRight, Check, Loader2, Search } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { ProgressBar } from '@/components/ProgressBar'
 import {
   Select,
   SelectContent,
@@ -21,6 +24,11 @@ import { useChiefReviewers, useCurrentUser } from '@/lib/queries/users'
 import { FILTER_STAGES } from '@/app/(portal)/reviewer/applications/components/constants'
 import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 
+type VoteFilter = 'needsVote' | 'all'
+
+// Same settle time as the applications table's and the lead queue's search.
+const SEARCH_DEBOUNCE_MS = 250
+
 // Persisted across visits (not just in-session) so leaving the queue to
 // review an applicant and coming back doesn't reset the filters.
 // v2: bumped so a stage: 'chief_review' saved under the old default doesn't
@@ -31,6 +39,7 @@ type StoredFilters = {
   cycleId?: string
   role?: Role | 'all'
   stage?: ApplicationStage | 'all'
+  voteFilter?: VoteFilter
 }
 
 function readStoredFilters(): StoredFilters {
@@ -67,6 +76,22 @@ export function ChiefReviewQueueClient() {
   const [activeStage, setActiveStageState] = useState<ApplicationStage | 'all'>(
     'all'
   )
+  // Defaults to the chief's own outstanding work, same as the lead queue
+  // defaulting to "assigned to me" — the point of this queue is finding
+  // applicants that still need a vote, not re-showing everyone every visit.
+  const [voteFilter, setVoteFilterState] = useState<VoteFilter>('needsVote')
+
+  // Matched server-side, so it narrows the whole queue rather than the rows
+  // already in hand.
+  const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  useEffect(() => {
+    const timer = setTimeout(
+      () => setDebouncedSearch(search),
+      SEARCH_DEBOUNCE_MS
+    )
+    return () => clearTimeout(timer)
+  }, [search])
 
   // Restored once on mount — done in an effect (rather than a useState
   // initializer) so the server-rendered markup and the first client render
@@ -77,6 +102,7 @@ export function ChiefReviewQueueClient() {
     if (stored.cycleId) setCycleIdState(stored.cycleId)
     if (stored.role) setActiveRoleState(stored.role)
     if (stored.stage) setActiveStageState(stored.stage)
+    if (stored.voteFilter) setVoteFilterState(stored.voteFilter)
   }, [])
 
   if (!cycleId && cycles.length > 0) {
@@ -96,6 +122,10 @@ export function ChiefReviewQueueClient() {
     setActiveStageState(stage)
     writeStoredFilters({ stage })
   }
+  function setVoteFilter(filter: VoteFilter) {
+    setVoteFilterState(filter)
+    writeStoredFilters({ voteFilter: filter })
+  }
 
   const { data: applications = [], isLoading: applicationsLoading } =
     useApplications(
@@ -104,6 +134,7 @@ export function ChiefReviewQueueClient() {
             cycle_id: cycleId,
             ...(activeRole !== 'all' && { role: activeRole }),
             ...(activeStage !== 'all' && { stage: activeStage }),
+            ...(debouncedSearch && { search: debouncedSearch }),
           }
         : undefined
     )
@@ -140,6 +171,25 @@ export function ChiefReviewQueueClient() {
     }
     return map
   }, [applicationIds, chiefReviewsByApplicationId])
+
+  // Own-vote progress across the current cycle/role/stage/search filters —
+  // independent of voteFilter below, which only changes what's *displayed*,
+  // not this denominator.
+  const votedCount = applicationIds.filter(
+    (id) => submittedByApplicationId[id]
+  ).length
+  // Voting through dozens of applicants is sequential work, so the primary
+  // action is "pick up where I left off" — same pattern as the lead queue's
+  // "Continue reviewing".
+  const nextUnvoted = applications.find((a) => !submittedByApplicationId[a.id])
+
+  const visibleApplications = useMemo(
+    () =>
+      voteFilter === 'needsVote'
+        ? applications.filter((a) => !submittedByApplicationId[a.id])
+        : applications,
+    [applications, voteFilter, submittedByApplicationId]
+  )
 
   // How many of the leads assigned to each application have submitted their
   // written review, so the queue can show "x/x reviews completed". Fetched
@@ -234,8 +284,63 @@ export function ChiefReviewQueueClient() {
               ))}
             </SelectContent>
           </Select>
+          <div className="relative w-full sm:w-60">
+            <Search className="text-text-subtle absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Search name or NUID..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="focus:border-brand-blue text-text-default placeholder:text-text-subtle w-full rounded-md border border-gray-200 py-1.5 pr-3 pl-9 text-sm focus:outline-none"
+            />
+          </div>
+          <div className="flex shrink-0 gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1">
+            {(
+              [
+                { value: 'needsVote', label: 'Needs my vote' },
+                { value: 'all', label: 'All' },
+              ] as const
+            ).map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setVoteFilter(option.value)}
+                className={cn(
+                  'rounded-md px-2.5 py-1 text-sm font-medium transition-colors',
+                  voteFilter === option.value
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700'
+                )}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
+
+      {applications.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <ProgressBar
+              value={votedCount}
+              total={applications.length}
+              className="w-40"
+            />
+            <span className="text-text-muted text-xs">
+              {votedCount} of {applications.length} voted
+            </span>
+          </div>
+          {nextUnvoted && (
+            <Button asChild>
+              <Link href={`/reviewer/chief-review/${nextUnvoted.id}`}>
+                {votedCount === 0 ? 'Start voting' : 'Continue voting'}
+                <ArrowRight data-icon="inline-end" size={14} />
+              </Link>
+            </Button>
+          )}
+        </div>
+      )}
 
       {isLoading ? (
         <div className="text-text-muted flex items-center gap-2 px-2 py-10 text-sm">
@@ -245,16 +350,30 @@ export function ChiefReviewQueueClient() {
       ) : applications.length === 0 ? (
         <div className="rounded-xl border border-dashed border-gray-200 bg-white p-10 text-center">
           <p className="text-text-default text-sm font-medium">
-            Nothing to review yet
+            {debouncedSearch
+              ? 'No applications match that search.'
+              : 'Nothing to review yet'}
           </p>
           <p className="text-text-muted mt-1 text-sm">
-            Submitted applications will show up here.
+            {debouncedSearch
+              ? 'Try a different name or NUID.'
+              : 'Submitted applications will show up here.'}
+          </p>
+        </div>
+      ) : visibleApplications.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-gray-200 bg-white p-10 text-center">
+          <p className="text-text-default text-sm font-medium">
+            You&apos;re all caught up
+          </p>
+          <p className="text-text-muted mt-1 text-sm">
+            Every applicant in this filter already has your vote — switch to
+            &quot;All&quot; to see them.
           </p>
         </div>
       ) : (
         <div className="flex flex-col gap-8">
           {ROLE_COLUMNS.map((role) => {
-            const roleApps = applications.filter((a) => a.role === role)
+            const roleApps = visibleApplications.filter((a) => a.role === role)
             if (roleApps.length === 0) return null
             return (
               <section key={role}>
