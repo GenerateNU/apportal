@@ -286,6 +286,13 @@ func (h *applicationHandler) update(ctx context.Context, in *UpdateApplicationIn
 			if current.Stage != models.StageDraft || *in.Body.Stage != models.StageSubmitted {
 				return nil, huma.Error403Forbidden("applicants may only submit their own draft")
 			}
+		} else if !actor.HasAnyRole(models.UserRoleChief, models.UserRoleAdmin) {
+			// Every other stage change — a lead moving an application through
+			// the pipeline, or an owner who also happens to hold a reviewer
+			// role — is a chief decision (advance to interview, reject,
+			// etc.), not something a plain lead reviewer can do just because
+			// they can view the application.
+			return nil, huma.Error403Forbidden("chief role required to change an application's stage")
 		}
 
 		// The draft->submitted completeness check applies regardless of who

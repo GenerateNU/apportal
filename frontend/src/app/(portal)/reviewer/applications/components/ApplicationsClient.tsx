@@ -479,6 +479,7 @@ export function ApplicationsClient() {
           <KanbanView
             applicants={filtered}
             availabilityByApplicationId={availabilityByApplicationId}
+            editable={isChief}
           />
         )}
       </div>

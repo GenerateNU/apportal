@@ -99,7 +99,11 @@ export function ApplicantRow({
         )
       })}
       <td className="border-r border-gray-100 px-3 py-2 whitespace-nowrap">
-        <StageSelect applicationId={applicant.id} stage={applicant.stage} />
+        <StageSelect
+          applicationId={applicant.id}
+          stage={applicant.stage}
+          editable={selectable}
+        />
       </td>
       <td className="text-text-muted px-3 py-2 text-sm whitespace-nowrap">
         {formatDate(applicant.submittedAt)}
