@@ -159,7 +159,7 @@ export default function Sidebar({ roles, fullName, isChief }: SidebarProps) {
       </div>
 
       {/* Nav sections */}
-      <nav className="flex flex-1 flex-col gap-4 overflow-hidden px-3 py-4">
+      <nav className="flex flex-1 flex-col gap-4 overflow-y-auto px-3 py-4">
         {sections.map((section) => (
           <div key={section.label}>
             <p className="text-text-subtle mb-2 px-2 text-xs font-semibold tracking-wider uppercase">
