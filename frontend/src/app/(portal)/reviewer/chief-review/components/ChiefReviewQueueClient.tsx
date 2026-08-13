@@ -28,9 +28,10 @@ import { useChiefReviewers, useCurrentUser } from '@/lib/queries/users'
 import { FILTER_STAGES } from '@/app/(portal)/reviewer/applications/components/constants'
 import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 
-// 'needsVote' and 'all' are my-queue scopes; a ChiefVote value narrows to
-// applicants I gave that specific vote.
-type VoteFilter = 'needsVote' | 'all' | ChiefVote
+// Whether to show every applicant or just the ones still needing my vote.
+type VoteScope = 'needsVote' | 'all'
+// Independent of VoteScope — narrows to applicants I gave this specific vote.
+type VoteValueFilter = 'all' | ChiefVote
 
 // Same settle time as the applications table's and the lead queue's search.
 const SEARCH_DEBOUNCE_MS = 250
@@ -45,7 +46,8 @@ type StoredFilters = {
   cycleId?: string
   role?: Role | 'all'
   stage?: ApplicationStage | 'all'
-  voteFilter?: VoteFilter
+  voteScope?: VoteScope
+  voteValue?: VoteValueFilter
 }
 
 function readStoredFilters(): StoredFilters {
@@ -85,7 +87,10 @@ export function ChiefReviewQueueClient() {
   // Defaults to the chief's own outstanding work, same as the lead queue
   // defaulting to "assigned to me" — the point of this queue is finding
   // applicants that still need a vote, not re-showing everyone every visit.
-  const [voteFilter, setVoteFilterState] = useState<VoteFilter>('needsVote')
+  const [voteScope, setVoteScopeState] = useState<VoteScope>('needsVote')
+  // Independent of voteScope — narrows to a specific vote value regardless
+  // of the scope toggle above.
+  const [voteValue, setVoteValueState] = useState<VoteValueFilter>('all')
 
   // Matched server-side, so it narrows the whole queue rather than the rows
   // already in hand.
@@ -108,7 +113,8 @@ export function ChiefReviewQueueClient() {
     if (stored.cycleId) setCycleIdState(stored.cycleId)
     if (stored.role) setActiveRoleState(stored.role)
     if (stored.stage) setActiveStageState(stored.stage)
-    if (stored.voteFilter) setVoteFilterState(stored.voteFilter)
+    if (stored.voteScope) setVoteScopeState(stored.voteScope)
+    if (stored.voteValue) setVoteValueState(stored.voteValue)
   }, [])
 
   if (!cycleId && cycles.length > 0) {
@@ -128,9 +134,13 @@ export function ChiefReviewQueueClient() {
     setActiveStageState(stage)
     writeStoredFilters({ stage })
   }
-  function setVoteFilter(filter: VoteFilter) {
-    setVoteFilterState(filter)
-    writeStoredFilters({ voteFilter: filter })
+  function setVoteScope(scope: VoteScope) {
+    setVoteScopeState(scope)
+    writeStoredFilters({ voteScope: scope })
+  }
+  function setVoteValue(value: VoteValueFilter) {
+    setVoteValueState(value)
+    writeStoredFilters({ voteValue: value })
   }
 
   const { data: applications = [], isLoading: applicationsLoading } =
@@ -185,8 +195,8 @@ export function ChiefReviewQueueClient() {
   }, [applicationIds, chiefReviewsByApplicationId])
 
   // Own-vote progress across the current cycle/role/stage/search filters —
-  // independent of voteFilter below, which only changes what's *displayed*,
-  // not this denominator.
+  // independent of voteScope/voteValue below, which only change what's
+  // *displayed*, not this denominator.
   const votedCount = applicationIds.filter(
     (id) => submittedByApplicationId[id]
   ).length
@@ -195,18 +205,22 @@ export function ChiefReviewQueueClient() {
   // "Continue reviewing".
   const nextUnvoted = applications.find((a) => !submittedByApplicationId[a.id])
 
+  // voteScope and voteValue are independent filters, applied together (AND):
+  // scope narrows to voted/unvoted, value narrows to a specific vote.
   const visibleApplications = useMemo(() => {
-    if (voteFilter === 'all') return applications
-    if (voteFilter === 'needsVote') {
-      return applications.filter((a) => !submittedByApplicationId[a.id])
-    }
-    // A specific ChiefVote — narrow to applicants I gave exactly that vote.
-    return applications.filter(
-      (a) => ownVoteByApplicationId[a.id] === voteFilter
-    )
+    return applications.filter((a) => {
+      if (voteScope === 'needsVote' && submittedByApplicationId[a.id]) {
+        return false
+      }
+      if (voteValue !== 'all' && ownVoteByApplicationId[a.id] !== voteValue) {
+        return false
+      }
+      return true
+    })
   }, [
     applications,
-    voteFilter,
+    voteScope,
+    voteValue,
     submittedByApplicationId,
     ownVoteByApplicationId,
   ])
@@ -315,15 +329,26 @@ export function ChiefReviewQueueClient() {
             />
           </div>
           <Select
-            value={voteFilter}
-            onValueChange={(val) => setVoteFilter(val as VoteFilter)}
+            value={voteScope}
+            onValueChange={(val) => setVoteScope(val as VoteScope)}
           >
-            <SelectTrigger className="w-64" aria-label="Filter by vote">
+            <SelectTrigger className="w-40" aria-label="Filter by vote status">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="needsVote">Needs my vote</SelectItem>
               <SelectItem value="all">All</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select
+            value={voteValue}
+            onValueChange={(val) => setVoteValue(val as VoteValueFilter)}
+          >
+            <SelectTrigger className="w-52" aria-label="Filter by vote value">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Any vote</SelectItem>
               {CHIEF_VOTE_ORDER.map((vote) => (
                 <SelectItem key={vote} value={vote}>
                   My vote: {CHIEF_VOTE_LABEL[vote]}
@@ -378,14 +403,14 @@ export function ChiefReviewQueueClient() {
       ) : visibleApplications.length === 0 ? (
         <div className="rounded-xl border border-dashed border-gray-200 bg-white p-10 text-center">
           <p className="text-text-default text-sm font-medium">
-            {voteFilter === 'needsVote'
-              ? "You're all caught up"
-              : 'No applicants match this vote'}
+            {voteValue !== 'all'
+              ? 'No applicants match this vote'
+              : "You're all caught up"}
           </p>
           <p className="text-text-muted mt-1 text-sm">
-            {voteFilter === 'needsVote'
-              ? 'Every applicant in this filter already has your vote — switch to "All" to see them.'
-              : 'Switch to "All" to see every applicant.'}
+            {voteValue !== 'all'
+              ? 'Try "Any vote" to clear the vote-value filter.'
+              : 'Every applicant in this filter already has your vote — switch to "All" to see them.'}
           </p>
         </div>
       ) : (
