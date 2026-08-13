@@ -5,7 +5,6 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ArrowRight, Check, Loader2, Search } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { ProgressBar } from '@/components/ProgressBar'
 import {
@@ -15,16 +14,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import type { ApplicationStage, Role } from '@/lib/api/types'
+import type { ApplicationStage, ChiefVote, Role } from '@/lib/api/types'
 import { useApplications } from '@/lib/queries/applications'
 import { useChiefReviewsByApplicationIdBatch } from '@/lib/queries/chief-reviews'
+import {
+  CHIEF_VOTE_BADGE_CLASS,
+  CHIEF_VOTE_LABEL,
+  CHIEF_VOTE_ORDER,
+} from '@/lib/chief-votes'
 import { pickDefaultCycleId, useCycles } from '@/lib/queries/cycles'
 import { useReviewerProgress } from '@/lib/queries/reviewer-progress'
 import { useChiefReviewers, useCurrentUser } from '@/lib/queries/users'
 import { FILTER_STAGES } from '@/app/(portal)/reviewer/applications/components/constants'
 import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 
-type VoteFilter = 'needsVote' | 'all'
+// Whether to show every applicant or just the ones still needing my vote.
+type VoteScope = 'needsVote' | 'all'
+// Independent of VoteScope — narrows to applicants I gave this specific vote.
+type VoteValueFilter = 'all' | ChiefVote
 
 // Same settle time as the applications table's and the lead queue's search.
 const SEARCH_DEBOUNCE_MS = 250
@@ -39,7 +46,8 @@ type StoredFilters = {
   cycleId?: string
   role?: Role | 'all'
   stage?: ApplicationStage | 'all'
-  voteFilter?: VoteFilter
+  voteScope?: VoteScope
+  voteValue?: VoteValueFilter
 }
 
 function readStoredFilters(): StoredFilters {
@@ -79,7 +87,10 @@ export function ChiefReviewQueueClient() {
   // Defaults to the chief's own outstanding work, same as the lead queue
   // defaulting to "assigned to me" — the point of this queue is finding
   // applicants that still need a vote, not re-showing everyone every visit.
-  const [voteFilter, setVoteFilterState] = useState<VoteFilter>('needsVote')
+  const [voteScope, setVoteScopeState] = useState<VoteScope>('needsVote')
+  // Independent of voteScope — narrows to a specific vote value regardless
+  // of the scope toggle above.
+  const [voteValue, setVoteValueState] = useState<VoteValueFilter>('all')
 
   // Matched server-side, so it narrows the whole queue rather than the rows
   // already in hand.
@@ -102,7 +113,8 @@ export function ChiefReviewQueueClient() {
     if (stored.cycleId) setCycleIdState(stored.cycleId)
     if (stored.role) setActiveRoleState(stored.role)
     if (stored.stage) setActiveStageState(stored.stage)
-    if (stored.voteFilter) setVoteFilterState(stored.voteFilter)
+    if (stored.voteScope) setVoteScopeState(stored.voteScope)
+    if (stored.voteValue) setVoteValueState(stored.voteValue)
   }, [])
 
   if (!cycleId && cycles.length > 0) {
@@ -122,9 +134,13 @@ export function ChiefReviewQueueClient() {
     setActiveStageState(stage)
     writeStoredFilters({ stage })
   }
-  function setVoteFilter(filter: VoteFilter) {
-    setVoteFilterState(filter)
-    writeStoredFilters({ voteFilter: filter })
+  function setVoteScope(scope: VoteScope) {
+    setVoteScopeState(scope)
+    writeStoredFilters({ voteScope: scope })
+  }
+  function setVoteValue(value: VoteValueFilter) {
+    setVoteValueState(value)
+    writeStoredFilters({ voteValue: value })
   }
 
   const { data: applications = [], isLoading: applicationsLoading } =
@@ -149,18 +165,24 @@ export function ChiefReviewQueueClient() {
   const { data: chiefReviewsByApplicationId = {}, isLoading: reviewsLoading } =
     useChiefReviewsByApplicationIdBatch(applicationIds)
 
-  // A review is a cast vote — a comment is optional and doesn't by itself
+  // The chief's own vote per application (undefined if not yet cast). A
+  // review is a cast vote — a comment is optional and doesn't by itself
   // count as having reviewed.
-  const submittedByApplicationId = useMemo(() => {
-    const map: Record<string, boolean> = {}
+  const ownVoteByApplicationId = useMemo(() => {
+    const map: Record<string, ChiefVote | undefined> = {}
     for (const id of applicationIds) {
       const own = chiefReviewsByApplicationId[id]?.find(
         (r) => r.reviewer_nuid === currentUser?.nuid
       )
-      map[id] = !!own?.vote
+      map[id] = own?.vote ?? undefined
     }
     return map
   }, [applicationIds, chiefReviewsByApplicationId, currentUser?.nuid])
+  const submittedByApplicationId = useMemo(() => {
+    const map: Record<string, boolean> = {}
+    for (const id of applicationIds) map[id] = !!ownVoteByApplicationId[id]
+    return map
+  }, [applicationIds, ownVoteByApplicationId])
 
   const chiefVoteCountByApplicationId = useMemo(() => {
     const map: Record<string, number> = {}
@@ -173,8 +195,8 @@ export function ChiefReviewQueueClient() {
   }, [applicationIds, chiefReviewsByApplicationId])
 
   // Own-vote progress across the current cycle/role/stage/search filters —
-  // independent of voteFilter below, which only changes what's *displayed*,
-  // not this denominator.
+  // independent of voteScope/voteValue below, which only change what's
+  // *displayed*, not this denominator.
   const votedCount = applicationIds.filter(
     (id) => submittedByApplicationId[id]
   ).length
@@ -183,13 +205,25 @@ export function ChiefReviewQueueClient() {
   // "Continue reviewing".
   const nextUnvoted = applications.find((a) => !submittedByApplicationId[a.id])
 
-  const visibleApplications = useMemo(
-    () =>
-      voteFilter === 'needsVote'
-        ? applications.filter((a) => !submittedByApplicationId[a.id])
-        : applications,
-    [applications, voteFilter, submittedByApplicationId]
-  )
+  // voteScope and voteValue are independent filters, applied together (AND):
+  // scope narrows to voted/unvoted, value narrows to a specific vote.
+  const visibleApplications = useMemo(() => {
+    return applications.filter((a) => {
+      if (voteScope === 'needsVote' && submittedByApplicationId[a.id]) {
+        return false
+      }
+      if (voteValue !== 'all' && ownVoteByApplicationId[a.id] !== voteValue) {
+        return false
+      }
+      return true
+    })
+  }, [
+    applications,
+    voteScope,
+    voteValue,
+    submittedByApplicationId,
+    ownVoteByApplicationId,
+  ])
 
   // How many of the leads assigned to each application have submitted their
   // written review, so the queue can show "x/x reviews completed". Fetched
@@ -294,28 +328,34 @@ export function ChiefReviewQueueClient() {
               className="focus:border-brand-blue text-text-default placeholder:text-text-subtle w-full rounded-md border border-gray-200 py-1.5 pr-3 pl-9 text-sm focus:outline-none"
             />
           </div>
-          <div className="flex shrink-0 gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1">
-            {(
-              [
-                { value: 'needsVote', label: 'Needs my vote' },
-                { value: 'all', label: 'All' },
-              ] as const
-            ).map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => setVoteFilter(option.value)}
-                className={cn(
-                  'rounded-md px-2.5 py-1 text-sm font-medium transition-colors',
-                  voteFilter === option.value
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-500 hover:text-gray-700'
-                )}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
+          <Select
+            value={voteScope}
+            onValueChange={(val) => setVoteScope(val as VoteScope)}
+          >
+            <SelectTrigger className="w-40" aria-label="Filter by vote status">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="needsVote">Needs my vote</SelectItem>
+              <SelectItem value="all">All</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select
+            value={voteValue}
+            onValueChange={(val) => setVoteValue(val as VoteValueFilter)}
+          >
+            <SelectTrigger className="w-52" aria-label="Filter by vote value">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Any vote</SelectItem>
+              {CHIEF_VOTE_ORDER.map((vote) => (
+                <SelectItem key={vote} value={vote}>
+                  My vote: {CHIEF_VOTE_LABEL[vote]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -363,11 +403,14 @@ export function ChiefReviewQueueClient() {
       ) : visibleApplications.length === 0 ? (
         <div className="rounded-xl border border-dashed border-gray-200 bg-white p-10 text-center">
           <p className="text-text-default text-sm font-medium">
-            You&apos;re all caught up
+            {voteValue !== 'all'
+              ? 'No applicants match this vote'
+              : "You're all caught up"}
           </p>
           <p className="text-text-muted mt-1 text-sm">
-            Every applicant in this filter already has your vote — switch to
-            &quot;All&quot; to see them.
+            {voteValue !== 'all'
+              ? 'Try "Any vote" to clear the vote-value filter.'
+              : 'Every applicant in this filter already has your vote — switch to "All" to see them.'}
           </p>
         </div>
       ) : (
@@ -386,6 +429,7 @@ export function ChiefReviewQueueClient() {
                 <div className="flex flex-col gap-3">
                   {roleApps.map((application) => {
                     const submitted = submittedByApplicationId[application.id]
+                    const ownVote = ownVoteByApplicationId[application.id]
                     const leadProgress =
                       leadReviewProgressByApplicationId[application.id]
                     const chiefVoteCount =
@@ -411,27 +455,36 @@ export function ChiefReviewQueueClient() {
                               reviews completed
                             </span>
                           )}
-                          {submitted && (
-                            <span className="bg-status-open/15 text-status-open inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium">
-                              <Check size={12} />
-                              Submitted
-                            </span>
-                          )}
                           <span className="rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
                             {chiefVoteCount}/{chiefs.length} chiefs reviewed
                           </span>
                         </div>
-                        <Button
-                          variant="outline"
-                          onClick={() =>
-                            router.push(
-                              `/reviewer/chief-review/${application.id}`
-                            )
-                          }
-                        >
-                          {submitted ? 'View' : 'Review'}
-                          <ArrowRight data-icon="inline-end" size={14} />
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          {submitted && ownVote && (
+                            <span
+                              className={`rounded-md px-2 py-0.5 text-xs font-medium ${CHIEF_VOTE_BADGE_CLASS[ownVote]}`}
+                            >
+                              {CHIEF_VOTE_LABEL[ownVote]}
+                            </span>
+                          )}
+                          {submitted && (
+                            <span className="bg-brand-blue/10 text-brand-blue inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium">
+                              <Check size={12} />
+                              Submitted
+                            </span>
+                          )}
+                          <Button
+                            variant="outline"
+                            onClick={() =>
+                              router.push(
+                                `/reviewer/chief-review/${application.id}`
+                              )
+                            }
+                          >
+                            {submitted ? 'View' : 'Review'}
+                            <ArrowRight data-icon="inline-end" size={14} />
+                          </Button>
+                        </div>
                       </div>
                     )
                   })}
