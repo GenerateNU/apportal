@@ -27,6 +27,8 @@ import type {
 import type {
   ErrorModel,
   ListReviewGates200,
+  ListReviewQuestionAverages200,
+  ListReviewQuestionAveragesParams,
   ListReviewerProgress200,
   ListReviewerProgressParams,
   ReviewGate,
@@ -225,6 +227,106 @@ export const useSetReviewRelease = <TError = ErrorModel | ErrorModel | ErrorMode
       return useMutation(mutationOptions, queryClient);
     }
     /**
+ * Chief only. One entry per lead with a role='lead' account, listing their average score on each of the cycle/role's score-type review questions.
+ * @summary Per-lead average score on each review question for a cycle
+ */
+export const listReviewQuestionAverages = (
+    id: string,
+    params?: ListReviewQuestionAveragesParams,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<ListReviewQuestionAverages200>(
+      {url: `/cycles/${id}/review-question-averages`, method: 'GET',
+        params, signal
+    },
+      options);
+    }
+  
+
+
+
+export const getListReviewQuestionAveragesQueryKey = (id?: string,
+    params?: ListReviewQuestionAveragesParams,) => {
+    return [
+    `/cycles/${id}/review-question-averages`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getListReviewQuestionAveragesQueryOptions = <TData = Awaited<ReturnType<typeof listReviewQuestionAverages>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(id: string,
+    params?: ListReviewQuestionAveragesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listReviewQuestionAverages>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListReviewQuestionAveragesQueryKey(id,params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listReviewQuestionAverages>>> = ({ signal }) => listReviewQuestionAverages(id,params, requestOptions, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listReviewQuestionAverages>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListReviewQuestionAveragesQueryResult = NonNullable<Awaited<ReturnType<typeof listReviewQuestionAverages>>>
+export type ListReviewQuestionAveragesQueryError = ErrorModel | ErrorModel | ErrorModel | ErrorModel
+
+
+export function useListReviewQuestionAverages<TData = Awaited<ReturnType<typeof listReviewQuestionAverages>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
+ id: string,
+    params: undefined |  ListReviewQuestionAveragesParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listReviewQuestionAverages>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listReviewQuestionAverages>>,
+          TError,
+          Awaited<ReturnType<typeof listReviewQuestionAverages>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListReviewQuestionAverages<TData = Awaited<ReturnType<typeof listReviewQuestionAverages>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
+ id: string,
+    params?: ListReviewQuestionAveragesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listReviewQuestionAverages>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listReviewQuestionAverages>>,
+          TError,
+          Awaited<ReturnType<typeof listReviewQuestionAverages>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListReviewQuestionAverages<TData = Awaited<ReturnType<typeof listReviewQuestionAverages>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
+ id: string,
+    params?: ListReviewQuestionAveragesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listReviewQuestionAverages>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Per-lead average score on each review question for a cycle
+ */
+
+export function useListReviewQuestionAverages<TData = Awaited<ReturnType<typeof listReviewQuestionAverages>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
+ id: string,
+    params?: ListReviewQuestionAveragesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listReviewQuestionAverages>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListReviewQuestionAveragesQueryOptions(id,params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+/**
  * Chief only. One entry per lead with any assignment or role='lead' account, listing every application assigned to them and whether their written review is submitted.
  * @summary Per-reviewer written-review progress for a cycle
  */
