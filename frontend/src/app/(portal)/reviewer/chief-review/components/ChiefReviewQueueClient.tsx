@@ -15,9 +15,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import type { ApplicationStage, Role } from '@/lib/api/types'
+import type { ApplicationStage, ChiefVote, Role } from '@/lib/api/types'
 import { useApplications } from '@/lib/queries/applications'
 import { useChiefReviewsByApplicationIdBatch } from '@/lib/queries/chief-reviews'
+import { CHIEF_VOTE_BADGE_CLASS, CHIEF_VOTE_LABEL } from '@/lib/chief-votes'
 import { pickDefaultCycleId, useCycles } from '@/lib/queries/cycles'
 import { useReviewerProgress } from '@/lib/queries/reviewer-progress'
 import { useChiefReviewers, useCurrentUser } from '@/lib/queries/users'
@@ -149,18 +150,24 @@ export function ChiefReviewQueueClient() {
   const { data: chiefReviewsByApplicationId = {}, isLoading: reviewsLoading } =
     useChiefReviewsByApplicationIdBatch(applicationIds)
 
-  // A review is a cast vote — a comment is optional and doesn't by itself
+  // The chief's own vote per application (undefined if not yet cast). A
+  // review is a cast vote — a comment is optional and doesn't by itself
   // count as having reviewed.
-  const submittedByApplicationId = useMemo(() => {
-    const map: Record<string, boolean> = {}
+  const ownVoteByApplicationId = useMemo(() => {
+    const map: Record<string, ChiefVote | undefined> = {}
     for (const id of applicationIds) {
       const own = chiefReviewsByApplicationId[id]?.find(
         (r) => r.reviewer_nuid === currentUser?.nuid
       )
-      map[id] = !!own?.vote
+      map[id] = own?.vote ?? undefined
     }
     return map
   }, [applicationIds, chiefReviewsByApplicationId, currentUser?.nuid])
+  const submittedByApplicationId = useMemo(() => {
+    const map: Record<string, boolean> = {}
+    for (const id of applicationIds) map[id] = !!ownVoteByApplicationId[id]
+    return map
+  }, [applicationIds, ownVoteByApplicationId])
 
   const chiefVoteCountByApplicationId = useMemo(() => {
     const map: Record<string, number> = {}
@@ -386,6 +393,7 @@ export function ChiefReviewQueueClient() {
                 <div className="flex flex-col gap-3">
                   {roleApps.map((application) => {
                     const submitted = submittedByApplicationId[application.id]
+                    const ownVote = ownVoteByApplicationId[application.id]
                     const leadProgress =
                       leadReviewProgressByApplicationId[application.id]
                     const chiefVoteCount =
@@ -411,27 +419,36 @@ export function ChiefReviewQueueClient() {
                               reviews completed
                             </span>
                           )}
-                          {submitted && (
-                            <span className="bg-status-open/15 text-status-open inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium">
-                              <Check size={12} />
-                              Submitted
-                            </span>
-                          )}
                           <span className="rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
                             {chiefVoteCount}/{chiefs.length} chiefs reviewed
                           </span>
                         </div>
-                        <Button
-                          variant="outline"
-                          onClick={() =>
-                            router.push(
-                              `/reviewer/chief-review/${application.id}`
-                            )
-                          }
-                        >
-                          {submitted ? 'View' : 'Review'}
-                          <ArrowRight data-icon="inline-end" size={14} />
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          {submitted && ownVote && (
+                            <span
+                              className={`rounded-md px-2 py-0.5 text-xs font-medium ${CHIEF_VOTE_BADGE_CLASS[ownVote]}`}
+                            >
+                              {CHIEF_VOTE_LABEL[ownVote]}
+                            </span>
+                          )}
+                          {submitted && (
+                            <span className="bg-brand-blue/10 text-brand-blue inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium">
+                              <Check size={12} />
+                              Submitted
+                            </span>
+                          )}
+                          <Button
+                            variant="outline"
+                            onClick={() =>
+                              router.push(
+                                `/reviewer/chief-review/${application.id}`
+                              )
+                            }
+                          >
+                            {submitted ? 'View' : 'Review'}
+                            <ArrowRight data-icon="inline-end" size={14} />
+                          </Button>
+                        </div>
                       </div>
                     )
                   })}
