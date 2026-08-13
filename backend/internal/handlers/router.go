@@ -22,6 +22,15 @@ const (
 	writeTimeout   = 15 * time.Second
 	idleTimeout    = 60 * time.Second
 	requestTimeout = 10 * time.Second
+
+	// fasthttp's default (4096) only leaves room for a few dozen UUIDs. The
+	// bulk endpoints (application_ids=...) allow up to maxBulkApplications
+	// (200) ids at ~37 bytes each, plus headers (notably the bearer token) —
+	// a request line that size overflows the default buffer, and fasthttp
+	// rejects it (431) before any handler, or even CORS, ever runs. The
+	// browser then reports it as a CORS failure, since the rejected response
+	// carries no Access-Control-Allow-Origin header.
+	readBufferSize = 16 * 1024
 )
 
 // Router holds shared dependencies for the plain (non-Huma) health endpoints.
@@ -37,9 +46,10 @@ func NewRouter(database *pgxpool.Pool, corsOrigins []string, supabaseURL, supaba
 	st := store.New(database)
 	verifier := middleware.NewSupabaseVerifier(supabaseURL, supabaseAnonKey)
 	app := fiber.New(fiber.Config{
-		ReadTimeout:  readTimeout,
-		WriteTimeout: writeTimeout,
-		IdleTimeout:  idleTimeout,
+		ReadTimeout:    readTimeout,
+		WriteTimeout:   writeTimeout,
+		IdleTimeout:    idleTimeout,
+		ReadBufferSize: readBufferSize,
 	})
 
 	// Middleware applies outermost-first.

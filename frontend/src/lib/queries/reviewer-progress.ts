@@ -4,6 +4,20 @@ import type { RequestOptions } from '@/lib/api/orval-mutator'
 import type { ReviewerProgress, Role } from '@/lib/api/types'
 import { queryKeys } from './keys'
 
+// Shared by the client hook below and the chief review queue's server-side
+// prefetch, so both fetch and shape this data identically.
+export async function fetchReviewerProgress(
+  cycleId: string,
+  role?: Role,
+  opts?: RequestOptions
+): Promise<ReviewerProgress[]> {
+  const data = (await listReviewerProgress(cycleId, { role }, opts)) ?? []
+  return data.map((p) => ({
+    ...p,
+    items: p.items ?? [],
+  })) as ReviewerProgress[]
+}
+
 // Per-lead written-review progress for a cycle × role: every application
 // assigned to them and whether it's submitted. Complements useReviewGates'
 // cycle-wide aggregate with a per-reviewer breakdown.
@@ -14,13 +28,7 @@ export function useReviewerProgress(
 ) {
   return useQuery({
     queryKey: queryKeys.reviewerProgress.list(cycleId, role),
-    queryFn: async () => {
-      const data = (await listReviewerProgress(cycleId, { role }, opts)) ?? []
-      return data.map((p) => ({
-        ...p,
-        items: p.items ?? [],
-      })) as ReviewerProgress[]
-    },
+    queryFn: () => fetchReviewerProgress(cycleId, role, opts),
     enabled: !!cycleId && !!role,
   })
 }
