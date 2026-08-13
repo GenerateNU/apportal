@@ -14,7 +14,6 @@ export interface ChiefReviewDetail {
   created_at: string;
   decided_at?: string;
   id: string;
-  notes?: string;
   reviewer_name?: string;
   reviewer_nuid: string;
   updated_at: string;

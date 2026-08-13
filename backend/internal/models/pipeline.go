@@ -103,16 +103,15 @@ type ReviewerProgressItem struct {
 	SubmittedAt   *time.Time `json:"submitted_at,omitempty"`
 }
 
-// ChiefReview: a chief's individual vote and notes on an application, after
-// the lead written reviews are in. One row per chief per application — see
-// ChiefVote for what each chief's vote means; the final advance/reject call
-// is made separately (by changing the application's stage) after discussing
-// everyone's votes.
+// ChiefReview: a chief's individual vote on an application, after the lead
+// written reviews are in. One row per chief per application — see ChiefVote
+// for what each chief's vote means; the final advance/reject call is made
+// separately (by changing the application's stage) after discussing
+// everyone's votes. Discussion itself happens as ChiefReviewComments.
 type ChiefReview struct {
 	ID            string     `json:"id"`
 	ApplicationID string     `json:"application_id"`
 	ReviewerNUID  string     `json:"reviewer_nuid"`
-	Notes         *string    `json:"notes,omitempty"`
 	Vote          *ChiefVote `json:"vote,omitempty"`
 	DecidedAt     *time.Time `json:"decided_at,omitempty"`
 	CreatedAt     time.Time  `json:"created_at"`
@@ -124,6 +123,24 @@ type ChiefReview struct {
 type ChiefReviewDetail struct {
 	ChiefReview
 	ReviewerName string `json:"reviewer_name,omitempty"`
+}
+
+// ChiefReviewComment is one comment a chief left on an application, separate
+// from their vote. A chief may leave any number of these and edit their own.
+type ChiefReviewComment struct {
+	ID            string    `json:"id"`
+	ApplicationID string    `json:"application_id"`
+	AuthorNUID    string    `json:"author_nuid"`
+	Body          string    `json:"body"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
+}
+
+// ChiefReviewCommentDetail bundles a comment with the author's resolved
+// display name (not a table column).
+type ChiefReviewCommentDetail struct {
+	ChiefReviewComment
+	AuthorName string `json:"author_name,omitempty"`
 }
 
 // InterviewAssignment: the single interviewer assigned to an application.

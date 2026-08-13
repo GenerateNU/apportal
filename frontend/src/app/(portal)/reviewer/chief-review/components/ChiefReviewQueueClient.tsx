@@ -1,9 +1,9 @@
 'use client'
 import { PageContainer } from '@/components/PageContainer'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowRight, Check } from 'lucide-react'
+import { ArrowRight, Check, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Select,
@@ -14,82 +14,162 @@ import {
 } from '@/components/ui/select'
 import type { ApplicationStage, Role } from '@/lib/api/types'
 import { useApplications } from '@/lib/queries/applications'
-import { useChiefReviewsByApplications } from '@/lib/queries/chief-reviews'
+import { useChiefReviewsByApplicationIdBatch } from '@/lib/queries/chief-reviews'
 import { pickDefaultCycleId, useCycles } from '@/lib/queries/cycles'
-import { useLeadAssignmentsByApplications } from '@/lib/queries/lead-assignments'
-import { useCurrentUser } from '@/lib/queries/users'
-import { useWrittenReviewsByApplicationIds } from '@/lib/queries/written-reviews'
+import { useReviewerProgress } from '@/lib/queries/reviewer-progress'
+import { useChiefs, useCurrentUser } from '@/lib/queries/users'
 import { FILTER_STAGES } from '@/app/(portal)/reviewer/applications/components/constants'
 import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
+
+// Persisted across visits (not just in-session) so leaving the queue to
+// review an applicant and coming back doesn't reset the filters.
+const FILTERS_STORAGE_KEY = 'chief-review-queue-filters'
+
+type StoredFilters = {
+  cycleId?: string
+  role?: Role | 'all'
+  stage?: ApplicationStage | 'all'
+}
+
+function readStoredFilters(): StoredFilters {
+  try {
+    return JSON.parse(localStorage.getItem(FILTERS_STORAGE_KEY) ?? '{}')
+  } catch {
+    return {}
+  }
+}
+
+function writeStoredFilters(patch: StoredFilters) {
+  localStorage.setItem(
+    FILTERS_STORAGE_KEY,
+    JSON.stringify({ ...readStoredFilters(), ...patch })
+  )
+}
 
 export function ChiefReviewQueueClient() {
   const router = useRouter()
   const { data: currentUser } = useCurrentUser()
   const { data: cycles = [] } = useCycles({})
+  const { data: chiefs = [] } = useChiefs()
 
   // Default cycle, same as the other chief-only pipeline pages. Shared with
   // the server prefetch in ../page.tsx, which scopes its application-list
   // prefetch to this same cycle.
-  const [cycleId, setCycleId] = useState('')
-  if (!cycleId && cycles.length > 0) {
-    const defaultId = pickDefaultCycleId(cycles)
-    if (defaultId) setCycleId(defaultId)
-  }
-  const [activeRole, setActiveRole] = useState<Role | 'all'>('all')
+  const [cycleId, setCycleIdState] = useState('')
+  const [activeRole, setActiveRoleState] = useState<Role | 'all'>('all')
   // Chief review is only actionable once a lead's finished with it, so the
   // queue starts scoped to that stage instead of every stage an application
   // ever passes through.
-  const [activeStage, setActiveStage] = useState<ApplicationStage | 'all'>(
+  const [activeStage, setActiveStageState] = useState<ApplicationStage | 'all'>(
     'chief_review'
   )
 
-  const { data: applications = [] } = useApplications(
-    cycleId
-      ? {
-          cycle_id: cycleId,
-          ...(activeRole !== 'all' && { role: activeRole }),
-          ...(activeStage !== 'all' && { stage: activeStage }),
-        }
-      : undefined
-  )
+  // Restored once on mount — done in an effect (rather than a useState
+  // initializer) so the server-rendered markup and the first client render
+  // match before localStorage is consulted.
+  useEffect(() => {
+    const stored = readStoredFilters()
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (stored.cycleId) setCycleIdState(stored.cycleId)
+    if (stored.role) setActiveRoleState(stored.role)
+    if (stored.stage) setActiveStageState(stored.stage)
+  }, [])
 
-  // Whether *my* review of each application counts as submitted (has a
-  // comment — casting a vote alone doesn't count), so the queue can show
-  // which ones are already done.
+  if (!cycleId && cycles.length > 0) {
+    const defaultId = pickDefaultCycleId(cycles)
+    if (defaultId) setCycleIdState(defaultId)
+  }
+
+  function setCycleId(id: string) {
+    setCycleIdState(id)
+    writeStoredFilters({ cycleId: id })
+  }
+  function setActiveRole(role: Role | 'all') {
+    setActiveRoleState(role)
+    writeStoredFilters({ role })
+  }
+  function setActiveStage(stage: ApplicationStage | 'all') {
+    setActiveStageState(stage)
+    writeStoredFilters({ stage })
+  }
+
+  const { data: applications = [], isLoading: applicationsLoading } =
+    useApplications(
+      cycleId
+        ? {
+            cycle_id: cycleId,
+            ...(activeRole !== 'all' && { role: activeRole }),
+            ...(activeStage !== 'all' && { stage: activeStage }),
+          }
+        : undefined
+    )
+
   const applicationIds = useMemo(
     () => applications.map((a) => a.id),
     [applications]
   )
-  const chiefReviewQueries = useChiefReviewsByApplications(applicationIds)
+
+  // All chief reviews for the queue in one request rather than one per
+  // application, used both for "have I reviewed this" and the vote count.
+  const { data: chiefReviewsByApplicationId = {}, isLoading: reviewsLoading } =
+    useChiefReviewsByApplicationIdBatch(applicationIds)
+
+  // A review is a cast vote — a comment is optional and doesn't by itself
+  // count as having reviewed.
   const submittedByApplicationId = useMemo(() => {
     const map: Record<string, boolean> = {}
-    applicationIds.forEach((id, i) => {
-      const own = chiefReviewQueries[i]?.data?.find(
+    for (const id of applicationIds) {
+      const own = chiefReviewsByApplicationId[id]?.find(
         (r) => r.reviewer_nuid === currentUser?.nuid
       )
-      map[id] = !!own?.notes?.trim()
-    })
+      map[id] = !!own?.vote
+    }
     return map
-  }, [applicationIds, chiefReviewQueries, currentUser?.nuid])
+  }, [applicationIds, chiefReviewsByApplicationId, currentUser?.nuid])
+
+  const chiefVoteCountByApplicationId = useMemo(() => {
+    const map: Record<string, number> = {}
+    for (const id of applicationIds) {
+      map[id] = (chiefReviewsByApplicationId[id] ?? []).filter(
+        (r) => !!r.vote
+      ).length
+    }
+    return map
+  }, [applicationIds, chiefReviewsByApplicationId])
 
   // How many of the leads assigned to each application have submitted their
-  // written review, so the queue can show "x/x reviews completed".
-  const leadAssignmentQueries = useLeadAssignmentsByApplications(applicationIds)
-  const writtenReviewQueries = useWrittenReviewsByApplicationIds(applicationIds)
-  const leadReviewProgressByApplicationId = useMemo(() => {
-    const map: Record<string, { completed: number; total: number }> = {}
-    applicationIds.forEach((id, i) => {
-      const assignedNuids = new Set(
-        leadAssignmentQueries[i]?.data?.map((a) => a.lead_nuid) ?? []
-      )
-      const reviews = writtenReviewQueries[i]?.data ?? []
-      const completed = reviews.filter(
-        (r) => assignedNuids.has(r.reviewer_nuid) && r.submitted_at
-      ).length
-      map[id] = { completed, total: assignedNuids.size }
-    })
-    return map
-  }, [applicationIds, leadAssignmentQueries, writtenReviewQueries])
+  // written review, so the queue can show "x/x reviews completed". Fetched
+  // per role — a fixed, small list, so this is always ROLE_COLUMNS.length
+  // requests rather than one per application. ROLE_COLUMNS is a module-level
+  // constant, so this calls the hook the same number of times every render.
+  const reviewerProgressQueries = ROLE_COLUMNS.map((role) =>
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    useReviewerProgress(cycleId, role)
+  )
+  const activeReviewerProgressQueries = reviewerProgressQueries.filter(
+    (_, i) => activeRole === 'all' || ROLE_COLUMNS[i] === activeRole
+  )
+  const leadReviewProgressByApplicationId: Record<
+    string,
+    { completed: number; total: number }
+  > = {}
+  for (const query of activeReviewerProgressQueries) {
+    for (const lead of query.data ?? []) {
+      for (const item of lead.items) {
+        const entry = leadReviewProgressByApplicationId[
+          item.application_id
+        ] ?? { completed: 0, total: 0 }
+        entry.total += 1
+        if (item.submitted_at) entry.completed += 1
+        leadReviewProgressByApplicationId[item.application_id] = entry
+      }
+    }
+  }
+
+  const isLoading =
+    applicationsLoading ||
+    reviewsLoading ||
+    activeReviewerProgressQueries.some((q) => q.isLoading)
 
   return (
     <PageContainer>
@@ -152,7 +232,12 @@ export function ChiefReviewQueueClient() {
         </div>
       </div>
 
-      {applications.length === 0 ? (
+      {isLoading ? (
+        <div className="text-text-muted flex items-center gap-2 px-2 py-10 text-sm">
+          <Loader2 className="animate-spin" size={16} />
+          Loading…
+        </div>
+      ) : applications.length === 0 ? (
         <div className="rounded-xl border border-dashed border-gray-200 bg-white p-10 text-center">
           <p className="text-text-default text-sm font-medium">
             Nothing to review yet
@@ -179,6 +264,8 @@ export function ChiefReviewQueueClient() {
                     const submitted = submittedByApplicationId[application.id]
                     const leadProgress =
                       leadReviewProgressByApplicationId[application.id]
+                    const chiefVoteCount =
+                      chiefVoteCountByApplicationId[application.id] ?? 0
                     return (
                       <div
                         key={application.id}
@@ -206,6 +293,9 @@ export function ChiefReviewQueueClient() {
                               Submitted
                             </span>
                           )}
+                          <span className="rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+                            {chiefVoteCount}/{chiefs.length} chiefs reviewed
+                          </span>
                         </div>
                         <Button
                           variant="outline"

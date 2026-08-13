@@ -129,6 +129,17 @@ export const queryKeys = {
     lists: () => [...queryKeys.chiefReviews.all, 'list'] as const,
     list: (applicationId: string) =>
       [...queryKeys.chiefReviews.lists(), applicationId] as const,
+    // One entry per batch of applications fetched together. Keyed by the exact
+    // id list so a batch stays cached as more are loaded alongside it.
+    bulk: (applicationIds: string[]) =>
+      [...queryKeys.chiefReviews.all, 'bulk', applicationIds] as const,
+  },
+
+  chiefReviewComments: {
+    all: ['chief-review-comments'] as const,
+    lists: () => [...queryKeys.chiefReviewComments.all, 'list'] as const,
+    list: (applicationId: string) =>
+      [...queryKeys.chiefReviewComments.lists(), applicationId] as const,
   },
 
   leadAssignments: {

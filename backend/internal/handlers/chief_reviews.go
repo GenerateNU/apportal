@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"net/http"
+	"strings"
 
 	"github.com/danielgtaylor/huma/v2"
 
@@ -33,6 +34,46 @@ func (h *chiefReviewHandler) register(api huma.API) {
 		Tags:        []string{"Chief reviews"},
 		Errors:      []int{http.StatusUnauthorized},
 	}, h.list)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "list-chief-reviews-bulk",
+		Method:      http.MethodGet,
+		Path:        "/chief-reviews",
+		Summary:     "List chief reviews for several applications",
+		Description: "One request for a page of applications, instead of one per application.",
+		Tags:        []string{"Chief reviews"},
+		Errors:      []int{http.StatusUnauthorized, http.StatusUnprocessableEntity},
+	}, h.listBulk)
+}
+
+type ListChiefReviewsBulkInput struct {
+	// Comma-separated rather than a repeated/array param because huma splits
+	// this form itself, while the browser client serializes arrays as
+	// `application_ids[]=…`, which binds to nothing server-side.
+	ApplicationIDs string `query:"application_ids" doc:"Comma-separated application IDs"`
+}
+
+func (h *chiefReviewHandler) listBulk(ctx context.Context, in *ListChiefReviewsBulkInput) (*ChiefReviewsOutput, error) {
+	if err := requireReviewer(ctx); err != nil {
+		return nil, err
+	}
+	ids := make([]string, 0, 8)
+	for _, id := range strings.Split(in.ApplicationIDs, ",") {
+		if id = strings.TrimSpace(id); id != "" {
+			ids = append(ids, id)
+		}
+	}
+	if len(ids) == 0 {
+		return &ChiefReviewsOutput{Body: []models.ChiefReviewDetail{}}, nil
+	}
+	if len(ids) > maxBulkApplications {
+		return nil, huma.Error422UnprocessableEntity("too many application_ids")
+	}
+	items, err := h.store.ListChiefReviewsForApplications(ctx, ids)
+	if err != nil {
+		return nil, storeErr(err)
+	}
+	return &ChiefReviewsOutput{Body: items}, nil
 }
 
 type ChiefReviewOutput struct {
@@ -46,8 +87,7 @@ type ChiefReviewsOutput struct {
 type UpsertChiefReviewInput struct {
 	ID   string `path:"id" doc:"Application ID"`
 	Body struct {
-		Notes *string           `json:"notes,omitempty"`
-		Vote  *models.ChiefVote `json:"vote,omitempty"`
+		Vote *models.ChiefVote `json:"vote,omitempty"`
 	}
 }
 
@@ -61,7 +101,6 @@ func (h *chiefReviewHandler) upsert(ctx context.Context, in *UpsertChiefReviewIn
 	review, err := h.store.UpsertChiefReview(ctx, store.ChiefReviewUpsert{
 		ApplicationID: in.ID,
 		ReviewerNUID:  currentActor(ctx).NUID,
-		Notes:         in.Body.Notes,
 		Vote:          in.Body.Vote,
 	})
 	if err != nil {
