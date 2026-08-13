@@ -140,8 +140,12 @@ export function ChiefReviewClient({
 
   // Re-seed whenever we land on a different application (Next/Previous swap
   // applicationId in place rather than remounting this component), so the
-  // form doesn't keep showing the previous applicant's draft.
+  // form doesn't keep showing the previous applicant's draft. Also re-seeds
+  // once `own` finishes loading, so a vote fetched after mount still lands
+  // in the form — not just a plain "reset on prop change" the render phase
+  // could handle instead.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setVote(own?.vote)
     setSaved(false)
     setNewComment('')

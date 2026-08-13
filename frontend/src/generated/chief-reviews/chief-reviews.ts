@@ -137,6 +137,229 @@ export const useUpsertChiefReview = <TError = ErrorModel | ErrorModel | ErrorMod
       return useMutation(mutationOptions, queryClient);
     }
     /**
+ * @summary List an application's chief review comments
+ */
+export const listChiefReviewComments = (
+    id: string,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<ListChiefReviewComments200>(
+      {url: `/applications/${id}/chief-review-comments`, method: 'GET', signal
+    },
+      options);
+    }
+  
+
+
+
+export const getListChiefReviewCommentsQueryKey = (id?: string,) => {
+    return [
+    `/applications/${id}/chief-review-comments`
+    ] as const;
+    }
+
+    
+export const getListChiefReviewCommentsQueryOptions = <TData = Awaited<ReturnType<typeof listChiefReviewComments>>, TError = ErrorModel | ErrorModel | ErrorModel>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listChiefReviewComments>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListChiefReviewCommentsQueryKey(id);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listChiefReviewComments>>> = ({ signal }) => listChiefReviewComments(id, requestOptions, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listChiefReviewComments>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListChiefReviewCommentsQueryResult = NonNullable<Awaited<ReturnType<typeof listChiefReviewComments>>>
+export type ListChiefReviewCommentsQueryError = ErrorModel | ErrorModel | ErrorModel
+
+
+export function useListChiefReviewComments<TData = Awaited<ReturnType<typeof listChiefReviewComments>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+ id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listChiefReviewComments>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listChiefReviewComments>>,
+          TError,
+          Awaited<ReturnType<typeof listChiefReviewComments>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListChiefReviewComments<TData = Awaited<ReturnType<typeof listChiefReviewComments>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listChiefReviewComments>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listChiefReviewComments>>,
+          TError,
+          Awaited<ReturnType<typeof listChiefReviewComments>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListChiefReviewComments<TData = Awaited<ReturnType<typeof listChiefReviewComments>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listChiefReviewComments>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List an application's chief review comments
+ */
+
+export function useListChiefReviewComments<TData = Awaited<ReturnType<typeof listChiefReviewComments>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listChiefReviewComments>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListChiefReviewCommentsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+/**
+ * Chief only. A chief may leave any number of comments on an application.
+ * @summary Add a chief review comment
+ */
+export const createChiefReviewComment = (
+    id: string,
+    createChiefReviewCommentInputBody: NonReadonly<CreateChiefReviewCommentInputBody>,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<ChiefReviewCommentDetail>(
+      {url: `/applications/${id}/chief-review-comments`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: createChiefReviewCommentInputBody, signal
+    },
+      options);
+    }
+  
+
+
+export const getCreateChiefReviewCommentMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createChiefReviewComment>>, TError,{id: string;data: NonReadonly<CreateChiefReviewCommentInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof createChiefReviewComment>>, TError,{id: string;data: NonReadonly<CreateChiefReviewCommentInputBody>}, TContext> => {
+
+const mutationKey = ['createChiefReviewComment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createChiefReviewComment>>, {id: string;data: NonReadonly<CreateChiefReviewCommentInputBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createChiefReviewComment(id,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateChiefReviewCommentMutationResult = NonNullable<Awaited<ReturnType<typeof createChiefReviewComment>>>
+    export type CreateChiefReviewCommentMutationBody = NonReadonly<CreateChiefReviewCommentInputBody>
+    export type CreateChiefReviewCommentMutationError = ErrorModel | ErrorModel | ErrorModel | ErrorModel
+
+    /**
+ * @summary Add a chief review comment
+ */
+export const useCreateChiefReviewComment = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createChiefReviewComment>>, TError,{id: string;data: NonReadonly<CreateChiefReviewCommentInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof createChiefReviewComment>>,
+        TError,
+        {id: string;data: NonReadonly<CreateChiefReviewCommentInputBody>},
+        TContext
+      > => {
+
+      const mutationOptions = getCreateChiefReviewCommentMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * Chief only, and only the comment's own author.
+ * @summary Edit a chief review comment
+ */
+export const updateChiefReviewComment = (
+    id: string,
+    commentId: string,
+    updateChiefReviewCommentInputBody: NonReadonly<UpdateChiefReviewCommentInputBody>,
+ options?: SecondParameter<typeof customInstance>,) => {
+      
+      
+      return customInstance<ChiefReviewCommentDetail>(
+      {url: `/applications/${id}/chief-review-comments/${commentId}`, method: 'PUT',
+      headers: {'Content-Type': 'application/json', },
+      data: updateChiefReviewCommentInputBody
+    },
+      options);
+    }
+  
+
+
+export const getUpdateChiefReviewCommentMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateChiefReviewComment>>, TError,{id: string;commentId: string;data: NonReadonly<UpdateChiefReviewCommentInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateChiefReviewComment>>, TError,{id: string;commentId: string;data: NonReadonly<UpdateChiefReviewCommentInputBody>}, TContext> => {
+
+const mutationKey = ['updateChiefReviewComment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateChiefReviewComment>>, {id: string;commentId: string;data: NonReadonly<UpdateChiefReviewCommentInputBody>}> = (props) => {
+          const {id,commentId,data} = props ?? {};
+
+          return  updateChiefReviewComment(id,commentId,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateChiefReviewCommentMutationResult = NonNullable<Awaited<ReturnType<typeof updateChiefReviewComment>>>
+    export type UpdateChiefReviewCommentMutationBody = NonReadonly<UpdateChiefReviewCommentInputBody>
+    export type UpdateChiefReviewCommentMutationError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel
+
+    /**
+ * @summary Edit a chief review comment
+ */
+export const useUpdateChiefReviewComment = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateChiefReviewComment>>, TError,{id: string;commentId: string;data: NonReadonly<UpdateChiefReviewCommentInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof updateChiefReviewComment>>,
+        TError,
+        {id: string;commentId: string;data: NonReadonly<UpdateChiefReviewCommentInputBody>},
+        TContext
+      > => {
+
+      const mutationOptions = getUpdateChiefReviewCommentMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
  * @summary List an application's chief reviews
  */
 export const listChiefReviews = (
@@ -235,70 +458,88 @@ export const listChiefReviewsBulk = (
     params?: ListChiefReviewsBulkParams,
  options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
 ) => {
-
-
+      
+      
       return customInstance<ListChiefReviewsBulk200>(
       {url: `/chief-reviews`, method: 'GET',
         params, signal
     },
       options);
     }
+  
 
 
 
-/**
- * @summary List an application's chief review comments
- */
-export const listChiefReviewComments = (
-    id: string,
- options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+export const getListChiefReviewsBulkQueryKey = (params?: ListChiefReviewsBulkParams,) => {
+    return [
+    `/chief-reviews`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getListChiefReviewsBulkQueryOptions = <TData = Awaited<ReturnType<typeof listChiefReviewsBulk>>, TError = ErrorModel | ErrorModel | ErrorModel>(params?: ListChiefReviewsBulkParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listChiefReviewsBulk>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
-      return customInstance<ListChiefReviewComments200>(
-      {url: `/applications/${id}/chief-review-comments`, method: 'GET', signal
-    },
-      options);
-    }
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListChiefReviewsBulkQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listChiefReviewsBulk>>> = ({ signal }) => listChiefReviewsBulk(params, requestOptions, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listChiefReviewsBulk>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListChiefReviewsBulkQueryResult = NonNullable<Awaited<ReturnType<typeof listChiefReviewsBulk>>>
+export type ListChiefReviewsBulkQueryError = ErrorModel | ErrorModel | ErrorModel
 
 
-
+export function useListChiefReviewsBulk<TData = Awaited<ReturnType<typeof listChiefReviewsBulk>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+ params: undefined |  ListChiefReviewsBulkParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listChiefReviewsBulk>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listChiefReviewsBulk>>,
+          TError,
+          Awaited<ReturnType<typeof listChiefReviewsBulk>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListChiefReviewsBulk<TData = Awaited<ReturnType<typeof listChiefReviewsBulk>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+ params?: ListChiefReviewsBulkParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listChiefReviewsBulk>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listChiefReviewsBulk>>,
+          TError,
+          Awaited<ReturnType<typeof listChiefReviewsBulk>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListChiefReviewsBulk<TData = Awaited<ReturnType<typeof listChiefReviewsBulk>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+ params?: ListChiefReviewsBulkParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listChiefReviewsBulk>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
- * Chief only. A chief may leave any number of comments on an application.
- * @summary Add a chief review comment
+ * @summary List chief reviews for several applications
  */
-export const createChiefReviewComment = (
-    id: string,
-    createChiefReviewCommentInputBody: CreateChiefReviewCommentInputBody,
- options?: SecondParameter<typeof customInstance>,) => {
 
-      return customInstance<ChiefReviewCommentDetail>(
-      {url: `/applications/${id}/chief-review-comments`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: createChiefReviewCommentInputBody
-    },
-      options);
-    }
+export function useListChiefReviewsBulk<TData = Awaited<ReturnType<typeof listChiefReviewsBulk>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+ params?: ListChiefReviewsBulkParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listChiefReviewsBulk>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
+  const queryOptions = getListChiefReviewsBulkQueryOptions(params,options)
 
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
-/**
- * Chief only, and only the comment's own author.
- * @summary Edit a chief review comment
- */
-export const updateChiefReviewComment = (
-    id: string,
-    commentId: string,
-    updateChiefReviewCommentInputBody: UpdateChiefReviewCommentInputBody,
- options?: SecondParameter<typeof customInstance>,) => {
+  query.queryKey = queryOptions.queryKey ;
 
-      return customInstance<ChiefReviewCommentDetail>(
-      {url: `/applications/${id}/chief-review-comments/${commentId}`, method: 'PUT',
-      headers: {'Content-Type': 'application/json', },
-      data: updateChiefReviewCommentInputBody
-    },
-      options);
-    }
-
+  return query;
+}
 
 
 

@@ -9,5 +9,6 @@
 export interface CreateChiefReviewCommentInputBody {
   /** A URL to the JSON Schema for this object. */
   readonly $schema?: string;
+  /** @minLength 1 */
   body: string;
 }

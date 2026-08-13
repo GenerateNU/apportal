@@ -69,6 +69,7 @@ export function ChiefReviewQueueClient() {
   // match before localStorage is consulted.
   useEffect(() => {
     const stored = readStoredFilters()
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (stored.cycleId) setCycleIdState(stored.cycleId)
     if (stored.role) setActiveRoleState(stored.role)
     if (stored.stage) setActiveStageState(stored.stage)
@@ -142,6 +143,7 @@ export function ChiefReviewQueueClient() {
   // requests rather than one per application. ROLE_COLUMNS is a module-level
   // constant, so this calls the hook the same number of times every render.
   const reviewerProgressQueries = ROLE_COLUMNS.map((role) =>
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     useReviewerProgress(cycleId, role)
   )
   const activeReviewerProgressQueries = reviewerProgressQueries.filter(
