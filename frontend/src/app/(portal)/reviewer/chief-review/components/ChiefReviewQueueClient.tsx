@@ -17,7 +17,7 @@ import { useApplications } from '@/lib/queries/applications'
 import { useChiefReviewsByApplicationIdBatch } from '@/lib/queries/chief-reviews'
 import { pickDefaultCycleId, useCycles } from '@/lib/queries/cycles'
 import { useReviewerProgress } from '@/lib/queries/reviewer-progress'
-import { useChiefs, useCurrentUser } from '@/lib/queries/users'
+import { useChiefReviewers, useCurrentUser } from '@/lib/queries/users'
 import { FILTER_STAGES } from '@/app/(portal)/reviewer/applications/components/constants'
 import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 
@@ -50,7 +50,7 @@ export function ChiefReviewQueueClient() {
   const router = useRouter()
   const { data: currentUser } = useCurrentUser()
   const { data: cycles = [] } = useCycles({})
-  const { data: chiefs = [] } = useChiefs()
+  const { data: chiefs = [], isLoading: chiefsLoading } = useChiefReviewers()
 
   // Default cycle, same as the other chief-only pipeline pages. Shared with
   // the server prefetch in ../page.tsx, which scopes its application-list
@@ -169,6 +169,7 @@ export function ChiefReviewQueueClient() {
   const isLoading =
     applicationsLoading ||
     reviewsLoading ||
+    chiefsLoading ||
     activeReviewerProgressQueries.some((q) => q.isLoading)
 
   return (

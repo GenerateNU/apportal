@@ -1,4 +1,10 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMemo } from 'react'
+import {
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query'
 import {
   createUser,
   getCurrentUser,
@@ -49,6 +55,28 @@ export function useChiefs(opts?: RequestOptions) {
     queryFn: async () =>
       ((await listUsers({ role: 'chief' }, opts))?.users ?? []) as User[],
   })
+}
+
+// Chiefs and admins — who together can cast a chief review vote
+// (`requireChief` on the backend accepts either role), so this is the
+// denominator for "x/y chiefs reviewed". `useChiefs` alone undercounts:
+// it's scoped to the interviewer picker, where admins aren't included.
+export function useChiefReviewers(opts?: RequestOptions) {
+  const queries = useQueries({
+    queries: (['chief', 'admin'] as const).map((role) => ({
+      queryKey: [...queryKeys.users.lists(), role],
+      queryFn: async () =>
+        ((await listUsers({ role }, opts))?.users ?? []) as User[],
+    })),
+  })
+  const data = useMemo(() => {
+    const byNuid = new Map<string, User>()
+    for (const q of queries) {
+      for (const u of q.data ?? []) byNuid.set(u.nuid, u)
+    }
+    return Array.from(byNuid.values())
+  }, [queries])
+  return { data, isLoading: queries.some((q) => q.isLoading) }
 }
 
 // Paginated member list for admin/members' infinite scroll. `limit` is a
