@@ -11,6 +11,7 @@ import { listChiefReviews } from '@/generated/chief-reviews/chief-reviews'
 import { listCycleQuestions } from '@/generated/questions/questions'
 import { listCycleReviewQuestions } from '@/generated/review-questions/review-questions'
 import { listWrittenReviews } from '@/generated/written-reviews/written-reviews'
+import { getCurrentUser } from '@/generated/users/users'
 import type { Application, Role } from '@/lib/api/types'
 import { getServerRequestOptions } from '@/lib/api/server-request-options'
 import { queryKeys } from '@/lib/queries/keys'
@@ -20,11 +21,29 @@ import { ChiefReviewClient } from './components/ChiefReviewClient'
 // this at build time (the backend isn't running then).
 export const dynamic = 'force-dynamic'
 
+// Chief/admin only. The sidebar hides this link from leads, but that alone
+// leaves the route reachable by URL, so the check is repeated here on the
+// server. The backend is still the actual boundary — every chief-review read
+// endpoint calls requireChief — this just avoids rendering a page whose every
+// request would 403.
+async function isChief(): Promise<boolean> {
+  try {
+    const user = await getCurrentUser(await getServerRequestOptions())
+    return (user.roles ?? []).some(
+      (role) => role === 'chief' || role === 'admin'
+    )
+  } catch {
+    return false
+  }
+}
+
 export default async function ChiefReviewPage({
   params,
 }: {
   params: Promise<{ id: string }>
 }) {
+  if (!(await isChief())) notFound()
+
   const { id } = await params
   const queryClient = new QueryClient()
   const requestOptions = await getServerRequestOptions()

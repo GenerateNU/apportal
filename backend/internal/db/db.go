@@ -17,7 +17,12 @@ func Open(ctx context.Context, databaseURL string) (*pgxpool.Pool, error) {
 		return nil, err
 	}
 
-	config.MaxConns = 5
+	// 5 was too tight: a single page can fan out into a dozen-plus queries
+	// (e.g. chief-review's detail page prefetches ~7 endpoints in parallel,
+	// several of which issue 2-3 sequential queries of their own), so they
+	// were queueing for a free connection instead of actually running
+	// concurrently.
+	config.MaxConns = 20
 	config.MaxConnLifetime = 30 * time.Minute
 
 	// Supabase's connection poolers (PgBouncer/Supavisor in transaction mode,
