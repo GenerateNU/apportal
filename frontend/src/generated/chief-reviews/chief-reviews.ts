@@ -25,9 +25,15 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  ChiefReviewCommentDetail,
   ChiefReviewDetail,
+  CreateChiefReviewCommentInputBody,
   ErrorModel,
+  ListChiefReviewComments200,
   ListChiefReviews200,
+  ListChiefReviewsBulk200,
+  ListChiefReviewsBulkParams,
+  UpdateChiefReviewCommentInputBody,
   UpsertChiefReviewInputBody
 } from '.././model';
 
@@ -218,6 +224,81 @@ export function useListChiefReviews<TData = Awaited<ReturnType<typeof listChiefR
 
   return query;
 }
+
+
+
+/**
+ * One request for a page of applications, instead of one per application.
+ * @summary List chief reviews for several applications
+ */
+export const listChiefReviewsBulk = (
+    params?: ListChiefReviewsBulkParams,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+
+
+      return customInstance<ListChiefReviewsBulk200>(
+      {url: `/chief-reviews`, method: 'GET',
+        params, signal
+    },
+      options);
+    }
+
+
+
+/**
+ * @summary List an application's chief review comments
+ */
+export const listChiefReviewComments = (
+    id: string,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+
+      return customInstance<ListChiefReviewComments200>(
+      {url: `/applications/${id}/chief-review-comments`, method: 'GET', signal
+    },
+      options);
+    }
+
+
+
+/**
+ * Chief only. A chief may leave any number of comments on an application.
+ * @summary Add a chief review comment
+ */
+export const createChiefReviewComment = (
+    id: string,
+    createChiefReviewCommentInputBody: CreateChiefReviewCommentInputBody,
+ options?: SecondParameter<typeof customInstance>,) => {
+
+      return customInstance<ChiefReviewCommentDetail>(
+      {url: `/applications/${id}/chief-review-comments`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: createChiefReviewCommentInputBody
+    },
+      options);
+    }
+
+
+
+/**
+ * Chief only, and only the comment's own author.
+ * @summary Edit a chief review comment
+ */
+export const updateChiefReviewComment = (
+    id: string,
+    commentId: string,
+    updateChiefReviewCommentInputBody: UpdateChiefReviewCommentInputBody,
+ options?: SecondParameter<typeof customInstance>,) => {
+
+      return customInstance<ChiefReviewCommentDetail>(
+      {url: `/applications/${id}/chief-review-comments/${commentId}`, method: 'PUT',
+      headers: {'Content-Type': 'application/json', },
+      data: updateChiefReviewCommentInputBody
+    },
+      options);
+    }
+
 
 
 
