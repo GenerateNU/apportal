@@ -23,7 +23,9 @@ import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 
 // Persisted across visits (not just in-session) so leaving the queue to
 // review an applicant and coming back doesn't reset the filters.
-const FILTERS_STORAGE_KEY = 'chief-review-queue-filters'
+// v2: bumped so a stage: 'chief_review' saved under the old default doesn't
+// resurrect it — that default hid almost everything (see activeStage below).
+const FILTERS_STORAGE_KEY = 'chief-review-queue-filters-v2'
 
 type StoredFilters = {
   cycleId?: string
@@ -57,11 +59,13 @@ export function ChiefReviewQueueClient() {
   // prefetch to this same cycle.
   const [cycleId, setCycleIdState] = useState('')
   const [activeRole, setActiveRoleState] = useState<Role | 'all'>('all')
-  // Chief review is only actionable once a lead's finished with it, so the
-  // queue starts scoped to that stage instead of every stage an application
-  // ever passes through.
+  // Advancing an application to the chief_review stage is a manual, separate
+  // action nobody reliably takes — defaulting this filter to that stage hid
+  // every application chiefs actually needed to see (and already-cast votes
+  // on applications still sitting in lead_review). Starts unfiltered; the
+  // stage dropdown remains for narrowing manually.
   const [activeStage, setActiveStageState] = useState<ApplicationStage | 'all'>(
-    'chief_review'
+    'all'
   )
 
   // Restored once on mount — done in an effect (rather than a useState

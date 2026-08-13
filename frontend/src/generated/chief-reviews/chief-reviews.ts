@@ -137,6 +137,7 @@ export const useUpsertChiefReview = <TError = ErrorModel | ErrorModel | ErrorMod
       return useMutation(mutationOptions, queryClient);
     }
     /**
+ * Chief only.
  * @summary List an application's chief review comments
  */
 export const listChiefReviewComments = (
@@ -161,7 +162,7 @@ export const getListChiefReviewCommentsQueryKey = (id?: string,) => {
     }
 
     
-export const getListChiefReviewCommentsQueryOptions = <TData = Awaited<ReturnType<typeof listChiefReviewComments>>, TError = ErrorModel | ErrorModel | ErrorModel>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listChiefReviewComments>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export const getListChiefReviewCommentsQueryOptions = <TData = Awaited<ReturnType<typeof listChiefReviewComments>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listChiefReviewComments>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -180,10 +181,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListChiefReviewCommentsQueryResult = NonNullable<Awaited<ReturnType<typeof listChiefReviewComments>>>
-export type ListChiefReviewCommentsQueryError = ErrorModel | ErrorModel | ErrorModel
+export type ListChiefReviewCommentsQueryError = ErrorModel | ErrorModel | ErrorModel | ErrorModel
 
 
-export function useListChiefReviewComments<TData = Awaited<ReturnType<typeof listChiefReviewComments>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+export function useListChiefReviewComments<TData = Awaited<ReturnType<typeof listChiefReviewComments>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
  id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listChiefReviewComments>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listChiefReviewComments>>,
@@ -193,7 +194,7 @@ export function useListChiefReviewComments<TData = Awaited<ReturnType<typeof lis
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListChiefReviewComments<TData = Awaited<ReturnType<typeof listChiefReviewComments>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+export function useListChiefReviewComments<TData = Awaited<ReturnType<typeof listChiefReviewComments>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
  id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listChiefReviewComments>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listChiefReviewComments>>,
@@ -203,7 +204,7 @@ export function useListChiefReviewComments<TData = Awaited<ReturnType<typeof lis
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListChiefReviewComments<TData = Awaited<ReturnType<typeof listChiefReviewComments>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+export function useListChiefReviewComments<TData = Awaited<ReturnType<typeof listChiefReviewComments>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
  id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listChiefReviewComments>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
@@ -211,7 +212,7 @@ export function useListChiefReviewComments<TData = Awaited<ReturnType<typeof lis
  * @summary List an application's chief review comments
  */
 
-export function useListChiefReviewComments<TData = Awaited<ReturnType<typeof listChiefReviewComments>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+export function useListChiefReviewComments<TData = Awaited<ReturnType<typeof listChiefReviewComments>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
  id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listChiefReviewComments>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -360,6 +361,7 @@ export const useUpdateChiefReviewComment = <TError = ErrorModel | ErrorModel | E
       return useMutation(mutationOptions, queryClient);
     }
     /**
+ * Chief only.
  * @summary List an application's chief reviews
  */
 export const listChiefReviews = (
@@ -384,7 +386,7 @@ export const getListChiefReviewsQueryKey = (id?: string,) => {
     }
 
     
-export const getListChiefReviewsQueryOptions = <TData = Awaited<ReturnType<typeof listChiefReviews>>, TError = ErrorModel | ErrorModel | ErrorModel>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listChiefReviews>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export const getListChiefReviewsQueryOptions = <TData = Awaited<ReturnType<typeof listChiefReviews>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listChiefReviews>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -403,10 +405,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListChiefReviewsQueryResult = NonNullable<Awaited<ReturnType<typeof listChiefReviews>>>
-export type ListChiefReviewsQueryError = ErrorModel | ErrorModel | ErrorModel
+export type ListChiefReviewsQueryError = ErrorModel | ErrorModel | ErrorModel | ErrorModel
 
 
-export function useListChiefReviews<TData = Awaited<ReturnType<typeof listChiefReviews>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+export function useListChiefReviews<TData = Awaited<ReturnType<typeof listChiefReviews>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
  id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listChiefReviews>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listChiefReviews>>,
@@ -416,7 +418,7 @@ export function useListChiefReviews<TData = Awaited<ReturnType<typeof listChiefR
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListChiefReviews<TData = Awaited<ReturnType<typeof listChiefReviews>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+export function useListChiefReviews<TData = Awaited<ReturnType<typeof listChiefReviews>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
  id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listChiefReviews>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listChiefReviews>>,
@@ -426,7 +428,7 @@ export function useListChiefReviews<TData = Awaited<ReturnType<typeof listChiefR
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListChiefReviews<TData = Awaited<ReturnType<typeof listChiefReviews>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+export function useListChiefReviews<TData = Awaited<ReturnType<typeof listChiefReviews>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
  id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listChiefReviews>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
@@ -434,7 +436,7 @@ export function useListChiefReviews<TData = Awaited<ReturnType<typeof listChiefR
  * @summary List an application's chief reviews
  */
 
-export function useListChiefReviews<TData = Awaited<ReturnType<typeof listChiefReviews>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+export function useListChiefReviews<TData = Awaited<ReturnType<typeof listChiefReviews>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
  id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listChiefReviews>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -451,7 +453,7 @@ export function useListChiefReviews<TData = Awaited<ReturnType<typeof listChiefR
 
 
 /**
- * One request for a page of applications, instead of one per application.
+ * Chief only. One request for a page of applications, instead of one per application.
  * @summary List chief reviews for several applications
  */
 export const listChiefReviewsBulk = (
@@ -477,7 +479,7 @@ export const getListChiefReviewsBulkQueryKey = (params?: ListChiefReviewsBulkPar
     }
 
     
-export const getListChiefReviewsBulkQueryOptions = <TData = Awaited<ReturnType<typeof listChiefReviewsBulk>>, TError = ErrorModel | ErrorModel | ErrorModel>(params?: ListChiefReviewsBulkParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listChiefReviewsBulk>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export const getListChiefReviewsBulkQueryOptions = <TData = Awaited<ReturnType<typeof listChiefReviewsBulk>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(params?: ListChiefReviewsBulkParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listChiefReviewsBulk>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -496,10 +498,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListChiefReviewsBulkQueryResult = NonNullable<Awaited<ReturnType<typeof listChiefReviewsBulk>>>
-export type ListChiefReviewsBulkQueryError = ErrorModel | ErrorModel | ErrorModel
+export type ListChiefReviewsBulkQueryError = ErrorModel | ErrorModel | ErrorModel | ErrorModel
 
 
-export function useListChiefReviewsBulk<TData = Awaited<ReturnType<typeof listChiefReviewsBulk>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+export function useListChiefReviewsBulk<TData = Awaited<ReturnType<typeof listChiefReviewsBulk>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
  params: undefined |  ListChiefReviewsBulkParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listChiefReviewsBulk>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listChiefReviewsBulk>>,
@@ -509,7 +511,7 @@ export function useListChiefReviewsBulk<TData = Awaited<ReturnType<typeof listCh
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListChiefReviewsBulk<TData = Awaited<ReturnType<typeof listChiefReviewsBulk>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+export function useListChiefReviewsBulk<TData = Awaited<ReturnType<typeof listChiefReviewsBulk>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
  params?: ListChiefReviewsBulkParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listChiefReviewsBulk>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listChiefReviewsBulk>>,
@@ -519,7 +521,7 @@ export function useListChiefReviewsBulk<TData = Awaited<ReturnType<typeof listCh
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListChiefReviewsBulk<TData = Awaited<ReturnType<typeof listChiefReviewsBulk>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+export function useListChiefReviewsBulk<TData = Awaited<ReturnType<typeof listChiefReviewsBulk>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
  params?: ListChiefReviewsBulkParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listChiefReviewsBulk>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
@@ -527,7 +529,7 @@ export function useListChiefReviewsBulk<TData = Awaited<ReturnType<typeof listCh
  * @summary List chief reviews for several applications
  */
 
-export function useListChiefReviewsBulk<TData = Awaited<ReturnType<typeof listChiefReviewsBulk>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+export function useListChiefReviewsBulk<TData = Awaited<ReturnType<typeof listChiefReviewsBulk>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
  params?: ListChiefReviewsBulkParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listChiefReviewsBulk>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {

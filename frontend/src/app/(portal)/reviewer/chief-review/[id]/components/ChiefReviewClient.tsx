@@ -74,12 +74,14 @@ export function ChiefReviewClient({
     (r) => r === 'chief' || r === 'admin'
   )
 
-  // The same queue the chief review list shows by default — every
-  // applicant in chief_review, grouped by role in the list's order — so
-  // "next"/"previous" here retraces exactly the list this was opened from.
+  // The same queue the chief review list shows by default — every applicant
+  // in the cycle, grouped by role in the list's order — so "next"/"previous"
+  // here retraces exactly the list this was opened from. Unfiltered by
+  // stage: advancing to chief_review is a manual, rarely-taken action, so
+  // gating on it would skip applicants who need a chief's review just as
+  // much while still sitting in lead_review.
   const { data: queueApplications = [] } = useApplications({
     cycle_id: cycleId,
-    stage: 'chief_review',
   })
   const orderedQueue = useMemo(
     () =>

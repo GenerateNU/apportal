@@ -2997,6 +2997,7 @@ paths:
         - Chief reviews
   /applications/{id}/chief-review-comments:
     get:
+      description: Chief only.
       operationId: list-chief-review-comments
       parameters:
         - description: Application ID
@@ -3023,6 +3024,12 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorModel"
           description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
         "422":
           content:
             application/problem+json:
@@ -3156,6 +3163,7 @@ paths:
         - Chief reviews
   /applications/{id}/chief-reviews:
     get:
+      description: Chief only.
       operationId: list-chief-reviews
       parameters:
         - description: Application ID
@@ -3182,6 +3190,12 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorModel"
           description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
         "422":
           content:
             application/problem+json:
@@ -3831,7 +3845,7 @@ paths:
         - Written reviews
   /chief-reviews:
     get:
-      description: One request for a page of applications, instead of one per application.
+      description: Chief only. One request for a page of applications, instead of one per application.
       operationId: list-chief-reviews-bulk
       parameters:
         - description: Comma-separated application IDs
@@ -3858,6 +3872,12 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorModel"
           description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
         "422":
           content:
             application/problem+json:

@@ -20,8 +20,9 @@ func (h *chiefReviewCommentHandler) register(api huma.API) {
 		Method:      http.MethodGet,
 		Path:        "/applications/{id}/chief-review-comments",
 		Summary:     "List an application's chief review comments",
+		Description: "Chief only.",
 		Tags:        []string{"Chief reviews"},
-		Errors:      []int{http.StatusUnauthorized},
+		Errors:      []int{http.StatusUnauthorized, http.StatusForbidden},
 	}, h.list)
 
 	huma.Register(api, huma.Operation{
@@ -54,7 +55,7 @@ type ChiefReviewCommentsOutput struct {
 }
 
 func (h *chiefReviewCommentHandler) list(ctx context.Context, in *ApplicationScopedInput) (*ChiefReviewCommentsOutput, error) {
-	if err := requireReviewer(ctx); err != nil {
+	if err := requireChief(ctx); err != nil {
 		return nil, err
 	}
 	items, err := h.store.ListChiefReviewComments(ctx, in.ID)

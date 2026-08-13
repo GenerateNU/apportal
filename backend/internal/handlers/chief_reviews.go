@@ -31,8 +31,9 @@ func (h *chiefReviewHandler) register(api huma.API) {
 		Method:      http.MethodGet,
 		Path:        "/applications/{id}/chief-reviews",
 		Summary:     "List an application's chief reviews",
+		Description: "Chief only.",
 		Tags:        []string{"Chief reviews"},
-		Errors:      []int{http.StatusUnauthorized},
+		Errors:      []int{http.StatusUnauthorized, http.StatusForbidden},
 	}, h.list)
 
 	huma.Register(api, huma.Operation{
@@ -40,9 +41,9 @@ func (h *chiefReviewHandler) register(api huma.API) {
 		Method:      http.MethodGet,
 		Path:        "/chief-reviews",
 		Summary:     "List chief reviews for several applications",
-		Description: "One request for a page of applications, instead of one per application.",
+		Description: "Chief only. One request for a page of applications, instead of one per application.",
 		Tags:        []string{"Chief reviews"},
-		Errors:      []int{http.StatusUnauthorized, http.StatusUnprocessableEntity},
+		Errors:      []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusUnprocessableEntity},
 	}, h.listBulk)
 }
 
@@ -54,7 +55,7 @@ type ListChiefReviewsBulkInput struct {
 }
 
 func (h *chiefReviewHandler) listBulk(ctx context.Context, in *ListChiefReviewsBulkInput) (*ChiefReviewsOutput, error) {
-	if err := requireReviewer(ctx); err != nil {
+	if err := requireChief(ctx); err != nil {
 		return nil, err
 	}
 	ids := make([]string, 0, 8)
@@ -110,7 +111,7 @@ func (h *chiefReviewHandler) upsert(ctx context.Context, in *UpsertChiefReviewIn
 }
 
 func (h *chiefReviewHandler) list(ctx context.Context, in *ApplicationScopedInput) (*ChiefReviewsOutput, error) {
-	if err := requireReviewer(ctx); err != nil {
+	if err := requireChief(ctx); err != nil {
 		return nil, err
 	}
 	items, err := h.store.ListChiefReviews(ctx, in.ID)
