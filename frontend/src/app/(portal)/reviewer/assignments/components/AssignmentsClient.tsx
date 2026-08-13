@@ -53,6 +53,9 @@ export function AssignmentsClient() {
     if (defaultId) setCycleId(defaultId)
   }
   const [activeRole, setActiveRole] = useState<Role | 'all'>('all')
+  // Lead NUID to narrow to, or 'all' — lets a chief see everything one lead
+  // is carrying without scanning every row's assignment chips.
+  const [leadFilter, setLeadFilter] = useState<string>('all')
 
   const applications = useMemo(
     () =>
@@ -79,6 +82,16 @@ export function AssignmentsClient() {
     })
     return map
   }, [appIds, assignmentQueries])
+
+  // Filtered for display only — appIds/assignmentsByApp above stay scoped to
+  // every role/cycle match so the lead filter itself has full data to filter
+  // against, not just whatever it already narrowed to.
+  const visibleApplications = useMemo(() => {
+    if (leadFilter === 'all') return applications
+    return applications.filter((a) =>
+      (assignmentsByApp[a.id] ?? []).some((asn) => asn.lead_nuid === leadFilter)
+    )
+  }, [applications, leadFilter, assignmentsByApp])
 
   const { data: gates = [] } = useReviewGates(cycleId)
   const assignLead = useAssignLead()
@@ -168,6 +181,22 @@ export function AssignmentsClient() {
               ))}
             </SelectContent>
           </Select>
+          <Select value={leadFilter} onValueChange={setLeadFilter}>
+            <SelectTrigger
+              className="w-52"
+              aria-label="Filter by assigned lead"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All leads</SelectItem>
+              {leads.map((lead) => (
+                <SelectItem key={lead.nuid} value={lead.nuid}>
+                  {lead.full_name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -216,9 +245,15 @@ export function AssignmentsClient() {
             No applications in this cycle
           </p>
         </div>
+      ) : visibleApplications.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-gray-200 bg-white p-10 text-center">
+          <p className="text-text-default text-sm font-medium">
+            No applications assigned to {leadName[leadFilter] ?? 'this lead'}
+          </p>
+        </div>
       ) : (
         ROLE_COLUMNS.map((role) => {
-          const roleApps = applications.filter((a) => a.role === role)
+          const roleApps = visibleApplications.filter((a) => a.role === role)
           const gate = gates.find(
             (g) => g.role === role && g.kind === 'written'
           )
