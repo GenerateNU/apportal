@@ -170,6 +170,36 @@ func (s *Store) ListWrittenReviews(ctx context.Context, applicationID, onlyRevie
 	return details, nil
 }
 
+// ReviewQuestionAverageRow is one lead's average score on one review
+// question within a cycle × role, before it's grouped by lead.
+type ReviewQuestionAverageRow struct {
+	LeadNUID         string
+	ReviewQuestionID string
+	AvgScore         float64
+	Count            int
+}
+
+// ListReviewQuestionAverages averages every scored answer a lead has given,
+// per review question, across a cycle's applications of one role — a
+// calibration check for whether a lead scores certain questions
+// systematically higher or lower than their peers.
+func (s *Store) ListReviewQuestionAverages(ctx context.Context, cycleID string, role models.Role) ([]ReviewQuestionAverageRow, error) {
+	const q = `
+		SELECT wr.reviewer_nuid, wra.review_question_id,
+		       AVG(wra.score)::float8 AS avg_score, COUNT(*)::int AS count
+		FROM written_review_answers wra
+		JOIN written_reviews wr ON wr.id = wra.review_id
+		JOIN applications a ON a.id = wr.application_id
+		WHERE a.cycle_id = $1 AND a.application_role = $2 AND wra.score IS NOT NULL
+		GROUP BY wr.reviewer_nuid, wra.review_question_id
+		ORDER BY wr.reviewer_nuid`
+	rows, err := s.db.Query(ctx, q, cycleID, role)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, pgx.RowToStructByPos[ReviewQuestionAverageRow])
+}
+
 // listReviewAnswers fetches the review-question answers for the given review
 // IDs, grouped by review_id.
 func (s *Store) listReviewAnswers(ctx context.Context, reviewIDs []string) (map[string][]models.WrittenReviewAnswer, error) {

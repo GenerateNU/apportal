@@ -9,6 +9,7 @@ import {
   Calendar,
   ClipboardCheck,
   ListChecks,
+  Scale,
   Video,
   Wand2,
   LogOut,
@@ -70,6 +71,12 @@ const sectionsByRole: Record<Role, NavSection> = {
         href: '/reviewer/review-progress',
         label: 'Review Progress',
         icon: ListChecks,
+        chiefOnly: true,
+      },
+      {
+        href: '/reviewer/review-calibration',
+        label: 'Review Calibration',
+        icon: Scale,
         chiefOnly: true,
       },
       {

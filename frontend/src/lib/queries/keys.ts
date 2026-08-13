@@ -185,4 +185,15 @@ export const queryKeys = {
     list: (cycleId: string, role?: Role) =>
       [...queryKeys.reviewerProgress.lists(), cycleId, role ?? 'all'] as const,
   },
+
+  reviewQuestionAverages: {
+    all: ['review-question-averages'] as const,
+    lists: () => [...queryKeys.reviewQuestionAverages.all, 'list'] as const,
+    list: (cycleId: string, role?: Role) =>
+      [
+        ...queryKeys.reviewQuestionAverages.lists(),
+        cycleId,
+        role ?? 'all',
+      ] as const,
+  },
 } as const

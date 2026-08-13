@@ -103,6 +103,24 @@ type ReviewerProgressItem struct {
 	SubmittedAt   *time.Time `json:"submitted_at,omitempty"`
 }
 
+// ReviewQuestionAverage reports one lead's average score on each of a
+// cycle × role's score-type review questions — a calibration check for
+// whether a lead scores certain questions systematically higher or lower
+// than their peers (not a table — aggregated from written_review_answers).
+type ReviewQuestionAverage struct {
+	LeadNUID string                 `json:"lead_nuid"`
+	FullName string                 `json:"full_name"`
+	Scores   []QuestionAverageScore `json:"scores"`
+}
+
+// QuestionAverageScore is one review question's average within a
+// ReviewQuestionAverage.
+type QuestionAverageScore struct {
+	ReviewQuestionID string  `json:"review_question_id"`
+	AvgScore         float64 `json:"avg_score"`
+	Count            int     `json:"count"`
+}
+
 // ChiefReview: a chief's individual vote on an application, after the lead
 // written reviews are in. One row per chief per application — see ChiefVote
 // for what each chief's vote means; the final advance/reject call is made

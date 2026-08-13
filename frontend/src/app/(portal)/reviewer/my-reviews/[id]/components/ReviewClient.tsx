@@ -100,11 +100,6 @@ export function ReviewClient({
     (r) => r === 'chief' || r === 'admin'
   )
 
-  const reviewQuestionById = useMemo(
-    () => new Map(reviewQuestions.map((q) => [q.id, q])),
-    [reviewQuestions]
-  )
-
   const own = reviews.find((r) => r.reviewer_nuid === currentUser?.nuid)
   const others = reviews.filter((r) => r.reviewer_nuid !== currentUser?.nuid)
 
@@ -333,10 +328,11 @@ export function ReviewClient({
                           Reviewer {r.reviewer_name || r.reviewer_nuid}
                         </span>
                         <div className="mt-2 flex flex-col gap-2">
-                          {r.answers.map((a) => {
-                            const q = reviewQuestionById.get(
-                              a.review_question_id
+                          {reviewQuestions.map((q) => {
+                            const a = r.answers.find(
+                              (ans) => ans.review_question_id === q.id
                             )
+                            if (!a) return null
                             const display =
                               a.score != null
                                 ? `${a.score}/10`
@@ -345,9 +341,9 @@ export function ReviewClient({
                                   : a.answer_text
                             if (!display) return null
                             return (
-                              <div key={a.id}>
+                              <div key={q.id}>
                                 <p className="text-text-muted text-xs font-medium">
-                                  {q?.question_text ?? 'Question'}
+                                  {q.question_text}
                                 </p>
                                 <p className="text-text-default text-sm whitespace-pre-wrap">
                                   {display}

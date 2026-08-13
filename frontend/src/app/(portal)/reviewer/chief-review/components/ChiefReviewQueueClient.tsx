@@ -4,7 +4,7 @@ import { PageContainer } from '@/components/PageContainer'
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowRight, Check, Loader2, Search } from 'lucide-react'
+import { ArrowRight, Check, Eye, EyeOff, Loader2, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ProgressBar } from '@/components/ProgressBar'
 import {
@@ -19,6 +19,7 @@ import { useApplications } from '@/lib/queries/applications'
 import { useChiefReviewsByApplicationIdBatch } from '@/lib/queries/chief-reviews'
 import {
   CHIEF_VOTE_BADGE_CLASS,
+  CHIEF_VOTE_DOT_CLASS,
   CHIEF_VOTE_LABEL,
   CHIEF_VOTE_ORDER,
 } from '@/lib/chief-votes'
@@ -40,7 +41,9 @@ const SEARCH_DEBOUNCE_MS = 250
 // review an applicant and coming back doesn't reset the filters.
 // v2: bumped so a stage: 'chief_review' saved under the old default doesn't
 // resurrect it — that default hid almost everything (see activeStage below).
-const FILTERS_STORAGE_KEY = 'chief-review-queue-filters-v2'
+// v3: bumped so a voteScope: 'needsVote' saved under the old default doesn't
+// resurrect it now that the default is 'all'.
+const FILTERS_STORAGE_KEY = 'chief-review-queue-filters-v3'
 
 type StoredFilters = {
   cycleId?: string
@@ -84,13 +87,18 @@ export function ChiefReviewQueueClient() {
   const [activeStage, setActiveStageState] = useState<ApplicationStage | 'all'>(
     'all'
   )
-  // Defaults to the chief's own outstanding work, same as the lead queue
-  // defaulting to "assigned to me" — the point of this queue is finding
-  // applicants that still need a vote, not re-showing everyone every visit.
-  const [voteScope, setVoteScopeState] = useState<VoteScope>('needsVote')
+  // Starts unfiltered — the "needs my vote" scope stays available via the
+  // select below, but defaulting to it hid every already-voted applicant a
+  // chief still wanted to see (e.g. to revisit or compare votes).
+  const [voteScope, setVoteScopeState] = useState<VoteScope>('all')
   // Independent of voteScope — narrows to a specific vote value regardless
   // of the scope toggle above.
   const [voteValue, setVoteValueState] = useState<VoteValueFilter>('all')
+  // Not persisted (unlike the filters above) and defaults off, same as the
+  // detail page's "reveal other chiefs' votes" toggle — seeing every vote at
+  // a glance while scanning the queue is exactly the anchoring risk that
+  // toggle exists to avoid, so it stays an opt-in per visit.
+  const [showVotes, setShowVotes] = useState(false)
 
   // Matched server-side, so it narrows the whole queue rather than the rows
   // already in hand.
@@ -194,12 +202,64 @@ export function ChiefReviewQueueClient() {
     return map
   }, [applicationIds, chiefReviewsByApplicationId])
 
+  // Every cast vote for each application, weakest-no to strongest-yes — the
+  // dot indicator behind the reveal toggle below.
+  const votesByApplicationId = useMemo(() => {
+    const map: Record<string, ChiefVote[]> = {}
+    for (const id of applicationIds) {
+      map[id] = (chiefReviewsByApplicationId[id] ?? [])
+        .map((r) => r.vote)
+        .filter((v): v is ChiefVote => !!v)
+        .sort(
+          (a, b) => CHIEF_VOTE_ORDER.indexOf(a) - CHIEF_VOTE_ORDER.indexOf(b)
+        )
+    }
+    return map
+  }, [applicationIds, chiefReviewsByApplicationId])
+
+  // Flags an application where every vote cast SO FAR agrees on one of the
+  // two strong ends — re-evaluated as more chiefs vote, not gated on every
+  // chief having voted, so early unanimous agreement (or an early outlier)
+  // surfaces as soon as it exists.
+  const unanimousStrongByApplicationId = useMemo(() => {
+    const map: Record<string, ChiefVote | null> = {}
+    for (const id of applicationIds) {
+      const votes = votesByApplicationId[id] ?? []
+      if (votes.length === 0) {
+        map[id] = null
+      } else if (votes.every((v) => v === 'strong_interview')) {
+        map[id] = 'strong_interview'
+      } else if (votes.every((v) => v === 'strong_no_interview')) {
+        map[id] = 'strong_no_interview'
+      } else {
+        map[id] = null
+      }
+    }
+    return map
+  }, [applicationIds, votesByApplicationId])
+
   // Own-vote progress across the current cycle/role/stage/search filters —
   // independent of voteScope/voteValue below, which only change what's
   // *displayed*, not this denominator.
   const votedCount = applicationIds.filter(
     (id) => submittedByApplicationId[id]
   ).length
+  // Same scope as votedCount above — how many applicants I put in each
+  // category, not affected by the voteScope/voteValue display filters.
+  const ownVoteCountByValue = useMemo(() => {
+    const counts: Record<ChiefVote, number> = {
+      strong_interview: 0,
+      interview: 0,
+      neutral: 0,
+      no_interview: 0,
+      strong_no_interview: 0,
+    }
+    for (const id of applicationIds) {
+      const vote = ownVoteByApplicationId[id]
+      if (vote) counts[vote] += 1
+    }
+    return counts
+  }, [applicationIds, ownVoteByApplicationId])
   // Voting through dozens of applicants is sequential work, so the primary
   // action is "pick up where I left off" — same pattern as the lead queue's
   // "Continue reviewing".
@@ -359,7 +419,7 @@ export function ChiefReviewQueueClient() {
         </div>
       </div>
 
-      {applications.length > 0 && (
+      {!isLoading && applications.length > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <ProgressBar
@@ -371,14 +431,46 @@ export function ChiefReviewQueueClient() {
               {votedCount} of {applications.length} voted
             </span>
           </div>
-          {nextUnvoted && (
-            <Button asChild>
-              <Link href={`/reviewer/chief-review/${nextUnvoted.id}`}>
-                {votedCount === 0 ? 'Start voting' : 'Continue voting'}
-                <ArrowRight data-icon="inline-end" size={14} />
-              </Link>
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowVotes((prev) => !prev)}
+              className="text-text-muted hover:text-text-default inline-flex items-center gap-1.5 text-xs font-medium"
+            >
+              {showVotes ? (
+                <>
+                  <EyeOff size={14} />
+                  Hide votes
+                </>
+              ) : (
+                <>
+                  <Eye size={14} />
+                  Reveal votes
+                </>
+              )}
+            </button>
+            {nextUnvoted && (
+              <Button asChild>
+                <Link href={`/reviewer/chief-review/${nextUnvoted.id}`}>
+                  {votedCount === 0 ? 'Start voting' : 'Continue voting'}
+                  <ArrowRight data-icon="inline-end" size={14} />
+                </Link>
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {!isLoading && applications.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          {CHIEF_VOTE_ORDER.map((vote) => (
+            <span
+              key={vote}
+              className={`rounded-md px-2 py-0.5 text-xs font-medium ${CHIEF_VOTE_BADGE_CLASS[vote]}`}
+            >
+              {ownVoteCountByValue[vote]} {CHIEF_VOTE_LABEL[vote]}
+            </span>
+          ))}
         </div>
       )}
 
@@ -434,10 +526,20 @@ export function ChiefReviewQueueClient() {
                       leadReviewProgressByApplicationId[application.id]
                     const chiefVoteCount =
                       chiefVoteCountByApplicationId[application.id] ?? 0
+                    const votes = votesByApplicationId[application.id] ?? []
+                    const unanimousStrong =
+                      unanimousStrongByApplicationId[application.id]
+                    const highlightUnanimous = showVotes && unanimousStrong
                     return (
                       <div
                         key={application.id}
-                        className="flex items-center justify-between gap-4 rounded-xl border border-gray-100 bg-white p-4 transition-colors hover:bg-gray-50"
+                        className={`flex items-center justify-between gap-4 rounded-xl border p-4 transition-colors hover:bg-gray-50 ${
+                          highlightUnanimous === 'strong_interview'
+                            ? 'border-status-open bg-status-open/5'
+                            : highlightUnanimous === 'strong_no_interview'
+                              ? 'border-red-300 bg-red-50'
+                              : 'border-gray-100 bg-white'
+                        }`}
                       >
                         <div className="flex items-center gap-3">
                           <span className="text-text-default text-sm font-medium">
@@ -458,6 +560,31 @@ export function ChiefReviewQueueClient() {
                           <span className="rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
                             {chiefVoteCount}/{chiefs.length} chiefs reviewed
                           </span>
+                          {showVotes && votes.length > 0 && (
+                            <span
+                              className="flex items-center gap-1"
+                              aria-label={votes
+                                .map((v) => CHIEF_VOTE_LABEL[v])
+                                .join(', ')}
+                              title={votes
+                                .map((v) => CHIEF_VOTE_LABEL[v])
+                                .join(', ')}
+                            >
+                              {votes.map((v, i) => (
+                                <span
+                                  key={i}
+                                  className={`h-2 w-2 rounded-full ${CHIEF_VOTE_DOT_CLASS[v]}`}
+                                />
+                              ))}
+                            </span>
+                          )}
+                          {highlightUnanimous && (
+                            <span
+                              className={`rounded-md px-2 py-0.5 text-xs font-medium ${CHIEF_VOTE_BADGE_CLASS[highlightUnanimous]}`}
+                            >
+                              Unanimous {CHIEF_VOTE_LABEL[highlightUnanimous]}
+                            </span>
+                          )}
                         </div>
                         <div className="flex items-center gap-2">
                           {submitted && ownVote && (

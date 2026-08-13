@@ -19,8 +19,10 @@ import type {
   InterviewAssignment as GenInterviewAssignment,
   InterviewReviewAssignment as GenInterviewReviewAssignment,
   Question as GenQuestion,
+  QuestionAverageScore,
   ReviewerProgress as GenReviewerProgress,
   ReviewQuestion as GenReviewQuestion,
+  ReviewQuestionAverage as GenReviewQuestionAverage,
   User as GenUser,
   WrittenAnswer as GenWrittenAnswer,
   WrittenReviewAnswer as GenWrittenReviewAnswer,
@@ -147,3 +149,8 @@ export type InterviewReviewAssignment = Omit<
 export type ReviewerProgress = Omit<GenReviewerProgress, 'items'> & {
   items: NonNullable<GenReviewerProgress['items']>
 }
+
+export type ReviewQuestionAverage = Omit<GenReviewQuestionAverage, 'scores'> & {
+  scores: NonNullable<GenReviewQuestionAverage['scores']>
+}
+export type { QuestionAverageScore }

@@ -1530,6 +1530,22 @@ components:
         - display_order
         - created_at
       type: object
+    QuestionAverageScore:
+      additionalProperties: false
+      properties:
+        avg_score:
+          format: double
+          type: number
+        count:
+          format: int64
+          type: integer
+        review_question_id:
+          type: string
+      required:
+        - review_question_id
+        - avg_score
+        - count
+      type: object
     ReviewAnswerSubmission:
       additionalProperties: false
       properties:
@@ -1636,6 +1652,24 @@ components:
         - is_required
         - display_order
         - created_at
+      type: object
+    ReviewQuestionAverage:
+      additionalProperties: false
+      properties:
+        full_name:
+          type: string
+        lead_nuid:
+          type: string
+        scores:
+          items:
+            $ref: "#/components/schemas/QuestionAverageScore"
+          type:
+            - array
+            - "null"
+      required:
+        - lead_nuid
+        - full_name
+        - scores
       type: object
     ReviewerProgress:
       additionalProperties: false
@@ -4658,6 +4692,66 @@ paths:
                 $ref: "#/components/schemas/ErrorModel"
           description: Internal Server Error
       summary: Release or hide a cycle's reviews for a role
+      tags:
+        - Review releases
+  /cycles/{id}/review-question-averages:
+    get:
+      description: Chief only. One entry per lead with a role='lead' account, listing their average score on each of the cycle/role's score-type review questions.
+      operationId: list-review-question-averages
+      parameters:
+        - description: Cycle ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Cycle ID
+            type: string
+        - description: Applicant role
+          explode: false
+          in: query
+          name: role
+          schema:
+            description: Applicant role
+            enum:
+              - software_engineer
+              - software_designer
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/ReviewQuestionAverage"
+                type:
+                  - array
+                  - "null"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Per-lead average score on each review question for a cycle
       tags:
         - Review releases
   /cycles/{id}/review-questions:

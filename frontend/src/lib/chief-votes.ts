@@ -24,3 +24,13 @@ export const CHIEF_VOTE_BADGE_CLASS: Record<ChiefVote, string> = {
   no_interview: 'bg-orange-50 text-orange-700',
   strong_no_interview: 'bg-red-50 text-red-700',
 }
+
+// Solid fill for compact indicators (e.g. a vote-distribution dot) where the
+// light badge backgrounds above would be too subtle to read at a glance.
+export const CHIEF_VOTE_DOT_CLASS: Record<ChiefVote, string> = {
+  strong_interview: 'bg-status-open',
+  interview: 'bg-green-700',
+  neutral: 'bg-gray-400',
+  no_interview: 'bg-orange-700',
+  strong_no_interview: 'bg-red-700',
+}

@@ -98,11 +98,6 @@ export function ChiefReviewClient({
       ? orderedQueue[queueIndex + 1].id
       : null
 
-  const reviewQuestionById = useMemo(
-    () => new Map(reviewQuestions.map((q) => [q.id, q])),
-    [reviewQuestions]
-  )
-
   // Applicant answers keyed by question id, for the read-only Application panel.
   const answersByQuestionId = useMemo(
     () => new Map(answers.map((a) => [a.question_id, a])),
@@ -338,8 +333,11 @@ export function ChiefReviewClient({
                         </div>
                       </div>
                       <div className="flex flex-col gap-2">
-                        {r.answers.map((a) => {
-                          const q = reviewQuestionById.get(a.review_question_id)
+                        {reviewQuestions.map((q) => {
+                          const a = r.answers.find(
+                            (ans) => ans.review_question_id === q.id
+                          )
+                          if (!a) return null
                           const display =
                             a.score != null
                               ? `${a.score}/10`
@@ -348,9 +346,9 @@ export function ChiefReviewClient({
                                 : a.answer_text
                           if (!display) return null
                           return (
-                            <div key={a.id}>
+                            <div key={q.id}>
                               <p className="text-text-muted text-xs font-medium">
-                                {q?.question_text ?? 'Question'}
+                                {q.question_text}
                               </p>
                               <p className="text-text-default text-sm whitespace-pre-wrap">
                                 {display}
@@ -523,7 +521,7 @@ export function ChiefReviewClient({
                 <button
                   type="button"
                   onClick={() => setRevealOthers((prev) => !prev)}
-                  className="text-text-muted hover:text-text-default inline-flex items-center gap-1.5 text-xs font-medium"
+                  className="text-text-muted hover:text-text-default inline-flex items-center gap-1.5 rounded-md border border-gray-200 px-2.5 py-1 text-xs font-medium"
                 >
                   {revealOthers ? (
                     <>
@@ -533,7 +531,8 @@ export function ChiefReviewClient({
                   ) : (
                     <>
                       <Eye size={14} />
-                      Show all chiefs&apos; votes &amp; comments
+                      Show {otherAuthors.length}{' '}
+                      {otherAuthors.length === 1 ? 'chief' : 'chiefs'}
                     </>
                   )}
                 </button>
