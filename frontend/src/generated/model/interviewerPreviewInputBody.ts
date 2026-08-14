@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { InterviewerPreviewInputBodyCapOverrides } from './interviewerPreviewInputBodyCapOverrides';
+import type { InterviewerPreviewInputBodyConflicts } from './interviewerPreviewInputBodyConflicts';
 import type { InterviewerPreviewInputBodyExcludedApplicationIds } from './interviewerPreviewInputBodyExcludedApplicationIds';
 import type { InterviewerPreviewInputBodyLeads } from './interviewerPreviewInputBodyLeads';
 import type { InterviewerPreviewInputBodyRole } from './interviewerPreviewInputBodyRole';
@@ -16,6 +17,8 @@ export interface InterviewerPreviewInputBody {
   /** @minimum 1 */
   cap: number;
   cap_overrides?: InterviewerPreviewInputBodyCapOverrides;
+  /** Leads ineligible to interview a specific applicant */
+  conflicts?: InterviewerPreviewInputBodyConflicts;
   excluded_application_ids?: InterviewerPreviewInputBodyExcludedApplicationIds;
   leads: InterviewerPreviewInputBodyLeads;
   role: InterviewerPreviewInputBodyRole;

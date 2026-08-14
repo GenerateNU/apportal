@@ -116,7 +116,11 @@ type InterviewerInput struct {
 	// WroteReview maps an application to the set of lead NUIDs who wrote that
 	// applicant's lead review — soft-avoided as interviewer (a tie-break, not
 	// an exclusion).
-	WroteReview  map[string]map[string]bool
+	WroteReview map[string]map[string]bool
+	// Conflicts maps an application to the set of lead NUIDs declared to have
+	// a conflict of interest with that applicant — a hard exclusion, never
+	// overridden even if it leaves the applicant unassigned.
+	Conflicts    map[string]map[string]bool
 	Cap          int
 	CapOverrides map[string]int
 	Seed         uint64
@@ -178,8 +182,9 @@ func PlanInterviewers(in InterviewerInput) (InterviewerPlan, error) {
 
 		app := byApp[appID]
 		wrote := in.WroteReview[appID]
+		conflicted := in.Conflicts[appID]
 
-		li, dayMatched := bestInterviewer(leads, app.AvailableDays, wrote)
+		li, dayMatched := bestInterviewer(leads, app.AvailableDays, wrote, conflicted)
 		if li < 0 {
 			unassigned = append(unassigned, appID)
 			continue
@@ -215,10 +220,12 @@ func loadRatio(l leadState) float64 {
 
 // bestInterviewer picks the lead with the most headroom to interview an
 // applicant, preferring a day match and, among day-matched candidates,
-// someone who did not already write that applicant's review. Returns -1 if
-// no lead has spare capacity at all. The second return reports whether the
-// chosen lead's day actually matched the applicant's availability.
-func bestInterviewer(leads []leadState, availableDays map[string]bool, wroteReview map[string]bool) (int, bool) {
+// someone who did not already write that applicant's review. A lead in
+// conflicted is never chosen, even if that leaves the applicant unassigned.
+// Returns -1 if no eligible lead has spare capacity at all. The second
+// return reports whether the chosen lead's day actually matched the
+// applicant's availability.
+func bestInterviewer(leads []leadState, availableDays, wroteReview, conflicted map[string]bool) (int, bool) {
 	best, bestDayMatch := -1, false
 	var bestRatio float64
 	var bestWrote bool
@@ -236,7 +243,7 @@ func bestInterviewer(leads []leadState, availableDays map[string]bool, wroteRevi
 	}
 
 	for li, l := range leads {
-		if l.load >= l.cap || !availableDays[l.day] {
+		if l.load >= l.cap || conflicted[l.nuid] || !availableDays[l.day] {
 			continue
 		}
 		consider(li, true)
@@ -245,9 +252,10 @@ func bestInterviewer(leads []leadState, availableDays map[string]bool, wroteRevi
 		return best, bestDayMatch
 	}
 
-	// No day-matched candidate had room: fall back to anyone with capacity.
+	// No day-matched candidate had room: fall back to anyone with capacity
+	// (excluding conflicted leads).
 	for li, l := range leads {
-		if l.load >= l.cap {
+		if l.load >= l.cap || conflicted[l.nuid] {
 			continue
 		}
 		consider(li, false)
@@ -296,6 +304,11 @@ type ReviewerInput struct {
 	// avoidance. An application missing here (or whose interviewer isn't in
 	// Leads) simply never triggers that avoidance.
 	Interviewer map[string]string
+	// Conflicts maps an application to the set of lead NUIDs declared to have
+	// a conflict of interest with that applicant — a hard exclusion from
+	// reviewing that applicant's interview, same list used for the
+	// interviewer stage.
+	Conflicts map[string]map[string]bool
 	// Existing reviewer pairs already assigned — never modified; a lead
 	// already reviewing an application is never assigned to it again.
 	Existing     []ReviewerPair
@@ -378,6 +391,18 @@ func PlanReviewers(in ReviewerInput) (ReviewerPlan, error) {
 			onApp[appID] = make(map[string]bool)
 		}
 		onApp[appID][nuid] = true
+	}
+
+	// Declared conflicts of interest are a hard exclusion too — merged into
+	// the same "already on this app" set, so they fall out of bestReviewer's
+	// existing exclusion check without a separate parameter.
+	for appID, conflicted := range in.Conflicts {
+		if onApp[appID] == nil {
+			onApp[appID] = make(map[string]bool)
+		}
+		for nuid := range conflicted {
+			onApp[appID][nuid] = true
+		}
 	}
 
 	var added []ReviewerPair

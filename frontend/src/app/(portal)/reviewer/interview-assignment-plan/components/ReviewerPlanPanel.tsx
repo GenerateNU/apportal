@@ -29,6 +29,7 @@ import {
   useSuggestInterviewReviewerCapacity,
 } from '@/lib/queries/interview-assignment-plan'
 import { ROLE_LABEL } from '@/lib/roles'
+import type { DraftConflict } from './ConflictBuilder'
 import type { DraftLeadDay } from './MeetingDayPicker'
 import { ReviewerPlanPreview } from './ReviewerPlanPreview'
 
@@ -36,10 +37,12 @@ export function ReviewerPlanPanel({
   cycleId,
   role,
   meetingDays,
+  conflicts,
 }: {
   cycleId: string
   role: Role
   meetingDays: DraftLeadDay[]
+  conflicts: DraftConflict[]
 }) {
   const [coverage, setCoverage] = useState(2)
   const [cap, setCap] = useState(10)
@@ -55,6 +58,14 @@ export function ReviewerPlanPanel({
   const apiLeads = useMemo(
     () => meetingDays.map((d) => ({ lead_nuid: d.leadNuid, day: d.day })),
     [meetingDays]
+  )
+  const apiConflicts = useMemo(
+    () =>
+      conflicts.map((c) => ({
+        lead_nuid: c.leadNuid,
+        application_id: c.applicationId,
+      })),
+    [conflicts]
   )
   const canPlan = apiLeads.length > 0 && !!cycleId
 
@@ -101,6 +112,7 @@ export function ReviewerPlanPanel({
       body: {
         role,
         leads: apiLeads,
+        conflicts: apiConflicts,
         coverage,
         cap,
         excluded_application_ids: excludedApplicationIds,
@@ -115,6 +127,7 @@ export function ReviewerPlanPanel({
         body: {
           role,
           leads: apiLeads,
+          conflicts: apiConflicts,
           coverage,
           cap,
           excluded_application_ids: excludedApplicationIds,

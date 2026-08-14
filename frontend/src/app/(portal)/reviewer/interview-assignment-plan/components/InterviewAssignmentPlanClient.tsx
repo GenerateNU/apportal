@@ -11,8 +11,10 @@ import {
 } from '@/components/ui/select'
 import type { Role } from '@/lib/api/types'
 import { pickDefaultCycleId, useCycles } from '@/lib/queries/cycles'
+import { useInterviewerPool } from '@/lib/queries/interview-assignment-plan'
 import { useLeads } from '@/lib/queries/users'
 import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
+import { ConflictBuilder, type DraftConflict } from './ConflictBuilder'
 import { InterviewerPlanPanel } from './InterviewerPlanPanel'
 import { MeetingDayPicker, type DraftLeadDay } from './MeetingDayPicker'
 import { ReviewerPlanPanel } from './ReviewerPlanPanel'
@@ -35,7 +37,13 @@ export function InterviewAssignmentPlanClient() {
   }
   const [role, setRole] = useState<Role>('software_engineer')
   const [meetingDays, setMeetingDays] = useState<DraftLeadDay[]>([])
+  const [conflicts, setConflicts] = useState<DraftConflict[]>([])
   const [stage, setStage] = useState<Stage>('interviewer')
+
+  // The broader of the two stages' pools (every interview-stage applicant,
+  // whether or not they have an interviewer yet), so the conflict picker
+  // covers whoever a chief might plan for in either stage.
+  const { data: pool } = useInterviewerPool(cycleId, role)
 
   return (
     <PageContainer>
@@ -83,6 +91,13 @@ export function InterviewAssignmentPlanClient() {
         onChange={setMeetingDays}
       />
 
+      <ConflictBuilder
+        leads={leads}
+        applicants={pool?.applicants ?? []}
+        value={conflicts}
+        onChange={setConflicts}
+      />
+
       <div className="flex gap-1 rounded-lg bg-gray-100 p-1">
         <StageTab
           active={stage === 'interviewer'}
@@ -103,12 +118,14 @@ export function InterviewAssignmentPlanClient() {
           cycleId={cycleId}
           role={role}
           meetingDays={meetingDays}
+          conflicts={conflicts}
         />
       ) : (
         <ReviewerPlanPanel
           cycleId={cycleId}
           role={role}
           meetingDays={meetingDays}
+          conflicts={conflicts}
         />
       )}
     </PageContainer>

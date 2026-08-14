@@ -136,6 +136,27 @@ func toInterviewassignLeads(in []PlanLeadDay) []interviewassign.Lead {
 	return out
 }
 
+// PlanConflict declares a lead ineligible to interview or review a specific
+// applicant's interview — supplied per request rather than stored, same as
+// PlanLeadDay. A hard exclusion in the planner, not a preference.
+type PlanConflict struct {
+	LeadNUID      string `json:"lead_nuid"`
+	ApplicationID string `json:"application_id"`
+}
+
+// toConflictMap groups conflicts by application, the shape both planning
+// stages need to look up a given applicant's excluded leads.
+func toConflictMap(in []PlanConflict) map[string]map[string]bool {
+	out := make(map[string]map[string]bool, len(in))
+	for _, c := range in {
+		if out[c.ApplicationID] == nil {
+			out[c.ApplicationID] = make(map[string]bool)
+		}
+		out[c.ApplicationID][c.LeadNUID] = true
+	}
+	return out
+}
+
 // PlannedInterviewer is one lead's proposed interview queue.
 type PlannedInterviewer struct {
 	LeadNUID     string               `json:"lead_nuid"`
@@ -247,6 +268,7 @@ type InterviewerPreviewInput struct {
 	Body struct {
 		Role                   models.Role    `json:"role"`
 		Leads                  []PlanLeadDay  `json:"leads"`
+		Conflicts              []PlanConflict `json:"conflicts,omitempty" doc:"Leads ineligible to interview a specific applicant"`
 		Cap                    int            `json:"cap" minimum:"1"`
 		CapOverrides           map[string]int `json:"cap_overrides,omitempty"`
 		ExcludedApplicationIDs []string       `json:"excluded_application_ids,omitempty"`
@@ -307,6 +329,7 @@ func (h *interviewAssignmentPlannerHandler) buildInterviewerPlan(ctx context.Con
 		Leads:        toInterviewassignLeads(in.Body.Leads),
 		Existing:     existing,
 		WroteReview:  wroteReview,
+		Conflicts:    toConflictMap(in.Body.Conflicts),
 		Cap:          in.Body.Cap,
 		CapOverrides: in.Body.CapOverrides,
 		Seed:         interviewassign.SeedFrom(in.ID, string(in.Body.Role), "interviewer"),
@@ -542,6 +565,7 @@ type ReviewerPreviewInput struct {
 	Body struct {
 		Role                   models.Role    `json:"role"`
 		Leads                  []PlanLeadDay  `json:"leads"`
+		Conflicts              []PlanConflict `json:"conflicts,omitempty" doc:"Leads ineligible to review a specific applicant's interview"`
 		Coverage               int            `json:"coverage" minimum:"1"`
 		Cap                    int            `json:"cap" minimum:"1"`
 		CapOverrides           map[string]int `json:"cap_overrides,omitempty"`
@@ -599,6 +623,7 @@ func (h *interviewAssignmentPlannerHandler) buildReviewerPlan(ctx context.Contex
 		Applicants:   applicants,
 		Leads:        toInterviewassignLeads(in.Body.Leads),
 		Interviewer:  interviewer,
+		Conflicts:    toConflictMap(in.Body.Conflicts),
 		Existing:     prior,
 		Cap:          in.Body.Cap,
 		CapOverrides: in.Body.CapOverrides,

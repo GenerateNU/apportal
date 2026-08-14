@@ -85,6 +85,48 @@ func TestPlanInterviewersAvoidsOwnWrittenReview(t *testing.T) {
 	}
 }
 
+func TestPlanInterviewersRespectsConflictOfInterest(t *testing.T) {
+	// Two same-day leads with equal load; "a" has a declared conflict with
+	// this applicant, so must never be picked, even though they'd otherwise
+	// tie or win on load/written-review grounds.
+	in := InterviewerInput{
+		Applicants: []Applicant{{ApplicationID: "app1", AvailableDays: map[string]bool{"monday": true}}},
+		Leads:      []Lead{{NUID: "a", Day: "monday"}, {NUID: "b", Day: "monday"}},
+		Conflicts:  map[string]map[string]bool{"app1": {"a": true}},
+		Cap:        10,
+		Seed:       SeedFrom("t"),
+	}
+	plan, err := PlanInterviewers(in)
+	if err != nil {
+		t.Fatalf("PlanInterviewers: %v", err)
+	}
+	if len(plan.New) != 1 || plan.New[0].LeadNUID != "b" {
+		t.Fatalf("New = %+v, want app1 assigned to b (a has a declared conflict)", plan.New)
+	}
+}
+
+func TestPlanInterviewersConflictLeavesApplicantUnassignedRatherThanOverridden(t *testing.T) {
+	// The only lead has a conflict with this applicant — must go unassigned,
+	// never overridden even though it's the sole candidate.
+	in := InterviewerInput{
+		Applicants: []Applicant{{ApplicationID: "app1", AvailableDays: map[string]bool{"monday": true}}},
+		Leads:      []Lead{{NUID: "a", Day: "monday"}},
+		Conflicts:  map[string]map[string]bool{"app1": {"a": true}},
+		Cap:        10,
+		Seed:       SeedFrom("t"),
+	}
+	plan, err := PlanInterviewers(in)
+	if err != nil {
+		t.Fatalf("PlanInterviewers: %v", err)
+	}
+	if len(plan.New) != 0 {
+		t.Fatalf("New = %+v, want none — the only lead has a conflict", plan.New)
+	}
+	if len(plan.Unassigned) != 1 || plan.Unassigned[0] != "app1" {
+		t.Errorf("Unassigned = %v, want [app1]", plan.Unassigned)
+	}
+}
+
 func TestPlanInterviewersSkipsExistingAndCountsLoad(t *testing.T) {
 	in := InterviewerInput{
 		Applicants: []Applicant{
@@ -348,6 +390,24 @@ func TestPlanReviewersDistributesLoadEvenly(t *testing.T) {
 		if l.Total != 10 {
 			t.Errorf("lead %s has %d reviews, want exactly 10 (40/4, evenly split)", l.LeadNUID, l.Total)
 		}
+	}
+}
+
+func TestPlanReviewersRespectsConflictOfInterest(t *testing.T) {
+	in := ReviewerInput{
+		Applicants: []Applicant{{ApplicationID: "app1", AvailableDays: map[string]bool{"monday": true}}},
+		Leads:      []Lead{{NUID: "a", Day: "monday"}, {NUID: "b", Day: "monday"}},
+		Conflicts:  map[string]map[string]bool{"app1": {"a": true}},
+		Cap:        10,
+		Coverage:   1,
+		Seed:       SeedFrom("t"),
+	}
+	plan, err := PlanReviewers(in)
+	if err != nil {
+		t.Fatalf("PlanReviewers: %v", err)
+	}
+	if len(plan.New) != 1 || plan.New[0].LeadNUID != "b" {
+		t.Fatalf("New = %+v, want app1 reviewed by b (a has a declared conflict)", plan.New)
 	}
 }
 

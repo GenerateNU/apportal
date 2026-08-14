@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { ReviewerPreviewInputBodyCapOverrides } from './reviewerPreviewInputBodyCapOverrides';
+import type { ReviewerPreviewInputBodyConflicts } from './reviewerPreviewInputBodyConflicts';
 import type { ReviewerPreviewInputBodyExcludedApplicationIds } from './reviewerPreviewInputBodyExcludedApplicationIds';
 import type { ReviewerPreviewInputBodyLeads } from './reviewerPreviewInputBodyLeads';
 import type { ReviewerPreviewInputBodyRole } from './reviewerPreviewInputBodyRole';
@@ -16,6 +17,8 @@ export interface ReviewerPreviewInputBody {
   /** @minimum 1 */
   cap: number;
   cap_overrides?: ReviewerPreviewInputBodyCapOverrides;
+  /** Leads ineligible to review a specific applicant's interview */
+  conflicts?: ReviewerPreviewInputBodyConflicts;
   /** @minimum 1 */
   coverage: number;
   excluded_application_ids?: ReviewerPreviewInputBodyExcludedApplicationIds;

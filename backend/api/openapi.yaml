@@ -1505,6 +1505,13 @@ components:
             format: int64
             type: integer
           type: object
+        conflicts:
+          description: Leads ineligible to interview a specific applicant
+          items:
+            $ref: "#/components/schemas/PlanConflict"
+          type:
+            - array
+            - "null"
         excluded_application_ids:
           items:
             type: string
@@ -1603,6 +1610,17 @@ components:
         - application_id
         - created_at
         - updated_at
+      type: object
+    PlanConflict:
+      additionalProperties: false
+      properties:
+        application_id:
+          type: string
+        lead_nuid:
+          type: string
+      required:
+        - lead_nuid
+        - application_id
       type: object
     PlanLeadDay:
       additionalProperties: false
@@ -2102,6 +2120,13 @@ components:
             format: int64
             type: integer
           type: object
+        conflicts:
+          description: Leads ineligible to review a specific applicant's interview
+          items:
+            $ref: "#/components/schemas/PlanConflict"
+          type:
+            - array
+            - "null"
         coverage:
           format: int64
           minimum: 1
