@@ -9,6 +9,7 @@ export default function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirectTo = searchParams.get('redirectTo') ?? '/'
+  const sessionExpired = searchParams.get('sessionExpired') === '1'
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -38,6 +39,12 @@ export default function LoginForm() {
 
   return (
     <form onSubmit={handleSubmit} className="flex w-full flex-col gap-4">
+      {sessionExpired && (
+        <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-700">
+          Your session expired. Please sign in again.
+        </p>
+      )}
+
       <div className="flex flex-col gap-1.5">
         <label
           htmlFor="email"
