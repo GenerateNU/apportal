@@ -627,13 +627,12 @@ export function ChiefReviewQueueClient() {
                             label={
                               application.stage === 'interview'
                                 ? 'Already in interview stage'
-                                : 'Advance to interview'
+                                : 'Skip the vote discussion and move this applicant straight to the interview stage'
                             }
                           >
                             <Button
                               variant="outline"
-                              size="icon-sm"
-                              aria-label="Advance to interview"
+                              size="sm"
                               disabled={
                                 application.stage === 'interview' ||
                                 advancingId === application.id
@@ -647,8 +646,15 @@ export function ChiefReviewQueueClient() {
                               ) : (
                                 <UserCheck size={14} />
                               )}
+                              {application.stage === 'interview'
+                                ? 'In interview'
+                                : 'Advance to interview'}
                             </Button>
                           </Tooltip>
+                          <div
+                            aria-hidden
+                            className="h-5 w-px shrink-0 bg-gray-200"
+                          />
                           <Button
                             variant="outline"
                             onClick={() =>
