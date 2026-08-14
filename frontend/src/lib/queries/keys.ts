@@ -172,6 +172,26 @@ export const queryKeys = {
       [...queryKeys.interviewReviewAssignments.lists(), applicationId] as const,
   },
 
+  // Same shape as assignmentPlan above: read-only, driven by a meeting-day
+  // roster the chief types in, so only pool sizes are cached queries.
+  interviewAssignmentPlan: {
+    all: ['interview-assignment-plan'] as const,
+    interviewerPool: (cycleId: string, role: Role) =>
+      [
+        ...queryKeys.interviewAssignmentPlan.all,
+        'interviewer-pool',
+        cycleId,
+        role,
+      ] as const,
+    reviewerPool: (cycleId: string, role: Role) =>
+      [
+        ...queryKeys.interviewAssignmentPlan.all,
+        'reviewer-pool',
+        cycleId,
+        role,
+      ] as const,
+  },
+
   reviewGates: {
     all: ['review-gates'] as const,
     lists: () => [...queryKeys.reviewGates.all, 'list'] as const,

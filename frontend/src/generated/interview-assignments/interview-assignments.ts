@@ -30,7 +30,10 @@ import type {
   InterviewAssignment,
   InterviewReviewAssignment,
   ListRecordingReviewerAssignments200,
-  SetInterviewAssignmentInputBody
+  SetInterviewAssignmentInputBody,
+  UnassignAllInterviewersParams,
+  UnassignAllOutputBody,
+  UnassignAllRecordingReviewersParams
 } from '.././model';
 
 import { customInstance } from '../../lib/api/orval-mutator';
@@ -377,6 +380,134 @@ export const useAssignRecordingReviewer = <TError = ErrorModel | ErrorModel | Er
       > => {
 
       const mutationOptions = getAssignRecordingReviewerMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * Chief only. Deletes all interviewer assignments for one applicant role in a cycle at once. Cannot be undone.
+ * @summary Remove every interviewer assignment for a cycle's role
+ */
+export const unassignAllInterviewers = (
+    id: string,
+    params?: UnassignAllInterviewersParams,
+ options?: SecondParameter<typeof customInstance>,) => {
+      
+      
+      return customInstance<UnassignAllOutputBody>(
+      {url: `/cycles/${id}/interview-assignments`, method: 'DELETE',
+        params
+    },
+      options);
+    }
+  
+
+
+export const getUnassignAllInterviewersMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unassignAllInterviewers>>, TError,{id: string;params?: UnassignAllInterviewersParams}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof unassignAllInterviewers>>, TError,{id: string;params?: UnassignAllInterviewersParams}, TContext> => {
+
+const mutationKey = ['unassignAllInterviewers'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof unassignAllInterviewers>>, {id: string;params?: UnassignAllInterviewersParams}> = (props) => {
+          const {id,params} = props ?? {};
+
+          return  unassignAllInterviewers(id,params,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UnassignAllInterviewersMutationResult = NonNullable<Awaited<ReturnType<typeof unassignAllInterviewers>>>
+    
+    export type UnassignAllInterviewersMutationError = ErrorModel | ErrorModel | ErrorModel | ErrorModel
+
+    /**
+ * @summary Remove every interviewer assignment for a cycle's role
+ */
+export const useUnassignAllInterviewers = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unassignAllInterviewers>>, TError,{id: string;params?: UnassignAllInterviewersParams}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof unassignAllInterviewers>>,
+        TError,
+        {id: string;params?: UnassignAllInterviewersParams},
+        TContext
+      > => {
+
+      const mutationOptions = getUnassignAllInterviewersMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * Chief only. Deletes all recording-review assignments for one applicant role in a cycle at once. Cannot be undone.
+ * @summary Remove every recording-review assignment for a cycle's role
+ */
+export const unassignAllRecordingReviewers = (
+    id: string,
+    params?: UnassignAllRecordingReviewersParams,
+ options?: SecondParameter<typeof customInstance>,) => {
+      
+      
+      return customInstance<UnassignAllOutputBody>(
+      {url: `/cycles/${id}/interview-review-assignments`, method: 'DELETE',
+        params
+    },
+      options);
+    }
+  
+
+
+export const getUnassignAllRecordingReviewersMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unassignAllRecordingReviewers>>, TError,{id: string;params?: UnassignAllRecordingReviewersParams}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof unassignAllRecordingReviewers>>, TError,{id: string;params?: UnassignAllRecordingReviewersParams}, TContext> => {
+
+const mutationKey = ['unassignAllRecordingReviewers'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof unassignAllRecordingReviewers>>, {id: string;params?: UnassignAllRecordingReviewersParams}> = (props) => {
+          const {id,params} = props ?? {};
+
+          return  unassignAllRecordingReviewers(id,params,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UnassignAllRecordingReviewersMutationResult = NonNullable<Awaited<ReturnType<typeof unassignAllRecordingReviewers>>>
+    
+    export type UnassignAllRecordingReviewersMutationError = ErrorModel | ErrorModel | ErrorModel | ErrorModel
+
+    /**
+ * @summary Remove every recording-review assignment for a cycle's role
+ */
+export const useUnassignAllRecordingReviewers = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unassignAllRecordingReviewers>>, TError,{id: string;params?: UnassignAllRecordingReviewersParams}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof unassignAllRecordingReviewers>>,
+        TError,
+        {id: string;params?: UnassignAllRecordingReviewersParams},
+        TContext
+      > => {
+
+      const mutationOptions = getUnassignAllRecordingReviewersMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }

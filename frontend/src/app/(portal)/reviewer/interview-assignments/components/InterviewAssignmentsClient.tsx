@@ -2,7 +2,16 @@
 import { PageContainer } from '@/components/PageContainer'
 
 import { useMemo, useState } from 'react'
-import { X } from 'lucide-react'
+import { Loader2, Trash2, X } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import {
   Select,
   SelectContent,
@@ -18,10 +27,15 @@ import {
   useInterviewAssignmentsByApplications,
   useRecordingReviewerAssignmentsByApplications,
   useSetInterviewAssignment,
+  useUnassignAllInterviewers,
+  useUnassignAllRecordingReviewers,
   useUnassignRecordingReviewer,
 } from '@/lib/queries/interview-assignments'
 import { useChiefs, useLeads } from '@/lib/queries/users'
 import { ROLE_CHIP_CLASS, ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
+
+// Which "unassign all" confirmation dialog is open, if any.
+type ConfirmingUnassignAll = { role: Role; kind: 'interviewers' | 'reviewers' }
 
 export function InterviewAssignmentsClient() {
   const { data: cycles = [] } = useCycles({})
@@ -89,6 +103,85 @@ export function InterviewAssignmentsClient() {
   const setInterviewAssignment = useSetInterviewAssignment()
   const assignReviewer = useAssignRecordingReviewer()
   const unassignReviewer = useUnassignRecordingReviewer()
+  const unassignAllInterviewers = useUnassignAllInterviewers()
+  const unassignAllReviewers = useUnassignAllRecordingReviewers()
+
+  // Multiselect + bulk toolbar, same pattern as the lead-assignment page:
+  // select applicants, then either assign them all one interviewer or add
+  // one reviewer to each (ignoring 409s — already having that reviewer isn't
+  // a failure).
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [bulkInterviewerNuid, setBulkInterviewerNuid] = useState('')
+  const [bulkReviewerNuid, setBulkReviewerNuid] = useState('')
+  const [assigningInterviewers, setAssigningInterviewers] = useState(false)
+  const [assigningReviewers, setAssigningReviewers] = useState(false)
+  const [interviewerFailures, setInterviewerFailures] = useState(0)
+  const [reviewerFailures, setReviewerFailures] = useState(0)
+  const [confirmingUnassignAll, setConfirmingUnassignAll] =
+    useState<ConfirmingUnassignAll | null>(null)
+
+  function toggleSelected(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  async function assignInterviewerToSelected() {
+    if (!bulkInterviewerNuid || selected.size === 0) return
+    setAssigningInterviewers(true)
+    setInterviewerFailures(0)
+    const results = await Promise.allSettled(
+      [...selected].map((applicationId) =>
+        setInterviewAssignment.mutateAsync({
+          applicationId,
+          interviewerNuid: bulkInterviewerNuid,
+        })
+      )
+    )
+    const failures = results.filter((r) => r.status === 'rejected').length
+    setInterviewerFailures(failures)
+    if (failures === 0) setSelected(new Set())
+    setAssigningInterviewers(false)
+  }
+
+  async function assignReviewerToSelected() {
+    if (!bulkReviewerNuid || selected.size === 0) return
+    setAssigningReviewers(true)
+    setReviewerFailures(0)
+    const results = await Promise.allSettled(
+      [...selected].map((applicationId) =>
+        assignReviewer.mutateAsync({
+          applicationId,
+          leadNuid: bulkReviewerNuid,
+        })
+      )
+    )
+    const failures = results.filter(
+      (r) =>
+        r.status === 'rejected' &&
+        !String((r.reason as Error)?.message).includes('409')
+    ).length
+    setReviewerFailures(failures)
+    if (failures === 0) setSelected(new Set())
+    setAssigningReviewers(false)
+  }
+
+  const unassigningAll =
+    unassignAllInterviewers.isPending || unassignAllReviewers.isPending
+
+  function confirmUnassignAll() {
+    if (!confirmingUnassignAll) return
+    const { role, kind } = confirmingUnassignAll
+    const mutation =
+      kind === 'interviewers' ? unassignAllInterviewers : unassignAllReviewers
+    mutation.mutate(
+      { cycleId, role },
+      { onSuccess: () => setConfirmingUnassignAll(null) }
+    )
+  }
 
   return (
     <PageContainer>
@@ -134,6 +227,87 @@ export function InterviewAssignmentsClient() {
         </div>
       </div>
 
+      {/* Bulk toolbar */}
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-gray-100 bg-white p-4">
+        <span className="text-text-faint text-sm">
+          {selected.size} selected
+        </span>
+        {interviewerFailures > 0 && (
+          <span className="text-destructive text-sm">
+            {interviewerFailures} interviewer assignment
+            {interviewerFailures === 1 ? '' : 's'} failed
+          </span>
+        )}
+        {reviewerFailures > 0 && (
+          <span className="text-destructive text-sm">
+            {reviewerFailures} reviewer assignment
+            {reviewerFailures === 1 ? '' : 's'} failed
+          </span>
+        )}
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <Select
+            value={bulkInterviewerNuid}
+            onValueChange={setBulkInterviewerNuid}
+          >
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Select an interviewer…" />
+            </SelectTrigger>
+            <SelectContent>
+              {interviewers.map((u) => (
+                <SelectItem key={u.nuid} value={u.nuid}>
+                  {u.full_name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button
+            variant="outline"
+            onClick={assignInterviewerToSelected}
+            disabled={
+              !bulkInterviewerNuid ||
+              selected.size === 0 ||
+              assigningInterviewers
+            }
+          >
+            {assigningInterviewers ? (
+              <>
+                <Loader2 className="animate-spin" size={14} />
+                Assigning…
+              </>
+            ) : (
+              `Set interviewer for ${selected.size || ''} selected`
+            )}
+          </Button>
+          <Select value={bulkReviewerNuid} onValueChange={setBulkReviewerNuid}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Select a reviewer…" />
+            </SelectTrigger>
+            <SelectContent>
+              {leads.map((lead) => (
+                <SelectItem key={lead.nuid} value={lead.nuid}>
+                  {lead.full_name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button
+            onClick={assignReviewerToSelected}
+            disabled={
+              !bulkReviewerNuid || selected.size === 0 || assigningReviewers
+            }
+          >
+            {assigningReviewers ? (
+              <>
+                <Loader2 className="animate-spin" size={14} />
+                Assigning…
+              </>
+            ) : (
+              `Add reviewer to ${selected.size || ''} selected`
+            )}
+          </Button>
+        </div>
+      </div>
+
       {applications.length === 0 ? (
         <div className="rounded-xl border border-dashed border-gray-200 bg-white p-10 text-center">
           <p className="text-text-default text-sm font-medium">
@@ -147,14 +321,50 @@ export function InterviewAssignmentsClient() {
         ROLE_COLUMNS.map((role) => {
           const roleApps = applications.filter((a) => a.role === role)
           if (roleApps.length === 0) return null
+          const roleHasInterviewers = roleApps.some(
+            (a) => assignmentByApp[a.id]
+          )
+          const roleHasReviewers = roleApps.some(
+            (a) => (reviewersByApp[a.id] ?? []).length > 0
+          )
           return (
             <section key={role}>
-              <h2 className="text-text-default mb-3 text-sm font-semibold">
-                {ROLE_LABEL[role]}{' '}
-                <span className="text-text-faint font-normal">
-                  ({roleApps.length})
-                </span>
-              </h2>
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h2 className="text-text-default text-sm font-semibold">
+                  {ROLE_LABEL[role]}{' '}
+                  <span className="text-text-faint font-normal">
+                    ({roleApps.length})
+                  </span>
+                </h2>
+                <div className="flex items-center gap-2">
+                  {roleHasInterviewers && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-destructive hover:text-destructive"
+                      onClick={() =>
+                        setConfirmingUnassignAll({ role, kind: 'interviewers' })
+                      }
+                    >
+                      <Trash2 size={14} />
+                      Unassign all interviewers
+                    </Button>
+                  )}
+                  {roleHasReviewers && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-destructive hover:text-destructive"
+                      onClick={() =>
+                        setConfirmingUnassignAll({ role, kind: 'reviewers' })
+                      }
+                    >
+                      <Trash2 size={14} />
+                      Unassign all reviewers
+                    </Button>
+                  )}
+                </div>
+              </div>
               <div className="flex flex-col gap-2">
                 {roleApps.map((application) => (
                   <InterviewAssignmentRow
@@ -166,6 +376,8 @@ export function InterviewAssignmentsClient() {
                     userName={userName}
                     assignment={assignmentByApp[application.id]}
                     reviewers={reviewersByApp[application.id] ?? []}
+                    selected={selected.has(application.id)}
+                    onToggleSelected={() => toggleSelected(application.id)}
                     onSetInterviewer={(interviewerNuid) =>
                       setInterviewAssignment.mutate({
                         applicationId: application.id,
@@ -191,6 +403,50 @@ export function InterviewAssignmentsClient() {
           )
         })
       )}
+
+      <Dialog
+        open={!!confirmingUnassignAll}
+        onOpenChange={(open) => !open && setConfirmingUnassignAll(null)}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              Unassign all{' '}
+              {confirmingUnassignAll?.kind === 'interviewers'
+                ? 'interviewers'
+                : 'reviewers'}
+              ?
+            </DialogTitle>
+            <DialogDescription>
+              This removes every{' '}
+              {confirmingUnassignAll?.kind === 'interviewers'
+                ? 'interviewer'
+                : 'recording-review'}{' '}
+              assignment for{' '}
+              {confirmingUnassignAll &&
+                ROLE_LABEL[confirmingUnassignAll.role].toLowerCase()}{' '}
+              applicants in this cycle. This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setConfirmingUnassignAll(null)}
+              disabled={unassigningAll}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={unassigningAll}
+              onClick={confirmUnassignAll}
+            >
+              {unassigningAll && <Loader2 className="animate-spin" size={14} />}
+              Unassign all
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PageContainer>
   )
 }
@@ -203,6 +459,8 @@ function InterviewAssignmentRow({
   userName,
   assignment,
   reviewers,
+  selected,
+  onToggleSelected,
   onSetInterviewer,
   onAssignReviewer,
   onUnassignReviewer,
@@ -214,6 +472,8 @@ function InterviewAssignmentRow({
   userName: Record<string, string>
   assignment: { interviewer_nuid: string } | undefined
   reviewers: { id: string; lead_nuid: string }[]
+  selected: boolean
+  onToggleSelected: () => void
   onSetInterviewer: (interviewerNuid: string) => void
   onAssignReviewer: (leadNuid: string) => void
   onUnassignReviewer: (id: string) => void
@@ -226,6 +486,13 @@ function InterviewAssignmentRow({
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-gray-100 bg-white p-4 sm:flex-row sm:items-center sm:gap-4">
       <div className="flex min-w-0 items-center gap-2 sm:w-56 sm:shrink-0">
+        <input
+          type="checkbox"
+          className="accent-primary"
+          checked={selected}
+          onChange={onToggleSelected}
+          aria-label={`Select ${name}`}
+        />
         <span className="text-text-default truncate text-sm font-medium">
           {name}
         </span>
