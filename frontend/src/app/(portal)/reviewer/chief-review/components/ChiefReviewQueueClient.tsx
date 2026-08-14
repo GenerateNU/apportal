@@ -4,9 +4,18 @@ import { PageContainer } from '@/components/PageContainer'
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowRight, Check, Eye, EyeOff, Loader2, Search } from 'lucide-react'
+import {
+  ArrowRight,
+  Check,
+  Eye,
+  EyeOff,
+  Loader2,
+  Search,
+  UserCheck,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ProgressBar } from '@/components/ProgressBar'
+import { Tooltip } from '@/components/Tooltip'
 import {
   Select,
   SelectContent,
@@ -15,7 +24,10 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import type { ApplicationStage, ChiefVote, Role } from '@/lib/api/types'
-import { useApplications } from '@/lib/queries/applications'
+import {
+  useApplications,
+  useUpdateApplication,
+} from '@/lib/queries/applications'
 import { useChiefReviewsByApplicationIdBatch } from '@/lib/queries/chief-reviews'
 import {
   CHIEF_VOTE_BADGE_CLASS,
@@ -73,6 +85,17 @@ export function ChiefReviewQueueClient() {
   const { data: currentUser } = useCurrentUser()
   const { data: cycles = [] } = useCycles({})
   const { data: chiefs = [], isLoading: chiefsLoading } = useChiefReviewers()
+  // One shared mutation, so this tracks which row is in flight — otherwise
+  // every row's button would show a spinner whenever any one of them does.
+  const advanceToInterview = useUpdateApplication()
+  const [advancingId, setAdvancingId] = useState<string | null>(null)
+  function advanceApplicationToInterview(applicationId: string) {
+    setAdvancingId(applicationId)
+    advanceToInterview.mutate(
+      { id: applicationId, body: { stage: 'interview' } },
+      { onSettled: () => setAdvancingId(null) }
+    )
+  }
 
   // Default cycle, same as the other chief-only pipeline pages. Shared with
   // the server prefetch in ../page.tsx, which scopes its application-list
@@ -600,6 +623,32 @@ export function ChiefReviewQueueClient() {
                               Submitted
                             </span>
                           )}
+                          <Tooltip
+                            label={
+                              application.stage === 'interview'
+                                ? 'Already in interview stage'
+                                : 'Advance to interview'
+                            }
+                          >
+                            <Button
+                              variant="outline"
+                              size="icon-sm"
+                              aria-label="Advance to interview"
+                              disabled={
+                                application.stage === 'interview' ||
+                                advancingId === application.id
+                              }
+                              onClick={() =>
+                                advanceApplicationToInterview(application.id)
+                              }
+                            >
+                              {advancingId === application.id ? (
+                                <Loader2 className="animate-spin" size={14} />
+                              ) : (
+                                <UserCheck size={14} />
+                              )}
+                            </Button>
+                          </Tooltip>
                           <Button
                             variant="outline"
                             onClick={() =>
