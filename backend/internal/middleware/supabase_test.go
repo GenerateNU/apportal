@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -91,6 +92,75 @@ func TestSupabaseVerifierDeduplicatesConcurrentCalls(t *testing.T) {
 	defer mu.Unlock()
 	if calls != 1 {
 		t.Fatalf("calls = %d, want 1 (concurrent calls should be deduplicated)", calls)
+	}
+}
+
+// The leader of a singleflight group is whichever caller happens to arrive
+// first — e.g. one of several concurrent frontend requests sharing a bearer
+// token. If that specific caller's own request is cancelled (a browser
+// aborting a fetch, a page navigating away), the shared Supabase verification
+// it's leading must keep running for the other, still-alive callers instead
+// of failing all of them.
+func TestSupabaseVerifierSurvivesLeaderCancellation(t *testing.T) {
+	var calls int
+	var mu sync.Mutex
+	release := make(chan struct{})
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		calls++
+		mu.Unlock()
+		<-release
+		_, _ = w.Write([]byte(`{"email":"person@example.com"}`))
+	}))
+	defer server.Close()
+
+	v := NewSupabaseVerifier(server.URL, "anon-key")
+
+	leaderCtx, cancelLeader := context.WithCancel(context.Background())
+
+	const n = 5
+	var wg sync.WaitGroup
+	errs := make([]error, n)
+	emails := make([]string, n)
+
+	// Start the soon-to-be-cancelled leader first, then give it a moment to
+	// actually become the singleflight leader before the rest join in.
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		emails[0], errs[0] = v.Verify(leaderCtx, "good-token")
+	}()
+	time.Sleep(20 * time.Millisecond)
+
+	for i := 1; i < n; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			emails[i], errs[i] = v.Verify(t.Context(), "good-token")
+		}(i)
+	}
+
+	// Give the followers a chance to join the in-flight group, then cancel
+	// the leader's own request context before the server ever responds.
+	time.Sleep(20 * time.Millisecond)
+	cancelLeader()
+	time.Sleep(20 * time.Millisecond)
+	close(release)
+	wg.Wait()
+
+	for i := 1; i < n; i++ {
+		if errs[i] != nil {
+			t.Fatalf("call %d: unexpected error after leader cancellation: %v", i, errs[i])
+		}
+		if emails[i] != "person@example.com" {
+			t.Fatalf("call %d: email = %q, want person@example.com", i, emails[i])
+		}
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+	if calls != 1 {
+		t.Fatalf("calls = %d, want 1 (leader cancellation shouldn't trigger a retry)", calls)
 	}
 }
 
