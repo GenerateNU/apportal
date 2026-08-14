@@ -10,12 +10,19 @@ import {
   Eye,
   EyeOff,
   Loader2,
+  MoreVertical,
   Search,
   UserCheck,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ProgressBar } from '@/components/ProgressBar'
 import { Tooltip } from '@/components/Tooltip'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import {
   Select,
   SelectContent,
@@ -608,6 +615,42 @@ export function ChiefReviewQueueClient() {
                               Unanimous {CHIEF_VOTE_LABEL[highlightUnanimous]}
                             </span>
                           )}
+                          <DropdownMenu>
+                            <Tooltip label="More actions">
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon-sm"
+                                  aria-label="More actions"
+                                >
+                                  {advancingId === application.id ? (
+                                    <Loader2
+                                      className="animate-spin"
+                                      size={14}
+                                    />
+                                  ) : (
+                                    <MoreVertical size={14} />
+                                  )}
+                                </Button>
+                              </DropdownMenuTrigger>
+                            </Tooltip>
+                            <DropdownMenuContent align="start">
+                              <DropdownMenuItem
+                                disabled={
+                                  application.stage === 'interview' ||
+                                  advancingId === application.id
+                                }
+                                onClick={() =>
+                                  advanceApplicationToInterview(application.id)
+                                }
+                              >
+                                <UserCheck size={14} />
+                                {application.stage === 'interview'
+                                  ? 'Already in interview stage'
+                                  : 'Advance to interview'}
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                         <div className="flex items-center gap-2">
                           {submitted && ownVote && (
@@ -623,32 +666,6 @@ export function ChiefReviewQueueClient() {
                               Submitted
                             </span>
                           )}
-                          <Tooltip
-                            label={
-                              application.stage === 'interview'
-                                ? 'Already in interview stage'
-                                : 'Advance to interview'
-                            }
-                          >
-                            <Button
-                              variant="outline"
-                              size="icon-sm"
-                              aria-label="Advance to interview"
-                              disabled={
-                                application.stage === 'interview' ||
-                                advancingId === application.id
-                              }
-                              onClick={() =>
-                                advanceApplicationToInterview(application.id)
-                              }
-                            >
-                              {advancingId === application.id ? (
-                                <Loader2 className="animate-spin" size={14} />
-                              ) : (
-                                <UserCheck size={14} />
-                              )}
-                            </Button>
-                          </Tooltip>
                           <Button
                             variant="outline"
                             onClick={() =>
