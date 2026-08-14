@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
   ArrowRight,
+  Ban,
   Check,
   Eye,
   EyeOff,
@@ -21,6 +22,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
@@ -94,13 +96,16 @@ export function ChiefReviewQueueClient() {
   const { data: chiefs = [], isLoading: chiefsLoading } = useChiefReviewers()
   // One shared mutation, so this tracks which row is in flight — otherwise
   // every row's button would show a spinner whenever any one of them does.
-  const advanceToInterview = useUpdateApplication()
-  const [advancingId, setAdvancingId] = useState<string | null>(null)
-  function advanceApplicationToInterview(applicationId: string) {
-    setAdvancingId(applicationId)
-    advanceToInterview.mutate(
-      { id: applicationId, body: { stage: 'interview' } },
-      { onSettled: () => setAdvancingId(null) }
+  const updateStage = useUpdateApplication()
+  const [updatingId, setUpdatingId] = useState<string | null>(null)
+  function updateApplicationStage(
+    applicationId: string,
+    stage: ApplicationStage
+  ) {
+    setUpdatingId(applicationId)
+    updateStage.mutate(
+      { id: applicationId, body: { stage } },
+      { onSettled: () => setUpdatingId(null) }
     )
   }
 
@@ -623,7 +628,7 @@ export function ChiefReviewQueueClient() {
                                   size="icon-sm"
                                   aria-label="More actions"
                                 >
-                                  {advancingId === application.id ? (
+                                  {updatingId === application.id ? (
                                     <Loader2
                                       className="animate-spin"
                                       size={14}
@@ -638,16 +643,38 @@ export function ChiefReviewQueueClient() {
                               <DropdownMenuItem
                                 disabled={
                                   application.stage === 'interview' ||
-                                  advancingId === application.id
+                                  updatingId === application.id
                                 }
                                 onClick={() =>
-                                  advanceApplicationToInterview(application.id)
+                                  updateApplicationStage(
+                                    application.id,
+                                    'interview'
+                                  )
                                 }
                               >
                                 <UserCheck size={14} />
                                 {application.stage === 'interview'
                                   ? 'Already in interview stage'
                                   : 'Advance to interview'}
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                variant="destructive"
+                                disabled={
+                                  application.stage === 'rejected' ||
+                                  updatingId === application.id
+                                }
+                                onClick={() =>
+                                  updateApplicationStage(
+                                    application.id,
+                                    'rejected'
+                                  )
+                                }
+                              >
+                                <Ban size={14} />
+                                {application.stage === 'rejected'
+                                  ? 'Already rejected'
+                                  : 'Reject'}
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
