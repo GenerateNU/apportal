@@ -137,6 +137,8 @@ export * from './listCycleSelectionsParams';
 export * from './listCycleStages200';
 export * from './listCycles200';
 export * from './listCyclesParams';
+export * from './listInterviewsBulk200';
+export * from './listInterviewsBulkParams';
 export * from './listLeadAssignments200';
 export * from './listOpenApplicationTemplates200';
 export * from './listRecordingReviewerAssignments200';

@@ -36,6 +36,7 @@ export const queryKeys = {
       cycle_id?: string
       user_nuid?: string
       assigned_to?: string
+      interviewer_nuid?: string
       stage?: ApplicationStage
       role?: Role
       answer_filters?: AnswerFilterParam[]
@@ -156,6 +157,17 @@ export const queryKeys = {
     all: ['assignment-plan'] as const,
     pool: (cycleId: string, role: Role) =>
       [...queryKeys.assignmentPlan.all, 'pool', cycleId, role] as const,
+  },
+
+  interviews: {
+    all: ['interviews'] as const,
+    details: () => [...queryKeys.interviews.all, 'detail'] as const,
+    detail: (applicationId: string) =>
+      [...queryKeys.interviews.details(), applicationId] as const,
+    // One entry per batch of applications fetched together. Keyed by the exact
+    // id list so a batch stays cached as more are loaded alongside it.
+    bulk: (applicationIds: string[]) =>
+      [...queryKeys.interviews.all, 'bulk', applicationIds] as const,
   },
 
   interviewAssignments: {

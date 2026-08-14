@@ -11,6 +11,7 @@ import {
   ChevronsRight,
   ClipboardCheck,
   ListChecks,
+  Mic,
   Scale,
   Video,
   Wand2,
@@ -64,6 +65,7 @@ const sectionsByRole: Record<Role, NavSection> = {
     items: [
       { href: '/reviewer/applications', label: 'Applications', icon: Users },
       { href: '/reviewer/my-reviews', label: 'Lead Review', icon: FileText },
+      { href: '/reviewer/my-interviews', label: 'My Interviews', icon: Mic },
       {
         href: '/reviewer/chief-review',
         label: 'Chief Review',

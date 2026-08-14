@@ -70,6 +70,9 @@ type ApplicationFilter struct {
 	// AssignedTo limits results to applications the given lead is assigned to
 	// write-review (via lead_assignments).
 	AssignedTo string
+	// InterviewerNUID limits results to applications the given reviewer is
+	// assigned to interview (via interview_assignments).
+	InterviewerNUID string
 	// IncludeDraft allows draft applications into the results. Callers should
 	// only set this when listing a user's own applications by their own
 	// identity — drafts are otherwise invisible (reviewer queues, admin
@@ -305,6 +308,12 @@ func applicationsFrom(f ApplicationFilter, scope applicationFilterScope) (string
 		args = append(args, f.AssignedTo)
 		query += ` AND EXISTS (SELECT 1 FROM lead_assignments la` +
 			` WHERE la.application_id = a.id AND la.lead_nuid = $` +
+			strconv.Itoa(len(args)) + `)`
+	}
+	if f.InterviewerNUID != "" {
+		args = append(args, f.InterviewerNUID)
+		query += ` AND EXISTS (SELECT 1 FROM interview_assignments ia` +
+			` WHERE ia.application_id = a.id AND ia.interviewer_nuid = $` +
 			strconv.Itoa(len(args)) + `)`
 	}
 	if !f.IncludeDraft {

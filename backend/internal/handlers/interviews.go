@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -34,10 +35,54 @@ func (h *interviewHandler) register(api huma.API) {
 		Tags:        []string{"Interviews"},
 		Errors:      []int{http.StatusUnauthorized, http.StatusNotFound},
 	}, h.get)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "list-interviews-bulk",
+		Method:      http.MethodGet,
+		Path:        "/interviews",
+		Summary:     "List interviews for several applications",
+		Description: "Reviewer only. One request for a page of applications, instead of one per application.",
+		Tags:        []string{"Interviews"},
+		Errors:      []int{http.StatusUnauthorized, http.StatusUnprocessableEntity},
+	}, h.listBulk)
 }
 
 type InterviewOutput struct {
 	Body models.Interview
+}
+
+type InterviewsOutput struct {
+	Body []models.Interview
+}
+
+type ListInterviewsBulkInput struct {
+	// Comma-separated rather than a repeated/array param because huma splits
+	// this form itself, while the browser client serializes arrays as
+	// `application_ids[]=…`, which binds to nothing server-side.
+	ApplicationIDs string `query:"application_ids" doc:"Comma-separated application IDs"`
+}
+
+func (h *interviewHandler) listBulk(ctx context.Context, in *ListInterviewsBulkInput) (*InterviewsOutput, error) {
+	if err := requireReviewer(ctx); err != nil {
+		return nil, err
+	}
+	ids := make([]string, 0, 8)
+	for _, id := range strings.Split(in.ApplicationIDs, ",") {
+		if id = strings.TrimSpace(id); id != "" {
+			ids = append(ids, id)
+		}
+	}
+	if len(ids) == 0 {
+		return &InterviewsOutput{Body: []models.Interview{}}, nil
+	}
+	if len(ids) > maxBulkApplications {
+		return nil, huma.Error422UnprocessableEntity("too many application_ids")
+	}
+	items, err := h.store.ListInterviewsForApplications(ctx, ids)
+	if err != nil {
+		return nil, storeErr(err)
+	}
+	return &InterviewsOutput{Body: items}, nil
 }
 
 type UpsertInterviewInput struct {

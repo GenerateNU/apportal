@@ -8,6 +8,7 @@ import {
   QueryClientProvider,
 } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
+import { ToastProvider } from '@/components/ui/toast'
 import { APIError } from '@/lib/api/client'
 import { AuthProvider } from '@/lib/auth/auth-context'
 import { createClient } from '@/lib/supabase/client'
@@ -75,7 +76,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
       <QueryClientProvider client={queryClient}>
-        {children}
+        <ToastProvider>{children}</ToastProvider>
         {showDevtools && <ReactQueryDevtools initialIsOpen={false} />}
       </QueryClientProvider>
     </AuthProvider>

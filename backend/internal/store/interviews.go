@@ -65,6 +65,21 @@ func (s *Store) GetInterview(ctx context.Context, applicationID string) (models.
 	return i, err
 }
 
+// ListInterviewsForApplications fetches the interviews for many applications in
+// one round trip, for callers rendering a page of applications at once — the
+// per-application GetInterview above turns into a request per row there.
+func (s *Store) ListInterviewsForApplications(ctx context.Context, applicationIDs []string) ([]models.Interview, error) {
+	if len(applicationIDs) == 0 {
+		return nil, nil
+	}
+	const q = `SELECT ` + interviewColumns + ` FROM interviews WHERE application_id = ANY($1::uuid[]) ORDER BY application_id`
+	rows, err := s.db.Query(ctx, q, applicationIDs)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, pgx.RowToStructByPos[models.Interview])
+}
+
 // GetInterviewByID fetches an interview by its own ID (used by recording reviews).
 func (s *Store) GetInterviewByID(ctx context.Context, id string) (models.Interview, error) {
 	const q = `SELECT ` + interviewColumns + ` FROM interviews WHERE id = $1`
