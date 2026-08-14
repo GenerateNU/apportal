@@ -73,7 +73,15 @@ func (v *SupabaseVerifier) Verify(ctx context.Context, token string) (string, er
 			return email, nil
 		}
 
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, v.baseURL+"/auth/v1/user", nil)
+		// Detached from the leader's own request context: this call is
+		// shared via singleflight across every concurrent request racing to
+		// verify the same token, so one caller's request being cancelled
+		// (a browser aborting a fetch, a page navigating away) must not
+		// take down verification for the rest, which are still alive.
+		reqCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		req, err := http.NewRequestWithContext(reqCtx, http.MethodGet, v.baseURL+"/auth/v1/user", nil)
 		if err != nil {
 			return "", err
 		}
