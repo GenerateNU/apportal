@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import {
   ArrowLeft,
   Check,
@@ -19,7 +19,6 @@ import { useAnswers } from '@/lib/queries/answers'
 import { useApplicant } from '@/lib/queries/applicants'
 import {
   useApplication,
-  useApplications,
   useUpdateApplication,
 } from '@/lib/queries/applications'
 import {
@@ -27,6 +26,10 @@ import {
   useCreateChiefReviewComment,
   useUpdateChiefReviewComment,
 } from '@/lib/queries/chief-review-comments'
+import {
+  parseChiefReviewQueueSearchParams,
+  useChiefReviewQueue,
+} from '@/lib/queries/chief-review-queue'
 import {
   useChiefReviews,
   useUpsertChiefReview,
@@ -40,7 +43,7 @@ import {
   CHIEF_VOTE_LABEL,
   CHIEF_VOTE_ORDER,
 } from '@/lib/chief-votes'
-import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
+import { ROLE_LABEL } from '@/lib/roles'
 import { ResponseField } from '@/app/(portal)/reviewer/applications/components/ResponseField'
 
 export function ChiefReviewClient({
@@ -55,6 +58,13 @@ export function ChiefReviewClient({
   applicantNuid: string
 }) {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  // Only present when opened from the queue with non-default filters — see
+  // chiefReviewQueueSearchParams. Carried forward on every Next/Previous
+  // click below so paging through applicants stays inside that same list.
+  const queueSuffix = searchParams.toString()
+    ? `?${searchParams.toString()}`
+    : ''
   const { data: currentUser } = useCurrentUser()
   const { data: application } = useApplication(applicationId)
   const { data: applicant } = useApplicant(applicantNuid)
@@ -74,22 +84,14 @@ export function ChiefReviewClient({
     (r) => r === 'chief' || r === 'admin'
   )
 
-  // The same queue the chief review list shows by default — every applicant
-  // in the cycle, grouped by role in the list's order — so "next"/"previous"
-  // here retraces exactly the list this was opened from. Unfiltered by
-  // stage: advancing to chief_review is a manual, rarely-taken action, so
-  // gating on it would skip applicants who need a chief's review just as
-  // much while still sitting in lead_review.
-  const { data: queueApplications = [] } = useApplications({
-    cycle_id: cycleId,
+  // Retraces the exact filtered, ordered list the queue page showed when
+  // this applicant was opened (see chiefReviewQueueSearchParams/
+  // parseChiefReviewQueueSearchParams) — falling back to the whole cycle,
+  // grouped by role, when opened without any filters.
+  const { orderedApplications: orderedQueue } = useChiefReviewQueue({
+    cycleId,
+    ...parseChiefReviewQueueSearchParams(searchParams),
   })
-  const orderedQueue = useMemo(
-    () =>
-      ROLE_COLUMNS.flatMap((r) =>
-        queueApplications.filter((a) => a.role === r)
-      ),
-    [queueApplications]
-  )
   const queueIndex = orderedQueue.findIndex((a) => a.id === applicationId)
   const previousApplicationId =
     queueIndex > 0 ? orderedQueue[queueIndex - 1].id : null
@@ -244,7 +246,9 @@ export function ChiefReviewClient({
               disabled={!previousApplicationId}
               onClick={() =>
                 previousApplicationId &&
-                router.push(`/reviewer/chief-review/${previousApplicationId}`)
+                router.push(
+                  `/reviewer/chief-review/${previousApplicationId}${queueSuffix}`
+                )
               }
             >
               <ChevronLeft data-icon="inline-start" size={14} />
@@ -256,7 +260,9 @@ export function ChiefReviewClient({
               disabled={!nextApplicationId}
               onClick={() =>
                 nextApplicationId &&
-                router.push(`/reviewer/chief-review/${nextApplicationId}`)
+                router.push(
+                  `/reviewer/chief-review/${nextApplicationId}${queueSuffix}`
+                )
               }
             >
               Next

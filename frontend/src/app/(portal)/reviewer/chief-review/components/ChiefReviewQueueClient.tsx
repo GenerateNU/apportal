@@ -38,6 +38,7 @@ import {
   useUpdateApplication,
 } from '@/lib/queries/applications'
 import { useChiefReviewsByApplicationIdBatch } from '@/lib/queries/chief-reviews'
+import { chiefReviewQueueSearchParams } from '@/lib/queries/chief-review-queue'
 import {
   CHIEF_VOTE_BADGE_CLASS,
   CHIEF_VOTE_DOT_CLASS,
@@ -355,6 +356,18 @@ export function ChiefReviewQueueClient() {
     chiefsLoading ||
     activeReviewerProgressQueries.some((q) => q.isLoading)
 
+  // Carried onto every link into an applicant's detail page, so its
+  // Next/Previous buttons retrace this same filtered list instead of the
+  // whole cycle.
+  const queueSearchParams = chiefReviewQueueSearchParams({
+    role: activeRole,
+    stage: activeStage,
+    search: debouncedSearch,
+    voteScope,
+    voteValue,
+  })
+  const queueSuffix = queueSearchParams ? `?${queueSearchParams}` : ''
+
   return (
     <PageContainer>
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -486,7 +499,9 @@ export function ChiefReviewQueueClient() {
             </button>
             {nextUnvoted && (
               <Button asChild>
-                <Link href={`/reviewer/chief-review/${nextUnvoted.id}`}>
+                <Link
+                  href={`/reviewer/chief-review/${nextUnvoted.id}${queueSuffix}`}
+                >
                   {votedCount === 0 ? 'Start voting' : 'Continue voting'}
                   <ArrowRight data-icon="inline-end" size={14} />
                 </Link>
@@ -697,7 +712,7 @@ export function ChiefReviewQueueClient() {
                             variant="outline"
                             onClick={() =>
                               router.push(
-                                `/reviewer/chief-review/${application.id}`
+                                `/reviewer/chief-review/${application.id}${queueSuffix}`
                               )
                             }
                           >
