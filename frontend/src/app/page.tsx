@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 import { HelpContact } from '@/components/HelpContact'
 import { Button } from '@/components/ui/button'
+import { APIError } from '@/lib/api/client'
+import { useAuth } from '@/lib/auth/auth-context'
 import { useCurrentUser } from '@/lib/queries/users'
 import { defaultDashboard, getRoles } from '@/types/roles'
 
@@ -12,16 +14,30 @@ import { defaultDashboard, getRoles } from '@/types/roles'
 // rather than a fixed page, so "Back to portal" and "/" land correctly.
 export default function RootPage() {
   const router = useRouter()
-  const { data: user, isLoading, isError, refetch } = useCurrentUser()
+  const { signOut } = useAuth()
+  const { data: user, isLoading, isError, error, refetch } = useCurrentUser()
+
+  // The browser's Supabase client can hang onto a session whose access token
+  // the backend no longer accepts (a stale refresh that silently kept the
+  // old token, a revoked session, clock skew). That's a 401 from /me, not a
+  // network/backend outage — clear it and send the user to /login instead of
+  // stranding them on the "couldn't verify" retry screen with a dead cookie
+  // that will just 401 again on every retry.
+  const isUnauthenticated = error instanceof APIError && error.status === 401
 
   useEffect(() => {
+    if (isLoading) return
+    if (isUnauthenticated) {
+      void signOut().then(() => router.replace('/login'))
+      return
+    }
     // A failed identity check (backend down, network error) is not the same
     // as "not signed in" — don't silently bounce those to /login.
-    if (isLoading || isError) return
+    if (isError) return
     router.replace(user ? defaultDashboard(getRoles(user)) : '/login')
-  }, [user, isLoading, isError, router])
+  }, [user, isLoading, isError, isUnauthenticated, signOut, router])
 
-  if (isError) {
+  if (isError && !isUnauthenticated) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-gray-50 px-4">
         <div className="flex w-full max-w-sm flex-col items-center gap-4 rounded-lg border border-gray-100 bg-white p-8 text-center shadow-sm">
