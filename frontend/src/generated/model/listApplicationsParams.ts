@@ -13,6 +13,10 @@ user_nuid?: string;
  * Limit to applications this lead is assigned to review
  */
 assigned_to?: string;
+/**
+ * Limit to applications this reviewer is assigned to interview
+ */
+interviewer_nuid?: string;
 role?: string;
 stage?: string;
 /**

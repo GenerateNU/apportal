@@ -27,6 +27,8 @@ import type {
 import type {
   ErrorModel,
   Interview,
+  ListInterviewsBulk200,
+  ListInterviewsBulkParams,
   UpsertInterviewInputBody
 } from '.././model';
 
@@ -220,4 +222,96 @@ export const useUpsertInterview = <TError = ErrorModel | ErrorModel | ErrorModel
 
       return useMutation(mutationOptions, queryClient);
     }
+    /**
+ * Reviewer only. One request for a page of applications, instead of one per application.
+ * @summary List interviews for several applications
+ */
+export const listInterviewsBulk = (
+    params?: ListInterviewsBulkParams,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<ListInterviewsBulk200>(
+      {url: `/interviews`, method: 'GET',
+        params, signal
+    },
+      options);
+    }
+  
+
+
+
+export const getListInterviewsBulkQueryKey = (params?: ListInterviewsBulkParams,) => {
+    return [
+    `/interviews`, ...(params ? [params]: [])
+    ] as const;
+    }
+
     
+export const getListInterviewsBulkQueryOptions = <TData = Awaited<ReturnType<typeof listInterviewsBulk>>, TError = ErrorModel | ErrorModel | ErrorModel>(params?: ListInterviewsBulkParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listInterviewsBulk>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListInterviewsBulkQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInterviewsBulk>>> = ({ signal }) => listInterviewsBulk(params, requestOptions, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listInterviewsBulk>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListInterviewsBulkQueryResult = NonNullable<Awaited<ReturnType<typeof listInterviewsBulk>>>
+export type ListInterviewsBulkQueryError = ErrorModel | ErrorModel | ErrorModel
+
+
+export function useListInterviewsBulk<TData = Awaited<ReturnType<typeof listInterviewsBulk>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+ params: undefined |  ListInterviewsBulkParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listInterviewsBulk>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listInterviewsBulk>>,
+          TError,
+          Awaited<ReturnType<typeof listInterviewsBulk>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListInterviewsBulk<TData = Awaited<ReturnType<typeof listInterviewsBulk>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+ params?: ListInterviewsBulkParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listInterviewsBulk>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listInterviewsBulk>>,
+          TError,
+          Awaited<ReturnType<typeof listInterviewsBulk>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListInterviewsBulk<TData = Awaited<ReturnType<typeof listInterviewsBulk>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+ params?: ListInterviewsBulkParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listInterviewsBulk>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List interviews for several applications
+ */
+
+export function useListInterviewsBulk<TData = Awaited<ReturnType<typeof listInterviewsBulk>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+ params?: ListInterviewsBulkParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listInterviewsBulk>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListInterviewsBulkQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+

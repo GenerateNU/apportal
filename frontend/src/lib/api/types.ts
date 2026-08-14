@@ -16,6 +16,7 @@ import type {
   Cycle as GenCycle,
   CodeChallenge as GenCodeChallenge,
   CodeSubmission as GenCodeSubmission,
+  Interview as GenInterview,
   InterviewAssignment as GenInterviewAssignment,
   InterviewReviewAssignment as GenInterviewReviewAssignment,
   Question as GenQuestion,
@@ -136,6 +137,9 @@ export type CodeSubmission = Omit<GenCodeSubmission, '$schema'>
 export type ChiefReview = Omit<GenChiefReviewDetail, '$schema'>
 
 export type ChiefReviewComment = Omit<GenChiefReviewCommentDetail, '$schema'>
+
+// The interviewer's write-up for one application (one per application).
+export type Interview = Omit<GenInterview, '$schema'>
 
 export type InterviewAssignment = Omit<GenInterviewAssignment, '$schema'>
 

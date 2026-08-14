@@ -29,6 +29,9 @@ export interface ApplicationListParams {
   cycle_id?: string
   user_nuid?: string
   assigned_to?: string
+  // Applications this reviewer is assigned to interview — the interview-side
+  // counterpart of assigned_to.
+  interviewer_nuid?: string
   stage?: ApplicationStage
   role?: Role
   answer_filters?: AnswerFilterParam[]

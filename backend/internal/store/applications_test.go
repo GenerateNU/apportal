@@ -238,6 +238,27 @@ func TestSearchMatchesNameNuidAndEmail(t *testing.T) {
 	}
 }
 
+// The two "assigned to me" filters hang off different tables, so a queue that
+// sets both must not collapse them into one.
+func TestAssignedToAndInterviewerFilterSeparately(t *testing.T) {
+	query, args := listApplicationsQuery(ApplicationFilter{
+		AssignedTo:      "l1",
+		InterviewerNUID: "l2",
+	})
+	for _, want := range []string{
+		`EXISTS (SELECT 1 FROM lead_assignments la WHERE la.application_id = a.id AND la.lead_nuid = $1)`,
+		`EXISTS (SELECT 1 FROM interview_assignments ia WHERE ia.application_id = a.id AND ia.interviewer_nuid = $2)`,
+	} {
+		if !strings.Contains(query, want) {
+			t.Errorf("query missing %q\ngot: %s", want, query)
+		}
+	}
+	if want := []any{"l1", "l2"}; !reflect.DeepEqual(args, want) {
+		t.Fatalf("args = %#v, want %#v", args, want)
+	}
+	assertPlaceholdersMatchArgs(t, query, args)
+}
+
 func stagePtr(s models.ApplicationStage) *models.ApplicationStage { return &s }
 
 var placeholderPattern = regexp.MustCompile(`\$(\d+)`)

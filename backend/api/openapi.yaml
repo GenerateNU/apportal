@@ -3009,6 +3009,13 @@ paths:
           schema:
             description: Limit to applications this lead is assigned to review
             type: string
+        - description: Limit to applications this reviewer is assigned to interview
+          explode: false
+          in: query
+          name: interviewer_nuid
+          schema:
+            description: Limit to applications this reviewer is assigned to interview
+            type: string
         - explode: false
           in: query
           name: role
@@ -6270,6 +6277,50 @@ paths:
       summary: Remove a recording-review assignment
       tags:
         - Interview assignments
+  /interviews:
+    get:
+      description: Reviewer only. One request for a page of applications, instead of one per application.
+      operationId: list-interviews-bulk
+      parameters:
+        - description: Comma-separated application IDs
+          explode: false
+          in: query
+          name: application_ids
+          schema:
+            description: Comma-separated application IDs
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/Interview"
+                type:
+                  - array
+                  - "null"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: List interviews for several applications
+      tags:
+        - Interviews
   /interviews/{id}/recording-review:
     put:
       description: Reviewer only; upserts the calling reviewer's review of the recording.
