@@ -64,6 +64,28 @@ func (h *interviewAssignmentHandler) register(api huma.API) {
 		DefaultStatus: http.StatusNoContent,
 		Errors:        []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound},
 	}, h.unassignReviewer)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "unassign-all-interviewers",
+		Method:      http.MethodDelete,
+		Path:        "/cycles/{id}/interview-assignments",
+		Summary:     "Remove every interviewer assignment for a cycle's role",
+		Description: "Chief only. Deletes all interviewer assignments for one applicant " +
+			"role in a cycle at once. Cannot be undone.",
+		Tags:   []string{"Interview assignments"},
+		Errors: []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusUnprocessableEntity},
+	}, h.unassignAllInterviewers)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "unassign-all-recording-reviewers",
+		Method:      http.MethodDelete,
+		Path:        "/cycles/{id}/interview-review-assignments",
+		Summary:     "Remove every recording-review assignment for a cycle's role",
+		Description: "Chief only. Deletes all recording-review assignments for one " +
+			"applicant role in a cycle at once. Cannot be undone.",
+		Tags:   []string{"Interview assignments"},
+		Errors: []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusUnprocessableEntity},
+	}, h.unassignAllReviewers)
 }
 
 type InterviewAssignmentOutput struct {
@@ -150,4 +172,48 @@ func (h *interviewAssignmentHandler) unassignReviewer(ctx context.Context, in *I
 		return nil, storeErr(err)
 	}
 	return nil, nil
+}
+
+// UnassignAllInput identifies a cycle-and-role-scoped bulk-delete.
+type UnassignAllInput struct {
+	ID   string      `path:"id" doc:"Cycle ID"`
+	Role models.Role `query:"role" doc:"Applicant role"`
+}
+
+type UnassignAllOutput struct {
+	Body struct {
+		Deleted int `json:"deleted" doc:"Number of assignments removed"`
+	}
+}
+
+func (h *interviewAssignmentHandler) unassignAllInterviewers(ctx context.Context, in *UnassignAllInput) (*UnassignAllOutput, error) {
+	if err := requireChief(ctx); err != nil {
+		return nil, err
+	}
+	if !in.Role.Valid() {
+		return nil, huma.Error422UnprocessableEntity("role is invalid")
+	}
+	deleted, err := h.store.DeleteInterviewAssignmentsForCycle(ctx, in.ID, in.Role)
+	if err != nil {
+		return nil, storeErr(err)
+	}
+	out := &UnassignAllOutput{}
+	out.Body.Deleted = deleted
+	return out, nil
+}
+
+func (h *interviewAssignmentHandler) unassignAllReviewers(ctx context.Context, in *UnassignAllInput) (*UnassignAllOutput, error) {
+	if err := requireChief(ctx); err != nil {
+		return nil, err
+	}
+	if !in.Role.Valid() {
+		return nil, huma.Error422UnprocessableEntity("role is invalid")
+	}
+	deleted, err := h.store.DeleteInterviewReviewAssignmentsForCycle(ctx, in.ID, in.Role)
+	if err != nil {
+		return nil, storeErr(err)
+	}
+	out := &UnassignAllOutput{}
+	out.Body.Deleted = deleted
+	return out, nil
 }

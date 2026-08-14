@@ -9,10 +9,13 @@ import {
   getInterviewAssignment,
   listRecordingReviewerAssignments,
   setInterviewAssignment,
+  unassignAllInterviewers,
+  unassignAllRecordingReviewers,
   unassignRecordingReviewer,
 } from '@/generated/interview-assignments/interview-assignments'
 import { APIError } from '@/lib/api/client'
 import type { RequestOptions } from '@/lib/api/orval-mutator'
+import type { Role } from '@/lib/api/types'
 import type {
   InterviewAssignment,
   InterviewReviewAssignment,
@@ -136,6 +139,47 @@ export function useUnassignRecordingReviewer() {
     onSuccess: (_data, vars) => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.interviewReviewAssignments.list(vars.applicationId),
+      })
+    },
+  })
+}
+
+// Bulk-clears every interviewer assignment for a cycle × role — a chief
+// redoing a botched or outdated run. Every application's interviewer
+// assignment is affected, so invalidate the whole namespace rather than
+// trying to patch individual application caches.
+export function useUnassignAllInterviewers() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (vars: {
+      cycleId: string
+      role: Role
+      opts?: RequestOptions
+    }) => unassignAllInterviewers(vars.cycleId, { role: vars.role }, vars.opts),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.interviewAssignments.all,
+      })
+    },
+  })
+}
+
+export function useUnassignAllRecordingReviewers() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (vars: {
+      cycleId: string
+      role: Role
+      opts?: RequestOptions
+    }) =>
+      unassignAllRecordingReviewers(
+        vars.cycleId,
+        { role: vars.role },
+        vars.opts
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.interviewReviewAssignments.all,
       })
     },
   })

@@ -15,6 +15,7 @@ import {
   Video,
   Wand2,
   LogOut,
+  CalendarClock,
 } from 'lucide-react'
 import NavItem from './NavItem'
 import { Avatar } from '@/components/ui/avatar'
@@ -97,6 +98,12 @@ const sectionsByRole: Record<Role, NavSection> = {
         href: '/reviewer/interview-assignments',
         label: 'Interview Assignments',
         icon: Video,
+        chiefOnly: true,
+      },
+      {
+        href: '/reviewer/interview-assignment-plan',
+        label: 'Plan Interviews',
+        icon: CalendarClock,
         chiefOnly: true,
       },
     ],
