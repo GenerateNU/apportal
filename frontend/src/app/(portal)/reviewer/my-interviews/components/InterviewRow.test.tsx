@@ -12,9 +12,10 @@ function render(node: ReactNode) {
 }
 
 describe('InterviewRow', () => {
-  it('is a button that copies the interviewee’s email', () => {
+  it('links to the applicant’s interview conduct page', () => {
     const html = render(
       <InterviewRow
+        applicationId="app-1"
         name="Dao Ho"
         email="ho.dao@northeastern.edu"
         stage="interview"
@@ -22,15 +23,16 @@ describe('InterviewRow', () => {
         state="none"
       />
     )
-    expect(html).toContain(
-      '<button type="button" title="Copy ho.dao@northeastern.edu"'
-    )
-    // Copying is the row's only action; it never links anywhere.
-    expect(html).not.toContain('<a ')
+    expect(html).toContain('href="/reviewer/my-interviews/app-1"')
+    // The whole row links out; only the nested icon copies the email.
+    expect(html).toContain('title="Copy ho.dao@northeastern.edu"')
   })
 
-  it('stays inert when the applicant has no email on file', () => {
-    const html = render(<InterviewRow name="No Email" state="submitted" />)
+  it('omits the copy button when the applicant has no email on file', () => {
+    const html = render(
+      <InterviewRow applicationId="app-2" name="No Email" state="submitted" />
+    )
+    expect(html).toContain('href="/reviewer/my-interviews/app-2"')
     expect(html).not.toContain('<button')
     expect(html).toContain('Interviewed')
   })

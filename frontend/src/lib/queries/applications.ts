@@ -32,6 +32,9 @@ export interface ApplicationListParams {
   // Applications this reviewer is assigned to interview — the interview-side
   // counterpart of assigned_to.
   interviewer_nuid?: string
+  // Applications this lead is assigned to review the interview recording of —
+  // the reviewer-side counterpart of interviewer_nuid.
+  recording_reviewer_nuid?: string
   stage?: ApplicationStage
   role?: Role
   answer_filters?: AnswerFilterParam[]

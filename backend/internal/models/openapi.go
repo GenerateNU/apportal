@@ -42,7 +42,7 @@ func (ApplicationType) Schema(huma.Registry) *huma.Schema {
 
 func (InterviewRating) Schema(huma.Registry) *huma.Schema {
 	return enumSchema(
-		string(RatingDoNotHire), string(RatingGood), string(RatingGreat), string(RatingMustHire),
+		string(RatingDoNotHire), string(RatingNeutral), string(RatingGood), string(RatingGreat), string(RatingMustHire),
 	)
 }
 

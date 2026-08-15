@@ -181,18 +181,20 @@ type InterviewReviewAssignment struct {
 
 // Interview: filled out by the interviewer after conducting the interview.
 type Interview struct {
-	ID              string           `json:"id"`
-	ApplicationID   string           `json:"application_id"`
-	InterviewerNUID string           `json:"interviewer_nuid"`
-	ScheduledAt     *time.Time       `json:"scheduled_at,omitempty"`
-	ConductedAt     *time.Time       `json:"conducted_at,omitempty"`
-	RecordingURL    *string          `json:"recording_url,omitempty"`
-	Notes           *string          `json:"notes,omitempty"`
-	Comments        *string          `json:"comments,omitempty"`
-	Rating          *InterviewRating `json:"rating,omitempty"`
-	SubmittedAt     *time.Time       `json:"submitted_at,omitempty"`
-	CreatedAt       time.Time        `json:"created_at"`
-	UpdatedAt       time.Time        `json:"updated_at"`
+	ID              string     `json:"id"`
+	ApplicationID   string     `json:"application_id"`
+	InterviewerNUID string     `json:"interviewer_nuid"`
+	ScheduledAt     *time.Time `json:"scheduled_at,omitempty"`
+	ConductedAt     *time.Time `json:"conducted_at,omitempty"`
+	RecordingURL    *string    `json:"recording_url,omitempty"`
+	// NotesURL links to the interviewer's notes doc (e.g. a Granola summary),
+	// alongside RecordingURL.
+	NotesURL    *string          `json:"notes_url,omitempty"`
+	Comments    *string          `json:"comments,omitempty"`
+	Rating      *InterviewRating `json:"rating,omitempty"`
+	SubmittedAt *time.Time       `json:"submitted_at,omitempty"`
+	CreatedAt   time.Time        `json:"created_at"`
+	UpdatedAt   time.Time        `json:"updated_at"`
 }
 
 // InterviewRecordingReview: an assigned lead's review of an interview recording.
@@ -205,6 +207,25 @@ type InterviewRecordingReview struct {
 	SubmittedAt  *time.Time       `json:"submitted_at,omitempty"`
 	CreatedAt    time.Time        `json:"created_at"`
 	UpdatedAt    time.Time        `json:"updated_at"`
+}
+
+// InterviewComment is an open comment on an application's interview, visible
+// to and postable by any reviewer — unlike ChiefReviewComment, not restricted
+// to chiefs, since interview calibration is meant to be a shared discussion.
+type InterviewComment struct {
+	ID            string    `json:"id"`
+	ApplicationID string    `json:"application_id"`
+	AuthorNUID    string    `json:"author_nuid"`
+	Body          string    `json:"body"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
+}
+
+// InterviewCommentDetail bundles a comment with the author's resolved display
+// name (not a table column).
+type InterviewCommentDetail struct {
+	InterviewComment
+	AuthorName string `json:"author_name,omitempty"`
 }
 
 // LeadSelection: a lead marking an application as wanted for their team.

@@ -18,6 +18,8 @@ import type {
   CodeSubmission as GenCodeSubmission,
   Interview as GenInterview,
   InterviewAssignment as GenInterviewAssignment,
+  InterviewCommentDetail as GenInterviewCommentDetail,
+  InterviewRecordingReview as GenInterviewRecordingReview,
   InterviewReviewAssignment as GenInterviewReviewAssignment,
   Question as GenQuestion,
   QuestionAverageScore,
@@ -30,6 +32,7 @@ import type {
   WrittenReviewDetail as GenWrittenReviewDetail,
   ApplicationRole,
   ApplicationStage,
+  InterviewRating,
   QuestionQuestionType,
   UserRolesAnyOfItem,
 } from '@/generated/model'
@@ -140,6 +143,15 @@ export type ChiefReviewComment = Omit<GenChiefReviewCommentDetail, '$schema'>
 
 // The interviewer's write-up for one application (one per application).
 export type Interview = Omit<GenInterview, '$schema'>
+
+export type InterviewRecordingReview = Omit<
+  GenInterviewRecordingReview,
+  '$schema' | 'rating'
+> & {
+  rating?: InterviewRating
+}
+
+export type InterviewComment = Omit<GenInterviewCommentDetail, '$schema'>
 
 export type InterviewAssignment = Omit<GenInterviewAssignment, '$schema'>
 

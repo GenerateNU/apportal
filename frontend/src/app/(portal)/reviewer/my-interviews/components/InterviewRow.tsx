@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type MouseEvent } from 'react'
+import Link from 'next/link'
 import { Check, CheckCircle2, Clock, Mail } from 'lucide-react'
 import { Tooltip } from '@/components/Tooltip'
 import { useToast } from '@/components/ui/toast'
@@ -16,9 +17,8 @@ import {
 } from '../../my-reviews/constants'
 import { INTERVIEW_STATE_LABEL } from '../constants'
 
-// Same tracks as my-reviews' ReviewRow. This row can't reuse that component:
-// there the row is a link into the app, here it's a button that copies the
-// interviewee's address.
+// Same tracks as my-reviews' ReviewRow, plus one for the copy-email button
+// (that row's action lives in its own hover-arrow column instead).
 const GRID =
   'grid-cols-[1rem_minmax(0,1fr)_7rem_2rem] sm:grid-cols-[1rem_minmax(0,1fr)_minmax(0,1.2fr)_5rem_7rem_2rem] lg:grid-cols-[1rem_minmax(0,1fr)_minmax(0,1.2fr)_9.5rem_5rem_7rem_2rem]'
 
@@ -33,15 +33,17 @@ function shortDate(iso: string) {
 }
 
 export function InterviewRow({
+  applicationId,
   name,
   email,
   stage,
   scheduledAt,
   state,
 }: {
+  applicationId: string
   name: string
-  // Absent when the applicant has no address on file, which leaves the row
-  // inert rather than offering a copy that yields nothing.
+  // Absent when the applicant has no address on file, which leaves the copy
+  // button hidden rather than offering a copy that yields nothing.
   email?: string
   stage?: ApplicationStage
   scheduledAt?: string
@@ -56,7 +58,9 @@ export function InterviewRow({
     return () => clearTimeout(timer)
   }, [copied])
 
-  async function copyEmail() {
+  async function copyEmail(e: MouseEvent) {
+    e.preventDefault()
+    e.stopPropagation()
     if (!email) return
     try {
       await navigator.clipboard.writeText(email)
@@ -69,8 +73,11 @@ export function InterviewRow({
     }
   }
 
-  const body = (
-    <>
+  return (
+    <Link
+      href={`/reviewer/my-interviews/${applicationId}`}
+      className={`group grid ${GRID} items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-gray-50`}
+    >
       <span
         className={`h-4 w-4 rounded-full border-2 ${REVIEW_STATE_DOT[state]}`}
       />
@@ -113,30 +120,21 @@ export function InterviewRow({
       </span>
 
       <span className="flex justify-end">
-        {email &&
-          (copied ? (
-            <Check className="h-4 w-4 text-green-600" />
-          ) : (
-            <Mail className="text-text-faint group-hover:text-brand-blue h-4 w-4 transition-colors" />
-          ))}
+        {email && (
+          <button
+            type="button"
+            onClick={copyEmail}
+            title={`Copy ${email}`}
+            className="rounded p-1 hover:bg-gray-100"
+          >
+            {copied ? (
+              <Check className="h-4 w-4 text-green-600" />
+            ) : (
+              <Mail className="text-text-faint group-hover:text-brand-blue h-4 w-4 transition-colors" />
+            )}
+          </button>
+        )}
       </span>
-    </>
-  )
-
-  const className = `group grid ${GRID} items-center gap-3 px-4 py-2.5 text-left transition-colors`
-
-  // The whole row is the copy target — one action, so a plain button rather
-  // than a control nested inside a clickable row.
-  return email ? (
-    <button
-      type="button"
-      onClick={copyEmail}
-      title={`Copy ${email}`}
-      className={`${className} w-full hover:bg-gray-50`}
-    >
-      {body}
-    </button>
-  ) : (
-    <div className={className}>{body}</div>
+    </Link>
   )
 }

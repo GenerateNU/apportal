@@ -18,6 +18,7 @@ import { useChiefs, useCurrentUser, useLeads } from '@/lib/queries/users'
 import { useInterviewsByApplicationIdBatches } from '@/lib/queries/interviews'
 import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 import type { ReviewState } from '../../my-reviews/constants'
+import { ReviewRow } from '../../my-reviews/components/ReviewRow'
 import { InterviewRow } from './InterviewRow'
 
 // Sentinel for "my own queue" in the viewer-selector below, since Radix
@@ -93,12 +94,27 @@ export function MyInterviewsClient() {
     { enabled: !!interviewerNuid }
   )
 
-  // How far my write-up for each interview has got, in one request for the
-  // whole list rather than one per row.
-  const applicationIds = useMemo(
-    () => applications.map((a) => a.id),
-    [applications]
+  // The same person's "assigned to review the recording" queue — a second
+  // work stream on the same page, alongside the one above.
+  const { data: reviewingApplications = [] } = useApplications(
+    {
+      ...(interviewerNuid && { recording_reviewer_nuid: interviewerNuid }),
+      ...(cycleId !== 'all' && { cycle_id: cycleId }),
+      ...(activeRole !== 'all' && { role: activeRole }),
+      ...(debouncedSearch && { search: debouncedSearch }),
+    },
+    undefined,
+    { enabled: !!interviewerNuid }
   )
+
+  // How far each interview write-up has got, in one request for both lists
+  // combined rather than one per row.
+  const applicationIds = useMemo(() => {
+    const ids = new Set<string>()
+    for (const a of applications) ids.add(a.id)
+    for (const a of reviewingApplications) ids.add(a.id)
+    return [...ids]
+  }, [applications, reviewingApplications])
   const [interviewBatch] = useInterviewsByApplicationIdBatches(
     applicationIds.length > 0 ? [applicationIds] : []
   )
@@ -142,6 +158,35 @@ export function MyInterviewsClient() {
     })).filter((s) => s.rows.length > 0)
   }, [rows])
 
+  // Reviewing rows can't act until the interviewer submits — that's the only
+  // signal available without a per-review fetch for every row, so "ready" vs
+  // "waiting" is as specific as this queue gets before opening a row.
+  const reviewingRows = useMemo(
+    () =>
+      reviewingApplications.map((application) => {
+        const interview = interviewByApplicationId?.[application.id]
+        const ready = !!interview?.submitted_at
+        return { application, interview, ready }
+      }),
+    [reviewingApplications, interviewByApplicationId]
+  )
+  const readyToReviewCount = reviewingRows.filter((r) => r.ready).length
+
+  const reviewingSections = useMemo(() => {
+    return ROLE_COLUMNS.map((role) => ({
+      role,
+      rows: reviewingRows
+        .filter((r) => r.application.role === role)
+        // Ready-to-review first — that's the actionable part of the queue.
+        .sort((a, b) => {
+          if (a.ready !== b.ready) return a.ready ? -1 : 1
+          return (
+            a.application.full_name || a.application.user_nuid
+          ).localeCompare(b.application.full_name || b.application.user_nuid)
+        }),
+    })).filter((s) => s.rows.length > 0)
+  }, [reviewingRows])
+
   return (
     <PageContainer>
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
@@ -151,9 +196,9 @@ export function MyInterviewsClient() {
           </h1>
           <p className="text-text-muted mt-1 text-sm">
             {viewingOther
-              ? `Applicants assigned to ${viewingName} to interview.`
-              : 'Applicants assigned to you to interview.'}{' '}
-            Click a row to copy their email.
+              ? `Applicants assigned to ${viewingName} to interview or review.`
+              : 'Applicants assigned to you to interview or review.'}{' '}
+            Click a row to open the applicant.
           </p>
         </div>
 
@@ -234,34 +279,85 @@ export function MyInterviewsClient() {
         </div>
       )}
 
-      {sections.length === 0 ? (
-        <p className="text-text-faint px-1 text-sm">
-          {debouncedSearch
-            ? 'No interviewees match that search.'
-            : viewingOther
-              ? `Nothing assigned to ${viewingName} yet.`
-              : 'Nothing assigned to you yet — a chief assigns the applicants you interview.'}
-        </p>
-      ) : (
-        sections.map(({ role, rows: roleRows }) => (
-          <div key={role} className="flex flex-col gap-2">
-            <h2 className="text-text-faint text-xs font-semibold tracking-wide uppercase">
-              {ROLE_LABEL[role]} ({roleRows.length})
-            </h2>
-            <div className="divide-y divide-gray-100 overflow-hidden rounded-lg border border-gray-200 bg-white">
-              {roleRows.map(({ application, interview, state }) => (
-                <InterviewRow
-                  key={application.id}
-                  name={application.full_name || application.user_nuid}
-                  email={application.email}
-                  stage={application.stage}
-                  scheduledAt={interview?.scheduled_at}
-                  state={state}
-                />
-              ))}
+      <div className="flex flex-col gap-3">
+        <h2 className="text-text-default text-sm font-semibold">
+          Interviewing
+        </h2>
+        {sections.length === 0 ? (
+          <p className="text-text-faint px-1 text-sm">
+            {debouncedSearch
+              ? 'No interviewees match that search.'
+              : viewingOther
+                ? `Nothing assigned to ${viewingName} to interview yet.`
+                : 'Nothing assigned to you yet — a chief assigns the applicants you interview.'}
+          </p>
+        ) : (
+          sections.map(({ role, rows: roleRows }) => (
+            <div key={role} className="flex flex-col gap-2">
+              <h3 className="text-text-faint text-xs font-semibold tracking-wide uppercase">
+                {ROLE_LABEL[role]} ({roleRows.length})
+              </h3>
+              <div className="divide-y divide-gray-100 overflow-hidden rounded-lg border border-gray-200 bg-white">
+                {roleRows.map(({ application, interview, state }) => (
+                  <InterviewRow
+                    key={application.id}
+                    applicationId={application.id}
+                    name={application.full_name || application.user_nuid}
+                    email={application.email}
+                    stage={application.stage}
+                    scheduledAt={interview?.scheduled_at}
+                    state={state}
+                  />
+                ))}
+              </div>
             </div>
+          ))
+        )}
+      </div>
+
+      {reviewingSections.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-3">
+            <h2 className="text-text-default text-sm font-semibold">
+              Reviewing
+            </h2>
+            <span className="text-text-muted text-xs">
+              {readyToReviewCount} of {reviewingRows.length} ready to review
+            </span>
           </div>
-        ))
+          {reviewingSections.map(({ role, rows: roleRows }) => (
+            <div key={role} className="flex flex-col gap-2">
+              <h3 className="text-text-faint text-xs font-semibold tracking-wide uppercase">
+                {ROLE_LABEL[role]} ({roleRows.length})
+              </h3>
+              <div className="divide-y divide-gray-100 overflow-hidden rounded-lg border border-gray-200 bg-white">
+                {roleRows.map(({ application, ready }) => (
+                  // Still a real link (you can open the applicant either way),
+                  // but visually recede until there's actually something to
+                  // review — reduces the queue to "what can I act on now".
+                  <div
+                    key={application.id}
+                    className={ready ? undefined : 'opacity-50 grayscale'}
+                  >
+                    <ReviewRow
+                      href={`/reviewer/my-interviews/${application.id}`}
+                      name={application.full_name || application.user_nuid}
+                      email={application.email}
+                      stage={application.stage}
+                      state={ready ? 'draft' : 'none'}
+                      stateLabel={ready ? 'Ready to review' : 'Waiting'}
+                      stateTooltip={
+                        ready
+                          ? 'The interviewer has submitted — you can leave your review'
+                          : 'Waiting for the interviewer to submit their write-up'
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
       )}
     </PageContainer>
   )

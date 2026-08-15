@@ -37,6 +37,7 @@ export const queryKeys = {
       user_nuid?: string
       assigned_to?: string
       interviewer_nuid?: string
+      recording_reviewer_nuid?: string
       stage?: ApplicationStage
       role?: Role
       answer_filters?: AnswerFilterParam[]
@@ -175,6 +176,20 @@ export const queryKeys = {
     details: () => [...queryKeys.interviewAssignments.all, 'detail'] as const,
     detail: (applicationId: string) =>
       [...queryKeys.interviewAssignments.details(), applicationId] as const,
+  },
+
+  interviewComments: {
+    all: ['interview-comments'] as const,
+    lists: () => [...queryKeys.interviewComments.all, 'list'] as const,
+    list: (applicationId: string) =>
+      [...queryKeys.interviewComments.lists(), applicationId] as const,
+  },
+
+  recordingReviews: {
+    all: ['recording-reviews'] as const,
+    lists: () => [...queryKeys.recordingReviews.all, 'list'] as const,
+    list: (interviewId: string) =>
+      [...queryKeys.recordingReviews.lists(), interviewId] as const,
   },
 
   interviewReviewAssignments: {

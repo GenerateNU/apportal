@@ -73,6 +73,11 @@ type ApplicationFilter struct {
 	// InterviewerNUID limits results to applications the given reviewer is
 	// assigned to interview (via interview_assignments).
 	InterviewerNUID string
+	// RecordingReviewerNUID limits results to applications the given lead is
+	// assigned to review the interview recording of (via
+	// interview_review_assignments) — the reviewer-side counterpart of
+	// InterviewerNUID.
+	RecordingReviewerNUID string
 	// IncludeDraft allows draft applications into the results. Callers should
 	// only set this when listing a user's own applications by their own
 	// identity — drafts are otherwise invisible (reviewer queues, admin
@@ -316,6 +321,12 @@ func applicationsFrom(f ApplicationFilter, scope applicationFilterScope) (string
 			` WHERE ia.application_id = a.id AND ia.interviewer_nuid = $` +
 			strconv.Itoa(len(args)) + `)`
 	}
+	if f.RecordingReviewerNUID != "" {
+		args = append(args, f.RecordingReviewerNUID)
+		query += ` AND EXISTS (SELECT 1 FROM interview_review_assignments irr` +
+			` WHERE irr.application_id = a.id AND irr.lead_nuid = $` +
+			strconv.Itoa(len(args)) + `)`
+	}
 	if !f.IncludeDraft {
 		query += ` AND a.stage != 'draft'`
 	}
@@ -381,6 +392,17 @@ func (s *Store) AdvanceApplicationsToLeadReview(ctx context.Context, application
 		return 0, err
 	}
 	return int(tag.RowsAffected()), nil
+}
+
+// AdvanceApplicationToInterviewReview moves an application into
+// interview_review once its interviewer submits their write-up. Guarded to
+// the pre-review interview stages so a resubmit is a no-op and a chief who
+// already moved the application further along manually is never overridden.
+func (s *Store) AdvanceApplicationToInterviewReview(ctx context.Context, applicationID string) error {
+	const q = `UPDATE applications SET stage = 'interview_review'
+		WHERE id = $1 AND stage IN ('interview', 'interview_scheduled', 'interview_conducted')`
+	_, err := s.db.Exec(ctx, q, applicationID)
+	return err
 }
 
 func (s *Store) UpdateApplication(ctx context.Context, id string, in ApplicationUpdate) (models.Application, error) {

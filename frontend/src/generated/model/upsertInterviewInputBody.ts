@@ -12,7 +12,7 @@ export interface UpsertInterviewInputBody {
   readonly $schema?: string;
   comments?: string;
   conducted_at?: string;
-  notes?: string;
+  notes_url?: string;
   rating?: UpsertInterviewInputBodyRating;
   recording_url?: string;
   scheduled_at?: string;

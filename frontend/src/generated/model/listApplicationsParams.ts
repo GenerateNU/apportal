@@ -17,6 +17,10 @@ assigned_to?: string;
  * Limit to applications this reviewer is assigned to interview
  */
 interviewer_nuid?: string;
+/**
+ * Limit to applications this lead is assigned to review the interview recording of
+ */
+recording_reviewer_nuid?: string;
 role?: string;
 stage?: string;
 /**

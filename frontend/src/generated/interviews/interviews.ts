@@ -25,10 +25,14 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  CreateInterviewCommentInputBody,
   ErrorModel,
   Interview,
+  InterviewCommentDetail,
+  ListInterviewComments200,
   ListInterviewsBulk200,
   ListInterviewsBulkParams,
+  UpdateInterviewCommentInputBody,
   UpsertInterviewInputBody
 } from '.././model';
 
@@ -219,6 +223,230 @@ export const useUpsertInterview = <TError = ErrorModel | ErrorModel | ErrorModel
       > => {
 
       const mutationOptions = getUpsertInterviewMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * Reviewer only. Open to any reviewer, not just the assigned interviewer/chief.
+ * @summary List an application's interview comments
+ */
+export const listInterviewComments = (
+    id: string,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<ListInterviewComments200>(
+      {url: `/applications/${id}/interview-comments`, method: 'GET', signal
+    },
+      options);
+    }
+  
+
+
+
+export const getListInterviewCommentsQueryKey = (id?: string,) => {
+    return [
+    `/applications/${id}/interview-comments`
+    ] as const;
+    }
+
+    
+export const getListInterviewCommentsQueryOptions = <TData = Awaited<ReturnType<typeof listInterviewComments>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listInterviewComments>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListInterviewCommentsQueryKey(id);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInterviewComments>>> = ({ signal }) => listInterviewComments(id, requestOptions, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listInterviewComments>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListInterviewCommentsQueryResult = NonNullable<Awaited<ReturnType<typeof listInterviewComments>>>
+export type ListInterviewCommentsQueryError = ErrorModel | ErrorModel | ErrorModel | ErrorModel
+
+
+export function useListInterviewComments<TData = Awaited<ReturnType<typeof listInterviewComments>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
+ id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listInterviewComments>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listInterviewComments>>,
+          TError,
+          Awaited<ReturnType<typeof listInterviewComments>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListInterviewComments<TData = Awaited<ReturnType<typeof listInterviewComments>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listInterviewComments>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listInterviewComments>>,
+          TError,
+          Awaited<ReturnType<typeof listInterviewComments>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListInterviewComments<TData = Awaited<ReturnType<typeof listInterviewComments>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listInterviewComments>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List an application's interview comments
+ */
+
+export function useListInterviewComments<TData = Awaited<ReturnType<typeof listInterviewComments>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listInterviewComments>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListInterviewCommentsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+/**
+ * Reviewer only. Any reviewer may leave any number of comments on an application.
+ * @summary Add an interview comment
+ */
+export const createInterviewComment = (
+    id: string,
+    createInterviewCommentInputBody: NonReadonly<CreateInterviewCommentInputBody>,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<InterviewCommentDetail>(
+      {url: `/applications/${id}/interview-comments`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: createInterviewCommentInputBody, signal
+    },
+      options);
+    }
+  
+
+
+export const getCreateInterviewCommentMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInterviewComment>>, TError,{id: string;data: NonReadonly<CreateInterviewCommentInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof createInterviewComment>>, TError,{id: string;data: NonReadonly<CreateInterviewCommentInputBody>}, TContext> => {
+
+const mutationKey = ['createInterviewComment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createInterviewComment>>, {id: string;data: NonReadonly<CreateInterviewCommentInputBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createInterviewComment(id,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateInterviewCommentMutationResult = NonNullable<Awaited<ReturnType<typeof createInterviewComment>>>
+    export type CreateInterviewCommentMutationBody = NonReadonly<CreateInterviewCommentInputBody>
+    export type CreateInterviewCommentMutationError = ErrorModel | ErrorModel | ErrorModel | ErrorModel
+
+    /**
+ * @summary Add an interview comment
+ */
+export const useCreateInterviewComment = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInterviewComment>>, TError,{id: string;data: NonReadonly<CreateInterviewCommentInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof createInterviewComment>>,
+        TError,
+        {id: string;data: NonReadonly<CreateInterviewCommentInputBody>},
+        TContext
+      > => {
+
+      const mutationOptions = getCreateInterviewCommentMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * Reviewer only, and only the comment's own author.
+ * @summary Edit an interview comment
+ */
+export const updateInterviewComment = (
+    id: string,
+    commentId: string,
+    updateInterviewCommentInputBody: NonReadonly<UpdateInterviewCommentInputBody>,
+ options?: SecondParameter<typeof customInstance>,) => {
+      
+      
+      return customInstance<InterviewCommentDetail>(
+      {url: `/applications/${id}/interview-comments/${commentId}`, method: 'PUT',
+      headers: {'Content-Type': 'application/json', },
+      data: updateInterviewCommentInputBody
+    },
+      options);
+    }
+  
+
+
+export const getUpdateInterviewCommentMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateInterviewComment>>, TError,{id: string;commentId: string;data: NonReadonly<UpdateInterviewCommentInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateInterviewComment>>, TError,{id: string;commentId: string;data: NonReadonly<UpdateInterviewCommentInputBody>}, TContext> => {
+
+const mutationKey = ['updateInterviewComment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateInterviewComment>>, {id: string;commentId: string;data: NonReadonly<UpdateInterviewCommentInputBody>}> = (props) => {
+          const {id,commentId,data} = props ?? {};
+
+          return  updateInterviewComment(id,commentId,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateInterviewCommentMutationResult = NonNullable<Awaited<ReturnType<typeof updateInterviewComment>>>
+    export type UpdateInterviewCommentMutationBody = NonReadonly<UpdateInterviewCommentInputBody>
+    export type UpdateInterviewCommentMutationError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel
+
+    /**
+ * @summary Edit an interview comment
+ */
+export const useUpdateInterviewComment = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateInterviewComment>>, TError,{id: string;commentId: string;data: NonReadonly<UpdateInterviewCommentInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof updateInterviewComment>>,
+        TError,
+        {id: string;commentId: string;data: NonReadonly<UpdateInterviewCommentInputBody>},
+        TContext
+      > => {
+
+      const mutationOptions = getUpdateInterviewCommentMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }

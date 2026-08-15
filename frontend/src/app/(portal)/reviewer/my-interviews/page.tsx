@@ -30,11 +30,18 @@ export default async function MyInterviewsPage() {
     }),
   ])
 
-  const params = { interviewer_nuid: me.nuid }
-  await queryClient.prefetchQuery({
-    queryKey: queryKeys.applications.list(params),
-    queryFn: () => fetchApplicationPage(params, requestOptions),
-  })
+  const interviewingParams = { interviewer_nuid: me.nuid }
+  const reviewingParams = { recording_reviewer_nuid: me.nuid }
+  await Promise.all([
+    queryClient.prefetchQuery({
+      queryKey: queryKeys.applications.list(interviewingParams),
+      queryFn: () => fetchApplicationPage(interviewingParams, requestOptions),
+    }),
+    queryClient.prefetchQuery({
+      queryKey: queryKeys.applications.list(reviewingParams),
+      queryFn: () => fetchApplicationPage(reviewingParams, requestOptions),
+    }),
+  ])
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>

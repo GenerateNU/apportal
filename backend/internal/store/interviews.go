@@ -18,34 +18,34 @@ type InterviewUpsert struct {
 	ScheduledAt     *time.Time
 	ConductedAt     *time.Time
 	RecordingURL    *string
-	Notes           *string
+	NotesURL        *string
 	Comments        *string
 	Rating          *models.InterviewRating
 	Submit          bool
 }
 
-const interviewColumns = `id, application_id, interviewer_nuid, scheduled_at, conducted_at, recording_url, notes, comments, rating, submitted_at, created_at, updated_at`
+const interviewColumns = `id, application_id, interviewer_nuid, scheduled_at, conducted_at, recording_url, notes_url, comments, rating, submitted_at, created_at, updated_at`
 
 // UpsertInterview creates or updates the single interview record for an
 // application (one per application). Provided fields overwrite; omitted ones
 // are preserved.
 func (s *Store) UpsertInterview(ctx context.Context, in InterviewUpsert) (models.Interview, error) {
 	const q = `
-		INSERT INTO interviews (application_id, interviewer_nuid, scheduled_at, conducted_at, recording_url, notes, comments, rating, submitted_at)
+		INSERT INTO interviews (application_id, interviewer_nuid, scheduled_at, conducted_at, recording_url, notes_url, comments, rating, submitted_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CASE WHEN $9 THEN NOW() ELSE NULL END)
 		ON CONFLICT (application_id) DO UPDATE SET
 			interviewer_nuid = EXCLUDED.interviewer_nuid,
 			scheduled_at     = COALESCE(EXCLUDED.scheduled_at, interviews.scheduled_at),
 			conducted_at     = COALESCE(EXCLUDED.conducted_at, interviews.conducted_at),
 			recording_url    = COALESCE(EXCLUDED.recording_url, interviews.recording_url),
-			notes            = COALESCE(EXCLUDED.notes, interviews.notes),
+			notes_url        = COALESCE(EXCLUDED.notes_url, interviews.notes_url),
 			comments         = COALESCE(EXCLUDED.comments, interviews.comments),
 			rating           = COALESCE(EXCLUDED.rating, interviews.rating),
 			submitted_at     = CASE WHEN $9 THEN NOW() ELSE interviews.submitted_at END,
 			updated_at       = NOW()
 		RETURNING ` + interviewColumns
 	rows, err := s.db.Query(ctx, q, in.ApplicationID, in.InterviewerNUID, in.ScheduledAt,
-		in.ConductedAt, in.RecordingURL, in.Notes, in.Comments, in.Rating, in.Submit)
+		in.ConductedAt, in.RecordingURL, in.NotesURL, in.Comments, in.Rating, in.Submit)
 	if err != nil {
 		return models.Interview{}, err
 	}

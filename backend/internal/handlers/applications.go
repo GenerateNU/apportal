@@ -157,8 +157,11 @@ type ListApplicationsInput struct {
 	// InterviewerNUID is the interview-side counterpart of AssignedTo: the
 	// reviewer's own "interviews assigned to me" queue.
 	InterviewerNUID string `query:"interviewer_nuid" doc:"Limit to applications this reviewer is assigned to interview"`
-	Role            string `query:"role"`
-	Stage           string `query:"stage"`
+	// RecordingReviewerNUID is the recording-review counterpart of
+	// InterviewerNUID: the lead's own "interviews assigned to me to review" queue.
+	RecordingReviewerNUID string `query:"recording_reviewer_nuid" doc:"Limit to applications this lead is assigned to review the interview recording of"`
+	Role                  string `query:"role"`
+	Stage                 string `query:"stage"`
 	// AnswerFilters is a JSON-encoded []AnswerFilterInput rather than a
 	// structured param because huma can only bind primitives from a query
 	// string — a []AnswerFilterInput field silently binds nothing (or panics,
@@ -189,13 +192,14 @@ func (h *applicationHandler) list(ctx context.Context, in *ListApplicationsInput
 	}
 
 	filter := store.ApplicationFilter{
-		CycleID:         in.CycleID,
-		UserNUID:        in.UserNUID,
-		AssignedTo:      in.AssignedTo,
-		InterviewerNUID: in.InterviewerNUID,
-		AnswerFilters:   answerFilters,
-		Search:          in.Search,
-		Offset:          in.Offset,
+		CycleID:               in.CycleID,
+		UserNUID:              in.UserNUID,
+		AssignedTo:            in.AssignedTo,
+		InterviewerNUID:       in.InterviewerNUID,
+		RecordingReviewerNUID: in.RecordingReviewerNUID,
+		AnswerFilters:         answerFilters,
+		Search:                in.Search,
+		Offset:                in.Offset,
 		// Only a user listing their own applications by their own identity
 		// ever sees their own draft — the reviewer queue and lookups of
 		// someone else's user_nuid never do.
