@@ -32,18 +32,13 @@ export function ApplicationRoleCard({
   const status =
     application && !isDraft ? APPLICANT_STATUS[application.stage] : null
 
-  // Once the deadline passes, a draft can no longer be edited or submitted
-  // and a fresh application can no longer be started — only an already
-  // submitted application remains viewable.
-  const isPastDeadline = template.closes_at
-    ? new Date(template.closes_at).getTime() < new Date().getTime()
-    : false
-  const isBlocked = isPastDeadline && (isDraft || !application)
-
+  // Not gated on comparing template.closes_at against the browser's own
+  // clock — a device with the wrong time or timezone would then lock
+  // someone out of a role that's actually still open, with no way to
+  // recover since this card never talks to the backend. The real deadline
+  // check happens server-side once they actually try to save/submit (see
+  // NewApplicationForm), which is the only trustworthy clock.
   const handleClick = () => {
-    if (isBlocked) {
-      return
-    }
     if (isDraft) {
       router.push(`/applicant/applications/new?cycle=${cycle.id}&role=${role}`)
     } else if (application) {
@@ -57,10 +52,7 @@ export function ApplicationRoleCard({
     <button
       type="button"
       onClick={handleClick}
-      disabled={isBlocked}
-      className={`group rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm transition-shadow ${
-        isBlocked ? 'cursor-not-allowed opacity-60' : 'hover:shadow-md'
-      }`}
+      className="group rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm transition-shadow hover:shadow-md"
     >
       <div className="flex items-center justify-between gap-2 text-left">
         <span
@@ -102,9 +94,7 @@ export function ApplicationRoleCard({
         </div>
 
         <span className="text-text-subtle group-hover:text-brand-blue flex items-center gap-1 text-sm font-medium transition-colors">
-          {isBlocked ? (
-            'Closed'
-          ) : isDraft ? (
+          {isDraft ? (
             <>
               Continue
               <ArrowRight
