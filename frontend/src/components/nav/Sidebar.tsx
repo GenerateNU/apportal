@@ -12,6 +12,7 @@ import {
   ClipboardCheck,
   ListChecks,
   Mic,
+  ScrollText,
   Scale,
   Star,
   Video,
@@ -67,6 +68,11 @@ const sectionsByRole: Record<Role, NavSection> = {
       { href: '/reviewer/applications', label: 'Applications', icon: Users },
       { href: '/reviewer/my-reviews', label: 'Lead Review', icon: FileText },
       { href: '/reviewer/my-interviews', label: 'My Interviews', icon: Mic },
+      {
+        href: '/reviewer/interview-script',
+        label: 'Interview Script',
+        icon: ScrollText,
+      },
       {
         href: '/reviewer/interview-ratings',
         label: 'Interview Ratings',
