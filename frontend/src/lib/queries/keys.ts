@@ -185,6 +185,12 @@ export const queryKeys = {
       [...queryKeys.interviewComments.lists(), applicationId] as const,
   },
 
+  // A single global record, not scoped to a cycle/application — the key just
+  // needs a stable identity, no params.
+  interviewScript: {
+    all: ['interview-script'] as const,
+  },
+
   recordingReviews: {
     all: ['recording-reviews'] as const,
     lists: () => [...queryKeys.recordingReviews.all, 'list'] as const,
