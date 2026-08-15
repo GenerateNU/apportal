@@ -14,11 +14,15 @@ import {
 import type { Role } from '@/lib/api/types'
 import { useApplications } from '@/lib/queries/applications'
 import { DEFAULT_CYCLE_ID, useCycles } from '@/lib/queries/cycles'
-import { useCurrentUser } from '@/lib/queries/users'
+import { useChiefs, useCurrentUser, useLeads } from '@/lib/queries/users'
 import { useInterviewsByApplicationIdBatches } from '@/lib/queries/interviews'
 import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 import type { ReviewState } from '../../my-reviews/constants'
 import { InterviewRow } from './InterviewRow'
+
+// Sentinel for "my own queue" in the viewer-selector below, since Radix
+// Select can't use an empty string as a value.
+const SELF = 'me'
 
 // Same settle time as the applications table's search.
 const SEARCH_DEBOUNCE_MS = 250
@@ -26,6 +30,12 @@ const SEARCH_DEBOUNCE_MS = 250
 export function MyInterviewsClient() {
   const { data: currentUser } = useCurrentUser()
   const { data: cycles = [] } = useCycles({})
+  const { data: leads = [] } = useLeads()
+  const { data: chiefs = [] } = useChiefs()
+
+  const isChief = !!currentUser?.roles.some(
+    (r) => r === 'chief' || r === 'admin'
+  )
 
   // A personal queue, so role stays "all" rather than forcing a pick. Cycle
   // defaults to the pinned cycle when it's in the list, but can be widened.
@@ -39,6 +49,22 @@ export function MyInterviewsClient() {
   }
   const [activeRole, setActiveRole] = useState<Role | 'all'>('all')
 
+  // Chief-only: view any interviewer's queue read-only, same list/interview
+  // data, just scoped to someone else's nuid instead of the caller's own.
+  const [viewingNuid, setViewingNuid] = useState<string>(SELF)
+  const viewingOther = isChief && viewingNuid !== SELF
+  const interviewers = useMemo(() => {
+    const byNuid = new Map<string, { nuid: string; full_name: string }>()
+    for (const u of [...leads, ...chiefs]) byNuid.set(u.nuid, u)
+    return [...byNuid.values()].sort((a, b) =>
+      a.full_name.localeCompare(b.full_name)
+    )
+  }, [leads, chiefs])
+  const viewingName = viewingOther
+    ? (interviewers.find((u) => u.nuid === viewingNuid)?.full_name ??
+      'this reviewer')
+    : undefined
+
   // Matched server-side, so it narrows the whole queue rather than the rows
   // already in hand.
   const [search, setSearch] = useState('')
@@ -51,7 +77,7 @@ export function MyInterviewsClient() {
     return () => clearTimeout(timer)
   }, [search])
 
-  const interviewerNuid = currentUser?.nuid
+  const interviewerNuid = viewingOther ? viewingNuid : currentUser?.nuid
 
   const { data: applications = [] } = useApplications(
     {
@@ -124,12 +150,33 @@ export function MyInterviewsClient() {
             My interviews
           </h1>
           <p className="text-text-muted mt-1 text-sm">
-            Applicants assigned to you to interview. Click a row to copy their
-            email.
+            {viewingOther
+              ? `Applicants assigned to ${viewingName} to interview.`
+              : 'Applicants assigned to you to interview.'}{' '}
+            Click a row to copy their email.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
+          {isChief && (
+            <Select value={viewingNuid} onValueChange={setViewingNuid}>
+              <SelectTrigger
+                className="w-48"
+                aria-label="Viewing whose interviews"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={SELF}>Me</SelectItem>
+                {interviewers.map((u) => (
+                  <SelectItem key={u.nuid} value={u.nuid}>
+                    {u.full_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
           <Select
             value={activeRole}
             onValueChange={(val) => setActiveRole(val as Role | 'all')}
@@ -191,7 +238,9 @@ export function MyInterviewsClient() {
         <p className="text-text-faint px-1 text-sm">
           {debouncedSearch
             ? 'No interviewees match that search.'
-            : 'Nothing assigned to you yet — a chief assigns the applicants you interview.'}
+            : viewingOther
+              ? `Nothing assigned to ${viewingName} yet.`
+              : 'Nothing assigned to you yet — a chief assigns the applicants you interview.'}
         </p>
       ) : (
         sections.map(({ role, rows: roleRows }) => (
