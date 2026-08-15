@@ -20,14 +20,16 @@ type RecordingReviewUpsert struct {
 const recordingReviewColumns = `id, interview_id, reviewer_nuid, comments, rating, submitted_at, created_at, updated_at`
 
 // UpsertRecordingReview upserts a reviewer's recording review, keyed on
-// interview + reviewer.
+// interview + reviewer. Provided fields overwrite; omitted ones are
+// preserved (e.g. saving a comment-only edit must not null out a rating set
+// on a previous call) — mirrors UpsertInterview's COALESCE contract.
 func (s *Store) UpsertRecordingReview(ctx context.Context, in RecordingReviewUpsert) (models.InterviewRecordingReview, error) {
 	const q = `
 		INSERT INTO interview_recording_reviews (interview_id, reviewer_nuid, comments, rating, submitted_at)
 		VALUES ($1, $2, $3, $4, CASE WHEN $5 THEN NOW() ELSE NULL END)
 		ON CONFLICT (interview_id, reviewer_nuid) DO UPDATE SET
-			comments     = EXCLUDED.comments,
-			rating       = EXCLUDED.rating,
+			comments     = COALESCE(EXCLUDED.comments, interview_recording_reviews.comments),
+			rating       = COALESCE(EXCLUDED.rating, interview_recording_reviews.rating),
 			submitted_at = CASE WHEN $5 THEN NOW() ELSE interview_recording_reviews.submitted_at END,
 			updated_at   = NOW()
 		RETURNING ` + recordingReviewColumns
