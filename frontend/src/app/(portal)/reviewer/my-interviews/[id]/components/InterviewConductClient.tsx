@@ -8,7 +8,9 @@ import {
   ArrowRight,
   Check,
   CheckCircle2,
+  ChevronDown,
   ChevronLeft,
+  ChevronUp,
   ExternalLink,
   Loader2,
   Lock,
@@ -55,6 +57,7 @@ import {
   REVIEWED_TEXT,
 } from '../../../my-reviews/constants'
 import { ResponseField } from '@/app/(portal)/reviewer/applications/components/ResponseField'
+import { InterviewScriptContent } from '@/app/(portal)/reviewer/interview-script/components/InterviewScriptContent'
 
 const TEXTAREA_CLASS =
   'border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 min-h-28 w-full rounded-lg border bg-transparent px-3.5 py-2.5 text-base transition-all outline-none focus-visible:ring-3 hover:border-gray-300 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 resize-none'
@@ -78,6 +81,7 @@ export function InterviewConductClient({
   applicantNuid: string
 }) {
   const router = useRouter()
+  const [scriptOpen, setScriptOpen] = useState(true)
   const { data: currentUser } = useCurrentUser()
   const { data: applicant } = useApplicant(applicantNuid)
   const { data: answers = [] } = useAnswers(applicationId)
@@ -305,6 +309,28 @@ export function InterviewConductClient({
       <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-2 lg:overflow-hidden">
         {/* Application */}
         <div className="border-b border-gray-200 px-4 py-4 sm:px-8 sm:py-6 lg:overflow-y-auto lg:border-r lg:border-b-0">
+          <div className="mb-4 flex flex-col gap-2 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+            <button
+              type="button"
+              onClick={() => setScriptOpen((v) => !v)}
+              className="text-text-faint hover:text-text-default flex items-center justify-between text-xs font-semibold tracking-wide uppercase"
+            >
+              Interview script
+              {scriptOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            </button>
+            {scriptOpen && (
+              <>
+                <Link
+                  href="/reviewer/interview-script"
+                  className="text-brand-blue self-start text-xs hover:underline"
+                >
+                  Open as a full page →
+                </Link>
+                <InterviewScriptContent />
+              </>
+            )}
+          </div>
+
           <h2 className="text-text-faint mb-4 text-xs font-semibold tracking-wide uppercase">
             Application
           </h2>
