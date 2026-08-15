@@ -23,12 +23,15 @@ import type {
 import { queryKeys } from './keys'
 
 // The backend 404s when an application has no interviewer assigned yet —
-// that's not an error here, just the "unassigned" state.
+// that's not an error here, just the "unassigned" state. Resolves to null
+// rather than undefined: TanStack rejects a queryFn that resolves to
+// undefined (it can't tell that apart from "still loading"), which would
+// otherwise throw on every unassigned application.
 async function fetchInterviewAssignment(id: string, opts?: RequestOptions) {
   try {
     return (await getInterviewAssignment(id, opts)) as InterviewAssignment
   } catch (err) {
-    if (err instanceof APIError && err.status === 404) return undefined
+    if (err instanceof APIError && err.status === 404) return null
     throw err
   }
 }

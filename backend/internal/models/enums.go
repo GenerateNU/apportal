@@ -74,6 +74,7 @@ type InterviewRating string
 
 const (
 	RatingDoNotHire InterviewRating = "do_not_hire"
+	RatingNeutral   InterviewRating = "neutral"
 	RatingGood      InterviewRating = "good"
 	RatingGreat     InterviewRating = "great"
 	RatingMustHire  InterviewRating = "must_hire"
@@ -81,7 +82,7 @@ const (
 
 func (r InterviewRating) Valid() bool {
 	switch r {
-	case RatingDoNotHire, RatingGood, RatingGreat, RatingMustHire:
+	case RatingDoNotHire, RatingNeutral, RatingGood, RatingGreat, RatingMustHire:
 		return true
 	}
 	return false

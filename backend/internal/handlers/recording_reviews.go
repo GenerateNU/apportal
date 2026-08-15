@@ -60,9 +60,38 @@ func (h *recordingReviewHandler) upsert(ctx context.Context, in *UpsertRecording
 	if in.Body.Rating != nil && !in.Body.Rating.Valid() {
 		return nil, huma.Error422UnprocessableEntity("invalid rating")
 	}
+
+	interview, err := h.store.GetInterviewByID(ctx, in.ID)
+	if err != nil {
+		return nil, storeErr(err)
+	}
+	// The interviewer hasn't finished yet — nothing to review, and nothing a
+	// reviewer writes now would have anything to go on.
+	if interview.SubmittedAt == nil {
+		return nil, huma.Error409Conflict("the interviewer hasn't submitted this interview yet")
+	}
+
+	actor := currentActor(ctx)
+	if !actor.HasAnyRole(models.UserRoleChief, models.UserRoleAdmin) {
+		assignments, err := h.store.ListInterviewReviewAssignments(ctx, interview.ApplicationID)
+		if err != nil {
+			return nil, storeErr(err)
+		}
+		assigned := false
+		for _, a := range assignments {
+			if a.LeadNUID == actor.NUID {
+				assigned = true
+				break
+			}
+		}
+		if !assigned {
+			return nil, huma.Error403Forbidden("only an assigned recording reviewer may submit this review")
+		}
+	}
+
 	review, err := h.store.UpsertRecordingReview(ctx, store.RecordingReviewUpsert{
 		InterviewID:  in.ID,
-		ReviewerNUID: currentActor(ctx).NUID,
+		ReviewerNUID: actor.NUID,
 		Comments:     in.Body.Comments,
 		Rating:       in.Body.Rating,
 		Submit:       in.Body.Submit,

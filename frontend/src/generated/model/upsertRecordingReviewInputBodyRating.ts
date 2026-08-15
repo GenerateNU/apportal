@@ -12,6 +12,7 @@ export type UpsertRecordingReviewInputBodyRating = typeof UpsertRecordingReviewI
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const UpsertRecordingReviewInputBodyRating = {
   do_not_hire: 'do_not_hire',
+  neutral: 'neutral',
   good: 'good',
   great: 'great',
   must_hire: 'must_hire',

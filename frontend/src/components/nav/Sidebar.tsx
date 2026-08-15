@@ -13,6 +13,7 @@ import {
   ListChecks,
   Mic,
   Scale,
+  Star,
   Video,
   Wand2,
   LogOut,
@@ -66,6 +67,11 @@ const sectionsByRole: Record<Role, NavSection> = {
       { href: '/reviewer/applications', label: 'Applications', icon: Users },
       { href: '/reviewer/my-reviews', label: 'Lead Review', icon: FileText },
       { href: '/reviewer/my-interviews', label: 'My Interviews', icon: Mic },
+      {
+        href: '/reviewer/interview-ratings',
+        label: 'Interview Ratings',
+        icon: Star,
+      },
       {
         href: '/reviewer/chief-review',
         label: 'Chief Review',

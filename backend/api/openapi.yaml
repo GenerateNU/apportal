@@ -763,6 +763,22 @@ components:
       required:
         - url
       type: object
+    CreateInterviewCommentInputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/CreateInterviewCommentInputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        body:
+          minLength: 1
+          type: string
+      required:
+        - body
+      type: object
     CreateLeadAssignmentInputBody:
       additionalProperties: false
       properties:
@@ -1152,11 +1168,12 @@ components:
           type: string
         interviewer_nuid:
           type: string
-        notes:
+        notes_url:
           type: string
         rating:
           enum:
             - do_not_hire
+            - neutral
             - good
             - great
             - must_hire
@@ -1253,6 +1270,40 @@ components:
         - suggested_cap
         - notes
       type: object
+    InterviewCommentDetail:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/InterviewCommentDetail.json
+          format: uri
+          readOnly: true
+          type: string
+        application_id:
+          type: string
+        author_name:
+          type: string
+        author_nuid:
+          type: string
+        body:
+          type: string
+        created_at:
+          format: date-time
+          type: string
+        id:
+          type: string
+        updated_at:
+          format: date-time
+          type: string
+      required:
+        - id
+        - application_id
+        - author_nuid
+        - body
+        - created_at
+        - updated_at
+      type: object
     InterviewPoolOutputBody:
       additionalProperties: false
       properties:
@@ -1302,6 +1353,7 @@ components:
         rating:
           enum:
             - do_not_hire
+            - neutral
             - good
             - great
             - must_hire
@@ -2393,6 +2445,22 @@ components:
           format: int64
           type: integer
       type: object
+    UpdateInterviewCommentInputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/UpdateInterviewCommentInputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        body:
+          minLength: 1
+          type: string
+      required:
+        - body
+      type: object
     UpdateQuestionInputBody:
       additionalProperties: false
       properties:
@@ -2602,11 +2670,12 @@ components:
         conducted_at:
           format: date-time
           type: string
-        notes:
+        notes_url:
           type: string
         rating:
           enum:
             - do_not_hire
+            - neutral
             - good
             - great
             - must_hire
@@ -2635,6 +2704,7 @@ components:
         rating:
           enum:
             - do_not_hire
+            - neutral
             - good
             - great
             - must_hire
@@ -3015,6 +3085,13 @@ paths:
           name: interviewer_nuid
           schema:
             description: Limit to applications this reviewer is assigned to interview
+            type: string
+        - description: Limit to applications this lead is assigned to review the interview recording of
+          explode: false
+          in: query
+          name: recording_reviewer_nuid
+          schema:
+            description: Limit to applications this lead is assigned to review the interview recording of
             type: string
         - explode: false
           in: query
@@ -4002,6 +4079,172 @@ paths:
       summary: Assign the interviewer for an application
       tags:
         - Interview assignments
+  /applications/{id}/interview-comments:
+    get:
+      description: Reviewer only. Open to any reviewer, not just the assigned interviewer/chief.
+      operationId: list-interview-comments
+      parameters:
+        - description: Application ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Application ID
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/InterviewCommentDetail"
+                type:
+                  - array
+                  - "null"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: List an application's interview comments
+      tags:
+        - Interviews
+    post:
+      description: Reviewer only. Any reviewer may leave any number of comments on an application.
+      operationId: create-interview-comment
+      parameters:
+        - description: Application ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Application ID
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateInterviewCommentInputBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InterviewCommentDetail"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Add an interview comment
+      tags:
+        - Interviews
+  /applications/{id}/interview-comments/{commentId}:
+    put:
+      description: Reviewer only, and only the comment's own author.
+      operationId: update-interview-comment
+      parameters:
+        - description: Application ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Application ID
+            type: string
+        - description: Comment ID
+          in: path
+          name: commentId
+          required: true
+          schema:
+            description: Comment ID
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateInterviewCommentInputBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InterviewCommentDetail"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Edit an interview comment
+      tags:
+        - Interviews
   /applications/{id}/interview-review-assignments:
     get:
       operationId: list-recording-reviewer-assignments

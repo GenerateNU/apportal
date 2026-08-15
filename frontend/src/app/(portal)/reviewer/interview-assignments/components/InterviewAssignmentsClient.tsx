@@ -470,7 +470,7 @@ function InterviewAssignmentRow({
   interviewers: User[]
   leads: User[]
   userName: Record<string, string>
-  assignment: { interviewer_nuid: string } | undefined
+  assignment: { interviewer_nuid: string } | null | undefined
   reviewers: { id: string; lead_nuid: string }[]
   selected: boolean
   onToggleSelected: () => void

@@ -91,7 +91,7 @@ type UpsertInterviewInput struct {
 		ScheduledAt  *time.Time              `json:"scheduled_at,omitempty"`
 		ConductedAt  *time.Time              `json:"conducted_at,omitempty"`
 		RecordingURL *string                 `json:"recording_url,omitempty"`
-		Notes        *string                 `json:"notes,omitempty"`
+		NotesURL     *string                 `json:"notes_url,omitempty"`
 		Comments     *string                 `json:"comments,omitempty"`
 		Rating       *models.InterviewRating `json:"rating,omitempty"`
 		Submit       bool                    `json:"submit,omitempty" doc:"When true, marks the interview as submitted"`
@@ -105,13 +105,29 @@ func (h *interviewHandler) upsert(ctx context.Context, in *UpsertInterviewInput)
 	if in.Body.Rating != nil && !in.Body.Rating.Valid() {
 		return nil, huma.Error422UnprocessableEntity("invalid rating")
 	}
+
+	actor := currentActor(ctx)
+	isChief := actor.HasAnyRole(models.UserRoleChief, models.UserRoleAdmin)
+	assignment, assignErr := h.store.GetInterviewAssignment(ctx, in.ID)
+	if !isChief && (assignErr != nil || assignment.InterviewerNUID != actor.NUID) {
+		return nil, huma.Error403Forbidden("only the assigned interviewer may submit this interview")
+	}
+
+	// Attribute the write-up to whoever is actually assigned, even when a
+	// chief is the one editing it — only fall back to the caller's own NUID
+	// when there's no assignment to attribute it to at all.
+	interviewerNUID := actor.NUID
+	if assignErr == nil && assignment.InterviewerNUID != "" {
+		interviewerNUID = assignment.InterviewerNUID
+	}
+
 	iv, err := h.store.UpsertInterview(ctx, store.InterviewUpsert{
 		ApplicationID:   in.ID,
-		InterviewerNUID: currentActor(ctx).NUID,
+		InterviewerNUID: interviewerNUID,
 		ScheduledAt:     in.Body.ScheduledAt,
 		ConductedAt:     in.Body.ConductedAt,
 		RecordingURL:    in.Body.RecordingURL,
-		Notes:           in.Body.Notes,
+		NotesURL:        in.Body.NotesURL,
 		Comments:        in.Body.Comments,
 		Rating:          in.Body.Rating,
 		Submit:          in.Body.Submit,
@@ -119,6 +135,14 @@ func (h *interviewHandler) upsert(ctx context.Context, in *UpsertInterviewInput)
 	if err != nil {
 		return nil, storeErr(err)
 	}
+
+	// Submitting is the signal that the applicant has moved from "being
+	// interviewed" to "under interview review" — best-effort: the write-up
+	// itself already succeeded, so a failure here shouldn't fail the request.
+	if in.Body.Submit {
+		_ = h.store.AdvanceApplicationToInterviewReview(ctx, in.ID)
+	}
+
 	return &InterviewOutput{Body: iv}, nil
 }
 
