@@ -270,14 +270,12 @@ function Form({
     null
   )
 
-  // Derived rather than synced via an effect so an already-passed deadline
-  // (e.g. a stale direct link) is caught on the very first render, not one
-  // render later.
-  const deadlineClosed =
-    deadlineRejected ||
-    (template?.closes_at
-      ? new Date(template.closes_at).getTime() < new Date().getTime()
-      : false)
+  // Deliberately NOT derived from comparing template.closes_at against the
+  // browser's own clock — a device with the wrong time or timezone would
+  // then block (or silently stop autosaving for) an applicant who is well
+  // within the real deadline. The backend is the only trustworthy clock, so
+  // this only flips once it actually rejects a save/submit with a 403.
+  const deadlineClosed = deadlineRejected
   const pendingScrollRef = useRef<string | null>(null)
 
   const pages = useMemo(() => groupQuestionsIntoPages(questions), [questions])
