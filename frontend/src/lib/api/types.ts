@@ -21,6 +21,7 @@ import type {
   InterviewCommentDetail as GenInterviewCommentDetail,
   InterviewRecordingReview as GenInterviewRecordingReview,
   InterviewReviewAssignment as GenInterviewReviewAssignment,
+  InterviewScript as GenInterviewScript,
   Question as GenQuestion,
   QuestionAverageScore,
   ReviewerProgress as GenReviewerProgress,
@@ -152,6 +153,31 @@ export type InterviewRecordingReview = Omit<
 }
 
 export type InterviewComment = Omit<GenInterviewCommentDetail, '$schema'>
+
+export interface InterviewScriptQuestion {
+  prompt: string
+  // Optional prompts to reach for if the applicant's first answer was thin.
+  followUps?: string[]
+}
+
+export interface InterviewScriptChallengeTrack {
+  label: string
+  followUps: string[]
+}
+
+export interface InterviewScriptChallengeTracks {
+  backend: InterviewScriptChallengeTrack
+  frontend: InterviewScriptChallengeTrack
+}
+
+export type InterviewScript = Omit<
+  GenInterviewScript,
+  '$schema' | 'questions' | 'challenge_tracks' | 'post_interview_checklist'
+> & {
+  questions: InterviewScriptQuestion[]
+  challenge_tracks: InterviewScriptChallengeTracks
+  post_interview_checklist: string[]
+}
 
 export type InterviewAssignment = Omit<GenInterviewAssignment, '$schema'>
 

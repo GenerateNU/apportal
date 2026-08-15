@@ -2,17 +2,8 @@
 
 import { useState } from 'react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
-import {
-  AVAILABILITY_REMINDER,
-  CHALLENGE_INTRO,
-  CHALLENGE_TRACKS,
-  CLOSING_NOTE,
-  INTRO_SPEECH,
-  POST_INTERVIEW_CHECKLIST,
-  QUESTIONS,
-  RECORDING_REMINDER,
-  type ScriptQuestion,
-} from '@/lib/interview-script'
+import type { InterviewScriptQuestion } from '@/lib/api/types'
+import { useInterviewScript } from '@/lib/queries/interview-script'
 
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return (
@@ -26,7 +17,7 @@ function QuestionItem({
   question,
   index,
 }: {
-  question: ScriptQuestion
+  question: InterviewScriptQuestion
   index: number
 }) {
   const [open, setOpen] = useState(false)
@@ -65,6 +56,12 @@ function QuestionItem({
 }
 
 export function InterviewScriptContent() {
+  const { data: script, isLoading } = useInterviewScript()
+
+  if (isLoading || !script) {
+    return <p className="text-text-faint text-sm">Loading script…</p>
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
@@ -73,30 +70,35 @@ export function InterviewScriptContent() {
           Read this to every applicant for posterity.
         </p>
         <div className="text-text-default flex flex-col gap-3 text-sm whitespace-pre-line">
-          {INTRO_SPEECH.split('\n\n').map((paragraph) => (
+          {script.intro_speech.split('\n\n').map((paragraph) => (
             <p key={paragraph}>{paragraph}</p>
           ))}
         </div>
       </div>
 
       <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800">
-        {RECORDING_REMINDER}
+        {script.recording_reminder}
       </div>
 
       <div className="flex flex-col gap-2">
         <SectionHeading>Questions</SectionHeading>
         <ul className="flex flex-col gap-2">
-          {QUESTIONS.map((q, i) => (
+          {script.questions.map((q, i) => (
             <QuestionItem key={q.prompt} question={q} index={i} />
           ))}
         </ul>
-        <p className="text-text-muted text-sm">{CLOSING_NOTE}</p>
+        <p className="text-text-muted text-sm">{script.closing_note}</p>
       </div>
 
       <div className="flex flex-col gap-2">
         <SectionHeading>Challenge</SectionHeading>
-        <p className="text-text-muted text-sm">{CHALLENGE_INTRO}</p>
-        {Object.values(CHALLENGE_TRACKS).map((track) => (
+        <p className="text-text-muted text-sm">{script.challenge_intro}</p>
+        {(
+          [
+            script.challenge_tracks.backend,
+            script.challenge_tracks.frontend,
+          ] as const
+        ).map((track) => (
           <div key={track.label} className="flex flex-col gap-2">
             <p className="text-text-default text-sm font-medium">
               {track.label}
@@ -111,14 +113,14 @@ export function InterviewScriptContent() {
           </div>
         ))}
         <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-800">
-          {AVAILABILITY_REMINDER}
+          {script.availability_reminder}
         </div>
       </div>
 
       <div className="flex flex-col gap-2">
         <SectionHeading>Post interview</SectionHeading>
         <ol className="flex list-decimal flex-col gap-1 pl-4">
-          {POST_INTERVIEW_CHECKLIST.map((item) => (
+          {script.post_interview_checklist.map((item) => (
             <li key={item} className="text-text-default text-sm">
               {item}
             </li>
