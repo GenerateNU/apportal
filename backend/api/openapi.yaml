@@ -1469,10 +1469,22 @@ components:
           format: uri
           readOnly: true
           type: string
+        application_role:
+          enum:
+            - software_engineer
+            - software_designer
+          type: string
         challenge_intro:
           type: string
         challenge_tracks: {}
         closing_note:
+          type: string
+        created_at:
+          format: date-time
+          type: string
+        cycle_id:
+          type: string
+        id:
           type: string
         intro_speech:
           type: string
@@ -1486,6 +1498,9 @@ components:
         updated_by:
           type: string
       required:
+        - id
+        - cycle_id
+        - application_role
         - intro_speech
         - recording_reminder
         - questions
@@ -1493,6 +1508,7 @@ components:
         - challenge_intro
         - challenge_tracks
         - post_interview_checklist
+        - created_at
         - updated_at
       type: object
     InterviewerCapacityInputBody:
@@ -5807,6 +5823,117 @@ paths:
       summary: Remove every recording-review assignment for a cycle's role
       tags:
         - Interview assignments
+  /cycles/{id}/interview-script:
+    get:
+      description: Reviewer only. ?role= selects which role's script to fetch (required). Creates a default-content row on first access.
+      operationId: get-interview-script
+      parameters:
+        - description: Cycle ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Cycle ID
+            type: string
+        - description: Applicant role
+          explode: false
+          in: query
+          name: role
+          schema:
+            description: Applicant role
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InterviewScript"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Get a cycle's per-role interview script
+      tags:
+        - Interview script
+    put:
+      description: Chief only. ?role= selects which role's script to update (required). Replaces the whole script — there's no partial update.
+      operationId: update-interview-script
+      parameters:
+        - description: Cycle ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Cycle ID
+            type: string
+        - description: Applicant role
+          explode: false
+          in: query
+          name: role
+          schema:
+            description: Applicant role
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateInterviewScriptInputBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InterviewScript"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Replace a cycle's per-role interview script
+      tags:
+        - Interview script
   /cycles/{id}/lead-assignments:
     delete:
       description: Chief only. Deletes all written-review lead assignments for one applicant role in a cycle at once. Cannot be undone.
@@ -6590,75 +6717,6 @@ paths:
       summary: Remove a recording-review assignment
       tags:
         - Interview assignments
-  /interview-script:
-    get:
-      description: Reviewer only. One global script, not scoped to a cycle.
-      operationId: get-interview-script
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/InterviewScript"
-          description: OK
-        "401":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unauthorized
-        "500":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Internal Server Error
-      summary: Get the interview script
-      tags:
-        - Interview script
-    put:
-      description: Chief only. Replaces the whole script — there's no partial update.
-      operationId: update-interview-script
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/UpdateInterviewScriptInputBody"
-        required: true
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/InterviewScript"
-          description: OK
-        "401":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unauthorized
-        "403":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Forbidden
-        "422":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unprocessable Entity
-        "500":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Internal Server Error
-      summary: Replace the interview script
-      tags:
-        - Interview script
   /interviews:
     get:
       description: Reviewer only. One request for a page of applications, instead of one per application.

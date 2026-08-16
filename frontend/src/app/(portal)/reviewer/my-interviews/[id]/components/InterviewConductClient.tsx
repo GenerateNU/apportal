@@ -321,12 +321,12 @@ export function InterviewConductClient({
             {scriptOpen && (
               <>
                 <Link
-                  href="/reviewer/interview-script"
+                  href={`/reviewer/interview-script?cycle=${cycleId}&role=${role}`}
                   className="text-brand-blue self-start text-xs hover:underline"
                 >
                   Open as a full page →
                 </Link>
-                <InterviewScriptContent />
+                <InterviewScriptContent cycleId={cycleId} role={role} />
               </>
             )}
           </div>

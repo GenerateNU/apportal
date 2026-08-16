@@ -186,9 +186,12 @@ export const queryKeys = {
   },
 
   // A single global record, not scoped to a cycle/application — the key just
-  // needs a stable identity, no params.
+  // Scoped like applicationTemplates below: one script per (cycle, role).
   interviewScript: {
     all: ['interview-script'] as const,
+    details: () => [...queryKeys.interviewScript.all, 'detail'] as const,
+    detail: (cycleId: string, role: Role) =>
+      [...queryKeys.interviewScript.details(), cycleId, role] as const,
   },
 
   recordingReviews: {
