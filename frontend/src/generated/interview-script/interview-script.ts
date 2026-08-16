@@ -26,8 +26,10 @@ import type {
 
 import type {
   ErrorModel,
+  GetInterviewScriptParams,
   InterviewScript,
-  UpdateInterviewScriptInputBody
+  UpdateInterviewScriptInputBody,
+  UpdateInterviewScriptParams
 } from '.././model';
 
 import { customInstance } from '../../lib/api/orval-mutator';
@@ -65,17 +67,19 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
 /**
- * Reviewer only. One global script, not scoped to a cycle.
- * @summary Get the interview script
+ * Reviewer only. ?role= selects which role's script to fetch (required). Creates a default-content row on first access.
+ * @summary Get a cycle's per-role interview script
  */
 export const getInterviewScript = (
-    
+    id: string,
+    params?: GetInterviewScriptParams,
  options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
 ) => {
       
       
       return customInstance<InterviewScript>(
-      {url: `/interview-script`, method: 'GET', signal
+      {url: `/cycles/${id}/interview-script`, method: 'GET',
+        params, signal
     },
       options);
     }
@@ -83,37 +87,40 @@ export const getInterviewScript = (
 
 
 
-export const getGetInterviewScriptQueryKey = () => {
+export const getGetInterviewScriptQueryKey = (id?: string,
+    params?: GetInterviewScriptParams,) => {
     return [
-    `/interview-script`
+    `/cycles/${id}/interview-script`, ...(params ? [params]: [])
     ] as const;
     }
 
     
-export const getGetInterviewScriptQueryOptions = <TData = Awaited<ReturnType<typeof getInterviewScript>>, TError = ErrorModel | ErrorModel>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getInterviewScript>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export const getGetInterviewScriptQueryOptions = <TData = Awaited<ReturnType<typeof getInterviewScript>>, TError = ErrorModel | ErrorModel | ErrorModel>(id: string,
+    params?: GetInterviewScriptParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getInterviewScript>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetInterviewScriptQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getGetInterviewScriptQueryKey(id,params);
 
   
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getInterviewScript>>> = ({ signal }) => getInterviewScript(requestOptions, signal);
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getInterviewScript>>> = ({ signal }) => getInterviewScript(id,params, requestOptions, signal);
 
       
 
       
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getInterviewScript>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getInterviewScript>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
 export type GetInterviewScriptQueryResult = NonNullable<Awaited<ReturnType<typeof getInterviewScript>>>
-export type GetInterviewScriptQueryError = ErrorModel | ErrorModel
+export type GetInterviewScriptQueryError = ErrorModel | ErrorModel | ErrorModel
 
 
-export function useGetInterviewScript<TData = Awaited<ReturnType<typeof getInterviewScript>>, TError = ErrorModel | ErrorModel>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getInterviewScript>>, TError, TData>> & Pick<
+export function useGetInterviewScript<TData = Awaited<ReturnType<typeof getInterviewScript>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+ id: string,
+    params: undefined |  GetInterviewScriptParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getInterviewScript>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getInterviewScript>>,
           TError,
@@ -122,8 +129,9 @@ export function useGetInterviewScript<TData = Awaited<ReturnType<typeof getInter
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetInterviewScript<TData = Awaited<ReturnType<typeof getInterviewScript>>, TError = ErrorModel | ErrorModel>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getInterviewScript>>, TError, TData>> & Pick<
+export function useGetInterviewScript<TData = Awaited<ReturnType<typeof getInterviewScript>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+ id: string,
+    params?: GetInterviewScriptParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getInterviewScript>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getInterviewScript>>,
           TError,
@@ -132,20 +140,22 @@ export function useGetInterviewScript<TData = Awaited<ReturnType<typeof getInter
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetInterviewScript<TData = Awaited<ReturnType<typeof getInterviewScript>>, TError = ErrorModel | ErrorModel>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getInterviewScript>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export function useGetInterviewScript<TData = Awaited<ReturnType<typeof getInterviewScript>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+ id: string,
+    params?: GetInterviewScriptParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getInterviewScript>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
- * @summary Get the interview script
+ * @summary Get a cycle's per-role interview script
  */
 
-export function useGetInterviewScript<TData = Awaited<ReturnType<typeof getInterviewScript>>, TError = ErrorModel | ErrorModel>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getInterviewScript>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export function useGetInterviewScript<TData = Awaited<ReturnType<typeof getInterviewScript>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+ id: string,
+    params?: GetInterviewScriptParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getInterviewScript>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getGetInterviewScriptQueryOptions(options)
+  const queryOptions = getGetInterviewScriptQueryOptions(id,params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
@@ -157,27 +167,30 @@ export function useGetInterviewScript<TData = Awaited<ReturnType<typeof getInter
 
 
 /**
- * Chief only. Replaces the whole script — there's no partial update.
- * @summary Replace the interview script
+ * Chief only. ?role= selects which role's script to update (required). Replaces the whole script — there's no partial update.
+ * @summary Replace a cycle's per-role interview script
  */
 export const updateInterviewScript = (
+    id: string,
     updateInterviewScriptInputBody: NonReadonly<UpdateInterviewScriptInputBody>,
+    params?: UpdateInterviewScriptParams,
  options?: SecondParameter<typeof customInstance>,) => {
       
       
       return customInstance<InterviewScript>(
-      {url: `/interview-script`, method: 'PUT',
+      {url: `/cycles/${id}/interview-script`, method: 'PUT',
       headers: {'Content-Type': 'application/json', },
-      data: updateInterviewScriptInputBody
+      data: updateInterviewScriptInputBody,
+        params
     },
       options);
     }
   
 
 
-export const getUpdateInterviewScriptMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateInterviewScript>>, TError,{data: NonReadonly<UpdateInterviewScriptInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof updateInterviewScript>>, TError,{data: NonReadonly<UpdateInterviewScriptInputBody>}, TContext> => {
+export const getUpdateInterviewScriptMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateInterviewScript>>, TError,{id: string;data: NonReadonly<UpdateInterviewScriptInputBody>;params?: UpdateInterviewScriptParams}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateInterviewScript>>, TError,{id: string;data: NonReadonly<UpdateInterviewScriptInputBody>;params?: UpdateInterviewScriptParams}, TContext> => {
 
 const mutationKey = ['updateInterviewScript'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -189,10 +202,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateInterviewScript>>, {data: NonReadonly<UpdateInterviewScriptInputBody>}> = (props) => {
-          const {data} = props ?? {};
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateInterviewScript>>, {id: string;data: NonReadonly<UpdateInterviewScriptInputBody>;params?: UpdateInterviewScriptParams}> = (props) => {
+          const {id,data,params} = props ?? {};
 
-          return  updateInterviewScript(data,requestOptions)
+          return  updateInterviewScript(id,data,params,requestOptions)
         }
 
         
@@ -202,17 +215,17 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type UpdateInterviewScriptMutationResult = NonNullable<Awaited<ReturnType<typeof updateInterviewScript>>>
     export type UpdateInterviewScriptMutationBody = NonReadonly<UpdateInterviewScriptInputBody>
-    export type UpdateInterviewScriptMutationError = ErrorModel | ErrorModel | ErrorModel | ErrorModel
+    export type UpdateInterviewScriptMutationError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel
 
     /**
- * @summary Replace the interview script
+ * @summary Replace a cycle's per-role interview script
  */
-export const useUpdateInterviewScript = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateInterviewScript>>, TError,{data: NonReadonly<UpdateInterviewScriptInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
+export const useUpdateInterviewScript = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateInterviewScript>>, TError,{id: string;data: NonReadonly<UpdateInterviewScriptInputBody>;params?: UpdateInterviewScriptParams}, TContext>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof updateInterviewScript>>,
         TError,
-        {data: NonReadonly<UpdateInterviewScriptInputBody>},
+        {id: string;data: NonReadonly<UpdateInterviewScriptInputBody>;params?: UpdateInterviewScriptParams},
         TContext
       > => {
 

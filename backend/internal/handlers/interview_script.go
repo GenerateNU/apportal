@@ -19,21 +19,21 @@ func (h *interviewScriptHandler) register(api huma.API) {
 	huma.Register(api, huma.Operation{
 		OperationID: "get-interview-script",
 		Method:      http.MethodGet,
-		Path:        "/interview-script",
-		Summary:     "Get the interview script",
-		Description: "Reviewer only. One global script, not scoped to a cycle.",
+		Path:        "/cycles/{id}/interview-script",
+		Summary:     "Get a cycle's per-role interview script",
+		Description: "Reviewer only. ?role= selects which role's script to fetch (required). Creates a default-content row on first access.",
 		Tags:        []string{"Interview script"},
-		Errors:      []int{http.StatusUnauthorized},
+		Errors:      []int{http.StatusUnauthorized, http.StatusUnprocessableEntity},
 	}, h.get)
 
 	huma.Register(api, huma.Operation{
 		OperationID: "update-interview-script",
 		Method:      http.MethodPut,
-		Path:        "/interview-script",
-		Summary:     "Replace the interview script",
-		Description: "Chief only. Replaces the whole script — there's no partial update.",
+		Path:        "/cycles/{id}/interview-script",
+		Summary:     "Replace a cycle's per-role interview script",
+		Description: "Chief only. ?role= selects which role's script to update (required). Replaces the whole script — there's no partial update.",
 		Tags:        []string{"Interview script"},
-		Errors:      []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusUnprocessableEntity},
+		Errors:      []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusUnprocessableEntity, http.StatusNotFound},
 	}, h.update)
 }
 
@@ -41,13 +41,20 @@ type InterviewScriptOutput struct {
 	Body models.InterviewScript
 }
 
-type GetInterviewScriptInput struct{}
+type GetInterviewScriptInput struct {
+	ID   string `path:"id" doc:"Cycle ID"`
+	Role string `query:"role" doc:"Applicant role"`
+}
 
-func (h *interviewScriptHandler) get(ctx context.Context, _ *GetInterviewScriptInput) (*InterviewScriptOutput, error) {
+func (h *interviewScriptHandler) get(ctx context.Context, in *GetInterviewScriptInput) (*InterviewScriptOutput, error) {
 	if err := requireReviewer(ctx); err != nil {
 		return nil, err
 	}
-	script, err := h.store.GetInterviewScript(ctx)
+	role, err := parseTemplateRole(in.Role)
+	if err != nil {
+		return nil, err
+	}
+	script, err := h.store.GetOrCreateInterviewScript(ctx, in.ID, role)
 	if err != nil {
 		return nil, storeErr(err)
 	}
@@ -55,6 +62,8 @@ func (h *interviewScriptHandler) get(ctx context.Context, _ *GetInterviewScriptI
 }
 
 type UpdateInterviewScriptInput struct {
+	ID   string `path:"id" doc:"Cycle ID"`
+	Role string `query:"role" doc:"Applicant role"`
 	Body struct {
 		IntroSpeech            string          `json:"intro_speech" minLength:"1"`
 		RecordingReminder      string          `json:"recording_reminder" minLength:"1"`
@@ -70,6 +79,10 @@ func (h *interviewScriptHandler) update(ctx context.Context, in *UpdateInterview
 	if err := requireChief(ctx); err != nil {
 		return nil, err
 	}
+	role, err := parseTemplateRole(in.Role)
+	if err != nil {
+		return nil, err
+	}
 	if !json.Valid(in.Body.Questions) {
 		return nil, huma.Error422UnprocessableEntity("questions must be valid JSON")
 	}
@@ -80,7 +93,7 @@ func (h *interviewScriptHandler) update(ctx context.Context, in *UpdateInterview
 		return nil, huma.Error422UnprocessableEntity("post_interview_checklist must be valid JSON")
 	}
 
-	script, err := h.store.UpdateInterviewScript(ctx, store.InterviewScriptUpdate{
+	script, err := h.store.UpdateInterviewScript(ctx, in.ID, role, store.InterviewScriptUpdate{
 		IntroSpeech:            in.Body.IntroSpeech,
 		RecordingReminder:      in.Body.RecordingReminder,
 		Questions:              in.Body.Questions,

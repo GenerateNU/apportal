@@ -172,8 +172,13 @@ export interface InterviewScriptChallengeTracks {
 
 export type InterviewScript = Omit<
   GenInterviewScript,
-  '$schema' | 'questions' | 'challenge_tracks' | 'post_interview_checklist'
+  | '$schema'
+  | 'questions'
+  | 'challenge_tracks'
+  | 'post_interview_checklist'
+  | 'application_role'
 > & {
+  application_role: Role
   questions: InterviewScriptQuestion[]
   challenge_tracks: InterviewScriptChallengeTracks
   post_interview_checklist: string[]
