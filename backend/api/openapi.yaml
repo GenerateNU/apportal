@@ -1469,8 +1469,6 @@ components:
           format: uri
           readOnly: true
           type: string
-        availability_reminder:
-          type: string
         challenge_intro:
           type: string
         challenge_tracks: {}
@@ -1494,7 +1492,6 @@ components:
         - closing_note
         - challenge_intro
         - challenge_tracks
-        - availability_reminder
         - post_interview_checklist
         - updated_at
       type: object
@@ -2510,9 +2507,6 @@ components:
           format: uri
           readOnly: true
           type: string
-        availability_reminder:
-          minLength: 1
-          type: string
         challenge_intro:
           minLength: 1
           type: string
@@ -2535,7 +2529,6 @@ components:
         - closing_note
         - challenge_intro
         - challenge_tracks
-        - availability_reminder
         - post_interview_checklist
       type: object
     UpdateQuestionInputBody:

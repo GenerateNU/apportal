@@ -10,8 +10,6 @@ export interface UpdateInterviewScriptInputBody {
   /** A URL to the JSON Schema for this object. */
   readonly $schema?: string;
   /** @minLength 1 */
-  availability_reminder: string;
-  /** @minLength 1 */
   challenge_intro: string;
   challenge_tracks: unknown;
   /** @minLength 1 */
