@@ -112,9 +112,6 @@ export function InterviewScriptContent() {
             </ul>
           </div>
         ))}
-        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-800">
-          {script.availability_reminder}
-        </div>
       </div>
 
       <div className="flex flex-col gap-2">

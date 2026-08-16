@@ -178,7 +178,6 @@ export function InterviewScriptEditClient() {
         closing_note: form.closing_note,
         challenge_intro: form.challenge_intro,
         challenge_tracks: form.challenge_tracks,
-        availability_reminder: form.availability_reminder,
         post_interview_checklist: form.post_interview_checklist,
       },
     })
@@ -331,17 +330,6 @@ export function InterviewScriptEditClient() {
             }
           />
         </div>
-
-        <Field label="Availability reminder" htmlFor="availability-reminder">
-          <textarea
-            id="availability-reminder"
-            className={TEXTAREA_CLASS}
-            value={form.availability_reminder}
-            onChange={(e) =>
-              updateField('availability_reminder', e.target.value)
-            }
-          />
-        </Field>
 
         <div className="flex flex-col gap-2">
           <Label>Post-interview checklist</Label>

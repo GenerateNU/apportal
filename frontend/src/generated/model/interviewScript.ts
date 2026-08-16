@@ -9,7 +9,6 @@
 export interface InterviewScript {
   /** A URL to the JSON Schema for this object. */
   readonly $schema?: string;
-  availability_reminder: string;
   challenge_intro: string;
   challenge_tracks: unknown;
   closing_note: string;

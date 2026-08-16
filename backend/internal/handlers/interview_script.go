@@ -62,7 +62,6 @@ type UpdateInterviewScriptInput struct {
 		ClosingNote            string          `json:"closing_note" minLength:"1"`
 		ChallengeIntro         string          `json:"challenge_intro" minLength:"1"`
 		ChallengeTracks        json.RawMessage `json:"challenge_tracks"`
-		AvailabilityReminder   string          `json:"availability_reminder" minLength:"1"`
 		PostInterviewChecklist json.RawMessage `json:"post_interview_checklist"`
 	}
 }
@@ -88,7 +87,6 @@ func (h *interviewScriptHandler) update(ctx context.Context, in *UpdateInterview
 		ClosingNote:            in.Body.ClosingNote,
 		ChallengeIntro:         in.Body.ChallengeIntro,
 		ChallengeTracks:        in.Body.ChallengeTracks,
-		AvailabilityReminder:   in.Body.AvailabilityReminder,
 		PostInterviewChecklist: in.Body.PostInterviewChecklist,
 		UpdatedBy:              currentActor(ctx).NUID,
 	})
