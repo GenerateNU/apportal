@@ -26,6 +26,7 @@ import type {
 
 import type {
   Applicant,
+  ChallengeScore,
   ErrorModel,
   UpsertApplicantInputBody
 } from '.././model';
@@ -210,6 +211,98 @@ export function useGetApplicant<TData = Awaited<ReturnType<typeof getApplicant>>
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getGetApplicantQueryOptions(nuid,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+/**
+ * Reviewer only. Reads the applicant's best finished expedition from the separate challenge server, matched by their apportal email. Body is null if they have none there (e.g. they took the frontend challenge, or the lookup isn't configured).
+ * @summary Get an applicant's technical challenge score
+ */
+export const getChallengeScore = (
+    nuid: string,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<ChallengeScore>(
+      {url: `/applicants/${nuid}/challenge-score`, method: 'GET', signal
+    },
+      options);
+    }
+  
+
+
+
+export const getGetChallengeScoreQueryKey = (nuid?: string,) => {
+    return [
+    `/applicants/${nuid}/challenge-score`
+    ] as const;
+    }
+
+    
+export const getGetChallengeScoreQueryOptions = <TData = Awaited<ReturnType<typeof getChallengeScore>>, TError = ErrorModel | ErrorModel | ErrorModel>(nuid: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getChallengeScore>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetChallengeScoreQueryKey(nuid);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getChallengeScore>>> = ({ signal }) => getChallengeScore(nuid, requestOptions, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(nuid), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getChallengeScore>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetChallengeScoreQueryResult = NonNullable<Awaited<ReturnType<typeof getChallengeScore>>>
+export type GetChallengeScoreQueryError = ErrorModel | ErrorModel | ErrorModel
+
+
+export function useGetChallengeScore<TData = Awaited<ReturnType<typeof getChallengeScore>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+ nuid: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getChallengeScore>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getChallengeScore>>,
+          TError,
+          Awaited<ReturnType<typeof getChallengeScore>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetChallengeScore<TData = Awaited<ReturnType<typeof getChallengeScore>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+ nuid: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getChallengeScore>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getChallengeScore>>,
+          TError,
+          Awaited<ReturnType<typeof getChallengeScore>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetChallengeScore<TData = Awaited<ReturnType<typeof getChallengeScore>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+ nuid: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getChallengeScore>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get an applicant's technical challenge score
+ */
+
+export function useGetChallengeScore<TData = Awaited<ReturnType<typeof getChallengeScore>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+ nuid: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getChallengeScore>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetChallengeScoreQueryOptions(nuid,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

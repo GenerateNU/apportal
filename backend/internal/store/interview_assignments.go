@@ -70,6 +70,37 @@ func (s *Store) ListInterviewReviewAssignments(ctx context.Context, applicationI
 	return pgx.CollectRows(rows, pgx.RowToStructByPos[models.InterviewReviewAssignment])
 }
 
+// ListInterviewAssignmentsForApplications fetches interviewer assignments for
+// many applications in one round trip, for callers rendering a page of
+// applications at once — the per-application GetInterviewAssignment above
+// turns into a request per row there.
+func (s *Store) ListInterviewAssignmentsForApplications(ctx context.Context, applicationIDs []string) ([]models.InterviewAssignment, error) {
+	if len(applicationIDs) == 0 {
+		return nil, nil
+	}
+	const q = `SELECT ` + interviewAssignmentColumns + ` FROM interview_assignments WHERE application_id = ANY($1::uuid[])`
+	rows, err := s.db.Query(ctx, q, applicationIDs)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, pgx.RowToStructByPos[models.InterviewAssignment])
+}
+
+// ListInterviewReviewAssignmentsForApplications fetches recording-reviewer
+// assignments for many applications in one round trip, mirroring
+// ListInterviewAssignmentsForApplications above.
+func (s *Store) ListInterviewReviewAssignmentsForApplications(ctx context.Context, applicationIDs []string) ([]models.InterviewReviewAssignment, error) {
+	if len(applicationIDs) == 0 {
+		return nil, nil
+	}
+	const q = `SELECT ` + interviewReviewAssignmentColumns + ` FROM interview_review_assignments WHERE application_id = ANY($1::uuid[]) ORDER BY application_id, assigned_at`
+	rows, err := s.db.Query(ctx, q, applicationIDs)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, pgx.RowToStructByPos[models.InterviewReviewAssignment])
+}
+
 func (s *Store) DeleteInterviewReviewAssignment(ctx context.Context, id string) error {
 	tag, err := s.db.Exec(ctx, `DELETE FROM interview_review_assignments WHERE id = $1`, id)
 	if err != nil {

@@ -13,6 +13,12 @@ type Config struct {
 	SupabaseURL            string
 	SupabaseAnonKey        string
 	SupabaseServiceRoleKey string
+	// ChallengeServerURL/ChallengeAdminToken call the separate
+	// f26-technical-challenge server's own GET /admin/lookup?email= endpoint
+	// for an applicant's scheduler-challenge score. Optional — the feature
+	// just no-ops if the token is unset, rather than failing startup.
+	ChallengeServerURL  string
+	ChallengeAdminToken string
 }
 
 func Load() (Config, error) {
@@ -23,6 +29,8 @@ func Load() (Config, error) {
 		SupabaseURL:            os.Getenv("SUPABASE_URL"),
 		SupabaseAnonKey:        os.Getenv("SUPABASE_ANON_KEY"),
 		SupabaseServiceRoleKey: os.Getenv("SUPABASE_SERVICE_ROLE_KEY"),
+		ChallengeServerURL:     getEnv("CHALLENGE_SERVER_URL", "https://fall26-challenge.generatenu.com"),
+		ChallengeAdminToken:    os.Getenv("CHALLENGE_ADMIN_TOKEN"),
 	}
 
 	if cfg.DatabaseURL == "" {

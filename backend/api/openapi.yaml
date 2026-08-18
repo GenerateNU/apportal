@@ -400,6 +400,65 @@ components:
         - teams
         - coverage
       type: object
+    ChallengeMetrics:
+      additionalProperties: false
+      properties:
+        arrivalSuccess:
+          format: double
+          type: number
+        fairness:
+          format: double
+          type: number
+        gateUtilization:
+          format: double
+          type: number
+        reliability:
+          format: double
+          type: number
+        slaCompliance:
+          format: double
+          type: number
+        throughput:
+          format: double
+          type: number
+      required:
+        - throughput
+        - gateUtilization
+        - arrivalSuccess
+        - fairness
+        - reliability
+        - slaCompliance
+      type: object
+    ChallengeScore:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/ChallengeScore.json
+          format: uri
+          readOnly: true
+          type: string
+        attempt_count:
+          format: int64
+          type: integer
+        expedition_id:
+          type: string
+        finished_at:
+          format: date-time
+          type: string
+        metrics:
+          $ref: "#/components/schemas/ChallengeMetrics"
+        overall_score:
+          format: double
+          type: number
+      required:
+        - expedition_id
+        - overall_score
+        - metrics
+        - attempt_count
+        - finished_at
+      type: object
     ChiefReviewCommentDetail:
       additionalProperties: false
       properties:
@@ -3117,6 +3176,44 @@ paths:
                 $ref: "#/components/schemas/ErrorModel"
           description: Internal Server Error
       summary: Get an applicant
+      tags:
+        - Applicants
+  /applicants/{nuid}/challenge-score:
+    get:
+      description: Reviewer only. Reads the applicant's best finished expedition from the separate challenge server, matched by their apportal email. Body is null if they have none there (e.g. they took the frontend challenge, or the lookup isn't configured).
+      operationId: get-challenge-score
+      parameters:
+        - in: path
+          name: nuid
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChallengeScore"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Get an applicant's technical challenge score
       tags:
         - Applicants
   /application-templates/open:
@@ -6671,6 +6768,94 @@ paths:
       summary: Per-role template counts for a cycle
       tags:
         - Cycles
+  /interview-assignments:
+    get:
+      description: Reviewer only. One request for a page of applications, instead of one per application.
+      operationId: list-interview-assignments-bulk
+      parameters:
+        - description: Comma-separated application IDs
+          explode: false
+          in: query
+          name: application_ids
+          schema:
+            description: Comma-separated application IDs
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/InterviewAssignment"
+                type:
+                  - array
+                  - "null"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: List interviewer assignments for several applications
+      tags:
+        - Interview assignments
+  /interview-review-assignments:
+    get:
+      description: Reviewer only. One request for a page of applications, instead of one per application.
+      operationId: list-interview-review-assignments-bulk
+      parameters:
+        - description: Comma-separated application IDs
+          explode: false
+          in: query
+          name: application_ids
+          schema:
+            description: Comma-separated application IDs
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/InterviewReviewAssignment"
+                type:
+                  - array
+                  - "null"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: List recording-reviewer assignments for several applications
+      tags:
+        - Interview assignments
   /interview-review-assignments/{id}:
     delete:
       description: Chief only.
@@ -7002,6 +7187,50 @@ paths:
       summary: Update a question
       tags:
         - Questions
+  /recording-reviews:
+    get:
+      description: Reviewer only. One request for a page of applications, instead of one per interview. Comments are always omitted here — this is for computing review-progress counts, not reading review content; use list-recording-reviews for that.
+      operationId: list-recording-reviews-bulk
+      parameters:
+        - description: Comma-separated interview IDs
+          explode: false
+          in: query
+          name: interview_ids
+          schema:
+            description: Comma-separated interview IDs
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/InterviewRecordingReview"
+                type:
+                  - array
+                  - "null"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: List recording reviews for several interviews
+      tags:
+        - Recording reviews
   /review-questions/{id}:
     delete:
       description: Chief only.

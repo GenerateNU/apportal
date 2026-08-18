@@ -1,0 +1,17 @@
+import { useQuery } from '@tanstack/react-query'
+import { getChallengeScore } from '@/generated/applicants/applicants'
+import type { RequestOptions } from '@/lib/api/orval-mutator'
+import type { ChallengeScore } from '@/lib/api/types'
+import { queryKeys } from './keys'
+
+// null body is a real, non-error outcome: the applicant has no finished
+// backend-challenge expedition (they may have done the frontend challenge,
+// or the challenge database isn't configured).
+export function useChallengeScore(nuid: string, opts?: RequestOptions) {
+  return useQuery({
+    queryKey: queryKeys.challengeScore.detail(nuid),
+    queryFn: () =>
+      getChallengeScore(nuid, opts) as Promise<ChallengeScore | null>,
+    enabled: !!nuid,
+  })
+}

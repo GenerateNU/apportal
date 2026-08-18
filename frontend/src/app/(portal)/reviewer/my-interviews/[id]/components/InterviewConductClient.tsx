@@ -26,10 +26,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import type { InterviewComment, InterviewRating, Role } from '@/lib/api/types'
+import type {
+  ChallengeMetrics,
+  InterviewComment,
+  InterviewRating,
+  Role,
+} from '@/lib/api/types'
 import { useAnswers } from '@/lib/queries/answers'
 import { useApplicant } from '@/lib/queries/applicants'
 import { useApplications } from '@/lib/queries/applications'
+import { useChallengeScore } from '@/lib/queries/challenge-score'
 import {
   useCreateInterviewComment,
   useInterviewComments,
@@ -49,6 +55,7 @@ import {
   useRecordingReviews,
   useUpsertRecordingReview,
 } from '@/lib/queries/recording-reviews'
+import { useSubmission } from '@/lib/queries/submissions'
 import { useCurrentUser, useUser } from '@/lib/queries/users'
 import { RATING_LABEL, RATING_OPTIONS } from '@/lib/interview-ratings'
 import { ROLE_CHIP_CLASS, ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
@@ -67,6 +74,80 @@ const TEXTAREA_CLASS =
 function ReviewerName({ nuid }: { nuid: string }) {
   const { data: user } = useUser(nuid)
   return <>{user?.full_name || nuid}</>
+}
+
+const CHALLENGE_METRIC_LABEL: { key: keyof ChallengeMetrics; label: string }[] =
+  [
+    { key: 'throughput', label: 'Throughput' },
+    { key: 'gateUtilization', label: 'Gate utilization' },
+    { key: 'arrivalSuccess', label: 'Arrival success' },
+    { key: 'fairness', label: 'Fairness' },
+    { key: 'reliability', label: 'Reliability' },
+    { key: 'slaCompliance', label: 'SLA compliance' },
+  ]
+
+// The applicant's backend/scheduler technical challenge — read from the
+// separate challenge server, shown alongside their code submission link so
+// the interviewer doesn't have to leave this page to find either.
+function ChallengeCard({
+  applicantNuid,
+  applicationId,
+}: {
+  applicantNuid: string
+  applicationId: string
+}) {
+  const { data: score } = useChallengeScore(applicantNuid)
+  const { data: submission } = useSubmission(applicationId)
+
+  if (!score && !submission) return null
+
+  return (
+    <div className="mb-4 flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+      <h2 className="text-text-faint text-xs font-semibold tracking-wide uppercase">
+        Technical challenge
+      </h2>
+
+      {submission && (
+        <a
+          href={submission.submission_url}
+          target="_blank"
+          rel="noreferrer"
+          className="text-brand-blue inline-flex w-fit items-center gap-1 text-sm hover:underline"
+        >
+          View code submission
+          <ExternalLink size={12} />
+        </a>
+      )}
+
+      {score ? (
+        <>
+          <div className="flex items-baseline gap-2">
+            <span className="text-text-default text-lg font-semibold">
+              {score.overall_score.toFixed(1)}
+            </span>
+            <span className="text-text-faint text-xs">
+              overall score · {score.attempt_count} finished attempt
+              {score.attempt_count === 1 ? '' : 's'}
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+            {CHALLENGE_METRIC_LABEL.map(({ key, label }) => (
+              <div key={key} className="flex items-center justify-between">
+                <span className="text-text-faint text-xs">{label}</span>
+                <span className="text-text-default text-xs font-medium">
+                  {score.metrics[key].toFixed(2)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </>
+      ) : (
+        <p className="text-text-faint text-sm">
+          No finished challenge attempt yet.
+        </p>
+      )}
+    </div>
+  )
 }
 
 export function InterviewConductClient({
@@ -330,6 +411,11 @@ export function InterviewConductClient({
               </>
             )}
           </div>
+
+          <ChallengeCard
+            applicantNuid={applicantNuid}
+            applicationId={applicationId}
+          />
 
           <h2 className="text-text-faint mb-4 text-xs font-semibold tracking-wide uppercase">
             Application

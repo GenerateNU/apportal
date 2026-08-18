@@ -176,6 +176,10 @@ export const queryKeys = {
     details: () => [...queryKeys.interviewAssignments.all, 'detail'] as const,
     detail: (applicationId: string) =>
       [...queryKeys.interviewAssignments.details(), applicationId] as const,
+    // One entry per batch of applications fetched together. Keyed by the exact
+    // id list so a batch stays cached as more are loaded alongside it.
+    bulk: (applicationIds: string[]) =>
+      [...queryKeys.interviewAssignments.all, 'bulk', applicationIds] as const,
   },
 
   interviewComments: {
@@ -199,6 +203,17 @@ export const queryKeys = {
     lists: () => [...queryKeys.recordingReviews.all, 'list'] as const,
     list: (interviewId: string) =>
       [...queryKeys.recordingReviews.lists(), interviewId] as const,
+    // One entry per batch of interviews fetched together. Keyed by the exact
+    // id list so a batch stays cached as more are loaded alongside it.
+    bulk: (interviewIds: string[]) =>
+      [...queryKeys.recordingReviews.all, 'bulk', interviewIds] as const,
+  },
+
+  challengeScore: {
+    all: ['challenge-score'] as const,
+    details: () => [...queryKeys.challengeScore.all, 'detail'] as const,
+    detail: (nuid: string) =>
+      [...queryKeys.challengeScore.details(), nuid] as const,
   },
 
   interviewReviewAssignments: {
@@ -206,6 +221,14 @@ export const queryKeys = {
     lists: () => [...queryKeys.interviewReviewAssignments.all, 'list'] as const,
     list: (applicationId: string) =>
       [...queryKeys.interviewReviewAssignments.lists(), applicationId] as const,
+    // One entry per batch of applications fetched together. Keyed by the exact
+    // id list so a batch stays cached as more are loaded alongside it.
+    bulk: (applicationIds: string[]) =>
+      [
+        ...queryKeys.interviewReviewAssignments.all,
+        'bulk',
+        applicationIds,
+      ] as const,
   },
 
   // Same shape as assignmentPlan above: read-only, driven by a meeting-day

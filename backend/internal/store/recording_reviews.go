@@ -48,3 +48,19 @@ func (s *Store) ListRecordingReviews(ctx context.Context, interviewID string) ([
 	}
 	return pgx.CollectRows(rows, pgx.RowToStructByPos[models.InterviewRecordingReview])
 }
+
+// ListRecordingReviewsForInterviews fetches recording reviews for many
+// interviews in one round trip, for callers rendering a page of applications
+// at once — the per-interview ListRecordingReviews above turns into a
+// request per row there.
+func (s *Store) ListRecordingReviewsForInterviews(ctx context.Context, interviewIDs []string) ([]models.InterviewRecordingReview, error) {
+	if len(interviewIDs) == 0 {
+		return nil, nil
+	}
+	const q = `SELECT ` + recordingReviewColumns + ` FROM interview_recording_reviews WHERE interview_id = ANY($1::uuid[]) ORDER BY interview_id, created_at`
+	rows, err := s.db.Query(ctx, q, interviewIDs)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, pgx.RowToStructByPos[models.InterviewRecordingReview])
+}
