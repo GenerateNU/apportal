@@ -13,6 +13,10 @@ interface NavItemProps {
   collapsed?: boolean
 }
 
+export function isNavItemActive(pathname: string, href: string) {
+  return pathname === href || pathname.startsWith(href + '/')
+}
+
 export default function NavItem({
   href,
   label,
@@ -20,7 +24,7 @@ export default function NavItem({
   collapsed,
 }: NavItemProps) {
   const pathname = usePathname()
-  const isActive = pathname === href || pathname.startsWith(href + '/')
+  const isActive = isNavItemActive(pathname, href)
 
   const link = (
     <Link
