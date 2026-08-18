@@ -42,8 +42,8 @@ type Router struct {
 // plain health checks, creates a Huma API over the same app (which auto-serves
 // the OpenAPI spec at /openapi.json|yaml and Scalar docs at /docs), then
 // registers every domain's typed operations.
-func NewRouter(database *pgxpool.Pool, corsOrigins []string, supabaseURL, supabaseAnonKey string, storageClient *storage.Client) *fiber.App {
-	st := store.New(database)
+func NewRouter(database *pgxpool.Pool, corsOrigins []string, supabaseURL, supabaseAnonKey string, storageClient *storage.Client, challengeServerURL, challengeAdminToken string) *fiber.App {
+	st := store.New(database, challengeServerURL, challengeAdminToken)
 	verifier := middleware.NewSupabaseVerifier(supabaseURL, supabaseAnonKey)
 	app := fiber.New(fiber.Config{
 		ReadTimeout:    readTimeout,
@@ -112,6 +112,7 @@ func registerHandlers(api huma.API, st *store.Store, storageClient *storage.Clie
 	(&recordingReviewHandler{store: st}).register(api)
 	(&interviewCommentHandler{store: st}).register(api)
 	(&interviewScriptHandler{store: st}).register(api)
+	(&challengeScoreHandler{store: st}).register(api)
 	(&selectionHandler{store: st}).register(api)
 }
 
@@ -121,7 +122,7 @@ func registerHandlers(api huma.API, st *store.Store, storageClient *storage.Clie
 // cmd/openapi) dump the spec for frontend codegen without a running server.
 func OpenAPIYAML() ([]byte, error) {
 	api := humafiber.New(fiber.New(), humaConfig())
-	registerHandlers(api, store.New(nil), storage.NewClient("", ""))
+	registerHandlers(api, store.New(nil, "", ""), storage.NewClient("", ""))
 	return api.OpenAPI().YAML()
 }
 

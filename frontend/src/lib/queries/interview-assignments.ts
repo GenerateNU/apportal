@@ -7,6 +7,8 @@ import {
 import {
   assignRecordingReviewer,
   getInterviewAssignment,
+  listInterviewAssignmentsBulk,
+  listInterviewReviewAssignmentsBulk,
   listRecordingReviewerAssignments,
   setInterviewAssignment,
   unassignAllInterviewers,
@@ -61,6 +63,39 @@ export function useInterviewAssignmentsByApplications(
   })
 }
 
+// One request for the whole page of applications, instead of one per row —
+// writes each result back into the per-application cache useInterviewAssignment
+// reads, so opening one afterwards is a cache hit rather than a fresh request.
+export function useInterviewAssignmentsBulk(
+  applicationIds: string[],
+  opts?: RequestOptions
+) {
+  const queryClient = useQueryClient()
+  return useQuery({
+    queryKey: queryKeys.interviewAssignments.bulk(applicationIds),
+    queryFn: async () => {
+      const assignments = ((await listInterviewAssignmentsBulk(
+        { application_ids: applicationIds.join(',') },
+        opts
+      )) ?? []) as InterviewAssignment[]
+
+      const byApplicationId: Record<string, InterviewAssignment | null> = {}
+      for (const id of applicationIds) byApplicationId[id] = null
+      for (const assignment of assignments) {
+        byApplicationId[assignment.application_id] = assignment
+      }
+      for (const [id, assignment] of Object.entries(byApplicationId)) {
+        queryClient.setQueryData(
+          queryKeys.interviewAssignments.detail(id),
+          assignment
+        )
+      }
+      return byApplicationId
+    },
+    enabled: applicationIds.length > 0,
+  })
+}
+
 export function useSetInterviewAssignment() {
   const queryClient = useQueryClient()
   return useMutation({
@@ -107,6 +142,40 @@ export function useRecordingReviewerAssignmentsByApplications(
         ((await listRecordingReviewerAssignments(id, opts)) ??
           []) as InterviewReviewAssignment[],
     })),
+  })
+}
+
+// One request for the whole page of applications, instead of one per row —
+// mirrors useInterviewAssignmentsBulk above.
+export function useRecordingReviewerAssignmentsBulk(
+  applicationIds: string[],
+  opts?: RequestOptions
+) {
+  const queryClient = useQueryClient()
+  return useQuery({
+    queryKey: queryKeys.interviewReviewAssignments.bulk(applicationIds),
+    queryFn: async () => {
+      const assignments = ((await listInterviewReviewAssignmentsBulk(
+        { application_ids: applicationIds.join(',') },
+        opts
+      )) ?? []) as InterviewReviewAssignment[]
+
+      const byApplicationId: Record<string, InterviewReviewAssignment[]> = {}
+      for (const id of applicationIds) byApplicationId[id] = []
+      for (const assignment of assignments) {
+        const list = byApplicationId[assignment.application_id] ?? []
+        list.push(assignment)
+        byApplicationId[assignment.application_id] = list
+      }
+      for (const [id, list] of Object.entries(byApplicationId)) {
+        queryClient.setQueryData(
+          queryKeys.interviewReviewAssignments.list(id),
+          list
+        )
+      }
+      return byApplicationId
+    },
+    enabled: applicationIds.length > 0,
   })
 }
 

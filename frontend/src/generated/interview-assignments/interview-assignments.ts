@@ -29,6 +29,10 @@ import type {
   ErrorModel,
   InterviewAssignment,
   InterviewReviewAssignment,
+  ListInterviewAssignmentsBulk200,
+  ListInterviewAssignmentsBulkParams,
+  ListInterviewReviewAssignmentsBulk200,
+  ListInterviewReviewAssignmentsBulkParams,
   ListRecordingReviewerAssignments200,
   SetInterviewAssignmentInputBody,
   UnassignAllInterviewersParams,
@@ -512,6 +516,192 @@ export const useUnassignAllRecordingReviewers = <TError = ErrorModel | ErrorMode
       return useMutation(mutationOptions, queryClient);
     }
     /**
+ * Reviewer only. One request for a page of applications, instead of one per application.
+ * @summary List interviewer assignments for several applications
+ */
+export const listInterviewAssignmentsBulk = (
+    params?: ListInterviewAssignmentsBulkParams,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<ListInterviewAssignmentsBulk200>(
+      {url: `/interview-assignments`, method: 'GET',
+        params, signal
+    },
+      options);
+    }
+  
+
+
+
+export const getListInterviewAssignmentsBulkQueryKey = (params?: ListInterviewAssignmentsBulkParams,) => {
+    return [
+    `/interview-assignments`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getListInterviewAssignmentsBulkQueryOptions = <TData = Awaited<ReturnType<typeof listInterviewAssignmentsBulk>>, TError = ErrorModel | ErrorModel | ErrorModel>(params?: ListInterviewAssignmentsBulkParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listInterviewAssignmentsBulk>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListInterviewAssignmentsBulkQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInterviewAssignmentsBulk>>> = ({ signal }) => listInterviewAssignmentsBulk(params, requestOptions, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listInterviewAssignmentsBulk>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListInterviewAssignmentsBulkQueryResult = NonNullable<Awaited<ReturnType<typeof listInterviewAssignmentsBulk>>>
+export type ListInterviewAssignmentsBulkQueryError = ErrorModel | ErrorModel | ErrorModel
+
+
+export function useListInterviewAssignmentsBulk<TData = Awaited<ReturnType<typeof listInterviewAssignmentsBulk>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+ params: undefined |  ListInterviewAssignmentsBulkParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listInterviewAssignmentsBulk>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listInterviewAssignmentsBulk>>,
+          TError,
+          Awaited<ReturnType<typeof listInterviewAssignmentsBulk>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListInterviewAssignmentsBulk<TData = Awaited<ReturnType<typeof listInterviewAssignmentsBulk>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+ params?: ListInterviewAssignmentsBulkParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listInterviewAssignmentsBulk>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listInterviewAssignmentsBulk>>,
+          TError,
+          Awaited<ReturnType<typeof listInterviewAssignmentsBulk>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListInterviewAssignmentsBulk<TData = Awaited<ReturnType<typeof listInterviewAssignmentsBulk>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+ params?: ListInterviewAssignmentsBulkParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listInterviewAssignmentsBulk>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List interviewer assignments for several applications
+ */
+
+export function useListInterviewAssignmentsBulk<TData = Awaited<ReturnType<typeof listInterviewAssignmentsBulk>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+ params?: ListInterviewAssignmentsBulkParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listInterviewAssignmentsBulk>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListInterviewAssignmentsBulkQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+/**
+ * Reviewer only. One request for a page of applications, instead of one per application.
+ * @summary List recording-reviewer assignments for several applications
+ */
+export const listInterviewReviewAssignmentsBulk = (
+    params?: ListInterviewReviewAssignmentsBulkParams,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<ListInterviewReviewAssignmentsBulk200>(
+      {url: `/interview-review-assignments`, method: 'GET',
+        params, signal
+    },
+      options);
+    }
+  
+
+
+
+export const getListInterviewReviewAssignmentsBulkQueryKey = (params?: ListInterviewReviewAssignmentsBulkParams,) => {
+    return [
+    `/interview-review-assignments`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getListInterviewReviewAssignmentsBulkQueryOptions = <TData = Awaited<ReturnType<typeof listInterviewReviewAssignmentsBulk>>, TError = ErrorModel | ErrorModel | ErrorModel>(params?: ListInterviewReviewAssignmentsBulkParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listInterviewReviewAssignmentsBulk>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListInterviewReviewAssignmentsBulkQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInterviewReviewAssignmentsBulk>>> = ({ signal }) => listInterviewReviewAssignmentsBulk(params, requestOptions, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listInterviewReviewAssignmentsBulk>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListInterviewReviewAssignmentsBulkQueryResult = NonNullable<Awaited<ReturnType<typeof listInterviewReviewAssignmentsBulk>>>
+export type ListInterviewReviewAssignmentsBulkQueryError = ErrorModel | ErrorModel | ErrorModel
+
+
+export function useListInterviewReviewAssignmentsBulk<TData = Awaited<ReturnType<typeof listInterviewReviewAssignmentsBulk>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+ params: undefined |  ListInterviewReviewAssignmentsBulkParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listInterviewReviewAssignmentsBulk>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listInterviewReviewAssignmentsBulk>>,
+          TError,
+          Awaited<ReturnType<typeof listInterviewReviewAssignmentsBulk>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListInterviewReviewAssignmentsBulk<TData = Awaited<ReturnType<typeof listInterviewReviewAssignmentsBulk>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+ params?: ListInterviewReviewAssignmentsBulkParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listInterviewReviewAssignmentsBulk>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listInterviewReviewAssignmentsBulk>>,
+          TError,
+          Awaited<ReturnType<typeof listInterviewReviewAssignmentsBulk>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListInterviewReviewAssignmentsBulk<TData = Awaited<ReturnType<typeof listInterviewReviewAssignmentsBulk>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+ params?: ListInterviewReviewAssignmentsBulkParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listInterviewReviewAssignmentsBulk>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List recording-reviewer assignments for several applications
+ */
+
+export function useListInterviewReviewAssignmentsBulk<TData = Awaited<ReturnType<typeof listInterviewReviewAssignmentsBulk>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+ params?: ListInterviewReviewAssignmentsBulkParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listInterviewReviewAssignmentsBulk>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListInterviewReviewAssignmentsBulkQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+/**
  * Chief only.
  * @summary Remove a recording-review assignment
  */

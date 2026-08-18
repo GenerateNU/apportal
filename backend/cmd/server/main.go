@@ -37,7 +37,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	app := handlers.NewRouter(database, cfg.CORSOrigins, cfg.SupabaseURL, cfg.SupabaseAnonKey, storageClient)
+	app := handlers.NewRouter(database, cfg.CORSOrigins, cfg.SupabaseURL, cfg.SupabaseAnonKey, storageClient, cfg.ChallengeServerURL, cfg.ChallengeAdminToken)
 
 	serverErrors := make(chan error, 1)
 	go func() {

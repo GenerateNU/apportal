@@ -4,7 +4,9 @@ package store
 
 import (
 	"errors"
+	"net/http"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -19,10 +21,22 @@ var ErrConflict = errors.New("conflict")
 // Store holds the connection pool shared by every domain method.
 type Store struct {
 	db *pgxpool.Pool
+	// challengeServerURL/challengeAdminToken call the separate
+	// f26-technical-challenge server's own GET /admin/lookup?email= endpoint
+	// (see challenge_score.go) — challengeAdminToken empty means
+	// GetChallengeScore just reports "no score" rather than erroring.
+	challengeServerURL  string
+	challengeAdminToken string
+	httpClient          *http.Client
 }
 
-func New(db *pgxpool.Pool) *Store {
-	return &Store{db: db}
+func New(db *pgxpool.Pool, challengeServerURL, challengeAdminToken string) *Store {
+	return &Store{
+		db:                  db,
+		challengeServerURL:  challengeServerURL,
+		challengeAdminToken: challengeAdminToken,
+		httpClient:          &http.Client{Timeout: 10 * time.Second},
+	}
 }
 
 // likeEscaper neutralizes LIKE's own metacharacters so a user searching for

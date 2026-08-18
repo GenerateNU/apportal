@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"net/http"
+	"strings"
 
 	"github.com/danielgtaylor/huma/v2"
 
@@ -34,6 +35,16 @@ func (h *recordingReviewHandler) register(api huma.API) {
 		Tags:        []string{"Recording reviews"},
 		Errors:      []int{http.StatusUnauthorized},
 	}, h.list)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "list-recording-reviews-bulk",
+		Method:      http.MethodGet,
+		Path:        "/recording-reviews",
+		Summary:     "List recording reviews for several interviews",
+		Description: "Reviewer only. One request for a page of applications, instead of one per interview. Comments are always omitted here — this is for computing review-progress counts, not reading review content; use list-recording-reviews for that.",
+		Tags:        []string{"Recording reviews"},
+		Errors:      []int{http.StatusUnauthorized, http.StatusUnprocessableEntity},
+	}, h.listBulk)
 }
 
 type RecordingReviewOutput struct {
@@ -104,6 +115,41 @@ func (h *recordingReviewHandler) upsert(ctx context.Context, in *UpsertRecording
 
 type InterviewScopedInput struct {
 	ID string `path:"id" doc:"Interview ID"`
+}
+
+type ListRecordingReviewsBulkInput struct {
+	// Comma-separated rather than a repeated/array param because huma splits
+	// this form itself, while the browser client serializes arrays as
+	// `interview_ids[]=…`, which binds to nothing server-side.
+	InterviewIDs string `query:"interview_ids" doc:"Comma-separated interview IDs"`
+}
+
+func (h *recordingReviewHandler) listBulk(ctx context.Context, in *ListRecordingReviewsBulkInput) (*RecordingReviewsOutput, error) {
+	if err := requireReviewer(ctx); err != nil {
+		return nil, err
+	}
+	ids := make([]string, 0, 8)
+	for _, id := range strings.Split(in.InterviewIDs, ",") {
+		if id = strings.TrimSpace(id); id != "" {
+			ids = append(ids, id)
+		}
+	}
+	if len(ids) == 0 {
+		return &RecordingReviewsOutput{Body: []models.InterviewRecordingReview{}}, nil
+	}
+	if len(ids) > maxBulkApplications {
+		return nil, huma.Error422UnprocessableEntity("too many interview_ids")
+	}
+	items, err := h.store.ListRecordingReviewsForInterviews(ctx, ids)
+	if err != nil {
+		return nil, storeErr(err)
+	}
+	// Comments are never useful for a progress count and would otherwise need
+	// a per-interview release check to redact correctly — just omit them.
+	for i := range items {
+		items[i].Comments = nil
+	}
+	return &RecordingReviewsOutput{Body: items}, nil
 }
 
 func (h *recordingReviewHandler) list(ctx context.Context, in *InterviewScopedInput) (*RecordingReviewsOutput, error) {

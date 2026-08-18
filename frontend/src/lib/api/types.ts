@@ -14,6 +14,7 @@ import type {
   ChiefReviewDetail as GenChiefReviewDetail,
   ChiefReviewDetailVote,
   Cycle as GenCycle,
+  ChallengeScore as GenChallengeScore,
   CodeChallenge as GenCodeChallenge,
   CodeSubmission as GenCodeSubmission,
   Interview as GenInterview,
@@ -41,6 +42,7 @@ import type {
 // Enum aliases — same string values as the backend, friendlier names for the app.
 export type {
   ApplicationStage,
+  ChallengeMetrics,
   InterviewRating,
   CycleStatus,
   CycleRoleSummary,
@@ -137,6 +139,10 @@ export type WrittenReviewDetail = Omit<
 }
 
 export type CodeSubmission = Omit<GenCodeSubmission, '$schema'>
+
+// An applicant's best finished expedition against the backend/scheduler
+// technical challenge, read from that separate server's own database.
+export type ChallengeScore = Omit<GenChallengeScore, '$schema'>
 
 export type ChiefReview = Omit<GenChiefReviewDetail, '$schema'>
 
