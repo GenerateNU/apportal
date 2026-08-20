@@ -1,8 +1,8 @@
 package handlers
 
 import (
-	"testing"
 	"github.com/GenerateNU/apportal/backend/internal/models"
+	"testing"
 )
 
 func TestParseRatingFilters(t *testing.T) {
@@ -25,18 +25,18 @@ func TestParseRatingFilters(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := parseRatingFilters(tt.input)
 			hasError := err != nil
-			
+
 			if hasError != tt.hasError {
 				t.Errorf("expected error=%v, got error=%v (err: %v)", tt.hasError, hasError, err)
 				return
 			}
-			
+
 			if !tt.hasError {
 				if len(result) != len(tt.expected) {
 					t.Errorf("expected length=%d, got length=%d", len(tt.expected), len(result))
 					return
 				}
-				
+
 				for i := range result {
 					if result[i] != tt.expected[i] {
 						t.Errorf("at index %d: expected=%v, got=%v", i, tt.expected[i], result[i])
