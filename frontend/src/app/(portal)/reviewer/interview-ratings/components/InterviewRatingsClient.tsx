@@ -584,7 +584,9 @@ function RatingColumn({
     <div className="flex w-80 shrink-0 flex-col">
       <div className="mb-3 flex items-center gap-2 px-1">
         {ratingKey === 'none' ? (
-          <span className="text-text-default text-sm font-semibold">{title}</span>
+          <span className="text-text-default text-sm font-semibold">
+            {title}
+          </span>
         ) : (
           <span
             className={`inline-flex items-center rounded-md px-2 py-0.5 text-sm font-semibold ${RATING_COLORS[ratingKey as InterviewRating].bg} ${RATING_COLORS[ratingKey as InterviewRating].text}`}
