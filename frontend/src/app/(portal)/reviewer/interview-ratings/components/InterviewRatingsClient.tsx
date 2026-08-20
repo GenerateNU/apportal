@@ -469,7 +469,7 @@ export function InterviewRatingsClient() {
       ) : showSwimlanes ? (
         <div className="max-h-[70vh] overflow-auto pb-4">
           <div
-            className={`sticky top-0 z-10 grid gap-5 border-b border-gray-100 bg-white pb-3 ${SWIMLANE_GRID_COLS_CLASS[visibleColumnDefs.length]}`}
+            className={`sticky top-0 z-10 grid gap-5 bg-white pb-2 pt-2 ${SWIMLANE_GRID_COLS_CLASS[visibleColumnDefs.length]}`}
           >
             {visibleColumnDefs.map((c) => (
               <div key={c.key} className="flex items-center gap-2 px-1">
@@ -486,14 +486,11 @@ export function InterviewRatingsClient() {
           {swimlanes.map((lane) => {
             const collapsed = collapsedLanes.has(lane.key)
             return (
-              <div
-                key={lane.key}
-                className="border-t border-gray-100 py-3 first:border-t-0 first:pt-0"
-              >
+              <div key={lane.key}>
                 <button
                   type="button"
                   onClick={() => toggleLane(lane.key)}
-                  className="text-text-default hover:text-brand-blue mb-2 flex items-center gap-1.5 px-1 text-sm font-medium"
+                  className="text-text-default hover:text-brand-blue sticky top-[2.2rem] z-[5] -mx-1 -mt-2 flex w-[calc(100%+0.5rem)] items-center gap-1.5 border-b border-t border-gray-100 bg-white px-1 py-2 text-sm font-medium"
                 >
                   {collapsed ? (
                     <ChevronRight size={14} />
@@ -507,7 +504,7 @@ export function InterviewRatingsClient() {
                 </button>
                 {!collapsed && (
                   <div
-                    className={`grid gap-5 ${SWIMLANE_GRID_COLS_CLASS[visibleColumnDefs.length]}`}
+                    className={`grid gap-5 py-3 ${SWIMLANE_GRID_COLS_CLASS[visibleColumnDefs.length]}`}
                   >
                     {visibleColumnDefs.map((c) => (
                       <div key={c.key} className="flex flex-col gap-2">
