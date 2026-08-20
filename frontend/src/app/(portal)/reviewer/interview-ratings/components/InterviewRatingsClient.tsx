@@ -404,9 +404,9 @@ export function InterviewRatingsClient() {
           No applicants match this interviewer filter.
         </p>
       ) : showSwimlanes ? (
-        <div className="overflow-x-auto pb-4">
+        <div className="max-h-[70vh] overflow-auto pb-4">
           <div
-            className={`grid gap-5 pb-3 ${SWIMLANE_GRID_COLS_CLASS[visibleColumnDefs.length]}`}
+            className={`sticky top-0 z-10 grid gap-5 border-b border-gray-100 bg-white pb-3 ${SWIMLANE_GRID_COLS_CLASS[visibleColumnDefs.length]}`}
           >
             {visibleColumnDefs.map((c) => (
               <div key={c.key} className="flex items-center gap-2 px-1">
