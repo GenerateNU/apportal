@@ -58,10 +58,7 @@ const INTERVIEW_STAGES: ApplicationStage[] = [
   'interview_review',
 ]
 
-const RATING_COLORS: Record<
-  InterviewRating,
-  { bg: string; text: string }
-> = {
+const RATING_COLORS: Record<InterviewRating, { bg: string; text: string }> = {
   must_hire: { bg: 'bg-green-100', text: 'text-green-700' },
   great: { bg: 'bg-teal-100', text: 'text-teal-700' },
   good: { bg: 'bg-blue-100', text: 'text-blue-700' },
@@ -250,17 +247,20 @@ export function InterviewRatingsClient() {
       if (interviewerFilter === 'unassigned') {
         filtered = filtered.filter((r) => !r.interviewerNuid)
       } else {
-        filtered = filtered.filter((r) => r.interviewerNuid === interviewerFilter)
+        filtered = filtered.filter(
+          (r) => r.interviewerNuid === interviewerFilter
+        )
       }
     }
 
     // Filter by search query
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim()
-      filtered = filtered.filter((r) =>
-        r.application.full_name?.toLowerCase().includes(query) ||
-        r.application.user_nuid.toLowerCase().includes(query) ||
-        r.application.email?.toLowerCase().includes(query)
+      filtered = filtered.filter(
+        (r) =>
+          r.application.full_name?.toLowerCase().includes(query) ||
+          r.application.user_nuid.toLowerCase().includes(query) ||
+          r.application.email?.toLowerCase().includes(query)
       )
     }
 
@@ -362,12 +362,12 @@ export function InterviewRatingsClient() {
               placeholder="Search by name, NUID, or email..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-9 pl-3 pr-8 text-sm"
+              className="h-9 pr-8 pl-3 text-sm"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                className="absolute top-1/2 right-2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
               >
                 ✕
               </button>
