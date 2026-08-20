@@ -2,8 +2,16 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
-import { ArrowRight, CheckCircle2, Clock } from 'lucide-react'
+import {
+  ArrowRight,
+  CheckCircle2,
+  ChevronDown,
+  ChevronRight,
+  Clock,
+} from 'lucide-react'
 import { PageContainer } from '@/components/PageContainer'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
@@ -57,7 +65,7 @@ type Row = {
   reviewedCount: number
 }
 
-type GroupBy = 'rating' | 'interviewer'
+type RatingKey = InterviewRating | 'none'
 
 // Worst to best, with the not-yet-rated bucket leading — matches how a
 // chief scans the queue (unrated first, then increasingly promising).
@@ -68,6 +76,37 @@ const RATING_DISPLAY_ORDER: InterviewRating[] = [
   'great',
   'must_hire',
 ]
+
+const RATING_COLUMN_DEFS: { key: RatingKey; title: string }[] = [
+  { key: 'none', title: 'Interview' },
+  ...RATING_DISPLAY_ORDER.map((value) => ({
+    key: value as RatingKey,
+    title: RATING_LABEL[value],
+  })),
+]
+
+// Static classes (not built from a runtime template) so Tailwind's JIT scan
+// picks them up — one entry per possible visible-column count, up to
+// RATING_COLUMN_DEFS.length.
+const SWIMLANE_GRID_COLS_CLASS: Record<number, string> = {
+  1: 'grid-cols-[repeat(1,20rem)]',
+  2: 'grid-cols-[repeat(2,20rem)]',
+  3: 'grid-cols-[repeat(3,20rem)]',
+  4: 'grid-cols-[repeat(4,20rem)]',
+  5: 'grid-cols-[repeat(5,20rem)]',
+  6: 'grid-cols-[repeat(6,20rem)]',
+}
+
+function emptyRatingBuckets(): Record<RatingKey, Row[]> {
+  return {
+    must_hire: [],
+    great: [],
+    good: [],
+    neutral: [],
+    do_not_hire: [],
+    none: [],
+  }
+}
 
 export function InterviewRatingsClient() {
   const { data: cycles = [] } = useCycles({})
@@ -81,8 +120,9 @@ export function InterviewRatingsClient() {
     if (defaultId) setCycleId(defaultId)
   }
   const [activeRole, setActiveRole] = useState<Role | 'all'>('all')
-  const [groupBy, setGroupBy] = useState<GroupBy>('rating')
+  const [groupByInterviewer, setGroupByInterviewer] = useState(true)
   const [interviewerFilter, setInterviewerFilter] = useState('all')
+  const [collapsedLanes, setCollapsedLanes] = useState<Set<string>>(new Set())
 
   const { data: applications = [] } = useApplications(
     {
@@ -96,8 +136,9 @@ export function InterviewRatingsClient() {
   const isChief = !!currentUser?.roles.some(
     (r) => r === 'chief' || r === 'admin'
   )
+  const showSwimlanes = groupByInterviewer && isChief
 
-  // Nuid -> display name, for the interviewer shown per row/column — same
+  // Nuid -> display name, for the interviewer shown per row/lane — same
   // lookup MyInterviewsClient uses for its chief "viewing" dropdown.
   const nameByNuid = useMemo(() => {
     const byNuid = new Map<string, string>()
@@ -196,32 +237,40 @@ export function InterviewRatingsClient() {
     return rows.filter((r) => r.interviewerNuid === interviewerFilter)
   }, [rows, interviewerFilter])
 
-  const ratingColumns = useMemo(() => {
-    const byRating: Record<InterviewRating | 'none', Row[]> = {
-      must_hire: [],
-      great: [],
-      good: [],
-      neutral: [],
-      do_not_hire: [],
-      none: [],
+  // Total per rating across the current filter — drives both the flat kanban
+  // and the swimlane header, and which (usually empty) columns to hide.
+  const ratingTotals = useMemo(() => {
+    const totals = emptyRatingBuckets() as unknown as Record<RatingKey, number>
+    for (const key of Object.keys(totals) as RatingKey[]) totals[key] = 0
+    for (const row of filteredRows) {
+      totals[row.interview?.rating ?? 'none']++
     }
+    return totals
+  }, [filteredRows])
+
+  const visibleColumnDefs = useMemo(
+    () => RATING_COLUMN_DEFS.filter((c) => ratingTotals[c.key] > 0),
+    [ratingTotals]
+  )
+
+  const ratingColumns = useMemo(() => {
+    const byRating = emptyRatingBuckets()
     for (const row of filteredRows) {
       byRating[row.interview?.rating ?? 'none'].push(row)
     }
-    for (const key of Object.keys(byRating) as (InterviewRating | 'none')[]) {
+    for (const key of Object.keys(byRating) as RatingKey[]) {
       byRating[key].sort(byName)
     }
-    return [
-      { key: 'none', title: 'Interview', rows: byRating.none },
-      ...RATING_DISPLAY_ORDER.map((value) => ({
-        key: value,
-        title: RATING_LABEL[value],
-        rows: byRating[value],
-      })),
-    ].filter((c) => c.rows.length > 0)
-  }, [filteredRows])
+    return visibleColumnDefs.map((c) => ({
+      key: c.key,
+      title: c.title,
+      rows: byRating[c.key],
+    }))
+  }, [filteredRows, visibleColumnDefs])
 
-  const interviewerColumns = useMemo(() => {
+  // One lane per interviewer, each holding its own rating -> rows map, for
+  // the swimlane board (rating columns repeated per interviewer).
+  const swimlanes = useMemo(() => {
     const byInterviewer = new Map<string, Row[]>()
     for (const row of filteredRows) {
       const key = row.interviewerNuid ?? 'unassigned'
@@ -229,21 +278,38 @@ export function InterviewRatingsClient() {
       list.push(row)
       byInterviewer.set(key, list)
     }
-    const columns = [...byInterviewer.entries()].map(([nuid, colRows]) => ({
-      key: nuid,
-      title:
-        nuid === 'unassigned' ? 'Unassigned' : (nameByNuid.get(nuid) ?? nuid),
-      rows: colRows.sort(byName),
-    }))
-    columns.sort((a, b) => {
+    const lanes = [...byInterviewer.entries()].map(([nuid, laneRows]) => {
+      const byRating = emptyRatingBuckets()
+      for (const row of laneRows) {
+        byRating[row.interview?.rating ?? 'none'].push(row)
+      }
+      for (const key of Object.keys(byRating) as RatingKey[]) {
+        byRating[key].sort(byName)
+      }
+      return {
+        key: nuid,
+        title:
+          nuid === 'unassigned' ? 'Unassigned' : (nameByNuid.get(nuid) ?? nuid),
+        count: laneRows.length,
+        byRating,
+      }
+    })
+    lanes.sort((a, b) => {
       if (a.key === 'unassigned') return 1
       if (b.key === 'unassigned') return -1
       return a.title.localeCompare(b.title)
     })
-    return columns
+    return lanes
   }, [filteredRows, nameByNuid])
 
-  const columns = groupBy === 'rating' ? ratingColumns : interviewerColumns
+  function toggleLane(key: string) {
+    setCollapsedLanes((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
 
   return (
     <PageContainer>
@@ -260,18 +326,19 @@ export function InterviewRatingsClient() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <Select
-            value={groupBy}
-            onValueChange={(v) => setGroupBy(v as GroupBy)}
-          >
-            <SelectTrigger className="w-48" aria-label="Group by">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="rating">Group by rating</SelectItem>
-              <SelectItem value="interviewer">Group by interviewer</SelectItem>
-            </SelectContent>
-          </Select>
+          {isChief && (
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox
+                checked={groupByInterviewer}
+                onCheckedChange={(checked) =>
+                  setGroupByInterviewer(checked === true)
+                }
+              />
+              <Label className="cursor-pointer font-normal">
+                Group by interviewer
+              </Label>
+            </label>
+          )}
 
           {isChief && (
             <Select
@@ -332,24 +399,92 @@ export function InterviewRatingsClient() {
         <p className="text-text-faint px-1 text-sm">
           No applicants have reached interviews yet for this cycle/role.
         </p>
-      ) : groupBy === 'interviewer' && !isChief ? (
-        <p className="text-text-faint px-1 text-sm">
-          Grouping by interviewer needs chief/admin access, since it reads every
-          applicant&apos;s assignment.
-        </p>
       ) : filteredRows.length === 0 ? (
         <p className="text-text-faint px-1 text-sm">
           No applicants match this interviewer filter.
         </p>
+      ) : showSwimlanes ? (
+        <div className="overflow-x-auto pb-4">
+          <div
+            className={`grid gap-5 pb-3 ${SWIMLANE_GRID_COLS_CLASS[visibleColumnDefs.length]}`}
+          >
+            {visibleColumnDefs.map((c) => (
+              <div key={c.key} className="flex items-center gap-2 px-1">
+                <span className="text-text-default text-sm font-semibold">
+                  {c.title}
+                </span>
+                <span className="text-text-subtle text-sm">
+                  {ratingTotals[c.key]}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {swimlanes.map((lane) => {
+            const collapsed = collapsedLanes.has(lane.key)
+            return (
+              <div
+                key={lane.key}
+                className="border-t border-gray-100 py-3 first:border-t-0 first:pt-0"
+              >
+                <button
+                  type="button"
+                  onClick={() => toggleLane(lane.key)}
+                  className="text-text-default hover:text-brand-blue mb-2 flex items-center gap-1.5 px-1 text-sm font-medium"
+                >
+                  {collapsed ? (
+                    <ChevronRight size={14} />
+                  ) : (
+                    <ChevronDown size={14} />
+                  )}
+                  {lane.title}
+                  <span className="text-text-subtle font-normal">
+                    {lane.count}
+                  </span>
+                </button>
+                {!collapsed && (
+                  <div
+                    className={`grid gap-5 ${SWIMLANE_GRID_COLS_CLASS[visibleColumnDefs.length]}`}
+                  >
+                    {visibleColumnDefs.map((c) => (
+                      <div key={c.key} className="flex flex-col gap-2">
+                        {lane.byRating[c.key].map(
+                          ({
+                            application,
+                            interview,
+                            reviewerCount,
+                            reviewedCount,
+                          }) => (
+                            <RatingCard
+                              key={application.id}
+                              application={application}
+                              interview={interview}
+                              interviewerName={null}
+                              reviewerCount={reviewerCount}
+                              reviewedCount={reviewedCount}
+                              showInterviewer={false}
+                              showRating={false}
+                              showRole={activeRole === 'all'}
+                            />
+                          )
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
       ) : (
         <div className="flex gap-5 overflow-x-auto pb-4">
-          {columns.map((column) => (
+          {ratingColumns.map((column) => (
             <RatingColumn
               key={column.key}
               title={column.title}
               rows={column.rows}
-              showInterviewer={groupBy === 'rating'}
-              showRating={groupBy === 'interviewer'}
+              showInterviewer
+              showRating={false}
               showRole={activeRole === 'all'}
               nameByNuid={nameByNuid}
             />
