@@ -63,6 +63,11 @@ export function useUpsertRecordingReview() {
       queryClient.invalidateQueries({
         queryKey: queryKeys.recordingReviews.list(vars.interviewId),
       })
+      // Bulk entries are keyed by id list, so there's no one batch to target —
+      // drop them all, or a queue that counts this review stays stale.
+      queryClient.invalidateQueries({
+        queryKey: [...queryKeys.recordingReviews.all, 'bulk'],
+      })
     },
   })
 }
