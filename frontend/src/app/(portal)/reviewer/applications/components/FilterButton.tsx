@@ -159,7 +159,7 @@ export function FilterChips({
           >
             <div className="flex items-center gap-1.5 px-2">
               {filter.isRatingFilter ? (
-                <Star className="h-3.5 w-3.5 text-text-muted shrink-0" />
+                <Star className="text-text-muted h-3.5 w-3.5 shrink-0" />
               ) : (
                 getIconForQuestionType(filter.question_type, 'h-3.5 w-3.5')
               )}

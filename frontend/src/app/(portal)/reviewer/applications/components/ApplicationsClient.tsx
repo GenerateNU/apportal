@@ -183,10 +183,12 @@ export function ApplicationsClient() {
     // Convert rating filter values back to rating enum values
     const ratingValues = ratingFilters.flatMap((f) => {
       const vals = Array.isArray(f.values) ? f.values : [f.values]
-      return vals.map((label) => {
-        const rating = RATING_OPTIONS.find((r) => r.label === label)
-        return rating?.value
-      }).filter(Boolean)
+      return vals
+        .map((label) => {
+          const rating = RATING_OPTIONS.find((r) => r.label === label)
+          return rating?.value
+        })
+        .filter(Boolean)
     })
 
     return {
@@ -196,7 +198,9 @@ export function ApplicationsClient() {
       // Each of these is omitted when inactive so an unfiltered first page
       // keys identically to the server prefetch in ../page.tsx.
       ...(answerFilters.length > 0 && { answer_filters: answerFilters }),
-      ...(ratingValues.length > 0 && { rating_filters: ratingValues.join(',') }),
+      ...(ratingValues.length > 0 && {
+        rating_filters: ratingValues.join(','),
+      }),
       // Kanban lays every stage out side by side, so it can neither filter by
       // one stage nor take a page — it asks for the whole set instead.
       ...(view === 'table' && {

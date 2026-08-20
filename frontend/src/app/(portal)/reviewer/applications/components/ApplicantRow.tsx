@@ -6,10 +6,7 @@ import { StageSelect } from './StageSelect'
 import { RATING_LABEL } from '@/lib/interview-ratings'
 import type { InterviewRating } from '@/lib/api/types'
 
-const RATING_COLORS: Record<
-  InterviewRating,
-  { bg: string; text: string }
-> = {
+const RATING_COLORS: Record<InterviewRating, { bg: string; text: string }> = {
   must_hire: { bg: 'bg-green-100', text: 'text-green-700' },
   great: { bg: 'bg-teal-100', text: 'text-teal-700' },
   good: { bg: 'bg-blue-100', text: 'text-blue-700' },
