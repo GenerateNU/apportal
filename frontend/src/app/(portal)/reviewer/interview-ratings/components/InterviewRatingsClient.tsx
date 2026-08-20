@@ -8,10 +8,11 @@ import {
   ChevronDown,
   ChevronRight,
   Clock,
+  Users,
+  LayoutList,
 } from 'lucide-react'
 import { PageContainer } from '@/components/PageContainer'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
@@ -56,6 +57,14 @@ const INTERVIEW_STAGES: ApplicationStage[] = [
   'interview_conducted',
   'interview_review',
 ]
+
+const RATING_COLORS: Record<InterviewRating, { bg: string; text: string }> = {
+  must_hire: { bg: 'bg-green-100', text: 'text-green-700' },
+  great: { bg: 'bg-teal-100', text: 'text-teal-700' },
+  good: { bg: 'bg-blue-100', text: 'text-blue-700' },
+  neutral: { bg: 'bg-gray-100', text: 'text-gray-700' },
+  do_not_hire: { bg: 'bg-red-100', text: 'text-red-700' },
+}
 
 type Row = {
   application: ApplicationSummary
@@ -123,6 +132,7 @@ export function InterviewRatingsClient() {
   const [groupByInterviewer, setGroupByInterviewer] = useState(true)
   const [interviewerFilter, setInterviewerFilter] = useState('all')
   const [collapsedLanes, setCollapsedLanes] = useState<Set<string>>(new Set())
+  const [searchQuery, setSearchQuery] = useState('')
 
   const { data: applications = [] } = useApplications(
     {
@@ -230,12 +240,32 @@ export function InterviewRatingsClient() {
   }, [rows, nameByNuid])
 
   const filteredRows = useMemo(() => {
-    if (interviewerFilter === 'all') return rows
-    if (interviewerFilter === 'unassigned') {
-      return rows.filter((r) => !r.interviewerNuid)
+    let filtered = rows
+
+    // Filter by interviewer
+    if (interviewerFilter !== 'all') {
+      if (interviewerFilter === 'unassigned') {
+        filtered = filtered.filter((r) => !r.interviewerNuid)
+      } else {
+        filtered = filtered.filter(
+          (r) => r.interviewerNuid === interviewerFilter
+        )
+      }
     }
-    return rows.filter((r) => r.interviewerNuid === interviewerFilter)
-  }, [rows, interviewerFilter])
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim()
+      filtered = filtered.filter(
+        (r) =>
+          r.application.full_name?.toLowerCase().includes(query) ||
+          r.application.user_nuid.toLowerCase().includes(query) ||
+          r.application.email?.toLowerCase().includes(query)
+      )
+    }
+
+    return filtered
+  }, [rows, interviewerFilter, searchQuery])
 
   // Total per rating across the current filter — drives both the flat kanban
   // and the swimlane header, and which (usually empty) columns to hide.
@@ -326,18 +356,51 @@ export function InterviewRatingsClient() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
+          <div className="relative w-64">
+            <Input
+              type="text"
+              placeholder="Search by name, NUID, or email..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="h-9 pr-8 pl-3 text-sm"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute top-1/2 right-2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
           {isChief && (
-            <label className="flex items-center gap-2 text-sm">
-              <Checkbox
-                checked={groupByInterviewer}
-                onCheckedChange={(checked) =>
-                  setGroupByInterviewer(checked === true)
-                }
-              />
-              <Label className="cursor-pointer font-normal">
-                Group by interviewer
-              </Label>
-            </label>
+            <div className="flex rounded-md border border-gray-200 bg-white">
+              <button
+                onClick={() => setGroupByInterviewer(false)}
+                className={`flex items-center gap-1.5 rounded-l-md px-3 py-1.5 text-sm transition-colors ${
+                  !groupByInterviewer
+                    ? 'text-text-default bg-gray-100 font-medium'
+                    : 'text-text-subtle hover:text-text-secondary'
+                }`}
+                aria-label="List view"
+              >
+                <LayoutList className="h-4 w-4" />
+                By rating
+              </button>
+              <button
+                onClick={() => setGroupByInterviewer(true)}
+                className={`flex items-center gap-1.5 rounded-r-md px-3 py-1.5 text-sm transition-colors ${
+                  groupByInterviewer
+                    ? 'text-text-default bg-gray-100 font-medium'
+                    : 'text-text-subtle hover:text-text-secondary'
+                }`}
+                aria-label="Grouped by interviewer view"
+              >
+                <Users className="h-4 w-4" />
+                By interviewer
+              </button>
+            </div>
           )}
 
           {isChief && (
@@ -463,7 +526,6 @@ export function InterviewRatingsClient() {
                               reviewerCount={reviewerCount}
                               reviewedCount={reviewedCount}
                               showInterviewer={false}
-                              showRating={false}
                               showRole={activeRole === 'all'}
                             />
                           )
@@ -484,7 +546,6 @@ export function InterviewRatingsClient() {
               title={column.title}
               rows={column.rows}
               showInterviewer
-              showRating={false}
               showRole={activeRole === 'all'}
               nameByNuid={nameByNuid}
             />
@@ -499,14 +560,12 @@ function RatingColumn({
   title,
   rows,
   showInterviewer,
-  showRating,
   showRole,
   nameByNuid,
 }: {
   title: string
   rows: Row[]
   showInterviewer: boolean
-  showRating: boolean
   showRole: boolean
   nameByNuid: Map<string, string>
 }) {
@@ -537,7 +596,6 @@ function RatingColumn({
               reviewerCount={reviewerCount}
               reviewedCount={reviewedCount}
               showInterviewer={showInterviewer}
-              showRating={showRating}
               showRole={showRole}
             />
           )
@@ -554,7 +612,6 @@ function RatingCard({
   reviewerCount,
   reviewedCount,
   showInterviewer,
-  showRating,
   showRole,
 }: {
   application: ApplicationSummary
@@ -563,7 +620,6 @@ function RatingCard({
   reviewerCount: number
   reviewedCount: number
   showInterviewer: boolean
-  showRating: boolean
   showRole: boolean
 }) {
   const state: ReviewState = interview?.submitted_at
@@ -571,6 +627,11 @@ function RatingCard({
     : interview
       ? 'draft'
       : 'none'
+
+  // Don't show interview state badge when stage already conveys that info
+  const showInterviewStateBadge =
+    !application.stage ||
+    !['interview_conducted', 'interview_review'].includes(application.stage)
 
   return (
     <Link
@@ -597,15 +658,19 @@ function RatingCard({
       </div>
 
       <div className="flex flex-wrap items-center gap-1.5">
-        <span
-          className={`h-2 w-2 shrink-0 rounded-full border-2 ${REVIEW_STATE_DOT[state]}`}
-        />
-        <span
-          className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium ${REVIEW_STATE_BADGE[state]}`}
-        >
-          {state === 'submitted' && <CheckCircle2 className="h-3 w-3" />}
-          {INTERVIEW_STATE_LABEL[state]}
-        </span>
+        {showInterviewStateBadge && (
+          <>
+            <span
+              className={`h-2 w-2 shrink-0 rounded-full border-2 ${REVIEW_STATE_DOT[state]}`}
+            />
+            <span
+              className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium ${REVIEW_STATE_BADGE[state]}`}
+            >
+              {state === 'submitted' && <CheckCircle2 className="h-3 w-3" />}
+              {INTERVIEW_STATE_LABEL[state]}
+            </span>
+          </>
+        )}
         {application.stage && (
           <span
             className={`rounded-md px-1.5 py-0.5 text-xs font-medium ${stageBadge[application.stage]}`}
@@ -613,9 +678,11 @@ function RatingCard({
             {stageLabel[application.stage]}
           </span>
         )}
-        {showRating && interview?.rating && (
-          <span className="bg-brand-blue/10 text-brand-blue rounded-md px-1.5 py-0.5 text-xs font-medium">
-            {interview.rating.replace('_', ' ')}
+        {interview?.rating && (
+          <span
+            className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${RATING_COLORS[interview.rating].bg} ${RATING_COLORS[interview.rating].text}`}
+          >
+            {RATING_LABEL[interview.rating]}
           </span>
         )}
       </div>
