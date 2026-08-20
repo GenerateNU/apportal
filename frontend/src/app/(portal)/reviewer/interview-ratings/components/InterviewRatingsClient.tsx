@@ -27,8 +27,8 @@ import {
 import { useInterviewsByApplicationIdBatches } from '@/lib/queries/interviews'
 import { useRecordingReviewsByInterviewIds } from '@/lib/queries/recording-reviews'
 import { useChiefs, useCurrentUser, useLeads } from '@/lib/queries/users'
-import { RATING_OPTIONS } from '@/lib/interview-ratings'
-import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
+import { RATING_LABEL } from '@/lib/interview-ratings'
+import { ROLE_CHIP_CLASS, ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 import {
   stageBadge,
   stageLabel,
@@ -59,6 +59,16 @@ type Row = {
 
 type GroupBy = 'rating' | 'interviewer'
 
+// Worst to best, with the not-yet-rated bucket leading — matches how a
+// chief scans the queue (unrated first, then increasingly promising).
+const RATING_DISPLAY_ORDER: InterviewRating[] = [
+  'do_not_hire',
+  'neutral',
+  'good',
+  'great',
+  'must_hire',
+]
+
 export function InterviewRatingsClient() {
   const { data: cycles = [] } = useCycles({})
   const { data: leads = [] } = useLeads()
@@ -72,6 +82,7 @@ export function InterviewRatingsClient() {
   }
   const [activeRole, setActiveRole] = useState<Role | 'all'>('all')
   const [groupBy, setGroupBy] = useState<GroupBy>('rating')
+  const [interviewerFilter, setInterviewerFilter] = useState('all')
 
   const { data: applications = [] } = useApplications(
     {
@@ -165,6 +176,26 @@ export function InterviewRatingsClient() {
       b.application.full_name || b.application.user_nuid
     )
 
+  // Every interviewer with at least one assigned applicant in the current
+  // cycle/role filter — options for the interviewer filter below.
+  const availableInterviewers = useMemo(() => {
+    const nuids = new Set<string>()
+    for (const row of rows) {
+      if (row.interviewerNuid) nuids.add(row.interviewerNuid)
+    }
+    return [...nuids]
+      .map((nuid) => ({ nuid, name: nameByNuid.get(nuid) ?? nuid }))
+      .sort((a, b) => a.name.localeCompare(b.name))
+  }, [rows, nameByNuid])
+
+  const filteredRows = useMemo(() => {
+    if (interviewerFilter === 'all') return rows
+    if (interviewerFilter === 'unassigned') {
+      return rows.filter((r) => !r.interviewerNuid)
+    }
+    return rows.filter((r) => r.interviewerNuid === interviewerFilter)
+  }, [rows, interviewerFilter])
+
   const ratingColumns = useMemo(() => {
     const byRating: Record<InterviewRating | 'none', Row[]> = {
       must_hire: [],
@@ -174,7 +205,7 @@ export function InterviewRatingsClient() {
       do_not_hire: [],
       none: [],
     }
-    for (const row of rows) {
+    for (const row of filteredRows) {
       byRating[row.interview?.rating ?? 'none'].push(row)
     }
     for (const key of Object.keys(byRating) as (InterviewRating | 'none')[]) {
@@ -182,17 +213,17 @@ export function InterviewRatingsClient() {
     }
     return [
       { key: 'none', title: 'Interview', rows: byRating.none },
-      ...RATING_OPTIONS.map((o) => ({
-        key: o.value,
-        title: o.label,
-        rows: byRating[o.value],
+      ...RATING_DISPLAY_ORDER.map((value) => ({
+        key: value,
+        title: RATING_LABEL[value],
+        rows: byRating[value],
       })),
     ].filter((c) => c.rows.length > 0)
-  }, [rows])
+  }, [filteredRows])
 
   const interviewerColumns = useMemo(() => {
     const byInterviewer = new Map<string, Row[]>()
-    for (const row of rows) {
+    for (const row of filteredRows) {
       const key = row.interviewerNuid ?? 'unassigned'
       const list = byInterviewer.get(key) ?? []
       list.push(row)
@@ -210,7 +241,7 @@ export function InterviewRatingsClient() {
       return a.title.localeCompare(b.title)
     })
     return columns
-  }, [rows, nameByNuid])
+  }, [filteredRows, nameByNuid])
 
   const columns = groupBy === 'rating' ? ratingColumns : interviewerColumns
 
@@ -241,6 +272,29 @@ export function InterviewRatingsClient() {
               <SelectItem value="interviewer">Group by interviewer</SelectItem>
             </SelectContent>
           </Select>
+
+          {isChief && (
+            <Select
+              value={interviewerFilter}
+              onValueChange={setInterviewerFilter}
+            >
+              <SelectTrigger
+                className="w-48"
+                aria-label="Filter by interviewer"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All interviewers</SelectItem>
+                <SelectItem value="unassigned">Unassigned</SelectItem>
+                {availableInterviewers.map((i) => (
+                  <SelectItem key={i.nuid} value={i.nuid}>
+                    {i.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
 
           <Select
             value={activeRole}
@@ -283,6 +337,10 @@ export function InterviewRatingsClient() {
           Grouping by interviewer needs chief/admin access, since it reads every
           applicant&apos;s assignment.
         </p>
+      ) : filteredRows.length === 0 ? (
+        <p className="text-text-faint px-1 text-sm">
+          No applicants match this interviewer filter.
+        </p>
       ) : (
         <div className="flex gap-5 overflow-x-auto pb-4">
           {columns.map((column) => (
@@ -292,6 +350,7 @@ export function InterviewRatingsClient() {
               rows={column.rows}
               showInterviewer={groupBy === 'rating'}
               showRating={groupBy === 'interviewer'}
+              showRole={activeRole === 'all'}
               nameByNuid={nameByNuid}
             />
           ))}
@@ -306,12 +365,14 @@ function RatingColumn({
   rows,
   showInterviewer,
   showRating,
+  showRole,
   nameByNuid,
 }: {
   title: string
   rows: Row[]
   showInterviewer: boolean
   showRating: boolean
+  showRole: boolean
   nameByNuid: Map<string, string>
 }) {
   return (
@@ -342,6 +403,7 @@ function RatingColumn({
               reviewedCount={reviewedCount}
               showInterviewer={showInterviewer}
               showRating={showRating}
+              showRole={showRole}
             />
           )
         )}
@@ -358,6 +420,7 @@ function RatingCard({
   reviewedCount,
   showInterviewer,
   showRating,
+  showRole,
 }: {
   application: ApplicationSummary
   interview: Interview | null | undefined
@@ -366,6 +429,7 @@ function RatingCard({
   reviewedCount: number
   showInterviewer: boolean
   showRating: boolean
+  showRole: boolean
 }) {
   const state: ReviewState = interview?.submitted_at
     ? 'submitted'
@@ -394,6 +458,13 @@ function RatingCard({
       </div>
 
       <div className="flex flex-wrap items-center gap-1.5">
+        {showRole && (
+          <span
+            className={`rounded-md px-1.5 py-0.5 text-xs font-medium ${ROLE_CHIP_CLASS[application.role]}`}
+          >
+            {ROLE_LABEL[application.role]}
+          </span>
+        )}
         <span
           className={`h-2 w-2 shrink-0 rounded-full border-2 ${REVIEW_STATE_DOT[state]}`}
         />
