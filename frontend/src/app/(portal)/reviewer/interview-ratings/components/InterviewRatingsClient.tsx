@@ -577,29 +577,26 @@ function RatingCard({
       href={`/reviewer/my-interviews/${application.id}`}
       className="group flex flex-col gap-2 rounded-lg border border-gray-200 bg-white p-3 shadow-sm transition-shadow hover:shadow-md"
     >
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-1.5">
           <p className="text-text-default truncate text-sm font-medium">
             {application.full_name || application.user_nuid}
           </p>
-          <p className="text-text-subtle truncate text-xs">
-            {application.email}
-          </p>
+          {showRole && (
+            <span
+              className={`shrink-0 rounded-md px-1.5 py-0.5 text-xs font-medium ${ROLE_CHIP_CLASS[application.role]}`}
+            >
+              {ROLE_LABEL[application.role]}
+            </span>
+          )}
         </div>
         <ArrowRight
           size={14}
-          className="text-text-faint group-hover:text-brand-blue mt-0.5 shrink-0 transition-transform group-hover:translate-x-1"
+          className="text-text-faint group-hover:text-brand-blue shrink-0 transition-transform group-hover:translate-x-1"
         />
       </div>
 
       <div className="flex flex-wrap items-center gap-1.5">
-        {showRole && (
-          <span
-            className={`rounded-md px-1.5 py-0.5 text-xs font-medium ${ROLE_CHIP_CLASS[application.role]}`}
-          >
-            {ROLE_LABEL[application.role]}
-          </span>
-        )}
         <span
           className={`h-2 w-2 shrink-0 rounded-full border-2 ${REVIEW_STATE_DOT[state]}`}
         />
