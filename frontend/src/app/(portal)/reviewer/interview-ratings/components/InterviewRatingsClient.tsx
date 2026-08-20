@@ -473,9 +473,17 @@ export function InterviewRatingsClient() {
           >
             {visibleColumnDefs.map((c) => (
               <div key={c.key} className="flex items-center gap-2 px-1">
-                <span className="text-text-default text-sm font-semibold">
-                  {c.title}
-                </span>
+                {c.key === 'none' ? (
+                  <span className="text-text-default text-sm font-semibold">
+                    {c.title}
+                  </span>
+                ) : (
+                  <span
+                    className={`inline-flex items-center rounded-md px-2 py-0.5 text-sm font-semibold ${RATING_COLORS[c.key as InterviewRating].bg} ${RATING_COLORS[c.key as InterviewRating].text}`}
+                  >
+                    {c.title}
+                  </span>
+                )}
                 <span className="text-text-subtle text-sm">
                   {ratingTotals[c.key]}
                 </span>
@@ -543,6 +551,7 @@ export function InterviewRatingsClient() {
           {ratingColumns.map((column) => (
             <RatingColumn
               key={column.key}
+              ratingKey={column.key}
               title={column.title}
               rows={column.rows}
               showInterviewer
@@ -557,12 +566,14 @@ export function InterviewRatingsClient() {
 }
 
 function RatingColumn({
+  ratingKey,
   title,
   rows,
   showInterviewer,
   showRole,
   nameByNuid,
 }: {
+  ratingKey: RatingKey
   title: string
   rows: Row[]
   showInterviewer: boolean
@@ -572,7 +583,15 @@ function RatingColumn({
   return (
     <div className="flex w-80 shrink-0 flex-col">
       <div className="mb-3 flex items-center gap-2 px-1">
-        <span className="text-text-default text-sm font-semibold">{title}</span>
+        {ratingKey === 'none' ? (
+          <span className="text-text-default text-sm font-semibold">{title}</span>
+        ) : (
+          <span
+            className={`inline-flex items-center rounded-md px-2 py-0.5 text-sm font-semibold ${RATING_COLORS[ratingKey as InterviewRating].bg} ${RATING_COLORS[ratingKey as InterviewRating].text}`}
+          >
+            {title}
+          </span>
+        )}
         <span className="text-text-subtle text-sm">{rows.length}</span>
       </div>
       <div className="flex max-h-[70vh] flex-col gap-2 overflow-y-auto pr-1 pb-1">
