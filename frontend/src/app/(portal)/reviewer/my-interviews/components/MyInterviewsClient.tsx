@@ -16,9 +16,11 @@ import { useApplications } from '@/lib/queries/applications'
 import { DEFAULT_CYCLE_ID, useCycles } from '@/lib/queries/cycles'
 import { useChiefs, useCurrentUser, useLeads } from '@/lib/queries/users'
 import { useInterviewsByApplicationIdBatches } from '@/lib/queries/interviews'
+import { useRecordingReviewsByInterviewIds } from '@/lib/queries/recording-reviews'
 import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 import type { ReviewState } from '../../my-reviews/constants'
 import { ReviewRow } from '../../my-reviews/components/ReviewRow'
+import { REVIEWING_STATE, type ReviewingState } from '../constants'
 import { InterviewRow } from './InterviewRow'
 
 // Sentinel for "my own queue" in the viewer-selector below, since Radix
@@ -158,28 +160,60 @@ export function MyInterviewsClient() {
     })).filter((s) => s.rows.length > 0)
   }, [rows])
 
-  // Reviewing rows can't act until the interviewer submits — that's the only
-  // signal available without a per-review fetch for every row, so "ready" vs
-  // "waiting" is as specific as this queue gets before opening a row.
+  // Own review progress for the reviewing queue, in one request for the whole
+  // list rather than one per row.
+  const reviewingInterviewIds = useMemo(
+    () =>
+      reviewingApplications
+        .map((a) => interviewByApplicationId?.[a.id]?.id)
+        .filter((id): id is string => !!id),
+    [reviewingApplications, interviewByApplicationId]
+  )
+  const { data: recordingReviewsByInterviewId } =
+    useRecordingReviewsByInterviewIds(reviewingInterviewIds)
+
+  // A reviewing row is gated on the interviewer submitting, then tracks the
+  // viewer's *own* write-up — a row they've already reviewed shouldn't keep
+  // reading as work to do.
   const reviewingRows = useMemo(
     () =>
       reviewingApplications.map((application) => {
         const interview = interviewByApplicationId?.[application.id]
-        const ready = !!interview?.submitted_at
-        return { application, interview, ready }
+        const own = interview?.id
+          ? recordingReviewsByInterviewId?.[interview.id]?.find(
+              (r) => r.reviewer_nuid === interviewerNuid
+            )
+          : undefined
+        const state: ReviewingState = !interview?.submitted_at
+          ? 'waiting'
+          : own?.submitted_at
+            ? 'submitted'
+            : own
+              ? 'draft'
+              : 'ready'
+        return { application, interview, state }
       }),
-    [reviewingApplications, interviewByApplicationId]
+    [
+      reviewingApplications,
+      interviewByApplicationId,
+      recordingReviewsByInterviewId,
+      interviewerNuid,
+    ]
   )
-  const readyToReviewCount = reviewingRows.filter((r) => r.ready).length
+  const reviewedCount = reviewingRows.filter(
+    (r) => r.state === 'submitted'
+  ).length
 
   const reviewingSections = useMemo(() => {
     return ROLE_COLUMNS.map((role) => ({
       role,
       rows: reviewingRows
         .filter((r) => r.application.role === role)
-        // Ready-to-review first — that's the actionable part of the queue.
+        // Actionable first — see REVIEWING_STATE's ranks.
         .sort((a, b) => {
-          if (a.ready !== b.ready) return a.ready ? -1 : 1
+          const byState =
+            REVIEWING_STATE[a.state].rank - REVIEWING_STATE[b.state].rank
+          if (byState !== 0) return byState
           return (
             a.application.full_name || a.application.user_nuid
           ).localeCompare(b.application.full_name || b.application.user_nuid)
@@ -321,8 +355,13 @@ export function MyInterviewsClient() {
             <h2 className="text-text-default text-sm font-semibold">
               Reviewing
             </h2>
+            <ProgressBar
+              value={reviewedCount}
+              total={reviewingRows.length}
+              className="w-40"
+            />
             <span className="text-text-muted text-xs">
-              {readyToReviewCount} of {reviewingRows.length} ready to review
+              {reviewedCount} of {reviewingRows.length} reviewed
             </span>
           </div>
           {reviewingSections.map(({ role, rows: roleRows }) => (
@@ -331,26 +370,24 @@ export function MyInterviewsClient() {
                 {ROLE_LABEL[role]} ({roleRows.length})
               </h3>
               <div className="divide-y divide-gray-100 overflow-hidden rounded-lg border border-gray-200 bg-white">
-                {roleRows.map(({ application, ready }) => (
+                {roleRows.map(({ application, state }) => (
                   // Still a real link (you can open the applicant either way),
                   // but visually recede until there's actually something to
                   // review — reduces the queue to "what can I act on now".
                   <div
                     key={application.id}
-                    className={ready ? undefined : 'opacity-50 grayscale'}
+                    className={
+                      state === 'waiting' ? 'opacity-50 grayscale' : undefined
+                    }
                   >
                     <ReviewRow
                       href={`/reviewer/my-interviews/${application.id}`}
                       name={application.full_name || application.user_nuid}
                       email={application.email}
                       stage={application.stage}
-                      state={ready ? 'draft' : 'none'}
-                      stateLabel={ready ? 'Ready to review' : 'Waiting'}
-                      stateTooltip={
-                        ready
-                          ? 'The interviewer has submitted — you can leave your review'
-                          : 'Waiting for the interviewer to submit their write-up'
-                      }
+                      state={REVIEWING_STATE[state].badge}
+                      stateLabel={REVIEWING_STATE[state].label}
+                      stateTooltip={REVIEWING_STATE[state].tooltip}
                     />
                   </div>
                 ))}
