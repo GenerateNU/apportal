@@ -1,8 +1,21 @@
-import type { Question, WrittenAnswer } from '@/lib/api/types'
+import type { Interview, Question, WrittenAnswer } from '@/lib/api/types'
 import type { ApplicantApplication } from './types'
 import { formatDate } from '@/lib/utils'
 import { AnswerCell } from './AnswerCell'
 import { StageSelect } from './StageSelect'
+import { RATING_LABEL } from '@/lib/interview-ratings'
+import type { InterviewRating } from '@/lib/api/types'
+
+const RATING_COLORS: Record<
+  InterviewRating,
+  { bg: string; text: string }
+> = {
+  must_hire: { bg: 'bg-green-100', text: 'text-green-700' },
+  great: { bg: 'bg-teal-100', text: 'text-teal-700' },
+  good: { bg: 'bg-blue-100', text: 'text-blue-700' },
+  neutral: { bg: 'bg-gray-100', text: 'text-gray-700' },
+  do_not_hire: { bg: 'bg-red-100', text: 'text-red-700' },
+}
 
 export function ApplicantRow({
   applicant,
@@ -11,6 +24,7 @@ export function ApplicantRow({
   answers,
   answersLoading,
   availabilityDays,
+  interview,
   selectable,
   selected,
   onToggleSelect,
@@ -25,6 +39,7 @@ export function ApplicantRow({
   // asserting "No response".
   answersLoading: boolean
   availabilityDays: string[]
+  interview: Interview | null
   selectable: boolean
   selected: boolean
   onToggleSelect: () => void
@@ -74,6 +89,17 @@ export function ApplicantRow({
           />
         </td>
       )}
+      <td className="min-w-36 border-r border-gray-100 px-3 py-2 whitespace-nowrap">
+        {interview?.rating ? (
+          <span
+            className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${RATING_COLORS[interview.rating].bg} ${RATING_COLORS[interview.rating].text}`}
+          >
+            {RATING_LABEL[interview.rating]}
+          </span>
+        ) : (
+          <span className="text-text-faint text-sm">—</span>
+        )}
+      </td>
       {columns.map((q) => {
         const rowQuestion = rowQuestions.find(
           (rq) =>

@@ -28,6 +28,10 @@ stage?: string;
  */
 answer_filters?: string;
 /**
+ * Comma-separated list of interview ratings, e.g. "must_hire,great"
+ */
+rating_filters?: string;
+/**
  * Case-insensitive substring match on the applicant's name, NUID, or email
  */
 search?: string;

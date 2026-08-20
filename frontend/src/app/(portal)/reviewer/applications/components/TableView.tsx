@@ -1,11 +1,12 @@
 import { Fragment, useEffect, useMemo, useRef } from 'react'
-import type { Question, WrittenAnswer } from '@/lib/api/types'
+import type { Interview, Question, WrittenAnswer } from '@/lib/api/types'
 import type { ApplicantApplication, ApplicationStage } from './types'
 import type { AnswerFilter } from './FilterButton'
 import { FILTER_STAGES } from './constants'
 import { isAvailabilityQuestion } from './meetingAvailability'
 import { ApplicantRow } from './ApplicantRow'
 import { FilterChips } from './FilterButton'
+import { useInterviewsByApplicationIdBatches } from '@/lib/queries/interviews'
 
 const TRAILING_COLUMNS = ['Stage', 'Submitted', 'Availability']
 
@@ -91,7 +92,24 @@ export function TableView({
     [columns]
   )
   const columnCount =
-    tableColumns.length + TRAILING_COLUMNS.length + (selectable ? 1 : 0)
+    (selectable ? 1 : 0) + 1 + tableColumns.length + TRAILING_COLUMNS.length
+
+  // Batch fetch interviews for the current page of applications. One request for
+  // the whole page rather than one per row, following the pattern in CLAUDE.md.
+  const applicationIds = useMemo(
+    () => applicants.map((a) => a.id),
+    [applicants]
+  )
+  const interviewQueries = useInterviewsByApplicationIdBatches([applicationIds])
+  const interviewsByApplicationId = useMemo(() => {
+    const map: Record<string, Interview | null> = {}
+    for (const query of interviewQueries) {
+      if (query.data) {
+        Object.assign(map, query.data)
+      }
+    }
+    return map
+  }, [interviewQueries])
 
   // Load the next page when the sentinel enters the scroll pane. Rooted at the
   // pane rather than the viewport, since the pane is what actually scrolls.
@@ -173,6 +191,9 @@ export function TableView({
                   />
                 </th>
               )}
+              <th className="text-text-muted min-w-36 border-r border-b border-gray-100 bg-gray-50 px-3 py-2 text-left text-xs font-medium whitespace-nowrap">
+                Rating
+              </th>
               {tableColumns.map((q) => (
                 <th
                   key={q.id}
@@ -205,6 +226,7 @@ export function TableView({
                     answers={answersByApplicationId[a.id] ?? []}
                     answersLoading={!!answersLoadingByApplicationId[a.id]}
                     availabilityDays={availabilityByApplicationId[a.id] ?? []}
+                    interview={interviewsByApplicationId[a.id] ?? null}
                     selectable={selectable}
                     selected={selectedIds.has(a.id)}
                     onToggleSelect={() => onToggleSelect(a.id)}
