@@ -526,7 +526,6 @@ export function InterviewRatingsClient() {
                               reviewerCount={reviewerCount}
                               reviewedCount={reviewedCount}
                               showInterviewer={false}
-                              showRating={false}
                               showRole={activeRole === 'all'}
                             />
                           )
@@ -547,7 +546,6 @@ export function InterviewRatingsClient() {
               title={column.title}
               rows={column.rows}
               showInterviewer
-              showRating={false}
               showRole={activeRole === 'all'}
               nameByNuid={nameByNuid}
             />
@@ -562,14 +560,12 @@ function RatingColumn({
   title,
   rows,
   showInterviewer,
-  showRating,
   showRole,
   nameByNuid,
 }: {
   title: string
   rows: Row[]
   showInterviewer: boolean
-  showRating: boolean
   showRole: boolean
   nameByNuid: Map<string, string>
 }) {
@@ -600,7 +596,6 @@ function RatingColumn({
               reviewerCount={reviewerCount}
               reviewedCount={reviewedCount}
               showInterviewer={showInterviewer}
-              showRating={showRating}
               showRole={showRole}
             />
           )
@@ -617,7 +612,6 @@ function RatingCard({
   reviewerCount,
   reviewedCount,
   showInterviewer,
-  showRating,
   showRole,
 }: {
   application: ApplicationSummary
@@ -626,7 +620,6 @@ function RatingCard({
   reviewerCount: number
   reviewedCount: number
   showInterviewer: boolean
-  showRating: boolean
   showRole: boolean
 }) {
   const state: ReviewState = interview?.submitted_at
