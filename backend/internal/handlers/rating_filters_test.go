@@ -1,8 +1,9 @@
 package handlers
 
 import (
-	"github.com/GenerateNU/apportal/backend/internal/models"
 	"testing"
+
+	"github.com/GenerateNU/apportal/backend/internal/models"
 )
 
 func TestParseRatingFilters(t *testing.T) {
