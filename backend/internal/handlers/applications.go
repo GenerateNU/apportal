@@ -44,7 +44,7 @@ func (h *applicationHandler) register(api huma.API) {
 		Method:      http.MethodGet,
 		Path:        "/applications",
 		Summary:     "List applications",
-		Description: "Reviewer queue; filter by cycle_id, role, stage, and answer_filters. Applicants may list their own by passing user_nuid.",
+		Description: "Reviewer queue; filter by cycle_id, role, stage, answer_filters, and rating_filters. Applicants may list their own by passing user_nuid.",
 		Tags:        []string{"Applications"},
 		Errors:      []int{http.StatusUnauthorized},
 	}, h.list)
@@ -167,6 +167,10 @@ type ListApplicationsInput struct {
 	// string — a []AnswerFilterInput field silently binds nothing (or panics,
 	// depending on how the client serializes it).
 	AnswerFilters string `query:"answer_filters" doc:"JSON array of answer filters, e.g. [{\"question_id\":\"…\",\"question_type\":\"checkbox\",\"values\":[\"Yes\"]}]. Values may be a string or an array of strings; a filter matches any of them, and separate filters are AND'd."`
+	// RatingFilters is a comma-separated list of interview ratings to filter by,
+	// e.g. "must_hire,great". Applications match if their interview has any of
+	// these ratings.
+	RatingFilters string `query:"rating_filters" doc:"Comma-separated list of interview ratings, e.g. \"must_hire,great\""`
 	Search        string `query:"search" doc:"Case-insensitive substring match on the applicant's name, NUID, or email"`
 	Limit         int    `query:"limit" doc:"Max results per page; omit (or 0) to return every match" minimum:"0" maximum:"200"`
 	Offset        int    `query:"offset" doc:"Number of results to skip" minimum:"0"`
@@ -190,6 +194,10 @@ func (h *applicationHandler) list(ctx context.Context, in *ListApplicationsInput
 	if err != nil {
 		return nil, err
 	}
+	ratingFilters, err := parseRatingFilters(in.RatingFilters)
+	if err != nil {
+		return nil, err
+	}
 
 	filter := store.ApplicationFilter{
 		CycleID:               in.CycleID,
@@ -198,6 +206,7 @@ func (h *applicationHandler) list(ctx context.Context, in *ListApplicationsInput
 		InterviewerNUID:       in.InterviewerNUID,
 		RecordingReviewerNUID: in.RecordingReviewerNUID,
 		AnswerFilters:         answerFilters,
+		InterviewRatings:      ratingFilters,
 		Search:                in.Search,
 		Offset:                in.Offset,
 		// Only a user listing their own applications by their own identity
@@ -238,6 +247,28 @@ func (h *applicationHandler) list(ctx context.Context, in *ListApplicationsInput
 		out.Body.StageCounts[string(stage)] = n
 	}
 	return out, nil
+}
+
+// parseRatingFilters decodes a comma-separated list of interview ratings.
+func parseRatingFilters(raw string) ([]models.InterviewRating, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil, nil
+	}
+	parts := strings.Split(raw, ",")
+	ratings := make([]models.InterviewRating, 0, len(parts))
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		rating := models.InterviewRating(part)
+		if !rating.Valid() {
+			return nil, huma.Error422UnprocessableEntity("invalid rating in rating_filters: " + part)
+		}
+		ratings = append(ratings, rating)
+	}
+	return ratings, nil
 }
 
 type UpdateApplicationInput struct {

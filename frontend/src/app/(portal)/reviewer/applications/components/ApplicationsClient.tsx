@@ -25,6 +25,7 @@ import { pickDefaultCycleId, useCycles } from '@/lib/queries/cycles'
 import { useQuestionsByCycleRoles } from '@/lib/queries/questions'
 import { useCurrentUser } from '@/lib/queries/users'
 import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
+import { RATING_OPTIONS } from '@/lib/interview-ratings'
 import { PAGE_SIZE } from './constants'
 import { BulkActionBar } from './BulkActionBar'
 import {
@@ -166,14 +167,30 @@ export function ApplicationsClient() {
   // counted server-side over every row rather than the page in hand.
   const listParams = useMemo(() => {
     if (!activeCycle) return undefined
+    // Split filters into answer filters and rating filters
+    const ratingFilters = filters.filter((f) => f.isRatingFilter)
+    const questionFilters = filters.filter((f) => !f.isRatingFilter)
+
     const answerFilters = [
-      ...filters.map((f) => ({
+      ...questionFilters.map((f) => ({
         question_id: f.question_id,
         question_type: f.question_type,
         values: f.values,
       })),
       ...(availabilityFilter ? [availabilityFilter] : []),
     ]
+
+    // Convert rating filter values back to rating enum values
+    const ratingValues = ratingFilters.flatMap((f) => {
+      const vals = Array.isArray(f.values) ? f.values : [f.values]
+      return vals
+        .map((label) => {
+          const rating = RATING_OPTIONS.find((r) => r.label === label)
+          return rating?.value
+        })
+        .filter(Boolean)
+    })
+
     return {
       cycle_id: activeCycle,
       role: activeRole,
@@ -181,6 +198,9 @@ export function ApplicationsClient() {
       // Each of these is omitted when inactive so an unfiltered first page
       // keys identically to the server prefetch in ../page.tsx.
       ...(answerFilters.length > 0 && { answer_filters: answerFilters }),
+      ...(ratingValues.length > 0 && {
+        rating_filters: ratingValues.join(','),
+      }),
       // Kanban lays every stage out side by side, so it can neither filter by
       // one stage nor take a page — it asks for the whole set instead.
       ...(view === 'table' && {

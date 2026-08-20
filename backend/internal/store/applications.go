@@ -78,6 +78,9 @@ type ApplicationFilter struct {
 	// interview_review_assignments) — the reviewer-side counterpart of
 	// InterviewerNUID.
 	RecordingReviewerNUID string
+	// InterviewRatings limits results to applications whose interview has one
+	// of these ratings. Empty means no filter.
+	InterviewRatings []models.InterviewRating
 	// IncludeDraft allows draft applications into the results. Callers should
 	// only set this when listing a user's own applications by their own
 	// identity — drafts are otherwise invisible (reviewer queues, admin
@@ -326,6 +329,16 @@ func applicationsFrom(f ApplicationFilter, scope applicationFilterScope) (string
 		query += ` AND EXISTS (SELECT 1 FROM interview_review_assignments irr` +
 			` WHERE irr.application_id = a.id AND irr.lead_nuid = $` +
 			strconv.Itoa(len(args)) + `)`
+	}
+	if len(f.InterviewRatings) > 0 {
+		ratings := make([]string, len(f.InterviewRatings))
+		for i, r := range f.InterviewRatings {
+			ratings[i] = string(r)
+		}
+		args = append(args, ratings)
+		query += ` AND EXISTS (SELECT 1 FROM interviews i` +
+			` WHERE i.application_id = a.id AND i.rating = ANY($` +
+			strconv.Itoa(len(args)) + `::interview_rating[]))`
 	}
 	if !f.IncludeDraft {
 		query += ` AND a.stage != 'draft'`

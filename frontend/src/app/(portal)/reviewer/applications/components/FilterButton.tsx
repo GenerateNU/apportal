@@ -23,7 +23,8 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
-import type { Question, QuestionType } from '@/lib/api/types'
+import type { Question, QuestionType, Role } from '@/lib/api/types'
+import { RATING_OPTIONS } from '@/lib/interview-ratings'
 
 // The wire shape the backend expects: a substring for free-text questions, a
 // list of chosen labels for choice questions.
@@ -34,6 +35,8 @@ export interface AnswerFilter {
   question_text: string
   question_type: QuestionType
   values: FilterValue
+  // isRatingFilter marks this as a special rating filter, not a question filter
+  isRatingFilter?: boolean
 }
 
 // Question types whose answers are picked from a fixed option list, so the
@@ -77,11 +80,26 @@ export function FilterChips({
     }
   }, [activeQuestionId])
 
-  // One filter per question, so anything already filtered on drops off the
-  // list of things you can add.
-  const availableColumns = columns.filter(
-    (q) => !filters.some((f) => f.question_id === q.id)
-  )
+  // Synthetic "question" for the rating filter
+  const ratingFilterItem: Question = {
+    id: '__rating__',
+    question_text: 'Interview Rating',
+    question_type: 'dropdown',
+    options: RATING_OPTIONS.map((r) => r.label),
+    display_order: -1,
+    is_required: false,
+    cycle_id: '',
+    role: 'backend_developer' as Role,
+    created_at: '',
+  }
+
+  // One filter per question (plus rating), so anything already filtered on
+  // drops off the list of things you can add.
+  const hasRatingFilter = filters.some((f) => f.isRatingFilter)
+  const availableColumns = [
+    ...(hasRatingFilter ? [] : [ratingFilterItem]),
+    ...columns.filter((q) => !filters.some((f) => f.question_id === q.id)),
+  ]
 
   const filteredColumns = availableColumns.filter((q) =>
     q.question_text.toLowerCase().includes(searchTerm.toLowerCase())
@@ -114,6 +132,7 @@ export function FilterChips({
         question_text: q.question_text,
         question_type: q.question_type,
         values,
+        isRatingFilter: q.id === '__rating__',
       },
       'add'
     )
@@ -139,13 +158,17 @@ export function FilterChips({
             className="inline-flex h-7 items-center overflow-hidden rounded-md border border-gray-200 bg-gray-50 text-sm"
           >
             <div className="flex items-center gap-1.5 px-2">
-              {getIconForQuestionType(filter.question_type, 'h-3.5 w-3.5')}
+              {filter.isRatingFilter ? (
+                <Star className="text-text-muted h-3.5 w-3.5 shrink-0" />
+              ) : (
+                getIconForQuestionType(filter.question_type, 'h-3.5 w-3.5')
+              )}
               <span className="text-text-default max-w-[11rem] truncate">
                 {filter.question_text}
               </span>
             </div>
             <div className="text-text-muted h-full border-l border-gray-200 px-2 leading-7">
-              {middleText}
+              {filter.isRatingFilter ? 'is' : middleText}
             </div>
             <div className="text-text-default h-full max-w-[12rem] truncate border-l border-gray-200 px-2 leading-7">
               {getDisplayValue(filter)}
