@@ -1,0 +1,192 @@
+package store
+
+import (
+	"context"
+	"errors"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/GenerateNU/apportal/backend/internal/models"
+)
+
+const preferenceListColumns = `id, cycle_id, application_role, name, status, created_by, submitted_at, created_at, updated_at`
+
+// PreferenceListCreate carries a new list's initial fields. The creator is
+// added as the first member in the same transaction, so "is a member" (not
+// "is the creator") stays the one access check every other route needs.
+type PreferenceListCreate struct {
+	CycleID         string
+	ApplicationRole models.Role
+	Name            string
+	CreatedBy       string
+}
+
+func (s *Store) CreatePreferenceList(ctx context.Context, in PreferenceListCreate) (models.PreferenceList, error) {
+	var list models.PreferenceList
+
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return list, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	const insertList = `
+		INSERT INTO preference_lists (cycle_id, application_role, name, created_by)
+		VALUES ($1, $2, $3, $4)
+		RETURNING ` + preferenceListColumns
+	rows, err := tx.Query(ctx, insertList, in.CycleID, in.ApplicationRole, in.Name, in.CreatedBy)
+	if err != nil {
+		return list, err
+	}
+	list, err = pgx.CollectExactlyOneRow(rows, pgx.RowToStructByPos[models.PreferenceList])
+	if err != nil {
+		return list, err
+	}
+
+	const insertMember = `INSERT INTO preference_list_members (preference_list_id, lead_nuid, added_by) VALUES ($1, $2, $2)`
+	if _, err := tx.Exec(ctx, insertMember, list.ID, in.CreatedBy); err != nil {
+		return list, err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return list, err
+	}
+	return list, nil
+}
+
+func (s *Store) GetPreferenceList(ctx context.Context, id string) (models.PreferenceList, error) {
+	const q = `SELECT ` + preferenceListColumns + ` FROM preference_lists WHERE id = $1`
+	rows, err := s.db.Query(ctx, q, id)
+	if err != nil {
+		return models.PreferenceList{}, err
+	}
+	list, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByPos[models.PreferenceList])
+	if errors.Is(err, pgx.ErrNoRows) {
+		return list, ErrNotFound
+	}
+	return list, err
+}
+
+// GetPreferenceListDetail bundles a list with its members (added_at order)
+// and entries (rank order, joined to the applicant's name/email) for a
+// single detail-page fetch.
+func (s *Store) GetPreferenceListDetail(ctx context.Context, id string) (models.PreferenceListDetail, error) {
+	var detail models.PreferenceListDetail
+
+	list, err := s.GetPreferenceList(ctx, id)
+	if err != nil {
+		return detail, err
+	}
+	detail.PreferenceList = list
+
+	const membersQ = `SELECT id, preference_list_id, lead_nuid, added_by, added_at FROM preference_list_members WHERE preference_list_id = $1 ORDER BY added_at`
+	memberRows, err := s.db.Query(ctx, membersQ, id)
+	if err != nil {
+		return detail, err
+	}
+	members, err := pgx.CollectRows(memberRows, pgx.RowToStructByPos[models.PreferenceListMember])
+	if err != nil {
+		return detail, err
+	}
+	detail.Members = members
+
+	const entriesQ = `
+		SELECT e.id, e.preference_list_id, e.application_id, e.rank, e.reasoning, e.updated_by, e.created_at, e.updated_at,
+		       u.full_name, u.email
+		FROM preference_list_entries e
+		JOIN applications a ON a.id = e.application_id
+		JOIN users u ON u.nuid = a.user_nuid
+		WHERE e.preference_list_id = $1
+		ORDER BY e.rank`
+	entryRows, err := s.db.Query(ctx, entriesQ, id)
+	if err != nil {
+		return detail, err
+	}
+	entries, err := pgx.CollectRows(entryRows, pgx.RowToStructByPos[models.PreferenceListEntryDetail])
+	if err != nil {
+		return detail, err
+	}
+	detail.Entries = entries
+
+	return detail, nil
+}
+
+// ListPreferenceLists returns every list for a (cycle, role). Chiefs/admins
+// pass includeAll=true to see every list; anyone else only sees lists they
+// belong to — a list a lead isn't on shouldn't even reveal its name to them.
+func (s *Store) ListPreferenceLists(ctx context.Context, cycleID string, role models.Role, memberNUID string, includeAll bool) ([]models.PreferenceListSummary, error) {
+	const base = `
+		SELECT pl.id, pl.cycle_id, pl.application_role, pl.name, pl.status, pl.created_by, pl.submitted_at, pl.created_at, pl.updated_at,
+		       COUNT(DISTINCT m.id) AS member_count,
+		       COUNT(DISTINCT e.id) AS entry_count
+		FROM preference_lists pl
+		LEFT JOIN preference_list_members m ON m.preference_list_id = pl.id
+		LEFT JOIN preference_list_entries e ON e.preference_list_id = pl.id
+		WHERE pl.cycle_id = $1 AND pl.application_role = $2`
+	const groupOrder = ` GROUP BY pl.id ORDER BY pl.created_at DESC`
+
+	var rows pgx.Rows
+	var err error
+	if includeAll {
+		rows, err = s.db.Query(ctx, base+groupOrder, cycleID, role)
+	} else {
+		const memberFilter = ` AND EXISTS (SELECT 1 FROM preference_list_members m2 WHERE m2.preference_list_id = pl.id AND m2.lead_nuid = $3)`
+		rows, err = s.db.Query(ctx, base+memberFilter+groupOrder, cycleID, role, memberNUID)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, pgx.RowToStructByPos[models.PreferenceListSummary])
+}
+
+// PreferenceListUpdate carries a partial rename/status change. Setting
+// Status to submitted stamps submitted_at; setting it back to draft clears
+// it — the deadline (not this status) is what actually locks editing.
+type PreferenceListUpdate struct {
+	Name   *string
+	Status *models.PreferenceListStatus
+}
+
+func (s *Store) UpdatePreferenceList(ctx context.Context, id string, in PreferenceListUpdate) (models.PreferenceList, error) {
+	const q = `
+		UPDATE preference_lists SET
+			name         = COALESCE($2, name),
+			status       = COALESCE($3, status),
+			submitted_at = CASE
+				WHEN $3::text = 'submitted' THEN NOW()
+				WHEN $3::text = 'draft' THEN NULL
+				ELSE submitted_at
+			END,
+			updated_at = NOW()
+		WHERE id = $1
+		RETURNING ` + preferenceListColumns
+	rows, err := s.db.Query(ctx, q, id, in.Name, in.Status)
+	if err != nil {
+		return models.PreferenceList{}, err
+	}
+	list, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByPos[models.PreferenceList])
+	if errors.Is(err, pgx.ErrNoRows) {
+		return list, ErrNotFound
+	}
+	return list, err
+}
+
+func (s *Store) DeletePreferenceList(ctx context.Context, id string) error {
+	tag, err := s.db.Exec(ctx, `DELETE FROM preference_lists WHERE id = $1`, id)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+func (s *Store) IsPreferenceListMember(ctx context.Context, listID, nuid string) (bool, error) {
+	const q = `SELECT EXISTS(SELECT 1 FROM preference_list_members WHERE preference_list_id = $1 AND lead_nuid = $2)`
+	var exists bool
+	if err := s.db.QueryRow(ctx, q, listID, nuid).Scan(&exists); err != nil {
+		return false, err
+	}
+	return exists, nil
+}

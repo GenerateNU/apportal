@@ -113,6 +113,7 @@ func registerHandlers(api huma.API, st *store.Store, storageClient *storage.Clie
 	(&interviewCommentHandler{store: st}).register(api)
 	(&interviewScriptHandler{store: st}).register(api)
 	(&challengeScoreHandler{store: st}).register(api)
+	(&preferenceListHandler{store: st}).register(api)
 	(&selectionHandler{store: st}).register(api)
 }
 

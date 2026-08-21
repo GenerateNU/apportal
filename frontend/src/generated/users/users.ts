@@ -73,7 +73,7 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
 /**
- * Chief only.
+ * Reviewer only. Any lead/chief/admin can browse the reviewer directory (e.g. to invite a fellow lead onto a preference list); creating or editing a user stays chief-only.
  * @summary List reviewers
  */
 export const listUsers = (

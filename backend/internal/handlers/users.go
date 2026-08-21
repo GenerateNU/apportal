@@ -22,9 +22,11 @@ func (h *userHandler) register(api huma.API) {
 		Method:      http.MethodGet,
 		Path:        "/users",
 		Summary:     "List reviewers",
-		Description: "Chief only.",
-		Tags:        []string{"Users"},
-		Errors:      []int{http.StatusUnauthorized, http.StatusForbidden},
+		Description: "Reviewer only. Any lead/chief/admin can browse the reviewer " +
+			"directory (e.g. to invite a fellow lead onto a preference list); " +
+			"creating or editing a user stays chief-only.",
+		Tags:   []string{"Users"},
+		Errors: []int{http.StatusUnauthorized, http.StatusForbidden},
 	}, h.list)
 
 	huma.Register(api, huma.Operation{
@@ -124,7 +126,7 @@ type ListUsersInput struct {
 }
 
 func (h *userHandler) list(ctx context.Context, in *ListUsersInput) (*UsersOutput, error) {
-	if err := requireChief(ctx); err != nil {
+	if err := requireReviewer(ctx); err != nil {
 		return nil, err
 	}
 	var role *models.UserRole
