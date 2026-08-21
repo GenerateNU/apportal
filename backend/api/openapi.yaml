@@ -1,5 +1,20 @@
 components:
   schemas:
+    AddPreferenceListMemberInputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/AddPreferenceListMemberInputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        lead_nuid:
+          type: string
+      required:
+        - lead_nuid
+      type: object
     Applicant:
       additionalProperties: false
       properties:
@@ -852,6 +867,30 @@ components:
           type: string
       required:
         - lead_nuid
+      type: object
+    CreatePreferenceListInputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/CreatePreferenceListInputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        application_role:
+          enum:
+            - software_engineer
+            - software_designer
+          type: string
+        cycle_id:
+          type: string
+        name:
+          type: string
+      required:
+        - cycle_id
+        - application_role
+        - name
       type: object
     CreateQuestionInputBody:
       additionalProperties: false
@@ -1988,6 +2027,289 @@ components:
         - lead_count
         - applicants
       type: object
+    PreferenceList:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/PreferenceList.json
+          format: uri
+          readOnly: true
+          type: string
+        application_role:
+          enum:
+            - software_engineer
+            - software_designer
+          type: string
+        created_at:
+          format: date-time
+          type: string
+        created_by:
+          type: string
+        cycle_id:
+          type: string
+        id:
+          type: string
+        name:
+          type: string
+        status:
+          type: string
+        submitted_at:
+          format: date-time
+          type: string
+        updated_at:
+          format: date-time
+          type: string
+      required:
+        - id
+        - cycle_id
+        - application_role
+        - name
+        - status
+        - created_by
+        - created_at
+        - updated_at
+      type: object
+    PreferenceListDeadline:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/PreferenceListDeadline.json
+          format: uri
+          readOnly: true
+          type: string
+        application_role:
+          enum:
+            - software_engineer
+            - software_designer
+          type: string
+        closes_at:
+          format: date-time
+          type: string
+        cycle_id:
+          type: string
+        id:
+          type: string
+        updated_at:
+          format: date-time
+          type: string
+        updated_by:
+          type: string
+      required:
+        - id
+        - cycle_id
+        - application_role
+        - updated_at
+      type: object
+    PreferenceListDetail:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/PreferenceListDetail.json
+          format: uri
+          readOnly: true
+          type: string
+        application_role:
+          enum:
+            - software_engineer
+            - software_designer
+          type: string
+        created_at:
+          format: date-time
+          type: string
+        created_by:
+          type: string
+        cycle_id:
+          type: string
+        entries:
+          items:
+            $ref: "#/components/schemas/PreferenceListEntryDetail"
+          type:
+            - array
+            - "null"
+        id:
+          type: string
+        members:
+          items:
+            $ref: "#/components/schemas/PreferenceListMember"
+          type:
+            - array
+            - "null"
+        name:
+          type: string
+        status:
+          type: string
+        submitted_at:
+          format: date-time
+          type: string
+        updated_at:
+          format: date-time
+          type: string
+      required:
+        - members
+        - entries
+        - id
+        - cycle_id
+        - application_role
+        - name
+        - status
+        - created_by
+        - created_at
+        - updated_at
+      type: object
+    PreferenceListEntry:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/PreferenceListEntry.json
+          format: uri
+          readOnly: true
+          type: string
+        application_id:
+          type: string
+        created_at:
+          format: date-time
+          type: string
+        id:
+          type: string
+        preference_list_id:
+          type: string
+        rank:
+          format: int64
+          type: integer
+        reasoning:
+          type: string
+        updated_at:
+          format: date-time
+          type: string
+        updated_by:
+          type: string
+      required:
+        - id
+        - preference_list_id
+        - application_id
+        - rank
+        - updated_by
+        - created_at
+        - updated_at
+      type: object
+    PreferenceListEntryDetail:
+      additionalProperties: false
+      properties:
+        application_id:
+          type: string
+        created_at:
+          format: date-time
+          type: string
+        email:
+          type: string
+        full_name:
+          type: string
+        id:
+          type: string
+        preference_list_id:
+          type: string
+        rank:
+          format: int64
+          type: integer
+        reasoning:
+          type: string
+        updated_at:
+          format: date-time
+          type: string
+        updated_by:
+          type: string
+      required:
+        - full_name
+        - email
+        - id
+        - preference_list_id
+        - application_id
+        - rank
+        - updated_by
+        - created_at
+        - updated_at
+      type: object
+    PreferenceListMember:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/PreferenceListMember.json
+          format: uri
+          readOnly: true
+          type: string
+        added_at:
+          format: date-time
+          type: string
+        added_by:
+          type: string
+        id:
+          type: string
+        lead_nuid:
+          type: string
+        preference_list_id:
+          type: string
+      required:
+        - id
+        - preference_list_id
+        - lead_nuid
+        - added_by
+        - added_at
+      type: object
+    PreferenceListSummary:
+      additionalProperties: false
+      properties:
+        application_role:
+          enum:
+            - software_engineer
+            - software_designer
+          type: string
+        created_at:
+          format: date-time
+          type: string
+        created_by:
+          type: string
+        cycle_id:
+          type: string
+        entry_count:
+          format: int64
+          type: integer
+        id:
+          type: string
+        member_count:
+          format: int64
+          type: integer
+        name:
+          type: string
+        status:
+          type: string
+        submitted_at:
+          format: date-time
+          type: string
+        updated_at:
+          format: date-time
+          type: string
+      required:
+        - member_count
+        - entry_count
+        - id
+        - cycle_id
+        - application_role
+        - name
+        - status
+        - created_by
+        - created_at
+        - updated_at
+      type: object
     PreviewPlanInputBody:
       additionalProperties: false
       properties:
@@ -2102,6 +2424,25 @@ components:
         - review_question_id
         - avg_score
         - count
+      type: object
+    ReorderPreferenceListEntriesInputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/ReorderPreferenceListEntriesInputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        application_ids:
+          items:
+            type: string
+          type:
+            - array
+            - "null"
+      required:
+        - application_ids
       type: object
     ReviewAnswerSubmission:
       additionalProperties: false
@@ -2374,6 +2715,20 @@ components:
       required:
         - interviewer_nuid
       type: object
+    SetPreferenceListDeadlineInputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/SetPreferenceListDeadlineInputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        closes_at:
+          format: date-time
+          type: string
+      type: object
     SetReviewReleaseInputBody:
       additionalProperties: false
       properties:
@@ -2606,6 +2961,21 @@ components:
         - challenge_tracks
         - post_interview_checklist
       type: object
+    UpdatePreferenceListInputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/UpdatePreferenceListInputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        name:
+          type: string
+        status:
+          type: string
+      type: object
     UpdateQuestionInputBody:
       additionalProperties: false
       properties:
@@ -2833,6 +3203,19 @@ components:
         submit:
           description: When true, marks the interview as submitted
           type: boolean
+      type: object
+    UpsertPreferenceListEntryInputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/UpsertPreferenceListEntryInputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        reasoning:
+          type: string
       type: object
     UpsertRecordingReviewInputBody:
       additionalProperties: false
@@ -6087,6 +6470,116 @@ paths:
       summary: Remove every lead assignment for a cycle's role
       tags:
         - Lead assignments
+  /cycles/{id}/preference-list-deadline:
+    get:
+      operationId: get-preference-list-deadline
+      parameters:
+        - description: Cycle ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Cycle ID
+            type: string
+        - description: Applicant role
+          explode: false
+          in: query
+          name: role
+          schema:
+            description: Applicant role
+            enum:
+              - software_engineer
+              - software_designer
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PreferenceListDeadline"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Get the preference-list submission deadline for a cycle's role
+      tags:
+        - Preference lists
+    put:
+      description: Chief only. Every preference list for that (cycle, role) locks for editing once this passes, submitted or not.
+      operationId: set-preference-list-deadline
+      parameters:
+        - description: Cycle ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Cycle ID
+            type: string
+        - description: Applicant role
+          explode: false
+          in: query
+          name: role
+          schema:
+            description: Applicant role
+            enum:
+              - software_engineer
+              - software_designer
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetPreferenceListDeadlineInputBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PreferenceListDeadline"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Set the preference-list submission deadline for a cycle's role
+      tags:
+        - Preference lists
   /cycles/{id}/questions:
     get:
       description: Optional ?role= returns that role's questions plus global ones.
@@ -7082,6 +7575,546 @@ paths:
       summary: Remove a lead assignment
       tags:
         - Lead assignments
+  /preference-lists:
+    get:
+      description: Reviewer only. Leads only see lists they're a member of; chiefs/admins see every list.
+      operationId: list-preference-lists
+      parameters:
+        - description: Cycle ID
+          explode: false
+          in: query
+          name: cycle_id
+          schema:
+            description: Cycle ID
+            type: string
+        - description: Applicant role
+          explode: false
+          in: query
+          name: role
+          schema:
+            description: Applicant role
+            enum:
+              - software_engineer
+              - software_designer
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/PreferenceListSummary"
+                type:
+                  - array
+                  - "null"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: List preference lists for a cycle and role
+      tags:
+        - Preference lists
+    post:
+      description: Reviewer only. The creator is added as the list's first member. Rejected once the (cycle, role) deadline has passed.
+      operationId: create-preference-list
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePreferenceListInputBody"
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PreferenceList"
+          description: Created
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Create a preference list
+      tags:
+        - Preference lists
+  /preference-lists/{id}:
+    delete:
+      description: Chief only. Deletes every member and entry. Allowed even after the (cycle, role) deadline has passed, for administrative cleanup.
+      operationId: delete-preference-list
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Delete a preference list
+      tags:
+        - Preference lists
+    get:
+      description: Reviewer only. Not found (rather than forbidden) for a lead who isn't a member, so a list's existence isn't leaked.
+      operationId: get-preference-list
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PreferenceListDetail"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Get a preference list's members and entries
+      tags:
+        - Preference lists
+    patch:
+      operationId: update-preference-list
+      parameters:
+        - description: Preference list ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Preference list ID
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePreferenceListInputBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PreferenceList"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Rename a preference list or toggle its submitted status
+      tags:
+        - Preference lists
+  /preference-lists/{id}/entries/{applicationId}:
+    delete:
+      operationId: delete-preference-list-entry
+      parameters:
+        - description: Preference list ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Preference list ID
+            type: string
+        - description: Application ID
+          in: path
+          name: applicationId
+          required: true
+          schema:
+            description: Application ID
+            type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Remove an applicant from a preference list
+      tags:
+        - Preference lists
+    put:
+      description: Adding for the first time appends to the end of the rank order; editing reasoning never changes rank.
+      operationId: upsert-preference-list-entry
+      parameters:
+        - description: Preference list ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Preference list ID
+            type: string
+        - description: Application ID
+          in: path
+          name: applicationId
+          required: true
+          schema:
+            description: Application ID
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertPreferenceListEntryInputBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PreferenceListEntry"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Add an applicant to a preference list, or edit their reasoning
+      tags:
+        - Preference lists
+  /preference-lists/{id}/entry-order:
+    put:
+      description: application_ids must be an exact permutation of the list's current entries, so a stale client can't silently drop one via reorder.
+      operationId: reorder-preference-list-entries
+      parameters:
+        - description: Preference list ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Preference list ID
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReorderPreferenceListEntriesInputBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/PreferenceListEntryDetail"
+                type:
+                  - array
+                  - "null"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Reorder a preference list's entries
+      tags:
+        - Preference lists
+  /preference-lists/{id}/members:
+    post:
+      description: Any current member (or a chief/admin) may add another lead, chief, or admin.
+      operationId: add-preference-list-member
+      parameters:
+        - description: Preference list ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Preference list ID
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddPreferenceListMemberInputBody"
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PreferenceListMember"
+          description: Created
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "409":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Conflict
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Add a lead as a collaborator on a preference list
+      tags:
+        - Preference lists
+  /preference-lists/{id}/members/{memberId}:
+    delete:
+      operationId: remove-preference-list-member
+      parameters:
+        - description: Preference list ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Preference list ID
+            type: string
+        - description: Preference list member ID
+          in: path
+          name: memberId
+          required: true
+          schema:
+            description: Preference list member ID
+            type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Remove a collaborator from a preference list
+      tags:
+        - Preference lists
   /questions/{id}:
     delete:
       description: Chief only.
@@ -7338,7 +8371,7 @@ paths:
         - Review questions
   /users:
     get:
-      description: Chief only.
+      description: Reviewer only. Any lead/chief/admin can browse the reviewer directory (e.g. to invite a fellow lead onto a preference list); creating or editing a user stays chief-only.
       operationId: list-users
       parameters:
         - description: Optional role filter

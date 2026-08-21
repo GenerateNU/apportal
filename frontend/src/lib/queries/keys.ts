@@ -275,4 +275,20 @@ export const queryKeys = {
         role ?? 'all',
       ] as const,
   },
+
+  preferenceLists: {
+    all: ['preference-lists'] as const,
+    lists: () => [...queryKeys.preferenceLists.all, 'list'] as const,
+    list: (cycleId: string, role: Role) =>
+      [...queryKeys.preferenceLists.lists(), cycleId, role] as const,
+    details: () => [...queryKeys.preferenceLists.all, 'detail'] as const,
+    detail: (id: string) =>
+      [...queryKeys.preferenceLists.details(), id] as const,
+  },
+
+  preferenceListDeadline: {
+    all: ['preference-list-deadline'] as const,
+    detail: (cycleId: string, role: Role) =>
+      [...queryKeys.preferenceListDeadline.all, cycleId, role] as const,
+  },
 } as const

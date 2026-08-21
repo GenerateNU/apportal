@@ -23,6 +23,13 @@ import type {
   InterviewRecordingReview as GenInterviewRecordingReview,
   InterviewReviewAssignment as GenInterviewReviewAssignment,
   InterviewScript as GenInterviewScript,
+  PreferenceList as GenPreferenceList,
+  PreferenceListDeadline as GenPreferenceListDeadline,
+  PreferenceListDetail as GenPreferenceListDetail,
+  PreferenceListEntry as GenPreferenceListEntry,
+  PreferenceListEntryDetail as GenPreferenceListEntryDetail,
+  PreferenceListMember as GenPreferenceListMember,
+  PreferenceListSummary as GenPreferenceListSummary,
   Question as GenQuestion,
   QuestionAverageScore,
   ReviewerProgress as GenReviewerProgress,
@@ -207,3 +214,46 @@ export type ReviewQuestionAverage = Omit<GenReviewQuestionAverage, 'scores'> & {
   scores: NonNullable<GenReviewQuestionAverage['scores']>
 }
 export type { QuestionAverageScore }
+
+export type PreferenceListStatus = 'draft' | 'submitted'
+
+export type PreferenceList = Omit<
+  GenPreferenceList,
+  '$schema' | 'application_role' | 'status'
+> & {
+  application_role: Role
+  status: PreferenceListStatus
+}
+
+export type PreferenceListSummary = Omit<
+  GenPreferenceListSummary,
+  'application_role' | 'status'
+> & {
+  application_role: Role
+  status: PreferenceListStatus
+}
+
+export type PreferenceListMember = Omit<GenPreferenceListMember, '$schema'>
+
+export type PreferenceListEntry = Omit<GenPreferenceListEntry, '$schema'>
+
+export type PreferenceListEntryDetail = GenPreferenceListEntryDetail
+
+// members/entries are nullable in the generated type (an empty Go slice can
+// encode as `null`); callers always want an array.
+export type PreferenceListDetail = Omit<
+  GenPreferenceListDetail,
+  '$schema' | 'application_role' | 'status' | 'members' | 'entries'
+> & {
+  application_role: Role
+  status: PreferenceListStatus
+  members: PreferenceListMember[]
+  entries: PreferenceListEntryDetail[]
+}
+
+export type PreferenceListDeadline = Omit<
+  GenPreferenceListDeadline,
+  '$schema' | 'application_role'
+> & {
+  application_role: Role
+}
