@@ -14,6 +14,7 @@ import type {
   ChiefReviewDetail as GenChiefReviewDetail,
   ChiefReviewDetailVote,
   Cycle as GenCycle,
+  ChallengeAttempt as GenChallengeAttempt,
   ChallengeScore as GenChallengeScore,
   CodeChallenge as GenCodeChallenge,
   CodeSubmission as GenCodeSubmission,
@@ -147,9 +148,15 @@ export type WrittenReviewDetail = Omit<
 
 export type CodeSubmission = Omit<GenCodeSubmission, '$schema'>
 
+export type ChallengeAttempt = GenChallengeAttempt
+
 // An applicant's best finished expedition against the backend/scheduler
 // technical challenge, read from that separate server's own database.
-export type ChallengeScore = Omit<GenChallengeScore, '$schema'>
+// attempts is nullable in the generated type (an empty Go slice can encode
+// as `null`); callers always want an array.
+export type ChallengeScore = Omit<GenChallengeScore, '$schema' | 'attempts'> & {
+  attempts: ChallengeAttempt[]
+}
 
 export type ChiefReview = Omit<GenChiefReviewDetail, '$schema'>
 
@@ -225,12 +232,15 @@ export type PreferenceList = Omit<
   status: PreferenceListStatus
 }
 
+// member_names is nullable in the generated type (an empty Go slice can
+// encode as `null`); callers always want an array.
 export type PreferenceListSummary = Omit<
   GenPreferenceListSummary,
-  'application_role' | 'status'
+  'application_role' | 'status' | 'member_names'
 > & {
   application_role: Role
   status: PreferenceListStatus
+  member_names: string[]
 }
 
 export type PreferenceListMember = Omit<GenPreferenceListMember, '$schema'>

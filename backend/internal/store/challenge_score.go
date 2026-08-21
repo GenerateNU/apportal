@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"sort"
 	"time"
 
 	"github.com/GenerateNU/apportal/backend/internal/models"
@@ -79,12 +80,25 @@ func (s *Store) GetChallengeScore(ctx context.Context, email string) (*models.Ch
 		return nil, nil
 	}
 
-	attempts := 0
+	attempts := make([]models.ChallengeAttempt, 0, len(parsed.Expeditions))
 	for _, item := range parsed.Expeditions {
-		if item.Finished {
-			attempts++
+		if !item.Finished {
+			continue
 		}
+		finishedAt, err := parseChallengeTime(item.CreatedAt)
+		if err != nil {
+			return nil, err
+		}
+		attempts = append(attempts, models.ChallengeAttempt{
+			ExpeditionID: item.ExpeditionID,
+			OverallScore: item.OverallScore,
+			Metrics:      item.Metrics,
+			FinishedAt:   finishedAt,
+		})
 	}
+	sort.Slice(attempts, func(i, j int) bool {
+		return attempts[i].FinishedAt.After(attempts[j].FinishedAt)
+	})
 
 	finishedAt, err := parseChallengeTime(best.CreatedAt)
 	if err != nil {
@@ -95,8 +109,9 @@ func (s *Store) GetChallengeScore(ctx context.Context, email string) (*models.Ch
 		ExpeditionID: best.ExpeditionID,
 		OverallScore: best.OverallScore,
 		Metrics:      best.Metrics,
-		AttemptCount: attempts,
+		AttemptCount: len(attempts),
 		FinishedAt:   finishedAt,
+		Attempts:     attempts,
 	}, nil
 }
 

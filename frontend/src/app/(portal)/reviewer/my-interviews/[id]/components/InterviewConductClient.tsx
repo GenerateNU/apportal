@@ -56,7 +56,12 @@ import {
   useUpsertRecordingReview,
 } from '@/lib/queries/recording-reviews'
 import { useSubmission } from '@/lib/queries/submissions'
-import { useCurrentUser, useUser } from '@/lib/queries/users'
+import {
+  useChiefs,
+  useCurrentUser,
+  useLeads,
+  useUser,
+} from '@/lib/queries/users'
 import { RATING_LABEL, RATING_OPTIONS } from '@/lib/interview-ratings'
 import { ROLE_CHIP_CLASS, ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 import {
@@ -98,6 +103,7 @@ function ChallengeCard({
 }) {
   const { data: score } = useChallengeScore(applicantNuid)
   const { data: submission } = useSubmission(applicationId)
+  const [showHistory, setShowHistory] = useState(false)
 
   if (!score && !submission) return null
 
@@ -140,6 +146,46 @@ function ChallengeCard({
               </div>
             ))}
           </div>
+
+          {score.attempts.length > 1 && (
+            <button
+              type="button"
+              onClick={() => setShowHistory((v) => !v)}
+              className="text-brand-blue inline-flex w-fit items-center gap-1 text-xs hover:underline"
+            >
+              {showHistory ? (
+                <ChevronUp size={12} />
+              ) : (
+                <ChevronDown size={12} />
+              )}
+              {showHistory ? 'Hide' : 'View'} previous attempts (
+              {score.attempts.length})
+            </button>
+          )}
+
+          {showHistory && (
+            <div className="flex flex-col gap-1.5 border-t border-gray-100 pt-2">
+              {score.attempts.map((attempt) => (
+                <div
+                  key={attempt.expedition_id}
+                  className="flex items-center justify-between text-xs"
+                >
+                  <span className="text-text-faint">
+                    {new Date(attempt.finished_at).toLocaleDateString()}
+                  </span>
+                  <span
+                    className={
+                      attempt.overall_score === score.overall_score
+                        ? 'text-brand-blue font-medium'
+                        : 'text-text-default font-medium'
+                    }
+                  >
+                    {attempt.overall_score.toFixed(1)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </>
       ) : (
         <p className="text-text-faint text-sm">
@@ -170,6 +216,15 @@ export function InterviewConductClient({
   const { data: assignment } = useInterviewAssignment(applicationId)
   const { data: reviewerAssignments = [] } =
     useRecordingReviewerAssignments(applicationId)
+  const { data: leads = [] } = useLeads()
+  const { data: chiefs = [] } = useChiefs()
+  const interviewerName = useMemo(() => {
+    if (!assignment?.interviewer_nuid) return null
+    const match = [...leads, ...chiefs].find(
+      (u) => u.nuid === assignment.interviewer_nuid
+    )
+    return match?.full_name ?? assignment.interviewer_nuid
+  }, [assignment, leads, chiefs])
   const { data: interview } = useInterview(applicationId)
   const upsertInterview = useUpsertInterview()
   const { data: recordingReviews = [] } = useRecordingReviews(
@@ -348,6 +403,11 @@ export function InterviewConductClient({
             >
               {ROLE_LABEL[role]}
             </span>
+            {interviewerName && (
+              <span className="text-text-subtle text-sm">
+                Interviewer: {interviewerName}
+              </span>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -390,6 +450,11 @@ export function InterviewConductClient({
       <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-2 lg:overflow-hidden">
         {/* Application */}
         <div className="border-b border-gray-200 px-4 py-4 sm:px-8 sm:py-6 lg:overflow-y-auto lg:border-r lg:border-b-0">
+          <ChallengeCard
+            applicantNuid={applicantNuid}
+            applicationId={applicationId}
+          />
+
           <div className="mb-4 flex flex-col gap-2 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
             <button
               type="button"
@@ -411,11 +476,6 @@ export function InterviewConductClient({
               </>
             )}
           </div>
-
-          <ChallengeCard
-            applicantNuid={applicantNuid}
-            applicationId={applicationId}
-          />
 
           <h2 className="text-text-faint mb-4 text-xs font-semibold tracking-wide uppercase">
             Application

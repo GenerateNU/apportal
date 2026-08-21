@@ -36,12 +36,14 @@ type PreferenceList struct {
 	UpdatedAt       time.Time            `json:"updated_at"`
 }
 
-// PreferenceListSummary adds membership/entry counts for the index page, so
-// it doesn't need a separate fetch per list to show "3 members, 8 entries."
+// PreferenceListSummary adds membership/entry counts and member names for
+// the index page, so it doesn't need a separate fetch per list (or a second
+// round trip to resolve names) to show who's on each list.
 type PreferenceListSummary struct {
 	PreferenceList
-	MemberCount int `json:"member_count"`
-	EntryCount  int `json:"entry_count"`
+	MemberCount int      `json:"member_count"`
+	EntryCount  int      `json:"entry_count"`
+	MemberNames []string `json:"member_names"`
 }
 
 type PreferenceListMember struct {

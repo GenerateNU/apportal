@@ -135,13 +135,14 @@ export function PreferenceListsPageClient({ isChief }: { isChief: boolean }) {
                   {STATUS_LABEL[list.status]}
                 </span>
                 <span className="text-text-subtle text-xs">
-                  {list.member_count} member{list.member_count === 1 ? '' : 's'}
-                </span>
-                <span className="text-text-subtle text-xs">·</span>
-                <span className="text-text-subtle text-xs">
                   {list.entry_count} entr{list.entry_count === 1 ? 'y' : 'ies'}
                 </span>
               </div>
+              <p className="text-text-subtle truncate text-xs">
+                {list.member_names.length > 0
+                  ? list.member_names.join(', ')
+                  : 'No members yet'}
+              </p>
             </Link>
           ))}
         </div>

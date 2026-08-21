@@ -118,9 +118,11 @@ func (s *Store) ListPreferenceLists(ctx context.Context, cycleID string, role mo
 	const base = `
 		SELECT pl.id, pl.cycle_id, pl.application_role, pl.name, pl.status, pl.created_by, pl.submitted_at, pl.created_at, pl.updated_at,
 		       COUNT(DISTINCT m.id) AS member_count,
-		       COUNT(DISTINCT e.id) AS entry_count
+		       COUNT(DISTINCT e.id) AS entry_count,
+		       COALESCE(array_agg(DISTINCT u.full_name) FILTER (WHERE u.full_name IS NOT NULL), '{}')::text[] AS member_names
 		FROM preference_lists pl
 		LEFT JOIN preference_list_members m ON m.preference_list_id = pl.id
+		LEFT JOIN users u ON u.nuid = m.lead_nuid
 		LEFT JOIN preference_list_entries e ON e.preference_list_id = pl.id
 		WHERE pl.cycle_id = $1 AND pl.application_role = $2`
 	const groupOrder = ` GROUP BY pl.id ORDER BY pl.created_at DESC`

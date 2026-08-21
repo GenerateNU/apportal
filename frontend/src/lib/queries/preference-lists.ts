@@ -33,9 +33,16 @@ export function usePreferenceLists(
 ) {
   return useQuery({
     queryKey: queryKeys.preferenceLists.list(cycleId, role),
-    queryFn: async () =>
-      ((await listPreferenceLists({ cycle_id: cycleId, role }, opts)) ??
-        []) as PreferenceListSummary[],
+    queryFn: async () => {
+      const lists = ((await listPreferenceLists(
+        { cycle_id: cycleId, role },
+        opts
+      )) ?? []) as PreferenceListSummary[]
+      return lists.map((list) => ({
+        ...list,
+        member_names: list.member_names ?? [],
+      }))
+    },
     enabled: !!cycleId,
   })
 }

@@ -5,14 +5,9 @@
  * Generate application portal — applications, reviews, and the hiring pipeline.
  * OpenAPI spec version: 0.1.0
  */
-import type { ChallengeScoreAttempts } from './challengeScoreAttempts';
 import type { ChallengeMetrics } from './challengeMetrics';
 
-export interface ChallengeScore {
-  /** A URL to the JSON Schema for this object. */
-  readonly $schema?: string;
-  attempt_count: number;
-  attempts: ChallengeScoreAttempts;
+export interface ChallengeAttempt {
   expedition_id: string;
   finished_at: string;
   metrics: ChallengeMetrics;
