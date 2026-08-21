@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { DateTimePicker } from '@/components/ui/datetime-picker'
+import { MEETING_DAY_LABEL } from '@/app/(portal)/reviewer/applications/components/meetingAvailability'
 import type { Role } from '@/lib/api/types'
 import { pickDefaultCycleId, useCycles } from '@/lib/queries/cycles'
 import {
@@ -137,6 +138,11 @@ export function PreferenceListsPageClient({ isChief }: { isChief: boolean }) {
                 <span className="text-text-subtle text-xs">
                   {list.entry_count} entr{list.entry_count === 1 ? 'y' : 'ies'}
                 </span>
+                {list.meeting_day && (
+                  <span className="bg-brand-blue/10 text-brand-blue rounded-md px-1.5 py-0.5 text-xs font-medium">
+                    Meets {MEETING_DAY_LABEL[list.meeting_day]}
+                  </span>
+                )}
               </div>
               <p className="text-text-subtle truncate text-xs">
                 {list.member_names.length > 0

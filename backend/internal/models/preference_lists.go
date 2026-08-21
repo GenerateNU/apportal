@@ -1,6 +1,9 @@
 package models
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 // PreferenceListStatus is a lead-toggleable status flag, not a hard lock —
 // the (cycle, role) deadline in PreferenceListDeadline is what actually
@@ -24,6 +27,11 @@ func (s PreferenceListStatus) Valid() bool {
 // applicants for a (cycle, role). Multiple lists can coexist per (cycle,
 // role) — membership (see PreferenceListMember), not authorship, is the
 // access boundary.
+//
+// MeetingDay is the weekly slot (matching the day-of-week set the
+// application's own "Meeting Availability" question offers) this list's
+// members have settled on for meeting to go through it together — nil until
+// they choose one.
 type PreferenceList struct {
 	ID              string               `json:"id"`
 	CycleID         string               `json:"cycle_id"`
@@ -34,6 +42,7 @@ type PreferenceList struct {
 	SubmittedAt     *time.Time           `json:"submitted_at,omitempty"`
 	CreatedAt       time.Time            `json:"created_at"`
 	UpdatedAt       time.Time            `json:"updated_at"`
+	MeetingDay      *string              `json:"meeting_day,omitempty"`
 }
 
 // PreferenceListSummary adds membership/entry counts and member names for
@@ -93,4 +102,14 @@ type PreferenceListDeadline struct {
 	ClosesAt        *time.Time `json:"closes_at,omitempty"`
 	UpdatedAt       time.Time  `json:"updated_at"`
 	UpdatedBy       *string    `json:"updated_by,omitempty"`
+}
+
+// LeadMeetingAvailability is a lead's own selected options from the "Meeting
+// Availability" question on their most recent application (as an applicant,
+// in whatever cycle they applied) — Options is empty when they have no
+// application, or their application predates that question, or they simply
+// left it blank.
+type LeadMeetingAvailability struct {
+	NUID    string          `json:"nuid"`
+	Options json.RawMessage `json:"options"`
 }

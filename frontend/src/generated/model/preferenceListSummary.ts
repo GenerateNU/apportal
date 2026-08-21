@@ -15,6 +15,7 @@ export interface PreferenceListSummary {
   cycle_id: string;
   entry_count: number;
   id: string;
+  meeting_day?: string;
   member_count: number;
   member_names: PreferenceListSummaryMemberNames;
   name: string;

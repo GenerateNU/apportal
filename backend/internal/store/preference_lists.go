@@ -9,7 +9,7 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/models"
 )
 
-const preferenceListColumns = `id, cycle_id, application_role, name, status, created_by, submitted_at, created_at, updated_at`
+const preferenceListColumns = `id, cycle_id, application_role, name, status, created_by, submitted_at, created_at, updated_at, meeting_day`
 
 // PreferenceListCreate carries a new list's initial fields. The creator is
 // added as the first member in the same transaction, so "is a member" (not
@@ -116,7 +116,7 @@ func (s *Store) GetPreferenceListDetail(ctx context.Context, id string) (models.
 // belong to — a list a lead isn't on shouldn't even reveal its name to them.
 func (s *Store) ListPreferenceLists(ctx context.Context, cycleID string, role models.Role, memberNUID string, includeAll bool) ([]models.PreferenceListSummary, error) {
 	const base = `
-		SELECT pl.id, pl.cycle_id, pl.application_role, pl.name, pl.status, pl.created_by, pl.submitted_at, pl.created_at, pl.updated_at,
+		SELECT pl.id, pl.cycle_id, pl.application_role, pl.name, pl.status, pl.created_by, pl.submitted_at, pl.created_at, pl.updated_at, pl.meeting_day,
 		       COUNT(DISTINCT m.id) AS member_count,
 		       COUNT(DISTINCT e.id) AS entry_count,
 		       COALESCE(array_agg(DISTINCT u.full_name) FILTER (WHERE u.full_name IS NOT NULL), '{}')::text[] AS member_names
@@ -171,6 +171,63 @@ func (s *Store) UpdatePreferenceList(ctx context.Context, id string, in Preferen
 		return list, ErrNotFound
 	}
 	return list, err
+}
+
+// UpdatePreferenceListMeetingDay sets or clears (meetingDay == nil) which day
+// this list's members have settled on for meeting to go through it —
+// separate from UpdatePreferenceList so a plain rename/status change can
+// never accidentally clear it (a nil Go value would be ambiguous between
+// "leave it" and "clear it" on a shared partial-update endpoint).
+func (s *Store) UpdatePreferenceListMeetingDay(ctx context.Context, id string, meetingDay *string) (models.PreferenceList, error) {
+	const q = `
+		UPDATE preference_lists SET meeting_day = $2, updated_at = NOW()
+		WHERE id = $1
+		RETURNING ` + preferenceListColumns
+	rows, err := s.db.Query(ctx, q, id, meetingDay)
+	if err != nil {
+		return models.PreferenceList{}, err
+	}
+	list, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByPos[models.PreferenceList])
+	if errors.Is(err, pgx.ErrNoRows) {
+		return list, ErrNotFound
+	}
+	return list, err
+}
+
+// GetLeadMeetingAvailability resolves each nuid's own selected options from
+// the "Meeting Availability" question on their most recent application (as
+// an applicant, in whatever cycle they applied) — used to flag who's free
+// for a preference list's chosen meeting day when picking new members.
+// Every requested nuid gets a row; Options is an empty array when they have
+// no application, their application predates that question, or they left it
+// blank.
+func (s *Store) GetLeadMeetingAvailability(ctx context.Context, nuids []string) ([]models.LeadMeetingAvailability, error) {
+	if len(nuids) == 0 {
+		return nil, nil
+	}
+	const q = `
+		WITH latest_app AS (
+			SELECT DISTINCT ON (user_nuid) id AS application_id, user_nuid, cycle_id, application_role
+			FROM applications
+			WHERE user_nuid = ANY($1::text[])
+			ORDER BY user_nuid, updated_at DESC
+		),
+		avail_question AS (
+			SELECT DISTINCT ON (la.application_id) la.application_id, la.user_nuid, q.id AS question_id
+			FROM latest_app la
+			JOIN questions q ON q.cycle_id = la.cycle_id
+				AND (q.application_role = la.application_role OR q.application_role IS NULL)
+				AND q.question_text ILIKE '%availability%'
+			ORDER BY la.application_id, q.display_order
+		)
+		SELECT aq.user_nuid, COALESCE(wa.answer_options, '[]'::jsonb)
+		FROM avail_question aq
+		LEFT JOIN written_answers wa ON wa.application_id = aq.application_id AND wa.question_id = aq.question_id`
+	rows, err := s.db.Query(ctx, q, nuids)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, pgx.RowToStructByPos[models.LeadMeetingAvailability])
 }
 
 func (s *Store) DeletePreferenceList(ctx context.Context, id string) error {

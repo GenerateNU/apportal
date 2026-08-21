@@ -467,12 +467,12 @@ export function InterviewRatingsClient() {
           No applicants match this interviewer filter.
         </p>
       ) : showSwimlanes ? (
-        <div className="max-h-[70vh] overflow-auto pb-4">
+        <div className="max-h-[70vh] overflow-auto rounded-lg border border-gray-200 pb-4">
           <div
-            className={`sticky top-0 z-10 grid gap-5 bg-white pt-2 pb-2 ${SWIMLANE_GRID_COLS_CLASS[visibleColumnDefs.length]}`}
+            className={`sticky top-0 z-10 grid divide-x divide-gray-200 bg-white pt-2 pb-2 ${SWIMLANE_GRID_COLS_CLASS[visibleColumnDefs.length]}`}
           >
             {visibleColumnDefs.map((c) => (
-              <div key={c.key} className="flex items-center gap-2 px-1">
+              <div key={c.key} className="flex items-center gap-2 px-4">
                 {c.key === 'none' ? (
                   <span className="text-text-default text-sm font-semibold">
                     {c.title}
@@ -491,14 +491,17 @@ export function InterviewRatingsClient() {
             ))}
           </div>
 
-          {swimlanes.map((lane) => {
+          {swimlanes.map((lane, laneIndex) => {
             const collapsed = collapsedLanes.has(lane.key)
             return (
-              <div key={lane.key}>
+              <div
+                key={lane.key}
+                className={laneIndex % 2 === 1 ? 'bg-gray-50/60' : undefined}
+              >
                 <button
                   type="button"
                   onClick={() => toggleLane(lane.key)}
-                  className="text-text-default hover:text-brand-blue sticky top-[2.2rem] z-[5] -mx-1 -mt-2 flex w-[calc(100%+0.5rem)] items-center gap-1.5 border-t border-b border-gray-100 bg-white px-1 py-2 text-sm font-medium"
+                  className="text-text-default hover:text-brand-blue sticky top-[2.2rem] z-[5] flex w-full items-center gap-1.5 border-t border-b border-gray-200 bg-inherit px-4 py-2 text-sm font-medium"
                 >
                   {collapsed ? (
                     <ChevronRight size={14} />
@@ -512,10 +515,10 @@ export function InterviewRatingsClient() {
                 </button>
                 {!collapsed && (
                   <div
-                    className={`grid gap-5 py-3 ${SWIMLANE_GRID_COLS_CLASS[visibleColumnDefs.length]}`}
+                    className={`grid divide-x divide-gray-200 py-3 ${SWIMLANE_GRID_COLS_CLASS[visibleColumnDefs.length]}`}
                   >
                     {visibleColumnDefs.map((c) => (
-                      <div key={c.key} className="flex flex-col gap-2">
+                      <div key={c.key} className="flex flex-col gap-2 px-4">
                         {lane.byRating[c.key].map(
                           ({
                             application,
@@ -544,7 +547,7 @@ export function InterviewRatingsClient() {
           })}
         </div>
       ) : (
-        <div className="flex gap-5 overflow-x-auto pb-4">
+        <div className="flex divide-x divide-gray-200 overflow-x-auto rounded-lg border border-gray-200 pb-4">
           {ratingColumns.map((column) => (
             <RatingColumn
               key={column.key}
@@ -578,8 +581,8 @@ function RatingColumn({
   nameByNuid: Map<string, string>
 }) {
   return (
-    <div className="flex w-80 shrink-0 flex-col">
-      <div className="mb-3 flex items-center gap-2 px-1">
+    <div className="flex w-80 shrink-0 flex-col px-4 pt-3">
+      <div className="mb-3 flex items-center gap-2">
         {ratingKey === 'none' ? (
           <span className="text-text-default text-sm font-semibold">
             {title}

@@ -19,6 +19,16 @@ export const AVAILABILITY_DAY_OPTIONS = [
   { code: 'Th', day: 'thursday', label: 'Thursday' },
 ] as const
 
+// Single source of truth for a day's display label, shared by anything
+// showing a MeetingDay value (a preference list's chosen meeting day, its
+// picker, etc.) — keyed the same way AVAILABILITY_DAY_OPTIONS.day is.
+export const MEETING_DAY_LABEL: Record<
+  (typeof AVAILABILITY_DAY_OPTIONS)[number]['day'],
+  string
+> = Object.fromEntries(
+  AVAILABILITY_DAY_OPTIONS.map((d) => [d.day, d.label])
+) as Record<(typeof AVAILABILITY_DAY_OPTIONS)[number]['day'], string>
+
 export function findAvailabilityQuestionId(
   questions: Question[] | undefined
 ): string | undefined {

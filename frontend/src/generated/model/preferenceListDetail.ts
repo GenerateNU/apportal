@@ -18,6 +18,7 @@ export interface PreferenceListDetail {
   cycle_id: string;
   entries: PreferenceListDetailEntries;
   id: string;
+  meeting_day?: string;
   members: PreferenceListDetailMembers;
   name: string;
   status: string;

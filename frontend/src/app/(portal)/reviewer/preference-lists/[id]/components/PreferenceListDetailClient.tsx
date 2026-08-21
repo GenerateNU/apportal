@@ -8,24 +8,55 @@ import { Button } from '@/components/ui/button'
 import { DateTimePicker } from '@/components/ui/datetime-picker'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { SearchableSelect } from '@/components/ui/searchable-select'
+import {
+  AVAILABILITY_DAY_OPTIONS,
+  MEETING_DAY_LABEL,
+} from '@/app/(portal)/reviewer/applications/components/meetingAvailability'
 import { APIError } from '@/lib/api/client'
-import type { PreferenceListStatus, Role } from '@/lib/api/types'
+import type { MeetingDay, PreferenceListStatus, Role } from '@/lib/api/types'
 import { useApplications } from '@/lib/queries/applications'
 import {
   useAddPreferenceListMember,
   useDeletePreferenceList,
   useDeletePreferenceListEntry,
+  useLeadMeetingAvailability,
   usePreferenceList,
   usePreferenceListDeadline,
   useRemovePreferenceListMember,
   useReorderPreferenceListEntries,
   useSetPreferenceListDeadline,
+  useSetPreferenceListMeetingDay,
   useUpdatePreferenceList,
   useUpsertPreferenceListEntry,
 } from '@/lib/queries/preference-lists'
 import { useChiefs, useLeads } from '@/lib/queries/users'
 import { ROLE_CHIP_CLASS, ROLE_LABEL } from '@/lib/roles'
+
+// True/false once we know; null when this lead has no usable answer at all
+// (no application, or one that predates the availability question).
+function isAvailableOn(
+  options: string[] | undefined,
+  day: MeetingDay
+): boolean | null {
+  if (!options) return null
+  if (options.length === 0) return null
+  return options.some((o) => o.toLowerCase().includes(day))
+}
+
+function availabilityBadge(available: boolean | null) {
+  if (available === null) return undefined
+  return available
+    ? { label: 'Free', className: 'bg-green-50 text-green-700' }
+    : { label: 'Busy', className: 'bg-red-50 text-red-700' }
+}
 
 const STATUS_BADGE: Record<PreferenceListStatus, string> = {
   draft: 'bg-gray-100 text-gray-500',
@@ -59,6 +90,16 @@ export function PreferenceListDetailClient({
     return m
   }, [leads, chiefs])
 
+  // Every reviewer's own availability, fetched once for the whole page
+  // (not per row) — used to flag who's free for the list's chosen meeting
+  // day, both on existing member chips and the add-member picker.
+  const allReviewerNuids = useMemo(
+    () => [...new Set([...leads, ...chiefs].map((u) => u.nuid))],
+    [leads, chiefs]
+  )
+  const { data: availabilityByNuid } =
+    useLeadMeetingAvailability(allReviewerNuids)
+
   const { data: deadline } = usePreferenceListDeadline(
     list?.cycle_id ?? '',
     (list?.application_role ?? 'software_engineer') as Role
@@ -75,6 +116,7 @@ export function PreferenceListDetailClient({
   const deleteEntry = useDeletePreferenceListEntry()
   const reorderEntries = useReorderPreferenceListEntries()
   const setDeadline = useSetPreferenceListDeadline()
+  const setMeetingDay = useSetPreferenceListMeetingDay()
 
   const [name, setName] = useState('')
   const [nameSeeded, setNameSeeded] = useState(false)
@@ -125,6 +167,8 @@ export function PreferenceListDetailClient({
         !memberNuids.has(u.nuid)
     )
     .sort((a, b) => a.full_name.localeCompare(b.full_name))
+
+  const meetingDay = list.meeting_day
 
   const entryApplicationIds = new Set(list.entries.map((e) => e.application_id))
   const availableApplications = applications
@@ -201,6 +245,11 @@ export function PreferenceListDetailClient({
           >
             {STATUS_LABEL[list.status]}
           </span>
+          {meetingDay && (
+            <span className="bg-brand-blue/10 text-brand-blue shrink-0 rounded-md px-2 py-0.5 text-xs font-medium">
+              Meets {MEETING_DAY_LABEL[meetingDay]}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -227,6 +276,32 @@ export function PreferenceListDetailClient({
             </Button>
           )}
         </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm">
+        <span className="text-text-muted font-medium">Meeting day:</span>
+        <Select
+          value={meetingDay ?? 'none'}
+          onValueChange={(value) =>
+            setMeetingDay.mutate({
+              id: list.id,
+              meetingDay: value === 'none' ? null : (value as MeetingDay),
+            })
+          }
+          disabled={locked}
+        >
+          <SelectTrigger className="w-48" aria-label="Meeting day">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">Not set</SelectItem>
+            {AVAILABILITY_DAY_OPTIONS.map((d) => (
+              <SelectItem key={d.day} value={d.day}>
+                {d.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {isChief && (
@@ -272,32 +347,54 @@ export function PreferenceListDetailClient({
           Members
         </h2>
         <div className="flex flex-wrap items-center gap-2">
-          {list.members.map((m) => (
-            <span
-              key={m.id}
-              className="bg-muted inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm"
-            >
-              {nameByNuid.get(m.lead_nuid) ?? m.lead_nuid}
-              {!locked && (
-                <button
-                  type="button"
-                  onClick={() =>
-                    removeMember.mutate({ listId: list.id, memberId: m.id })
-                  }
-                  aria-label={`Remove ${nameByNuid.get(m.lead_nuid) ?? m.lead_nuid}`}
-                  className="text-text-faint hover:text-text-muted"
-                >
-                  <X size={12} />
-                </button>
-              )}
-            </span>
-          ))}
+          {list.members.map((m) => {
+            const badge = meetingDay
+              ? availabilityBadge(
+                  isAvailableOn(
+                    availabilityByNuid?.get(m.lead_nuid),
+                    meetingDay
+                  )
+                )
+              : undefined
+            return (
+              <span
+                key={m.id}
+                className="bg-muted inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm"
+              >
+                {nameByNuid.get(m.lead_nuid) ?? m.lead_nuid}
+                {badge && (
+                  <span
+                    className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${badge.className}`}
+                  >
+                    {badge.label}
+                  </span>
+                )}
+                {!locked && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      removeMember.mutate({ listId: list.id, memberId: m.id })
+                    }
+                    aria-label={`Remove ${nameByNuid.get(m.lead_nuid) ?? m.lead_nuid}`}
+                    className="text-text-faint hover:text-text-muted"
+                  >
+                    <X size={12} />
+                  </button>
+                )}
+              </span>
+            )
+          })}
         </div>
         {!locked && (
           <SearchableSelect
             options={availableToAdd.map((u) => ({
               value: u.nuid,
               label: u.full_name,
+              badge: meetingDay
+                ? availabilityBadge(
+                    isAvailableOn(availabilityByNuid?.get(u.nuid), meetingDay)
+                  )
+                : undefined,
             }))}
             onValueChange={(nuid) =>
               addMember.mutate({ listId: list.id, leadNuid: nuid })
