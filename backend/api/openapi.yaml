@@ -415,6 +415,25 @@ components:
         - teams
         - coverage
       type: object
+    ChallengeAttempt:
+      additionalProperties: false
+      properties:
+        expedition_id:
+          type: string
+        finished_at:
+          format: date-time
+          type: string
+        metrics:
+          $ref: "#/components/schemas/ChallengeMetrics"
+        overall_score:
+          format: double
+          type: number
+      required:
+        - expedition_id
+        - overall_score
+        - metrics
+        - finished_at
+      type: object
     ChallengeMetrics:
       additionalProperties: false
       properties:
@@ -457,6 +476,12 @@ components:
         attempt_count:
           format: int64
           type: integer
+        attempts:
+          items:
+            $ref: "#/components/schemas/ChallengeAttempt"
+          type:
+            - array
+            - "null"
         expedition_id:
           type: string
         finished_at:
@@ -473,6 +498,7 @@ components:
         - metrics
         - attempt_count
         - finished_at
+        - attempts
       type: object
     ChiefReviewCommentDetail:
       additionalProperties: false
@@ -2288,6 +2314,12 @@ components:
         member_count:
           format: int64
           type: integer
+        member_names:
+          items:
+            type: string
+          type:
+            - array
+            - "null"
         name:
           type: string
         status:
@@ -2301,6 +2333,7 @@ components:
       required:
         - member_count
         - entry_count
+        - member_names
         - id
         - cycle_id
         - application_role

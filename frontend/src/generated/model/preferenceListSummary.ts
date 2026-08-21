@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { PreferenceListSummaryApplicationRole } from './preferenceListSummaryApplicationRole';
+import type { PreferenceListSummaryMemberNames } from './preferenceListSummaryMemberNames';
 
 export interface PreferenceListSummary {
   application_role: PreferenceListSummaryApplicationRole;
@@ -15,6 +16,7 @@ export interface PreferenceListSummary {
   entry_count: number;
   id: string;
   member_count: number;
+  member_names: PreferenceListSummaryMemberNames;
   name: string;
   status: string;
   submitted_at?: string;

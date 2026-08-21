@@ -10,8 +10,13 @@ import { queryKeys } from './keys'
 export function useChallengeScore(nuid: string, opts?: RequestOptions) {
   return useQuery({
     queryKey: queryKeys.challengeScore.detail(nuid),
-    queryFn: () =>
-      getChallengeScore(nuid, opts) as Promise<ChallengeScore | null>,
+    queryFn: async () => {
+      const score = (await getChallengeScore(
+        nuid,
+        opts
+      )) as ChallengeScore | null
+      return score && { ...score, attempts: score.attempts ?? [] }
+    },
     enabled: !!nuid,
   })
 }

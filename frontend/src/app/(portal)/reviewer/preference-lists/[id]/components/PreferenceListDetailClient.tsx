@@ -8,13 +8,7 @@ import { Button } from '@/components/ui/button'
 import { DateTimePicker } from '@/components/ui/datetime-picker'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { SearchableSelect } from '@/components/ui/searchable-select'
 import { APIError } from '@/lib/api/client'
 import type { PreferenceListStatus, Role } from '@/lib/api/types'
 import { useApplications } from '@/lib/queries/applications'
@@ -300,23 +294,20 @@ export function PreferenceListDetailClient({
           ))}
         </div>
         {!locked && (
-          <Select
-            value=""
+          <SearchableSelect
+            options={availableToAdd.map((u) => ({
+              value: u.nuid,
+              label: u.full_name,
+            }))}
             onValueChange={(nuid) =>
               addMember.mutate({ listId: list.id, leadNuid: nuid })
             }
-          >
-            <SelectTrigger className="w-64" aria-label="Add a member">
-              <SelectValue placeholder="Add a member…" />
-            </SelectTrigger>
-            <SelectContent>
-              {availableToAdd.map((u) => (
-                <SelectItem key={u.nuid} value={u.nuid}>
-                  {u.full_name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            placeholder="Add a member…"
+            searchPlaceholder="Search leads…"
+            emptyText="No matching leads."
+            className="w-64"
+            ariaLabel="Add a member"
+          />
         )}
       </div>
 
@@ -355,23 +346,20 @@ export function PreferenceListDetailClient({
           )}
         </div>
         {!locked && (
-          <Select
-            value=""
+          <SearchableSelect
+            options={availableApplications.map((a) => ({
+              value: a.id,
+              label: a.full_name || a.user_nuid,
+            }))}
             onValueChange={(applicationId) =>
               upsertEntry.mutate({ listId: list.id, applicationId })
             }
-          >
-            <SelectTrigger className="w-72" aria-label="Add an applicant">
-              <SelectValue placeholder="Add an applicant…" />
-            </SelectTrigger>
-            <SelectContent>
-              {availableApplications.map((a) => (
-                <SelectItem key={a.id} value={a.id}>
-                  {a.full_name || a.user_nuid}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            placeholder="Add an applicant…"
+            searchPlaceholder="Search applicants…"
+            emptyText="No matching applicants."
+            className="w-72"
+            ariaLabel="Add an applicant"
+          />
         )}
       </div>
     </PageContainer>
