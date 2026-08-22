@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import { ArrowDown, ArrowLeft, ArrowUp, Lock, Trash2, X } from 'lucide-react'
 import { PageContainer } from '@/components/PageContainer'
@@ -25,20 +25,23 @@ import type { MeetingDay, PreferenceListStatus, Role } from '@/lib/api/types'
 import { useApplications } from '@/lib/queries/applications'
 import {
   useAddPreferenceListMember,
+  useDeletePersonalPreferenceListEntry,
   useDeletePreferenceList,
   useDeletePreferenceListEntry,
   useLeadMeetingAvailability,
   usePreferenceList,
   usePreferenceListDeadline,
   useRemovePreferenceListMember,
+  useReorderPersonalPreferenceListEntries,
   useReorderPreferenceListEntries,
   useSetPreferenceListDeadline,
   useSetPreferenceListMeetingDay,
   useUpdatePreferenceList,
+  useUpsertPersonalPreferenceListEntry,
   useUpsertPreferenceListEntry,
 } from '@/lib/queries/preference-lists'
-import { useChiefs, useLeads } from '@/lib/queries/users'
-import { ROLE_CHIP_CLASS, ROLE_LABEL } from '@/lib/roles'
+import { useChiefs, useCurrentUser, useLeads } from '@/lib/queries/users'
+import { ROLE_CHIP_CLASS, ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 
 // True/false once we know; null when this lead has no usable answer at all
 // (no application, or one that predates the availability question).
@@ -68,6 +71,10 @@ const STATUS_LABEL: Record<PreferenceListStatus, string> = {
   submitted: 'Submitted',
 }
 
+function deadlinePassed(closesAt: string | undefined | null): boolean {
+  return !!closesAt && new Date(closesAt) < new Date()
+}
+
 export function PreferenceListDetailClient({
   id,
   isChief,
@@ -83,29 +90,42 @@ export function PreferenceListDetailClient({
   } = usePreferenceList(id, { poll: true })
   const { data: leads = [] } = useLeads()
   const { data: chiefs = [] } = useChiefs()
+  const { data: currentUser } = useCurrentUser()
 
-  const nameByNuid = useMemo(() => {
-    const m = new Map<string, string>()
-    for (const u of [...leads, ...chiefs]) m.set(u.nuid, u.full_name)
-    return m
-  }, [leads, chiefs])
+  const nameByNuid = new Map<string, string>()
+  for (const u of [...leads, ...chiefs]) nameByNuid.set(u.nuid, u.full_name)
 
   // Every reviewer's own availability, fetched once for the whole page
   // (not per row) — used to flag who's free for the list's chosen meeting
   // day, both on existing member chips and the add-member picker.
-  const allReviewerNuids = useMemo(
-    () => [...new Set([...leads, ...chiefs].map((u) => u.nuid))],
-    [leads, chiefs]
-  )
+  const allReviewerNuids = [
+    ...new Set([...leads, ...chiefs].map((u) => u.nuid)),
+  ]
   const { data: availabilityByNuid } =
     useLeadMeetingAvailability(allReviewerNuids)
 
-  const { data: deadline } = usePreferenceListDeadline(
+  const [selectedRole, setSelectedRole] = useState<Role>(ROLE_COLUMNS[0])
+  const [viewMode, setViewMode] = useState('group')
+
+  // Deadlines are still per (cycle, role) — a group covers every role, so we
+  // need every role's deadline to know both the current tab's lock state
+  // and whether the whole group (every role) has closed.
+  const engineerDeadline = usePreferenceListDeadline(
     list?.cycle_id ?? '',
-    (list?.application_role ?? 'software_engineer') as Role
+    'software_engineer'
   )
-  const locked = !!(
-    deadline?.closes_at && new Date(deadline.closes_at) < new Date()
+  const designerDeadline = usePreferenceListDeadline(
+    list?.cycle_id ?? '',
+    'software_designer'
+  )
+  const deadlineQueryByRole: Record<Role, typeof engineerDeadline> = {
+    software_engineer: engineerDeadline,
+    software_designer: designerDeadline,
+  }
+  const selectedDeadline = deadlineQueryByRole[selectedRole].data
+  const entryLocked = deadlinePassed(selectedDeadline?.closes_at)
+  const groupLocked = ROLE_COLUMNS.every((r) =>
+    deadlinePassed(deadlineQueryByRole[r].data?.closes_at)
   )
 
   const updateList = useUpdatePreferenceList()
@@ -115,6 +135,9 @@ export function PreferenceListDetailClient({
   const upsertEntry = useUpsertPreferenceListEntry()
   const deleteEntry = useDeletePreferenceListEntry()
   const reorderEntries = useReorderPreferenceListEntries()
+  const upsertPersonalEntry = useUpsertPersonalPreferenceListEntry()
+  const deletePersonalEntry = useDeletePersonalPreferenceListEntry()
+  const reorderPersonalEntries = useReorderPersonalPreferenceListEntries()
   const setDeadline = useSetPreferenceListDeadline()
   const setMeetingDay = useSetPreferenceListMeetingDay()
 
@@ -126,7 +149,7 @@ export function PreferenceListDetailClient({
   }
 
   const { data: applications = [] } = useApplications(
-    list ? { cycle_id: list.cycle_id, role: list.application_role } : undefined,
+    list ? { cycle_id: list.cycle_id, role: selectedRole } : undefined,
     undefined,
     { enabled: !!list }
   )
@@ -170,9 +193,47 @@ export function PreferenceListDetailClient({
 
   const meetingDay = list.meeting_day
 
-  const entryApplicationIds = new Set(list.entries.map((e) => e.application_id))
+  const roleEntries = list.entries.filter(
+    (e) => e.application_role === selectedRole
+  )
+  const entryApplicationIds = new Set(roleEntries.map((e) => e.application_id))
   const availableApplications = applications
     .filter((a) => !entryApplicationIds.has(a.id))
+    .sort((a, b) =>
+      (a.full_name || a.user_nuid).localeCompare(b.full_name || b.user_nuid)
+    )
+
+  // Whose personal list can be viewed: every current member, plus anyone
+  // who's already added personal entries (covers a chief/admin who has
+  // access without literally being a member), plus the current user
+  // themself so "My list" always shows even before they've added anything.
+  const personalOwnerNuids = [
+    ...new Set([
+      ...list.members.map((m) => m.lead_nuid),
+      ...list.personal_entries.map((e) => e.owner_nuid),
+      ...(currentUser ? [currentUser.nuid] : []),
+    ]),
+  ].sort((a, b) => {
+    if (a === currentUser?.nuid) return -1
+    if (b === currentUser?.nuid) return 1
+    return (nameByNuid.get(a) ?? a).localeCompare(nameByNuid.get(b) ?? b)
+  })
+
+  const viewingOwnerNuid = viewMode === 'group' ? null : viewMode
+  const isViewingMine =
+    viewingOwnerNuid !== null && viewingOwnerNuid === currentUser?.nuid
+  const personalEntriesForView = viewingOwnerNuid
+    ? list.personal_entries.filter(
+        (e) =>
+          e.owner_nuid === viewingOwnerNuid &&
+          e.application_role === selectedRole
+      )
+    : []
+  const personalEntryApplicationIds = new Set(
+    personalEntriesForView.map((e) => e.application_id)
+  )
+  const availablePersonalApplications = applications
+    .filter((a) => !personalEntryApplicationIds.has(a.id))
     .sort((a, b) =>
       (a.full_name || a.user_nuid).localeCompare(b.full_name || b.user_nuid)
     )
@@ -183,7 +244,6 @@ export function PreferenceListDetailClient({
     updateList.mutate({
       id: list.id,
       cycleId: list.cycle_id,
-      role: list.application_role,
       body: { name: trimmed },
     })
   }
@@ -193,7 +253,6 @@ export function PreferenceListDetailClient({
     updateList.mutate({
       id: list.id,
       cycleId: list.cycle_id,
-      role: list.application_role,
       body: { status: list.status === 'submitted' ? 'draft' : 'submitted' },
     })
   }
@@ -201,11 +260,21 @@ export function PreferenceListDetailClient({
   function moveEntry(index: number, direction: -1 | 1) {
     if (!list) return
     const target = index + direction
-    if (target < 0 || target >= list.entries.length) return
-    const ids = list.entries.map((e) => e.application_id)
+    if (target < 0 || target >= roleEntries.length) return
+    const ids = roleEntries.map((e) => e.application_id)
     const [moved] = ids.splice(index, 1)
     ids.splice(target, 0, moved)
     reorderEntries.mutate({ listId: list.id, applicationIds: ids })
+  }
+
+  function movePersonalEntry(index: number, direction: -1 | 1) {
+    if (!list) return
+    const target = index + direction
+    if (target < 0 || target >= personalEntriesForView.length) return
+    const ids = personalEntriesForView.map((e) => e.application_id)
+    const [moved] = ids.splice(index, 1)
+    ids.splice(target, 0, moved)
+    reorderPersonalEntries.mutate({ listId: list.id, applicationIds: ids })
   }
 
   return (
@@ -218,12 +287,20 @@ export function PreferenceListDetailClient({
         Back to preference lists
       </Link>
 
-      {locked && (
+      {groupLocked ? (
         <div className="border-border bg-muted/40 text-text-muted flex items-center gap-2 rounded-lg border px-4 py-3 text-sm">
           <Lock size={14} />
-          The submission deadline for this cycle/role has passed. This list is
-          read-only.
+          Every role&apos;s preference list deadline for this cycle has passed.
+          This group is fully read-only.
         </div>
+      ) : (
+        entryLocked && (
+          <div className="border-border bg-muted/40 text-text-muted flex items-center gap-2 rounded-lg border px-4 py-3 text-sm">
+            <Lock size={14} />
+            The {ROLE_LABEL[selectedRole]} deadline has passed — its shared list
+            is read-only. Other roles and group settings remain editable.
+          </div>
+        )
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -232,14 +309,9 @@ export function PreferenceListDetailClient({
             value={name}
             onChange={(e) => setName(e.target.value)}
             onBlur={saveName}
-            disabled={locked}
+            disabled={groupLocked}
             className="max-w-sm text-lg font-semibold"
           />
-          <span
-            className={`shrink-0 rounded-md px-2 py-0.5 text-xs font-medium ${ROLE_CHIP_CLASS[list.application_role]}`}
-          >
-            {ROLE_LABEL[list.application_role]}
-          </span>
           <span
             className={`shrink-0 rounded-md px-2 py-0.5 text-xs font-medium ${STATUS_BADGE[list.status]}`}
           >
@@ -255,7 +327,7 @@ export function PreferenceListDetailClient({
           <Button
             variant="outline"
             onClick={toggleSubmitted}
-            disabled={locked || updateList.isPending}
+            disabled={groupLocked || updateList.isPending}
           >
             {list.status === 'submitted' ? 'Mark as draft' : 'Submit'}
           </Button>
@@ -263,19 +335,32 @@ export function PreferenceListDetailClient({
             <Button
               variant="outline"
               onClick={() =>
-                deleteList.mutate({
-                  id: list.id,
-                  cycleId: list.cycle_id,
-                  role: list.application_role,
-                })
+                deleteList.mutate({ id: list.id, cycleId: list.cycle_id })
               }
               disabled={deleteList.isPending}
             >
               <Trash2 data-icon="inline-start" size={14} />
-              Delete list
+              Delete group
             </Button>
           )}
         </div>
+      </div>
+
+      <div className="flex items-center gap-1 rounded-lg border border-gray-200 bg-white p-1">
+        {ROLE_COLUMNS.map((r) => (
+          <button
+            key={r}
+            type="button"
+            onClick={() => setSelectedRole(r)}
+            className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+              selectedRole === r
+                ? ROLE_CHIP_CLASS[r]
+                : 'text-text-faint hover:text-text-muted'
+            }`}
+          >
+            {ROLE_LABEL[r]}
+          </button>
+        ))}
       </div>
 
       <div className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm">
@@ -288,7 +373,7 @@ export function PreferenceListDetailClient({
               meetingDay: value === 'none' ? null : (value as MeetingDay),
             })
           }
-          disabled={locked}
+          disabled={groupLocked}
         >
           <SelectTrigger className="w-48" aria-label="Meeting day">
             <SelectValue />
@@ -307,29 +392,30 @@ export function PreferenceListDetailClient({
       {isChief && (
         <div className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm">
           <span className="text-text-muted font-medium">
-            Deadline for every {ROLE_LABEL[list.application_role]} list this
-            cycle:
+            Deadline for every {ROLE_LABEL[selectedRole]} list this cycle:
           </span>
           <DateTimePicker
             value={
-              deadline?.closes_at ? new Date(deadline.closes_at) : undefined
+              selectedDeadline?.closes_at
+                ? new Date(selectedDeadline.closes_at)
+                : undefined
             }
             onValueChange={(date) =>
               setDeadline.mutate({
                 cycleId: list.cycle_id,
-                role: list.application_role,
+                role: selectedRole,
                 closesAt: date.toISOString(),
               })
             }
             placeholder="No deadline set"
           />
-          {deadline?.closes_at && (
+          {selectedDeadline?.closes_at && (
             <button
               type="button"
               onClick={() =>
                 setDeadline.mutate({
                   cycleId: list.cycle_id,
-                  role: list.application_role,
+                  role: selectedRole,
                   closesAt: null,
                 })
               }
@@ -369,7 +455,7 @@ export function PreferenceListDetailClient({
                     {badge.label}
                   </span>
                 )}
-                {!locked && (
+                {!groupLocked && (
                   <button
                     type="button"
                     onClick={() =>
@@ -385,7 +471,7 @@ export function PreferenceListDetailClient({
             )
           })}
         </div>
-        {!locked && (
+        {!groupLocked && (
           <SearchableSelect
             options={availableToAdd.map((u) => ({
               value: u.nuid,
@@ -409,54 +495,127 @@ export function PreferenceListDetailClient({
       </div>
 
       <div className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-        <h2 className="text-text-faint text-xs font-semibold tracking-wide uppercase">
-          Applicants
-        </h2>
-        <div className="flex flex-col gap-2">
-          {list.entries.map((entry, index) => (
-            <EntryRow
-              key={entry.id}
-              entry={entry}
-              index={index}
-              total={list.entries.length}
-              locked={locked}
-              onMove={(direction) => moveEntry(index, direction)}
-              onRemove={() =>
-                deleteEntry.mutate({
-                  listId: list.id,
-                  applicationId: entry.application_id,
-                })
-              }
-              onSaveReasoning={(reasoning) =>
-                upsertEntry.mutate({
-                  listId: list.id,
-                  applicationId: entry.application_id,
-                  reasoning,
-                })
-              }
-            />
-          ))}
-          {list.entries.length === 0 && (
-            <p className="text-text-faint text-sm">
-              No applicants on this list yet.
-            </p>
-          )}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-text-faint text-xs font-semibold tracking-wide uppercase">
+            Applicants — {ROLE_LABEL[selectedRole]}
+          </h2>
+          <Select value={viewMode} onValueChange={setViewMode}>
+            <SelectTrigger className="w-48" aria-label="Viewing which list">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="group">Group list</SelectItem>
+              {personalOwnerNuids.map((nuid) => (
+                <SelectItem key={nuid} value={nuid}>
+                  {nuid === currentUser?.nuid
+                    ? 'My list'
+                    : `${nameByNuid.get(nuid) ?? nuid}'s list`}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-        {!locked && (
-          <SearchableSelect
-            options={availableApplications.map((a) => ({
-              value: a.id,
-              label: a.full_name || a.user_nuid,
-            }))}
-            onValueChange={(applicationId) =>
-              upsertEntry.mutate({ listId: list.id, applicationId })
-            }
-            placeholder="Add an applicant…"
-            searchPlaceholder="Search applicants…"
-            emptyText="No matching applicants."
-            className="w-72"
-            ariaLabel="Add an applicant"
-          />
+
+        {viewMode === 'group' ? (
+          <>
+            <div className="flex flex-col gap-2">
+              {roleEntries.map((entry, index) => (
+                <EntryRow
+                  key={entry.id}
+                  entry={entry}
+                  index={index}
+                  total={roleEntries.length}
+                  locked={entryLocked}
+                  onMove={(direction) => moveEntry(index, direction)}
+                  onRemove={() =>
+                    deleteEntry.mutate({
+                      listId: list.id,
+                      applicationId: entry.application_id,
+                    })
+                  }
+                  onSaveReasoning={(reasoning) =>
+                    upsertEntry.mutate({
+                      listId: list.id,
+                      applicationId: entry.application_id,
+                      reasoning,
+                    })
+                  }
+                />
+              ))}
+              {roleEntries.length === 0 && (
+                <p className="text-text-faint text-sm">
+                  No applicants on this list yet.
+                </p>
+              )}
+            </div>
+            {!entryLocked && (
+              <SearchableSelect
+                options={availableApplications.map((a) => ({
+                  value: a.id,
+                  label: a.full_name || a.user_nuid,
+                }))}
+                onValueChange={(applicationId) =>
+                  upsertEntry.mutate({ listId: list.id, applicationId })
+                }
+                placeholder="Add an applicant…"
+                searchPlaceholder="Search applicants…"
+                emptyText="No matching applicants."
+                className="w-72"
+                ariaLabel="Add an applicant"
+              />
+            )}
+          </>
+        ) : (
+          <>
+            <div className="flex flex-col gap-2">
+              {personalEntriesForView.map((entry, index) => (
+                <EntryRow
+                  key={entry.id}
+                  entry={entry}
+                  index={index}
+                  total={personalEntriesForView.length}
+                  locked={!isViewingMine}
+                  onMove={(direction) => movePersonalEntry(index, direction)}
+                  onRemove={() =>
+                    deletePersonalEntry.mutate({
+                      listId: list.id,
+                      applicationId: entry.application_id,
+                    })
+                  }
+                  onSaveReasoning={(reasoning) =>
+                    upsertPersonalEntry.mutate({
+                      listId: list.id,
+                      applicationId: entry.application_id,
+                      reasoning,
+                    })
+                  }
+                />
+              ))}
+              {personalEntriesForView.length === 0 && (
+                <p className="text-text-faint text-sm">
+                  {isViewingMine
+                    ? "You haven't added anyone to your personal list yet."
+                    : "This person hasn't added anyone to their personal list yet."}
+                </p>
+              )}
+            </div>
+            {isViewingMine && (
+              <SearchableSelect
+                options={availablePersonalApplications.map((a) => ({
+                  value: a.id,
+                  label: a.full_name || a.user_nuid,
+                }))}
+                onValueChange={(applicationId) =>
+                  upsertPersonalEntry.mutate({ listId: list.id, applicationId })
+                }
+                placeholder="Add an applicant…"
+                searchPlaceholder="Search applicants…"
+                emptyText="No matching applicants."
+                className="w-72"
+                ariaLabel="Add an applicant to your personal list"
+              />
+            )}
+          </>
         )}
       </div>
     </PageContainer>

@@ -22,8 +22,8 @@ func (h *preferenceListHandler) register(api huma.API) {
 		OperationID:   "create-preference-list",
 		Method:        http.MethodPost,
 		Path:          "/preference-lists",
-		Summary:       "Create a preference list",
-		Description:   "Reviewer only. The creator is added as the list's first member. Rejected once the (cycle, role) deadline has passed.",
+		Summary:       "Create a preference list group for a cycle",
+		Description:   "Reviewer only. The creator is added as the group's first member. Rejected once every role's preference-list deadline for the cycle has passed.",
 		Tags:          []string{"Preference lists"},
 		DefaultStatus: http.StatusCreated,
 		Errors:        []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusUnprocessableEntity},
@@ -33,8 +33,8 @@ func (h *preferenceListHandler) register(api huma.API) {
 		OperationID: "list-preference-lists",
 		Method:      http.MethodGet,
 		Path:        "/preference-lists",
-		Summary:     "List preference lists for a cycle and role",
-		Description: "Reviewer only. Leads only see lists they're a member of; chiefs/admins see every list.",
+		Summary:     "List preference list groups for a cycle",
+		Description: "Reviewer only. Leads only see groups they're a member of; chiefs/admins see every group. Each group covers every role in the cycle.",
 		Tags:        []string{"Preference lists"},
 		Errors:      []int{http.StatusUnauthorized, http.StatusUnprocessableEntity},
 	}, h.list)
@@ -78,7 +78,7 @@ func (h *preferenceListHandler) register(api huma.API) {
 		Method:        http.MethodDelete,
 		Path:          "/preference-lists/{id}",
 		Summary:       "Delete a preference list",
-		Description:   "Chief only. Deletes every member and entry. Allowed even after the (cycle, role) deadline has passed, for administrative cleanup.",
+		Description:   "Chief only. Deletes every member and entry. Allowed even after every role's deadline has passed, for administrative cleanup.",
 		Tags:          []string{"Preference lists"},
 		DefaultStatus: http.StatusNoContent,
 		Errors:        []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound},
@@ -133,10 +133,41 @@ func (h *preferenceListHandler) register(api huma.API) {
 		Method:      http.MethodPut,
 		Path:        "/preference-lists/{id}/entry-order",
 		Summary:     "Reorder a preference list's entries",
-		Description: "application_ids must be an exact permutation of the list's current entries, so a stale client can't silently drop one via reorder.",
+		Description: "application_ids must be an exact permutation of the list's current entries for one role, so a stale client can't silently drop one via reorder.",
 		Tags:        []string{"Preference lists"},
 		Errors:      []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound, http.StatusUnprocessableEntity},
 	}, h.reorderEntries)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "upsert-preference-list-personal-entry",
+		Method:      http.MethodPut,
+		Path:        "/preference-lists/{id}/personal-entries/{applicationId}",
+		Summary:     "Add an applicant to your own personal list within a group, or edit your reasoning",
+		Description: "Every group member's personal list is visible to the whole group, but only its owner can write to it. Never deadline-gated.",
+		Tags:        []string{"Preference lists"},
+		Errors:      []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound, http.StatusUnprocessableEntity},
+	}, h.upsertPersonalEntry)
+
+	huma.Register(api, huma.Operation{
+		OperationID:   "delete-preference-list-personal-entry",
+		Method:        http.MethodDelete,
+		Path:          "/preference-lists/{id}/personal-entries/{applicationId}",
+		Summary:       "Remove an applicant from your own personal list",
+		Tags:          []string{"Preference lists"},
+		DefaultStatus: http.StatusNoContent,
+		Errors:        []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound},
+	}, h.deletePersonalEntry)
+
+	// A sibling of /personal-entries/{applicationId}, not nested under it,
+	// for the same literal-vs-param routing reason as /entry-order above.
+	huma.Register(api, huma.Operation{
+		OperationID: "reorder-preference-list-personal-entries",
+		Method:      http.MethodPut,
+		Path:        "/preference-lists/{id}/personal-entry-order",
+		Summary:     "Reorder your own personal list's entries",
+		Tags:        []string{"Preference lists"},
+		Errors:      []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound, http.StatusUnprocessableEntity},
+	}, h.reorderPersonalEntries)
 
 	huma.Register(api, huma.Operation{
 		OperationID: "get-preference-list-deadline",
@@ -196,11 +227,13 @@ func preferenceListDeadlinePassed(d models.PreferenceListDeadline) bool {
 	return d.ClosesAt != nil && time.Now().After(*d.ClosesAt)
 }
 
-// checkNotLocked 403s once the list's (cycle, role) deadline has passed —
-// re-checked on every mutating call, not just create, mirroring how
+// checkEntryNotLocked 403s once the given role's (cycle, role) deadline has
+// passed — re-checked on every shared-entry mutation, mirroring how
 // applications.go guards against writes after the application deadline.
-func (h *preferenceListHandler) checkNotLocked(ctx context.Context, list models.PreferenceList) error {
-	deadline, err := h.store.GetOrCreatePreferenceListDeadline(ctx, list.CycleID, list.ApplicationRole)
+// Entry-level mutations (add/remove/reorder/reasoning-edit) are scoped to
+// whichever role the target application has, not the whole group.
+func (h *preferenceListHandler) checkEntryNotLocked(ctx context.Context, cycleID string, role models.Role) error {
+	deadline, err := h.store.GetOrCreatePreferenceListDeadline(ctx, cycleID, role)
 	if err != nil {
 		return storeErr(err)
 	}
@@ -208,6 +241,24 @@ func (h *preferenceListHandler) checkNotLocked(ctx context.Context, list models.
 		return huma.Error403Forbidden("the preference list deadline has passed")
 	}
 	return nil
+}
+
+// checkGroupNotLocked 403s group-level mutations (rename, submit toggle,
+// membership, meeting day, create) once every role's deadline for the cycle
+// has passed — a group no longer belongs to one role, so no single role's
+// deadline should be able to lock it while another role's window is still
+// open.
+func (h *preferenceListHandler) checkGroupNotLocked(ctx context.Context, cycleID string) error {
+	for _, role := range models.AllRoles() {
+		deadline, err := h.store.GetOrCreatePreferenceListDeadline(ctx, cycleID, role)
+		if err != nil {
+			return storeErr(err)
+		}
+		if !preferenceListDeadlinePassed(deadline) {
+			return nil
+		}
+	}
+	return huma.Error403Forbidden("every role's preference list deadline has passed")
 }
 
 type PreferenceListOutput struct {
@@ -224,9 +275,8 @@ type PreferenceListsOutput struct {
 
 type CreatePreferenceListInput struct {
 	Body struct {
-		CycleID         string      `json:"cycle_id"`
-		ApplicationRole models.Role `json:"application_role"`
-		Name            string      `json:"name"`
+		CycleID string `json:"cycle_id"`
+		Name    string `json:"name"`
 	}
 }
 
@@ -234,21 +284,16 @@ func (h *preferenceListHandler) create(ctx context.Context, in *CreatePreference
 	if err := requireReviewer(ctx); err != nil {
 		return nil, err
 	}
-	if in.Body.CycleID == "" || !in.Body.ApplicationRole.Valid() || strings.TrimSpace(in.Body.Name) == "" {
-		return nil, huma.Error422UnprocessableEntity("cycle_id, application_role, and name are required")
+	if in.Body.CycleID == "" || strings.TrimSpace(in.Body.Name) == "" {
+		return nil, huma.Error422UnprocessableEntity("cycle_id and name are required")
 	}
-	deadline, err := h.store.GetOrCreatePreferenceListDeadline(ctx, in.Body.CycleID, in.Body.ApplicationRole)
-	if err != nil {
-		return nil, storeErr(err)
-	}
-	if preferenceListDeadlinePassed(deadline) {
-		return nil, huma.Error403Forbidden("the preference list deadline has passed")
+	if err := h.checkGroupNotLocked(ctx, in.Body.CycleID); err != nil {
+		return nil, err
 	}
 	list, err := h.store.CreatePreferenceList(ctx, store.PreferenceListCreate{
-		CycleID:         in.Body.CycleID,
-		ApplicationRole: in.Body.ApplicationRole,
-		Name:            strings.TrimSpace(in.Body.Name),
-		CreatedBy:       currentActor(ctx).NUID,
+		CycleID:   in.Body.CycleID,
+		Name:      strings.TrimSpace(in.Body.Name),
+		CreatedBy: currentActor(ctx).NUID,
 	})
 	if err != nil {
 		return nil, storeErr(err)
@@ -257,20 +302,19 @@ func (h *preferenceListHandler) create(ctx context.Context, in *CreatePreference
 }
 
 type ListPreferenceListsInput struct {
-	CycleID string      `query:"cycle_id" doc:"Cycle ID"`
-	Role    models.Role `query:"role" doc:"Applicant role"`
+	CycleID string `query:"cycle_id" doc:"Cycle ID"`
 }
 
 func (h *preferenceListHandler) list(ctx context.Context, in *ListPreferenceListsInput) (*PreferenceListsOutput, error) {
 	if err := requireReviewer(ctx); err != nil {
 		return nil, err
 	}
-	if in.CycleID == "" || !in.Role.Valid() {
-		return nil, huma.Error422UnprocessableEntity("cycle_id and role are required")
+	if in.CycleID == "" {
+		return nil, huma.Error422UnprocessableEntity("cycle_id is required")
 	}
 	actor := currentActor(ctx)
 	includeAll := actor.HasAnyRole(models.UserRoleChief, models.UserRoleAdmin)
-	items, err := h.store.ListPreferenceLists(ctx, in.CycleID, in.Role, actor.NUID, includeAll)
+	items, err := h.store.ListPreferenceLists(ctx, in.CycleID, actor.NUID, includeAll)
 	if err != nil {
 		return nil, storeErr(err)
 	}
@@ -313,7 +357,7 @@ func (h *preferenceListHandler) update(ctx context.Context, in *UpdatePreference
 	if err != nil {
 		return nil, storeErr(err)
 	}
-	if err := h.checkNotLocked(ctx, list); err != nil {
+	if err := h.checkGroupNotLocked(ctx, list.CycleID); err != nil {
 		return nil, err
 	}
 	updated, err := h.store.UpdatePreferenceList(ctx, in.ID, store.PreferenceListUpdate{
@@ -361,7 +405,7 @@ func (h *preferenceListHandler) addMember(ctx context.Context, in *AddPreference
 	if err != nil {
 		return nil, storeErr(err)
 	}
-	if err := h.checkNotLocked(ctx, list); err != nil {
+	if err := h.checkGroupNotLocked(ctx, list.CycleID); err != nil {
 		return nil, err
 	}
 	target, err := h.store.GetUser(ctx, in.Body.LeadNUID)
@@ -395,7 +439,7 @@ func (h *preferenceListHandler) removeMember(ctx context.Context, in *Preference
 	if err != nil {
 		return nil, storeErr(err)
 	}
-	if err := h.checkNotLocked(ctx, list); err != nil {
+	if err := h.checkGroupNotLocked(ctx, list.CycleID); err != nil {
 		return nil, err
 	}
 	if err := h.store.RemovePreferenceListMember(ctx, in.ID, in.MemberID); err != nil {
@@ -433,15 +477,15 @@ func (h *preferenceListHandler) upsertEntry(ctx context.Context, in *UpsertPrefe
 	if err != nil {
 		return nil, storeErr(err)
 	}
-	if err := h.checkNotLocked(ctx, list); err != nil {
-		return nil, err
-	}
 	app, err := h.store.GetApplication(ctx, in.ApplicationID)
 	if err != nil {
 		return nil, storeErr(err)
 	}
-	if app.CycleID != list.CycleID || app.Role != list.ApplicationRole {
-		return nil, huma.Error422UnprocessableEntity("application is not in this list's cycle/role")
+	if app.CycleID != list.CycleID {
+		return nil, huma.Error422UnprocessableEntity("application is not in this list's cycle")
+	}
+	if err := h.checkEntryNotLocked(ctx, list.CycleID, app.Role); err != nil {
+		return nil, err
 	}
 	entry, err := h.store.UpsertPreferenceListEntry(ctx, store.PreferenceListEntryUpsert{
 		PreferenceListID: in.ID,
@@ -466,7 +510,11 @@ func (h *preferenceListHandler) deleteEntry(ctx context.Context, in *PreferenceL
 	if err != nil {
 		return nil, storeErr(err)
 	}
-	if err := h.checkNotLocked(ctx, list); err != nil {
+	app, err := h.store.GetApplication(ctx, in.ApplicationID)
+	if err != nil {
+		return nil, storeErr(err)
+	}
+	if err := h.checkEntryNotLocked(ctx, list.CycleID, app.Role); err != nil {
 		return nil, err
 	}
 	if err := h.store.DeletePreferenceListEntry(ctx, in.ID, in.ApplicationID); err != nil {
@@ -497,10 +545,20 @@ func (h *preferenceListHandler) reorderEntries(ctx context.Context, in *ReorderP
 	if err != nil {
 		return nil, storeErr(err)
 	}
-	if err := h.checkNotLocked(ctx, list); err != nil {
+	if len(in.Body.ApplicationIDs) == 0 {
+		return nil, huma.Error422UnprocessableEntity("application_ids is required")
+	}
+	roles, err := h.store.DistinctApplicationRoles(ctx, in.Body.ApplicationIDs, list.CycleID)
+	if err != nil {
+		return nil, storeErr(err)
+	}
+	if len(roles) != 1 {
+		return nil, huma.Error422UnprocessableEntity("application_ids must all share one role within this list's cycle")
+	}
+	if err := h.checkEntryNotLocked(ctx, list.CycleID, roles[0]); err != nil {
 		return nil, err
 	}
-	current, err := h.store.ListPreferenceListEntryApplicationIDs(ctx, in.ID)
+	current, err := h.store.ListPreferenceListEntryApplicationIDs(ctx, in.ID, roles[0])
 	if err != nil {
 		return nil, storeErr(err)
 	}
@@ -600,7 +658,7 @@ func (h *preferenceListHandler) setMeetingDay(ctx context.Context, in *SetPrefer
 	if err != nil {
 		return nil, storeErr(err)
 	}
-	if err := h.checkNotLocked(ctx, list); err != nil {
+	if err := h.checkGroupNotLocked(ctx, list.CycleID); err != nil {
 		return nil, err
 	}
 	updated, err := h.store.UpdatePreferenceListMeetingDay(ctx, in.ID, in.Body.MeetingDay)

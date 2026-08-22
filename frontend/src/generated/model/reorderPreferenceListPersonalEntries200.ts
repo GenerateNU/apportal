@@ -5,10 +5,6 @@
  * Generate application portal — applications, reviews, and the hiring pipeline.
  * OpenAPI spec version: 0.1.0
  */
+import type { PreferenceListPersonalEntryDetail } from './preferenceListPersonalEntryDetail';
 
-export type ListPreferenceListsParams = {
-/**
- * Cycle ID
- */
-cycle_id?: string;
-};
+export type ReorderPreferenceListPersonalEntries200 = PreferenceListPersonalEntryDetail[] | null;

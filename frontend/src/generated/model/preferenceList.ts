@@ -5,12 +5,10 @@
  * Generate application portal — applications, reviews, and the hiring pipeline.
  * OpenAPI spec version: 0.1.0
  */
-import type { PreferenceListApplicationRole } from './preferenceListApplicationRole';
 
 export interface PreferenceList {
   /** A URL to the JSON Schema for this object. */
   readonly $schema?: string;
-  application_role: PreferenceListApplicationRole;
   created_at: string;
   created_by: string;
   cycle_id: string;

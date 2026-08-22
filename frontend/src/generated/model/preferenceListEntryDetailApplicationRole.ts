@@ -6,11 +6,11 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type PreferenceListDetailApplicationRole = typeof PreferenceListDetailApplicationRole[keyof typeof PreferenceListDetailApplicationRole];
+export type PreferenceListEntryDetailApplicationRole = typeof PreferenceListEntryDetailApplicationRole[keyof typeof PreferenceListEntryDetailApplicationRole];
 
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-export const PreferenceListDetailApplicationRole = {
+export const PreferenceListEntryDetailApplicationRole = {
   software_engineer: 'software_engineer',
   software_designer: 'software_designer',
 } as const;

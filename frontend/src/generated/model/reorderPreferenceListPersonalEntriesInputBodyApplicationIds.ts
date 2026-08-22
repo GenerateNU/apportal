@@ -6,9 +6,4 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ListPreferenceListsParams = {
-/**
- * Cycle ID
- */
-cycle_id?: string;
-};
+export type ReorderPreferenceListPersonalEntriesInputBodyApplicationIds = string[] | null;

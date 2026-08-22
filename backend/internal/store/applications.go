@@ -117,6 +117,23 @@ func (s *Store) CreateApplication(ctx context.Context, in ApplicationCreate) (mo
 	return a, err
 }
 
+// DistinctApplicationRoles returns the distinct application_role values
+// among the given application ids, restricted to cycleID — lets a caller
+// (e.g. a preference-list reorder request) check that a batch of ids all
+// share one role within one cycle before treating them as a role-scoped
+// unit.
+func (s *Store) DistinctApplicationRoles(ctx context.Context, ids []string, cycleID string) ([]models.Role, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	const q = `SELECT DISTINCT application_role FROM applications WHERE id = ANY($1::uuid[]) AND cycle_id = $2`
+	rows, err := s.db.Query(ctx, q, ids, cycleID)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, pgx.RowTo[models.Role])
+}
+
 func (s *Store) GetApplication(ctx context.Context, id string) (models.Application, error) {
 	const q = `SELECT ` + applicationColumns + ` FROM applications WHERE id = $1`
 	rows, err := s.db.Query(ctx, q, id)

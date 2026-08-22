@@ -31,6 +31,8 @@ import type {
   PreferenceListEntry as GenPreferenceListEntry,
   PreferenceListEntryDetail as GenPreferenceListEntryDetail,
   PreferenceListMember as GenPreferenceListMember,
+  PreferenceListPersonalEntry as GenPreferenceListPersonalEntry,
+  PreferenceListPersonalEntryDetail as GenPreferenceListPersonalEntryDetail,
   PreferenceListSummary as GenPreferenceListSummary,
   Question as GenQuestion,
   QuestionAverageScore,
@@ -230,11 +232,13 @@ export type PreferenceListStatus = 'draft' | 'submitted'
 // preference list's members pick one of these to plan around.
 export type MeetingDay = 'monday' | 'tuesday' | 'wednesday' | 'thursday'
 
+// A group is scoped to a cycle only — role lives on each entry (see
+// PreferenceListEntryDetail.application_role), not on the group itself, so
+// one group covers every role in its cycle.
 export type PreferenceList = Omit<
   GenPreferenceList,
-  '$schema' | 'application_role' | 'status' | 'meeting_day'
+  '$schema' | 'status' | 'meeting_day'
 > & {
-  application_role: Role
   status: PreferenceListStatus
   meeting_day?: MeetingDay
 }
@@ -243,9 +247,8 @@ export type PreferenceList = Omit<
 // encode as `null`); callers always want an array.
 export type PreferenceListSummary = Omit<
   GenPreferenceListSummary,
-  'application_role' | 'status' | 'member_names' | 'meeting_day'
+  'status' | 'member_names' | 'meeting_day'
 > & {
-  application_role: Role
   status: PreferenceListStatus
   member_names: string[]
   meeting_day?: MeetingDay
@@ -255,23 +258,40 @@ export type PreferenceListMember = Omit<GenPreferenceListMember, '$schema'>
 
 export type PreferenceListEntry = Omit<GenPreferenceListEntry, '$schema'>
 
-export type PreferenceListEntryDetail = GenPreferenceListEntryDetail
+export type PreferenceListEntryDetail = Omit<
+  GenPreferenceListEntryDetail,
+  'application_role'
+> & {
+  application_role: Role
+}
 
-// members/entries are nullable in the generated type (an empty Go slice can
-// encode as `null`); callers always want an array.
+export type PreferenceListPersonalEntry = Omit<
+  GenPreferenceListPersonalEntry,
+  '$schema'
+>
+
+export type PreferenceListPersonalEntryDetail = Omit<
+  GenPreferenceListPersonalEntryDetail,
+  'application_role'
+> & {
+  application_role: Role
+}
+
+// members/entries/personal_entries are nullable in the generated type (an
+// empty Go slice can encode as `null`); callers always want an array.
 export type PreferenceListDetail = Omit<
   GenPreferenceListDetail,
   | '$schema'
-  | 'application_role'
   | 'status'
   | 'members'
   | 'entries'
+  | 'personal_entries'
   | 'meeting_day'
 > & {
-  application_role: Role
   status: PreferenceListStatus
   members: PreferenceListMember[]
   entries: PreferenceListEntryDetail[]
+  personal_entries: PreferenceListPersonalEntryDetail[]
   meeting_day?: MeetingDay
 }
 

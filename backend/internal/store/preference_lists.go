@@ -9,16 +9,15 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/models"
 )
 
-const preferenceListColumns = `id, cycle_id, application_role, name, status, created_by, submitted_at, created_at, updated_at, meeting_day`
+const preferenceListColumns = `id, cycle_id, name, status, created_by, submitted_at, created_at, updated_at, meeting_day`
 
 // PreferenceListCreate carries a new list's initial fields. The creator is
 // added as the first member in the same transaction, so "is a member" (not
 // "is the creator") stays the one access check every other route needs.
 type PreferenceListCreate struct {
-	CycleID         string
-	ApplicationRole models.Role
-	Name            string
-	CreatedBy       string
+	CycleID   string
+	Name      string
+	CreatedBy string
 }
 
 func (s *Store) CreatePreferenceList(ctx context.Context, in PreferenceListCreate) (models.PreferenceList, error) {
@@ -31,10 +30,10 @@ func (s *Store) CreatePreferenceList(ctx context.Context, in PreferenceListCreat
 	defer func() { _ = tx.Rollback(ctx) }()
 
 	const insertList = `
-		INSERT INTO preference_lists (cycle_id, application_role, name, created_by)
-		VALUES ($1, $2, $3, $4)
+		INSERT INTO preference_lists (cycle_id, name, created_by)
+		VALUES ($1, $2, $3)
 		RETURNING ` + preferenceListColumns
-	rows, err := tx.Query(ctx, insertList, in.CycleID, in.ApplicationRole, in.Name, in.CreatedBy)
+	rows, err := tx.Query(ctx, insertList, in.CycleID, in.Name, in.CreatedBy)
 	if err != nil {
 		return list, err
 	}
@@ -67,9 +66,10 @@ func (s *Store) GetPreferenceList(ctx context.Context, id string) (models.Prefer
 	return list, err
 }
 
-// GetPreferenceListDetail bundles a list with its members (added_at order)
-// and entries (rank order, joined to the applicant's name/email) for a
-// single detail-page fetch.
+// GetPreferenceListDetail bundles a list with its members (added_at order),
+// shared entries (rank order, joined to the applicant's name/email/role),
+// and every member's personal entries (owner then rank order) for a single
+// detail-page fetch.
 func (s *Store) GetPreferenceListDetail(ctx context.Context, id string) (models.PreferenceListDetail, error) {
 	var detail models.PreferenceListDetail
 
@@ -92,7 +92,7 @@ func (s *Store) GetPreferenceListDetail(ctx context.Context, id string) (models.
 
 	const entriesQ = `
 		SELECT e.id, e.preference_list_id, e.application_id, e.rank, e.reasoning, e.updated_by, e.created_at, e.updated_at,
-		       u.full_name, u.email
+		       u.full_name, u.email, a.application_role
 		FROM preference_list_entries e
 		JOIN applications a ON a.id = e.application_id
 		JOIN users u ON u.nuid = a.user_nuid
@@ -108,15 +108,35 @@ func (s *Store) GetPreferenceListDetail(ctx context.Context, id string) (models.
 	}
 	detail.Entries = entries
 
+	const personalEntriesQ = `
+		SELECT pe.id, pe.preference_list_id, pe.owner_nuid, pe.application_id, pe.rank, pe.reasoning, pe.created_at, pe.updated_at,
+		       ou.full_name, au.full_name, au.email, a.application_role
+		FROM preference_list_personal_entries pe
+		JOIN applications a ON a.id = pe.application_id
+		JOIN users au ON au.nuid = a.user_nuid
+		JOIN users ou ON ou.nuid = pe.owner_nuid
+		WHERE pe.preference_list_id = $1
+		ORDER BY pe.owner_nuid, pe.rank`
+	personalRows, err := s.db.Query(ctx, personalEntriesQ, id)
+	if err != nil {
+		return detail, err
+	}
+	personalEntries, err := pgx.CollectRows(personalRows, pgx.RowToStructByPos[models.PreferenceListPersonalEntryDetail])
+	if err != nil {
+		return detail, err
+	}
+	detail.PersonalEntries = personalEntries
+
 	return detail, nil
 }
 
-// ListPreferenceLists returns every list for a (cycle, role). Chiefs/admins
-// pass includeAll=true to see every list; anyone else only sees lists they
-// belong to — a list a lead isn't on shouldn't even reveal its name to them.
-func (s *Store) ListPreferenceLists(ctx context.Context, cycleID string, role models.Role, memberNUID string, includeAll bool) ([]models.PreferenceListSummary, error) {
+// ListPreferenceLists returns every group for a cycle. Chiefs/admins pass
+// includeAll=true to see every group; anyone else only sees groups they
+// belong to — a group a lead isn't on shouldn't even reveal its name to
+// them.
+func (s *Store) ListPreferenceLists(ctx context.Context, cycleID string, memberNUID string, includeAll bool) ([]models.PreferenceListSummary, error) {
 	const base = `
-		SELECT pl.id, pl.cycle_id, pl.application_role, pl.name, pl.status, pl.created_by, pl.submitted_at, pl.created_at, pl.updated_at, pl.meeting_day,
+		SELECT pl.id, pl.cycle_id, pl.name, pl.status, pl.created_by, pl.submitted_at, pl.created_at, pl.updated_at, pl.meeting_day,
 		       COUNT(DISTINCT m.id) AS member_count,
 		       COUNT(DISTINCT e.id) AS entry_count,
 		       COALESCE(array_agg(DISTINCT u.full_name) FILTER (WHERE u.full_name IS NOT NULL), '{}')::text[] AS member_names
@@ -124,16 +144,16 @@ func (s *Store) ListPreferenceLists(ctx context.Context, cycleID string, role mo
 		LEFT JOIN preference_list_members m ON m.preference_list_id = pl.id
 		LEFT JOIN users u ON u.nuid = m.lead_nuid
 		LEFT JOIN preference_list_entries e ON e.preference_list_id = pl.id
-		WHERE pl.cycle_id = $1 AND pl.application_role = $2`
+		WHERE pl.cycle_id = $1`
 	const groupOrder = ` GROUP BY pl.id ORDER BY pl.created_at DESC`
 
 	var rows pgx.Rows
 	var err error
 	if includeAll {
-		rows, err = s.db.Query(ctx, base+groupOrder, cycleID, role)
+		rows, err = s.db.Query(ctx, base+groupOrder, cycleID)
 	} else {
-		const memberFilter = ` AND EXISTS (SELECT 1 FROM preference_list_members m2 WHERE m2.preference_list_id = pl.id AND m2.lead_nuid = $3)`
-		rows, err = s.db.Query(ctx, base+memberFilter+groupOrder, cycleID, role, memberNUID)
+		const memberFilter = ` AND EXISTS (SELECT 1 FROM preference_list_members m2 WHERE m2.preference_list_id = pl.id AND m2.lead_nuid = $2)`
+		rows, err = s.db.Query(ctx, base+memberFilter+groupOrder, cycleID, memberNUID)
 	}
 	if err != nil {
 		return nil, err
