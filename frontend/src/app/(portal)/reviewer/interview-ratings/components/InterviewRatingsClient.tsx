@@ -499,7 +499,7 @@ export function InterviewRatingsClient() {
                 className={laneIndex % 2 === 1 ? 'bg-gray-50/60' : undefined}
               >
                 <div
-                  className={`grid border-t border-b border-gray-200 bg-inherit ${SWIMLANE_GRID_COLS_CLASS[visibleColumnDefs.length]}`}
+                  className={`grid w-max min-w-full border-t border-b border-gray-200 bg-inherit ${SWIMLANE_GRID_COLS_CLASS[visibleColumnDefs.length]}`}
                 >
                   <button
                     type="button"
@@ -660,7 +660,7 @@ function RatingCard({
 
   return (
     <Link
-      href={`/reviewer/my-interviews/${application.id}`}
+      href={`/reviewer/my-interviews/${application.id}?from=interview-ratings`}
       className="group flex flex-col gap-2 rounded-lg border border-gray-200 bg-white p-3 shadow-sm transition-shadow hover:shadow-md"
     >
       <div className="flex items-center justify-between gap-2">

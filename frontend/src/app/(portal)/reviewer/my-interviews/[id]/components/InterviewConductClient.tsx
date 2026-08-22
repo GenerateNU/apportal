@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import {
   ArrowLeft,
   ArrowRight,
@@ -269,6 +269,20 @@ function ChallengeCard({
   )
 }
 
+// Which list page linked into this interview — carried through the `from`
+// query param so "Back" (and paging via Previous/Next) returns wherever the
+// reviewer actually came from, instead of always assuming My Interviews.
+const BACK_LINK: Record<string, { href: string; label: string }> = {
+  'interview-ratings': {
+    href: '/reviewer/interview-ratings',
+    label: 'Back to Interview Ratings',
+  },
+}
+const DEFAULT_BACK_LINK = {
+  href: '/reviewer/my-interviews',
+  label: 'Back to My interviews',
+}
+
 export function InterviewConductClient({
   applicationId,
   cycleId,
@@ -281,6 +295,10 @@ export function InterviewConductClient({
   applicantNuid: string
 }) {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const from = searchParams.get('from') ?? ''
+  const backLink = BACK_LINK[from] ?? DEFAULT_BACK_LINK
+  const queueQuery = from ? `?from=${encodeURIComponent(from)}` : ''
   const [scriptOpen, setScriptOpen] = useState(true)
   const { data: currentUser } = useCurrentUser()
   const { data: applicant } = useApplicant(applicantNuid)
@@ -461,11 +479,11 @@ export function InterviewConductClient({
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 bg-white px-4 py-3 sm:px-8">
         <div className="flex items-center gap-4">
           <Link
-            href="/reviewer/my-interviews"
+            href={backLink.href}
             className="text-text-muted hover:text-text-default inline-flex items-center gap-1 text-sm"
           >
             <ArrowLeft size={14} />
-            Back to My interviews
+            {backLink.label}
           </Link>
           <div className="flex items-center gap-3 border-l border-gray-200 pl-4">
             <h1 className="text-text-default text-lg font-semibold">
@@ -497,7 +515,9 @@ export function InterviewConductClient({
               variant="outline"
               size="sm"
               onClick={() =>
-                router.push(`/reviewer/my-interviews/${previousApplicationId}`)
+                router.push(
+                  `/reviewer/my-interviews/${previousApplicationId}${queueQuery}`
+                )
               }
             >
               <ChevronLeft data-icon="inline-start" size={14} />
@@ -509,7 +529,9 @@ export function InterviewConductClient({
               variant="outline"
               size="sm"
               onClick={() =>
-                router.push(`/reviewer/my-interviews/${nextApplicationId}`)
+                router.push(
+                  `/reviewer/my-interviews/${nextApplicationId}${queueQuery}`
+                )
               }
             >
               Next
@@ -597,12 +619,25 @@ export function InterviewConductClient({
               <div className="flex flex-col gap-1.5">
                 <Label>Recording link</Label>
                 {canEditInterview ? (
-                  <Input
-                    value={recordingUrl}
-                    onChange={(e) => setRecordingUrl(e.target.value)}
-                    placeholder="https://…"
-                    disabled={upsertInterview.isPending}
-                  />
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={recordingUrl}
+                      onChange={(e) => setRecordingUrl(e.target.value)}
+                      placeholder="https://…"
+                      disabled={upsertInterview.isPending}
+                    />
+                    {interview?.recording_url && (
+                      <a
+                        href={interview.recording_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-brand-blue inline-flex shrink-0 items-center gap-1 text-sm hover:underline"
+                      >
+                        Open
+                        <ExternalLink size={12} />
+                      </a>
+                    )}
+                  </div>
                 ) : interview?.recording_url ? (
                   <a
                     href={interview.recording_url}
@@ -621,12 +656,25 @@ export function InterviewConductClient({
               <div className="flex flex-col gap-1.5">
                 <Label>Notes link (e.g. Granola)</Label>
                 {canEditInterview ? (
-                  <Input
-                    value={notesUrl}
-                    onChange={(e) => setNotesUrl(e.target.value)}
-                    placeholder="https://…"
-                    disabled={upsertInterview.isPending}
-                  />
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={notesUrl}
+                      onChange={(e) => setNotesUrl(e.target.value)}
+                      placeholder="https://…"
+                      disabled={upsertInterview.isPending}
+                    />
+                    {interview?.notes_url && (
+                      <a
+                        href={interview.notes_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-brand-blue inline-flex shrink-0 items-center gap-1 text-sm hover:underline"
+                      >
+                        Open
+                        <ExternalLink size={12} />
+                      </a>
+                    )}
+                  </div>
                 ) : interview?.notes_url ? (
                   <a
                     href={interview.notes_url}
