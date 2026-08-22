@@ -597,12 +597,25 @@ export function InterviewConductClient({
               <div className="flex flex-col gap-1.5">
                 <Label>Recording link</Label>
                 {canEditInterview ? (
-                  <Input
-                    value={recordingUrl}
-                    onChange={(e) => setRecordingUrl(e.target.value)}
-                    placeholder="https://…"
-                    disabled={upsertInterview.isPending}
-                  />
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={recordingUrl}
+                      onChange={(e) => setRecordingUrl(e.target.value)}
+                      placeholder="https://…"
+                      disabled={upsertInterview.isPending}
+                    />
+                    {interview?.recording_url && (
+                      <a
+                        href={interview.recording_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-brand-blue inline-flex shrink-0 items-center gap-1 text-sm hover:underline"
+                      >
+                        Open
+                        <ExternalLink size={12} />
+                      </a>
+                    )}
+                  </div>
                 ) : interview?.recording_url ? (
                   <a
                     href={interview.recording_url}
@@ -621,12 +634,25 @@ export function InterviewConductClient({
               <div className="flex flex-col gap-1.5">
                 <Label>Notes link (e.g. Granola)</Label>
                 {canEditInterview ? (
-                  <Input
-                    value={notesUrl}
-                    onChange={(e) => setNotesUrl(e.target.value)}
-                    placeholder="https://…"
-                    disabled={upsertInterview.isPending}
-                  />
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={notesUrl}
+                      onChange={(e) => setNotesUrl(e.target.value)}
+                      placeholder="https://…"
+                      disabled={upsertInterview.isPending}
+                    />
+                    {interview?.notes_url && (
+                      <a
+                        href={interview.notes_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-brand-blue inline-flex shrink-0 items-center gap-1 text-sm hover:underline"
+                      >
+                        Open
+                        <ExternalLink size={12} />
+                      </a>
+                    )}
+                  </div>
                 ) : interview?.notes_url ? (
                   <a
                     href={interview.notes_url}
