@@ -98,6 +98,15 @@ export function PreferenceListDetailClient({
   const nameByNuid = new Map<string, string>()
   for (const u of [...leads, ...chiefs]) nameByNuid.set(u.nuid, u.full_name)
 
+  const [selectedRole, setSelectedRole] = useState<Role>(ROLE_COLUMNS[0])
+  const [viewMode, setViewMode] = useState('group')
+
+  const { data: applications = [] } = useApplications(
+    list ? { cycle_id: list.cycle_id, role: selectedRole } : undefined,
+    undefined,
+    { enabled: !!list }
+  )
+
   // Availability is about applicants, not leads: each applicant answers a
   // "Meeting Availability" question on their own application, and they're
   // flagged free/busy against whichever day this group has settled on,
@@ -112,15 +121,16 @@ export function PreferenceListDetailClient({
     ])
   ) as Record<Role, string | undefined>
 
-  // Every entry's (shared and personal, any role) application ids, fetched
-  // once regardless of the active tab/view — switching tabs never triggers a
-  // refetch.
+  // Every entry's (shared and personal, any role) application ids, plus the
+  // current tab's whole candidate pool (so applicants not yet added can also
+  // show a badge in the add-applicant pickers) — fetched once per role tab,
+  // not per row.
   const applicationIdsForAvailability = list
     ? [
         ...new Set(
-          [...list.entries, ...list.personal_entries].map(
-            (e) => e.application_id
-          )
+          [...list.entries, ...list.personal_entries]
+            .map((e) => e.application_id)
+            .concat(applications.map((a) => a.id))
         ),
       ]
     : []
@@ -128,9 +138,6 @@ export function PreferenceListDetailClient({
     applicationIdsForAvailability,
   ])
   const answersByApplicationId = availabilityAnswers?.data ?? {}
-
-  const [selectedRole, setSelectedRole] = useState<Role>(ROLE_COLUMNS[0])
-  const [viewMode, setViewMode] = useState('group')
 
   // Deadlines are still per (cycle, role) — a group covers every role, so we
   // need every role's deadline to know both the current tab's lock state
@@ -172,12 +179,6 @@ export function PreferenceListDetailClient({
     setName(list.name)
     setNameSeeded(true)
   }
-
-  const { data: applications = [] } = useApplications(
-    list ? { cycle_id: list.cycle_id, role: selectedRole } : undefined,
-    undefined,
-    { enabled: !!list }
-  )
 
   if (isError) {
     const notFound = error instanceof APIError && error.status === 404
