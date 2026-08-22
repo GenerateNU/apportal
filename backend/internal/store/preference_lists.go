@@ -214,42 +214,6 @@ func (s *Store) UpdatePreferenceListMeetingDay(ctx context.Context, id string, m
 	return list, err
 }
 
-// GetLeadMeetingAvailability resolves each nuid's own selected options from
-// the "Meeting Availability" question on their most recent application (as
-// an applicant, in whatever cycle they applied) — used to flag who's free
-// for a preference list's chosen meeting day when picking new members.
-// Every requested nuid gets a row; Options is an empty array when they have
-// no application, their application predates that question, or they left it
-// blank.
-func (s *Store) GetLeadMeetingAvailability(ctx context.Context, nuids []string) ([]models.LeadMeetingAvailability, error) {
-	if len(nuids) == 0 {
-		return nil, nil
-	}
-	const q = `
-		WITH latest_app AS (
-			SELECT DISTINCT ON (user_nuid) id AS application_id, user_nuid, cycle_id, application_role
-			FROM applications
-			WHERE user_nuid = ANY($1::text[])
-			ORDER BY user_nuid, updated_at DESC
-		),
-		avail_question AS (
-			SELECT DISTINCT ON (la.application_id) la.application_id, la.user_nuid, q.id AS question_id
-			FROM latest_app la
-			JOIN questions q ON q.cycle_id = la.cycle_id
-				AND (q.application_role = la.application_role OR q.application_role IS NULL)
-				AND q.question_text ILIKE '%availability%'
-			ORDER BY la.application_id, q.display_order
-		)
-		SELECT aq.user_nuid, COALESCE(wa.answer_options, '[]'::jsonb)
-		FROM avail_question aq
-		LEFT JOIN written_answers wa ON wa.application_id = aq.application_id AND wa.question_id = aq.question_id`
-	rows, err := s.db.Query(ctx, q, nuids)
-	if err != nil {
-		return nil, err
-	}
-	return pgx.CollectRows(rows, pgx.RowToStructByPos[models.LeadMeetingAvailability])
-}
-
 func (s *Store) DeletePreferenceList(ctx context.Context, id string) error {
 	tag, err := s.db.Exec(ctx, `DELETE FROM preference_lists WHERE id = $1`, id)
 	if err != nil {

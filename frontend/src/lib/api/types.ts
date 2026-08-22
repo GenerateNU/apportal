@@ -24,7 +24,6 @@ import type {
   InterviewRecordingReview as GenInterviewRecordingReview,
   InterviewReviewAssignment as GenInterviewReviewAssignment,
   InterviewScript as GenInterviewScript,
-  LeadMeetingAvailability as GenLeadMeetingAvailability,
   PreferenceList as GenPreferenceList,
   PreferenceListDeadline as GenPreferenceListDeadline,
   PreferenceListDetail as GenPreferenceListDetail,
@@ -300,14 +299,4 @@ export type PreferenceListDeadline = Omit<
   '$schema' | 'application_role'
 > & {
   application_role: Role
-}
-
-// options is JSONB (a free-form checkbox-answer array) on the backend, so it
-// arrives untyped; it's really the selected labels from the applicant's own
-// "Meeting Availability" answer (e.g. ["Thursday 7:30-9:00 PM"]).
-export type LeadMeetingAvailability = Omit<
-  GenLeadMeetingAvailability,
-  'options'
-> & {
-  options: string[]
 }

@@ -39,21 +39,6 @@ func (h *preferenceListHandler) register(api huma.API) {
 		Errors:      []int{http.StatusUnauthorized, http.StatusUnprocessableEntity},
 	}, h.list)
 
-	// Registered before GET /preference-lists/{id} — this shares the same
-	// method and path depth, and huma/Fiber matches literal segments against
-	// registration order rather than always preferring them, so a literal
-	// route registered after a param route at the same shape loses to it
-	// (mirrors why /users/me must precede /users/{nuid} in users.go).
-	huma.Register(api, huma.Operation{
-		OperationID: "get-lead-meeting-availability",
-		Method:      http.MethodGet,
-		Path:        "/preference-lists/lead-availability",
-		Summary:     "Get several leads' own meeting-availability answers",
-		Description: "Reviewer only. Resolved from each lead's own most recent application, for flagging who's free before adding them to a list.",
-		Tags:        []string{"Preference lists"},
-		Errors:      []int{http.StatusUnauthorized, http.StatusUnprocessableEntity},
-	}, h.getLeadAvailability)
-
 	huma.Register(api, huma.Operation{
 		OperationID: "get-preference-list",
 		Method:      http.MethodGet,
@@ -666,30 +651,4 @@ func (h *preferenceListHandler) setMeetingDay(ctx context.Context, in *SetPrefer
 		return nil, storeErr(err)
 	}
 	return &PreferenceListOutput{Body: updated}, nil
-}
-
-type GetLeadAvailabilityInput struct {
-	NUIDs string `query:"nuids" doc:"Comma-separated lead NUIDs"`
-}
-
-type LeadAvailabilityOutput struct {
-	Body []models.LeadMeetingAvailability
-}
-
-func (h *preferenceListHandler) getLeadAvailability(ctx context.Context, in *GetLeadAvailabilityInput) (*LeadAvailabilityOutput, error) {
-	if err := requireReviewer(ctx); err != nil {
-		return nil, err
-	}
-	nuids := parseBulkIDs(in.NUIDs)
-	if len(nuids) == 0 {
-		return &LeadAvailabilityOutput{Body: []models.LeadMeetingAvailability{}}, nil
-	}
-	if len(nuids) > maxBulkApplications {
-		return nil, huma.Error422UnprocessableEntity("too many nuids")
-	}
-	items, err := h.store.GetLeadMeetingAvailability(ctx, nuids)
-	if err != nil {
-		return nil, storeErr(err)
-	}
-	return &LeadAvailabilityOutput{Body: items}, nil
 }

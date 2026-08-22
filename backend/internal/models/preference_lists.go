@@ -1,7 +1,6 @@
 package models
 
 import (
-	"encoding/json"
 	"time"
 )
 
@@ -136,14 +135,4 @@ type PreferenceListDeadline struct {
 	ClosesAt        *time.Time `json:"closes_at,omitempty"`
 	UpdatedAt       time.Time  `json:"updated_at"`
 	UpdatedBy       *string    `json:"updated_by,omitempty"`
-}
-
-// LeadMeetingAvailability is a lead's own selected options from the "Meeting
-// Availability" question on their most recent application (as an applicant,
-// in whatever cycle they applied) — Options is empty when they have no
-// application, or their application predates that question, or they simply
-// left it blank.
-type LeadMeetingAvailability struct {
-	NUID    string          `json:"nuid"`
-	Options json.RawMessage `json:"options"`
 }

@@ -18,17 +18,19 @@ import {
 import { SearchableSelect } from '@/components/ui/searchable-select'
 import {
   AVAILABILITY_DAY_OPTIONS,
+  availabilityOptionsFor,
+  findAvailabilityQuestionId,
   MEETING_DAY_LABEL,
 } from '@/app/(portal)/reviewer/applications/components/meetingAvailability'
 import { APIError } from '@/lib/api/client'
 import type { MeetingDay, PreferenceListStatus, Role } from '@/lib/api/types'
+import { useAnswersByApplicationIdBatches } from '@/lib/queries/answers'
 import { useApplications } from '@/lib/queries/applications'
 import {
   useAddPreferenceListMember,
   useDeletePersonalPreferenceListEntry,
   useDeletePreferenceList,
   useDeletePreferenceListEntry,
-  useLeadMeetingAvailability,
   usePreferenceList,
   usePreferenceListDeadline,
   useRemovePreferenceListMember,
@@ -40,13 +42,14 @@ import {
   useUpsertPersonalPreferenceListEntry,
   useUpsertPreferenceListEntry,
 } from '@/lib/queries/preference-lists'
+import { useQuestionsByCycleRoles } from '@/lib/queries/questions'
 import { useChiefs, useCurrentUser, useLeads } from '@/lib/queries/users'
 import { ROLE_CHIP_CLASS, ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 
-// True/false once we know; null when this lead has no usable answer at all
-// (no application, or one that predates the availability question).
+// True/false once we know; null when the applicant left no usable answer at
+// all (no answer to the availability question, or it predates it).
 function isAvailableOn(
-  options: string[] | undefined,
+  options: string[] | null | undefined,
   day: MeetingDay
 ): boolean | null {
   if (!options) return null
@@ -95,14 +98,36 @@ export function PreferenceListDetailClient({
   const nameByNuid = new Map<string, string>()
   for (const u of [...leads, ...chiefs]) nameByNuid.set(u.nuid, u.full_name)
 
-  // Every reviewer's own availability, fetched once for the whole page
-  // (not per row) — used to flag who's free for the list's chosen meeting
-  // day, both on existing member chips and the add-member picker.
-  const allReviewerNuids = [
-    ...new Set([...leads, ...chiefs].map((u) => u.nuid)),
-  ]
-  const { data: availabilityByNuid } =
-    useLeadMeetingAvailability(allReviewerNuids)
+  // Availability is about applicants, not leads: each applicant answers a
+  // "Meeting Availability" question on their own application, and they're
+  // flagged free/busy against whichever day this group has settled on,
+  // scoped to their own role's copy of that question.
+  const questionQueries = useQuestionsByCycleRoles(
+    ROLE_COLUMNS.map((r) => ({ cycleId: list?.cycle_id ?? '', role: r }))
+  )
+  const availabilityQuestionIdByRole = Object.fromEntries(
+    ROLE_COLUMNS.map((r, i) => [
+      r,
+      findAvailabilityQuestionId(questionQueries[i]?.data),
+    ])
+  ) as Record<Role, string | undefined>
+
+  // Every entry's (shared and personal, any role) application ids, fetched
+  // once regardless of the active tab/view — switching tabs never triggers a
+  // refetch.
+  const applicationIdsForAvailability = list
+    ? [
+        ...new Set(
+          [...list.entries, ...list.personal_entries].map(
+            (e) => e.application_id
+          )
+        ),
+      ]
+    : []
+  const [availabilityAnswers] = useAnswersByApplicationIdBatches([
+    applicationIdsForAvailability,
+  ])
+  const answersByApplicationId = availabilityAnswers?.data ?? {}
 
   const [selectedRole, setSelectedRole] = useState<Role>(ROLE_COLUMNS[0])
   const [viewMode, setViewMode] = useState('group')
@@ -192,6 +217,15 @@ export function PreferenceListDetailClient({
     .sort((a, b) => a.full_name.localeCompare(b.full_name))
 
   const meetingDay = list.meeting_day
+
+  function availabilityBadgeFor(applicationId: string, role: Role) {
+    if (!meetingDay) return undefined
+    const options = availabilityOptionsFor(
+      answersByApplicationId[applicationId],
+      availabilityQuestionIdByRole[role]
+    )
+    return availabilityBadge(isAvailableOn(options, meetingDay))
+  }
 
   const roleEntries = list.entries.filter(
     (e) => e.application_role === selectedRole
@@ -433,54 +467,32 @@ export function PreferenceListDetailClient({
           Members
         </h2>
         <div className="flex flex-wrap items-center gap-2">
-          {list.members.map((m) => {
-            const badge = meetingDay
-              ? availabilityBadge(
-                  isAvailableOn(
-                    availabilityByNuid?.get(m.lead_nuid),
-                    meetingDay
-                  )
-                )
-              : undefined
-            return (
-              <span
-                key={m.id}
-                className="bg-muted inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm"
-              >
-                {nameByNuid.get(m.lead_nuid) ?? m.lead_nuid}
-                {badge && (
-                  <span
-                    className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${badge.className}`}
-                  >
-                    {badge.label}
-                  </span>
-                )}
-                {!groupLocked && (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      removeMember.mutate({ listId: list.id, memberId: m.id })
-                    }
-                    aria-label={`Remove ${nameByNuid.get(m.lead_nuid) ?? m.lead_nuid}`}
-                    className="text-text-faint hover:text-text-muted"
-                  >
-                    <X size={12} />
-                  </button>
-                )}
-              </span>
-            )
-          })}
+          {list.members.map((m) => (
+            <span
+              key={m.id}
+              className="bg-muted inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm"
+            >
+              {nameByNuid.get(m.lead_nuid) ?? m.lead_nuid}
+              {!groupLocked && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    removeMember.mutate({ listId: list.id, memberId: m.id })
+                  }
+                  aria-label={`Remove ${nameByNuid.get(m.lead_nuid) ?? m.lead_nuid}`}
+                  className="text-text-faint hover:text-text-muted"
+                >
+                  <X size={12} />
+                </button>
+              )}
+            </span>
+          ))}
         </div>
         {!groupLocked && (
           <SearchableSelect
             options={availableToAdd.map((u) => ({
               value: u.nuid,
               label: u.full_name,
-              badge: meetingDay
-                ? availabilityBadge(
-                    isAvailableOn(availabilityByNuid?.get(u.nuid), meetingDay)
-                  )
-                : undefined,
             }))}
             onValueChange={(nuid) =>
               addMember.mutate({ listId: list.id, leadNuid: nuid })
@@ -523,6 +535,10 @@ export function PreferenceListDetailClient({
                 <EntryRow
                   key={entry.id}
                   entry={entry}
+                  availabilityBadge={availabilityBadgeFor(
+                    entry.application_id,
+                    entry.application_role
+                  )}
                   index={index}
                   total={roleEntries.length}
                   locked={entryLocked}
@@ -553,6 +569,7 @@ export function PreferenceListDetailClient({
                 options={availableApplications.map((a) => ({
                   value: a.id,
                   label: a.full_name || a.user_nuid,
+                  badge: availabilityBadgeFor(a.id, selectedRole),
                 }))}
                 onValueChange={(applicationId) =>
                   upsertEntry.mutate({ listId: list.id, applicationId })
@@ -572,6 +589,10 @@ export function PreferenceListDetailClient({
                 <EntryRow
                   key={entry.id}
                   entry={entry}
+                  availabilityBadge={availabilityBadgeFor(
+                    entry.application_id,
+                    entry.application_role
+                  )}
                   index={index}
                   total={personalEntriesForView.length}
                   locked={!isViewingMine}
@@ -604,6 +625,7 @@ export function PreferenceListDetailClient({
                 options={availablePersonalApplications.map((a) => ({
                   value: a.id,
                   label: a.full_name || a.user_nuid,
+                  badge: availabilityBadgeFor(a.id, selectedRole),
                 }))}
                 onValueChange={(applicationId) =>
                   upsertPersonalEntry.mutate({ listId: list.id, applicationId })
@@ -624,6 +646,7 @@ export function PreferenceListDetailClient({
 
 function EntryRow({
   entry,
+  availabilityBadge,
   index,
   total,
   locked,
@@ -638,6 +661,7 @@ function EntryRow({
     email: string
     reasoning?: string
   }
+  availabilityBadge?: { label: string; className: string }
   index: number
   total: number
   locked: boolean
@@ -680,9 +704,18 @@ function EntryRow({
       <div className="flex flex-1 flex-col gap-1.5">
         <div className="flex items-center justify-between gap-2">
           <div>
-            <p className="text-text-default text-sm font-medium">
-              {entry.full_name}
-            </p>
+            <div className="flex items-center gap-1.5">
+              <p className="text-text-default text-sm font-medium">
+                {entry.full_name}
+              </p>
+              {availabilityBadge && (
+                <span
+                  className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${availabilityBadge.className}`}
+                >
+                  {availabilityBadge.label}
+                </span>
+              )}
+            </div>
             <p className="text-text-subtle text-xs">{entry.email}</p>
           </div>
           {!locked && (
