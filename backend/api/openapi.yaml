@@ -1805,6 +1805,16 @@ components:
         - assigned_by
         - assigned_at
       type: object
+    LeadMeetingAvailability:
+      additionalProperties: false
+      properties:
+        nuid:
+          type: string
+        options: {}
+      required:
+        - nuid
+        - options
+      type: object
     LeadSelection:
       additionalProperties: false
       properties:
@@ -2077,6 +2087,8 @@ components:
           type: string
         id:
           type: string
+        meeting_day:
+          type: string
         name:
           type: string
         status:
@@ -2159,6 +2171,8 @@ components:
             - array
             - "null"
         id:
+          type: string
+        meeting_day:
           type: string
         members:
           items:
@@ -2310,6 +2324,8 @@ components:
           format: int64
           type: integer
         id:
+          type: string
+        meeting_day:
           type: string
         member_count:
           format: int64
@@ -2760,6 +2776,20 @@ components:
           type: string
         closes_at:
           format: date-time
+          type: string
+      type: object
+    SetPreferenceListMeetingDayInputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/SetPreferenceListMeetingDayInputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        meeting_day:
+          description: monday, tuesday, wednesday, or thursday; omit/null to clear
           type: string
       type: object
     SetReviewReleaseInputBody:
@@ -7712,6 +7742,50 @@ paths:
       summary: Create a preference list
       tags:
         - Preference lists
+  /preference-lists/lead-availability:
+    get:
+      description: Reviewer only. Resolved from each lead's own most recent application, for flagging who's free before adding them to a list.
+      operationId: get-lead-meeting-availability
+      parameters:
+        - description: Comma-separated lead NUIDs
+          explode: false
+          in: query
+          name: nuids
+          schema:
+            description: Comma-separated lead NUIDs
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/LeadMeetingAvailability"
+                type:
+                  - array
+                  - "null"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Get several leads' own meeting-availability answers
+      tags:
+        - Preference lists
   /preference-lists/{id}:
     delete:
       description: Chief only. Deletes every member and entry. Allowed even after the (cycle, role) deadline has passed, for administrative cleanup.
@@ -8035,6 +8109,63 @@ paths:
                 $ref: "#/components/schemas/ErrorModel"
           description: Internal Server Error
       summary: Reorder a preference list's entries
+      tags:
+        - Preference lists
+  /preference-lists/{id}/meeting-day:
+    put:
+      operationId: set-preference-list-meeting-day
+      parameters:
+        - description: Preference list ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Preference list ID
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetPreferenceListMeetingDayInputBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PreferenceList"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Set (or clear) the day this list's members plan to meet
       tags:
         - Preference lists
   /preference-lists/{id}/members:

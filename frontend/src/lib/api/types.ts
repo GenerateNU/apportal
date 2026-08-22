@@ -24,6 +24,7 @@ import type {
   InterviewRecordingReview as GenInterviewRecordingReview,
   InterviewReviewAssignment as GenInterviewReviewAssignment,
   InterviewScript as GenInterviewScript,
+  LeadMeetingAvailability as GenLeadMeetingAvailability,
   PreferenceList as GenPreferenceList,
   PreferenceListDeadline as GenPreferenceListDeadline,
   PreferenceListDetail as GenPreferenceListDetail,
@@ -224,23 +225,30 @@ export type { QuestionAverageScore }
 
 export type PreferenceListStatus = 'draft' | 'submitted'
 
+// The day-of-week set the application's own "Meeting Availability" question
+// offers (see reviewer/applications/components/meetingAvailability.ts) — a
+// preference list's members pick one of these to plan around.
+export type MeetingDay = 'monday' | 'tuesday' | 'wednesday' | 'thursday'
+
 export type PreferenceList = Omit<
   GenPreferenceList,
-  '$schema' | 'application_role' | 'status'
+  '$schema' | 'application_role' | 'status' | 'meeting_day'
 > & {
   application_role: Role
   status: PreferenceListStatus
+  meeting_day?: MeetingDay
 }
 
 // member_names is nullable in the generated type (an empty Go slice can
 // encode as `null`); callers always want an array.
 export type PreferenceListSummary = Omit<
   GenPreferenceListSummary,
-  'application_role' | 'status' | 'member_names'
+  'application_role' | 'status' | 'member_names' | 'meeting_day'
 > & {
   application_role: Role
   status: PreferenceListStatus
   member_names: string[]
+  meeting_day?: MeetingDay
 }
 
 export type PreferenceListMember = Omit<GenPreferenceListMember, '$schema'>
@@ -253,12 +261,18 @@ export type PreferenceListEntryDetail = GenPreferenceListEntryDetail
 // encode as `null`); callers always want an array.
 export type PreferenceListDetail = Omit<
   GenPreferenceListDetail,
-  '$schema' | 'application_role' | 'status' | 'members' | 'entries'
+  | '$schema'
+  | 'application_role'
+  | 'status'
+  | 'members'
+  | 'entries'
+  | 'meeting_day'
 > & {
   application_role: Role
   status: PreferenceListStatus
   members: PreferenceListMember[]
   entries: PreferenceListEntryDetail[]
+  meeting_day?: MeetingDay
 }
 
 export type PreferenceListDeadline = Omit<
@@ -266,4 +280,14 @@ export type PreferenceListDeadline = Omit<
   '$schema' | 'application_role'
 > & {
   application_role: Role
+}
+
+// options is JSONB (a free-form checkbox-answer array) on the backend, so it
+// arrives untyped; it's really the selected labels from the applicant's own
+// "Meeting Availability" answer (e.g. ["Thursday 7:30-9:00 PM"]).
+export type LeadMeetingAvailability = Omit<
+  GenLeadMeetingAvailability,
+  'options'
+> & {
+  options: string[]
 }

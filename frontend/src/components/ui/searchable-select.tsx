@@ -13,6 +13,9 @@ import { cn } from '@/lib/utils'
 export interface SearchableSelectOption {
   value: string
   label: string
+  // A small pill shown to the right of the label (e.g. an availability
+  // indicator) — purely informational, doesn't affect filtering.
+  badge?: { label: string; className: string }
 }
 
 // A filterable dropdown for option lists too long to scan by eye (e.g.
@@ -106,7 +109,17 @@ export function SearchableSelect({
                   size={14}
                   className={o.value === value ? 'opacity-100' : 'opacity-0'}
                 />
-                <span className="truncate">{o.label}</span>
+                <span className="min-w-0 flex-1 truncate">{o.label}</span>
+                {o.badge && (
+                  <span
+                    className={cn(
+                      'shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium',
+                      o.badge.className
+                    )}
+                  >
+                    {o.badge.label}
+                  </span>
+                )}
               </button>
             ))
           )}

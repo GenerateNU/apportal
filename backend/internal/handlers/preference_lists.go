@@ -39,6 +39,21 @@ func (h *preferenceListHandler) register(api huma.API) {
 		Errors:      []int{http.StatusUnauthorized, http.StatusUnprocessableEntity},
 	}, h.list)
 
+	// Registered before GET /preference-lists/{id} — this shares the same
+	// method and path depth, and huma/Fiber matches literal segments against
+	// registration order rather than always preferring them, so a literal
+	// route registered after a param route at the same shape loses to it
+	// (mirrors why /users/me must precede /users/{nuid} in users.go).
+	huma.Register(api, huma.Operation{
+		OperationID: "get-lead-meeting-availability",
+		Method:      http.MethodGet,
+		Path:        "/preference-lists/lead-availability",
+		Summary:     "Get several leads' own meeting-availability answers",
+		Description: "Reviewer only. Resolved from each lead's own most recent application, for flagging who's free before adding them to a list.",
+		Tags:        []string{"Preference lists"},
+		Errors:      []int{http.StatusUnauthorized, http.StatusUnprocessableEntity},
+	}, h.getLeadAvailability)
+
 	huma.Register(api, huma.Operation{
 		OperationID: "get-preference-list",
 		Method:      http.MethodGet,
@@ -141,6 +156,22 @@ func (h *preferenceListHandler) register(api huma.API) {
 		Tags:        []string{"Preference lists"},
 		Errors:      []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusUnprocessableEntity},
 	}, h.setDeadline)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "set-preference-list-meeting-day",
+		Method:      http.MethodPut,
+		Path:        "/preference-lists/{id}/meeting-day",
+		Summary:     "Set (or clear) the day this list's members plan to meet",
+		Tags:        []string{"Preference lists"},
+		Errors:      []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound, http.StatusUnprocessableEntity},
+	}, h.setMeetingDay)
+}
+
+var validMeetingDays = map[string]bool{
+	"monday":    true,
+	"tuesday":   true,
+	"wednesday": true,
+	"thursday":  true,
 }
 
 // requireAccess rejects callers who aren't a member of the list and aren't a
@@ -546,4 +577,61 @@ func (h *preferenceListHandler) setDeadline(ctx context.Context, in *SetPreferen
 		return nil, storeErr(err)
 	}
 	return &PreferenceListDeadlineOutput{Body: d}, nil
+}
+
+type SetPreferenceListMeetingDayInput struct {
+	ID   string `path:"id" doc:"Preference list ID"`
+	Body struct {
+		MeetingDay *string `json:"meeting_day,omitempty" doc:"monday, tuesday, wednesday, or thursday; omit/null to clear"`
+	}
+}
+
+func (h *preferenceListHandler) setMeetingDay(ctx context.Context, in *SetPreferenceListMeetingDayInput) (*PreferenceListOutput, error) {
+	if err := requireReviewer(ctx); err != nil {
+		return nil, err
+	}
+	if err := h.requireAccess(ctx, in.ID); err != nil {
+		return nil, err
+	}
+	if in.Body.MeetingDay != nil && !validMeetingDays[*in.Body.MeetingDay] {
+		return nil, huma.Error422UnprocessableEntity("meeting_day must be monday, tuesday, wednesday, or thursday")
+	}
+	list, err := h.store.GetPreferenceList(ctx, in.ID)
+	if err != nil {
+		return nil, storeErr(err)
+	}
+	if err := h.checkNotLocked(ctx, list); err != nil {
+		return nil, err
+	}
+	updated, err := h.store.UpdatePreferenceListMeetingDay(ctx, in.ID, in.Body.MeetingDay)
+	if err != nil {
+		return nil, storeErr(err)
+	}
+	return &PreferenceListOutput{Body: updated}, nil
+}
+
+type GetLeadAvailabilityInput struct {
+	NUIDs string `query:"nuids" doc:"Comma-separated lead NUIDs"`
+}
+
+type LeadAvailabilityOutput struct {
+	Body []models.LeadMeetingAvailability
+}
+
+func (h *preferenceListHandler) getLeadAvailability(ctx context.Context, in *GetLeadAvailabilityInput) (*LeadAvailabilityOutput, error) {
+	if err := requireReviewer(ctx); err != nil {
+		return nil, err
+	}
+	nuids := parseBulkIDs(in.NUIDs)
+	if len(nuids) == 0 {
+		return &LeadAvailabilityOutput{Body: []models.LeadMeetingAvailability{}}, nil
+	}
+	if len(nuids) > maxBulkApplications {
+		return nil, huma.Error422UnprocessableEntity("too many nuids")
+	}
+	items, err := h.store.GetLeadMeetingAvailability(ctx, nuids)
+	if err != nil {
+		return nil, storeErr(err)
+	}
+	return &LeadAvailabilityOutput{Body: items}, nil
 }

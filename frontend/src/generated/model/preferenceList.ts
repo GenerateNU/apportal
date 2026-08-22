@@ -15,6 +15,7 @@ export interface PreferenceList {
   created_by: string;
   cycle_id: string;
   id: string;
+  meeting_day?: string;
   name: string;
   status: string;
   submitted_at?: string;
