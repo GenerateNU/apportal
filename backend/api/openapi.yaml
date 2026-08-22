@@ -8211,7 +8211,7 @@ paths:
         - Preference lists
   /preference-lists/{id}/members:
     post:
-      description: Any current member (or a chief/admin) may add another lead, chief, or admin.
+      description: Any current member (or a chief/admin) may add another lead, chief, or admin. Rejected once the group has 4 members.
       operationId: add-preference-list-member
       parameters:
         - description: Preference list ID

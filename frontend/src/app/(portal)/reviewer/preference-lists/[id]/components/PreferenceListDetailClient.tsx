@@ -74,6 +74,10 @@ const STATUS_LABEL: Record<PreferenceListStatus, string> = {
   submitted: 'Submitted',
 }
 
+// Matches the backend's maxPreferenceListMembers — enforced there, mirrored
+// here just to hide the picker before a rejected request round-trips.
+const MAX_PREFERENCE_LIST_MEMBERS = 4
+
 function deadlinePassed(closesAt: string | undefined | null): boolean {
   return !!closesAt && new Date(closesAt) < new Date()
 }
@@ -215,6 +219,7 @@ export function PreferenceListDetailClient({
         !memberNuids.has(u.nuid)
     )
     .sort((a, b) => a.full_name.localeCompare(b.full_name))
+  const atMemberCap = list.members.length >= MAX_PREFERENCE_LIST_MEMBERS
 
   const meetingDay = list.meeting_day
 
@@ -464,7 +469,7 @@ export function PreferenceListDetailClient({
 
       <div className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
         <h2 className="text-text-faint text-xs font-semibold tracking-wide uppercase">
-          Members
+          Members ({list.members.length}/{MAX_PREFERENCE_LIST_MEMBERS})
         </h2>
         <div className="flex flex-wrap items-center gap-2">
           {list.members.map((m) => (
@@ -488,7 +493,7 @@ export function PreferenceListDetailClient({
             </span>
           ))}
         </div>
-        {!groupLocked && (
+        {!groupLocked && !atMemberCap && (
           <SearchableSelect
             options={availableToAdd.map((u) => ({
               value: u.nuid,
@@ -503,6 +508,12 @@ export function PreferenceListDetailClient({
             className="w-64"
             ariaLabel="Add a member"
           />
+        )}
+        {!groupLocked && atMemberCap && (
+          <p className="text-text-faint text-xs">
+            This group has reached the maximum of {MAX_PREFERENCE_LIST_MEMBERS}{' '}
+            members.
+          </p>
         )}
       </div>
 

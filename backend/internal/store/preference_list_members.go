@@ -29,6 +29,18 @@ func (s *Store) AddPreferenceListMember(ctx context.Context, listID, leadNUID, a
 	return m, err
 }
 
+// CountPreferenceListMembers backs the handler-level cap on how many leads
+// can be on one group — enforced in application code, not a DB constraint,
+// so it stays easy to change.
+func (s *Store) CountPreferenceListMembers(ctx context.Context, listID string) (int, error) {
+	var count int
+	const q = `SELECT COUNT(*) FROM preference_list_members WHERE preference_list_id = $1`
+	if err := s.db.QueryRow(ctx, q, listID).Scan(&count); err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
 // RemovePreferenceListMember scopes the delete to (id, preference_list_id) so
 // a member id from one list can't be used to remove a row on another list.
 func (s *Store) RemovePreferenceListMember(ctx context.Context, listID, memberID string) error {
