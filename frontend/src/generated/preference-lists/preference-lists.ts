@@ -26,12 +26,14 @@ import type {
 
 import type {
   AddPreferenceListMemberInputBody,
+  CreatePreferenceListCommentInputBody,
   CreatePreferenceListInputBody,
   ErrorModel,
   GetPreferenceListDeadlineParams,
   ListPreferenceLists200,
   ListPreferenceListsParams,
   PreferenceList,
+  PreferenceListCommentDetail,
   PreferenceListDeadline,
   PreferenceListDetail,
   PreferenceListEntry,
@@ -44,6 +46,7 @@ import type {
   SetPreferenceListDeadlineInputBody,
   SetPreferenceListDeadlineParams,
   SetPreferenceListMeetingDayInputBody,
+  UpdatePreferenceListCommentInputBody,
   UpdatePreferenceListInputBody,
   UpsertPreferenceListEntryInputBody,
   UpsertPreferenceListPersonalEntryInputBody
@@ -622,6 +625,138 @@ export const useUpdatePreferenceList = <TError = ErrorModel | ErrorModel | Error
       > => {
 
       const mutationOptions = getUpdatePreferenceListMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * Any group member (or chief/admin) may post. Omit application_id for a comment on the group as a whole; set it to comment on one applicant in the shared list. Never deadline-gated.
+ * @summary Add a comment on a preference list group or one of its applicants
+ */
+export const createPreferenceListComment = (
+    id: string,
+    createPreferenceListCommentInputBody: NonReadonly<CreatePreferenceListCommentInputBody>,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<PreferenceListCommentDetail>(
+      {url: `/preference-lists/${id}/comments`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: createPreferenceListCommentInputBody, signal
+    },
+      options);
+    }
+  
+
+
+export const getCreatePreferenceListCommentMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPreferenceListComment>>, TError,{id: string;data: NonReadonly<CreatePreferenceListCommentInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof createPreferenceListComment>>, TError,{id: string;data: NonReadonly<CreatePreferenceListCommentInputBody>}, TContext> => {
+
+const mutationKey = ['createPreferenceListComment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createPreferenceListComment>>, {id: string;data: NonReadonly<CreatePreferenceListCommentInputBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createPreferenceListComment(id,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreatePreferenceListCommentMutationResult = NonNullable<Awaited<ReturnType<typeof createPreferenceListComment>>>
+    export type CreatePreferenceListCommentMutationBody = NonReadonly<CreatePreferenceListCommentInputBody>
+    export type CreatePreferenceListCommentMutationError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel
+
+    /**
+ * @summary Add a comment on a preference list group or one of its applicants
+ */
+export const useCreatePreferenceListComment = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPreferenceListComment>>, TError,{id: string;data: NonReadonly<CreatePreferenceListCommentInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof createPreferenceListComment>>,
+        TError,
+        {id: string;data: NonReadonly<CreatePreferenceListCommentInputBody>},
+        TContext
+      > => {
+
+      const mutationOptions = getCreatePreferenceListCommentMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * Only the comment's own author may edit it.
+ * @summary Edit a preference list comment
+ */
+export const updatePreferenceListComment = (
+    id: string,
+    commentId: string,
+    updatePreferenceListCommentInputBody: NonReadonly<UpdatePreferenceListCommentInputBody>,
+ options?: SecondParameter<typeof customInstance>,) => {
+      
+      
+      return customInstance<PreferenceListCommentDetail>(
+      {url: `/preference-lists/${id}/comments/${commentId}`, method: 'PUT',
+      headers: {'Content-Type': 'application/json', },
+      data: updatePreferenceListCommentInputBody
+    },
+      options);
+    }
+  
+
+
+export const getUpdatePreferenceListCommentMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePreferenceListComment>>, TError,{id: string;commentId: string;data: NonReadonly<UpdatePreferenceListCommentInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof updatePreferenceListComment>>, TError,{id: string;commentId: string;data: NonReadonly<UpdatePreferenceListCommentInputBody>}, TContext> => {
+
+const mutationKey = ['updatePreferenceListComment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updatePreferenceListComment>>, {id: string;commentId: string;data: NonReadonly<UpdatePreferenceListCommentInputBody>}> = (props) => {
+          const {id,commentId,data} = props ?? {};
+
+          return  updatePreferenceListComment(id,commentId,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdatePreferenceListCommentMutationResult = NonNullable<Awaited<ReturnType<typeof updatePreferenceListComment>>>
+    export type UpdatePreferenceListCommentMutationBody = NonReadonly<UpdatePreferenceListCommentInputBody>
+    export type UpdatePreferenceListCommentMutationError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel
+
+    /**
+ * @summary Edit a preference list comment
+ */
+export const useUpdatePreferenceListComment = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePreferenceListComment>>, TError,{id: string;commentId: string;data: NonReadonly<UpdatePreferenceListCommentInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof updatePreferenceListComment>>,
+        TError,
+        {id: string;commentId: string;data: NonReadonly<UpdatePreferenceListCommentInputBody>},
+        TContext
+      > => {
+
+      const mutationOptions = getUpdatePreferenceListCommentMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }

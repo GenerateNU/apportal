@@ -127,6 +127,12 @@ func (s *Store) GetPreferenceListDetail(ctx context.Context, id string) (models.
 	}
 	detail.PersonalEntries = personalEntries
 
+	comments, err := s.ListPreferenceListComments(ctx, id)
+	if err != nil {
+		return detail, err
+	}
+	detail.Comments = comments
+
 	return detail, nil
 }
 

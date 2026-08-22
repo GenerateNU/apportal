@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   addPreferenceListMember,
   createPreferenceList,
+  createPreferenceListComment,
   deletePreferenceList,
   deletePreferenceListEntry,
   deletePreferenceListPersonalEntry,
@@ -14,6 +15,7 @@ import {
   setPreferenceListDeadline,
   setPreferenceListMeetingDay,
   updatePreferenceList,
+  updatePreferenceListComment,
   upsertPreferenceListEntry,
   upsertPreferenceListPersonalEntry,
 } from '@/generated/preference-lists/preference-lists'
@@ -21,6 +23,7 @@ import type { RequestOptions } from '@/lib/api/orval-mutator'
 import type {
   MeetingDay,
   PreferenceList,
+  PreferenceListComment,
   PreferenceListDeadline,
   PreferenceListDetail,
   PreferenceListEntry,
@@ -347,6 +350,54 @@ export function useSetPreferenceListMeetingDay() {
       ) as Promise<PreferenceList>,
     onSuccess: (data, vars) => {
       queryClient.setQueryData(queryKeys.preferenceLists.detail(vars.id), data)
+    },
+  })
+}
+
+// Comments ride along in usePreferenceList's detail.comments — no separate
+// query key, just invalidate the detail on create/edit.
+
+export function useCreatePreferenceListComment() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (vars: {
+      listId: string
+      applicationId?: string
+      body: string
+      opts?: RequestOptions
+    }) =>
+      createPreferenceListComment(
+        vars.listId,
+        { application_id: vars.applicationId, body: vars.body },
+        vars.opts
+      ) as Promise<PreferenceListComment>,
+    onSuccess: (_data, vars) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.preferenceLists.detail(vars.listId),
+      })
+    },
+  })
+}
+
+export function useUpdatePreferenceListComment() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (vars: {
+      listId: string
+      commentId: string
+      body: string
+      opts?: RequestOptions
+    }) =>
+      updatePreferenceListComment(
+        vars.listId,
+        vars.commentId,
+        { body: vars.body },
+        vars.opts
+      ) as Promise<PreferenceListComment>,
+    onSuccess: (_data, vars) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.preferenceLists.detail(vars.listId),
+      })
     },
   })
 }

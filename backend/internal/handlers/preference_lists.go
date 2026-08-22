@@ -155,6 +155,27 @@ func (h *preferenceListHandler) register(api huma.API) {
 	}, h.reorderPersonalEntries)
 
 	huma.Register(api, huma.Operation{
+		OperationID:   "create-preference-list-comment",
+		Method:        http.MethodPost,
+		Path:          "/preference-lists/{id}/comments",
+		Summary:       "Add a comment on a preference list group or one of its applicants",
+		Description:   "Any group member (or chief/admin) may post. Omit application_id for a comment on the group as a whole; set it to comment on one applicant in the shared list. Never deadline-gated.",
+		Tags:          []string{"Preference lists"},
+		DefaultStatus: http.StatusCreated,
+		Errors:        []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound, http.StatusUnprocessableEntity},
+	}, h.createComment)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "update-preference-list-comment",
+		Method:      http.MethodPut,
+		Path:        "/preference-lists/{id}/comments/{commentId}",
+		Summary:     "Edit a preference list comment",
+		Description: "Only the comment's own author may edit it.",
+		Tags:        []string{"Preference lists"},
+		Errors:      []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound, http.StatusUnprocessableEntity},
+	}, h.updateComment)
+
+	huma.Register(api, huma.Operation{
 		OperationID: "get-preference-list-deadline",
 		Method:      http.MethodGet,
 		Path:        "/cycles/{id}/preference-list-deadline",

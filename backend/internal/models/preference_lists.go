@@ -114,15 +114,39 @@ type PreferenceListPersonalEntryDetail struct {
 	ApplicationRole Role   `json:"application_role"`
 }
 
-// PreferenceListDetail bundles a list with its members, shared entries, and
-// every member's personal entries for a single detail-page fetch, like
-// WrittenReviewDetail bundling a review with its answers — personal entries
-// for every member are fetched in bulk here rather than once per member.
+// PreferenceListComment is an open comment within a group's shared list —
+// mirrors InterviewComment's shape (any member may post, edit only their
+// own). ApplicationID nil means a comment on the group as a whole; set means
+// a comment on that one applicant/entry. Scoped to the shared list only, not
+// personal lists.
+type PreferenceListComment struct {
+	ID               string    `json:"id"`
+	PreferenceListID string    `json:"preference_list_id"`
+	ApplicationID    *string   `json:"application_id,omitempty"`
+	AuthorNUID       string    `json:"author_nuid"`
+	Body             string    `json:"body"`
+	CreatedAt        time.Time `json:"created_at"`
+	UpdatedAt        time.Time `json:"updated_at"`
+}
+
+// PreferenceListCommentDetail bundles a comment with the author's resolved
+// display name (not a table column).
+type PreferenceListCommentDetail struct {
+	PreferenceListComment
+	AuthorName string `json:"author_name,omitempty"`
+}
+
+// PreferenceListDetail bundles a list with its members, shared entries,
+// every member's personal entries, and every comment (group-level and
+// per-entry) for a single detail-page fetch, like WrittenReviewDetail
+// bundling a review with its answers — everything is fetched in bulk here
+// rather than once per member/entry.
 type PreferenceListDetail struct {
 	PreferenceList
 	Members         []PreferenceListMember              `json:"members"`
 	Entries         []PreferenceListEntryDetail         `json:"entries"`
 	PersonalEntries []PreferenceListPersonalEntryDetail `json:"personal_entries"`
+	Comments        []PreferenceListCommentDetail       `json:"comments"`
 }
 
 // PreferenceListDeadline is a per-(cycle, role) settings row — not a column
