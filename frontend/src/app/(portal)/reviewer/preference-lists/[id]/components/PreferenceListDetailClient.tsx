@@ -2,7 +2,18 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { ArrowDown, ArrowLeft, ArrowUp, Lock, Trash2, X } from 'lucide-react'
+import {
+  ArrowDown,
+  ArrowLeft,
+  ArrowUp,
+  ChevronDown,
+  ChevronUp,
+  Loader2,
+  Lock,
+  Pencil,
+  Trash2,
+  X,
+} from 'lucide-react'
 import { PageContainer } from '@/components/PageContainer'
 import { Button } from '@/components/ui/button'
 import { DateTimePicker } from '@/components/ui/datetime-picker'
@@ -23,11 +34,17 @@ import {
   MEETING_DAY_LABEL,
 } from '@/app/(portal)/reviewer/applications/components/meetingAvailability'
 import { APIError } from '@/lib/api/client'
-import type { MeetingDay, PreferenceListStatus, Role } from '@/lib/api/types'
+import type {
+  MeetingDay,
+  PreferenceListComment,
+  PreferenceListStatus,
+  Role,
+} from '@/lib/api/types'
 import { useAnswersByApplicationIdBatches } from '@/lib/queries/answers'
 import { useApplications } from '@/lib/queries/applications'
 import {
   useAddPreferenceListMember,
+  useCreatePreferenceListComment,
   useDeletePersonalPreferenceListEntry,
   useDeletePreferenceList,
   useDeletePreferenceListEntry,
@@ -39,6 +56,7 @@ import {
   useSetPreferenceListDeadline,
   useSetPreferenceListMeetingDay,
   useUpdatePreferenceList,
+  useUpdatePreferenceListComment,
   useUpsertPersonalPreferenceListEntry,
   useUpsertPreferenceListEntry,
 } from '@/lib/queries/preference-lists'
@@ -176,6 +194,8 @@ export function PreferenceListDetailClient({
   const reorderPersonalEntries = useReorderPersonalPreferenceListEntries()
   const setDeadline = useSetPreferenceListDeadline()
   const setMeetingDay = useSetPreferenceListMeetingDay()
+  const createComment = useCreatePreferenceListComment()
+  const updateComment = useUpdatePreferenceListComment()
 
   const [name, setName] = useState('')
   const [nameSeeded, setNameSeeded] = useState(false)
@@ -231,6 +251,14 @@ export function PreferenceListDetailClient({
       availabilityQuestionIdByRole[role]
     )
     return availabilityBadge(isAvailableOn(options, meetingDay))
+  }
+
+  // Comments are scoped to the shared list only, not personal lists.
+  // application_id absent is a comment on the group as a whole.
+  const comments = list.comments
+  const groupComments = comments.filter((c) => !c.application_id)
+  function commentsForEntry(applicationId: string) {
+    return comments.filter((c) => c.application_id === applicationId)
   }
 
   const roleEntries = list.entries.filter(
@@ -568,6 +596,20 @@ export function PreferenceListDetailClient({
                       reasoning,
                     })
                   }
+                  comments={commentsForEntry(entry.application_id)}
+                  currentUserNuid={currentUser?.nuid}
+                  onAddComment={(body) =>
+                    createComment.mutate({
+                      listId: list.id,
+                      applicationId: entry.application_id,
+                      body,
+                    })
+                  }
+                  onEditComment={(commentId, body) =>
+                    updateComment.mutate({ listId: list.id, commentId, body })
+                  }
+                  isAddingComment={createComment.isPending}
+                  isEditingComment={updateComment.isPending}
                 />
               ))}
               {roleEntries.length === 0 && (
@@ -652,6 +694,23 @@ export function PreferenceListDetailClient({
           </>
         )}
       </div>
+
+      <div className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+        <h2 className="text-text-faint text-xs font-semibold tracking-wide uppercase">
+          Group comments
+        </h2>
+        <CommentThread
+          comments={groupComments}
+          currentUserNuid={currentUser?.nuid}
+          onAdd={(body) => createComment.mutate({ listId: list.id, body })}
+          onEdit={(commentId, body) =>
+            updateComment.mutate({ listId: list.id, commentId, body })
+          }
+          isAdding={createComment.isPending}
+          isEditing={updateComment.isPending}
+          placeholder="Add a comment on this group…"
+        />
+      </div>
     </PageContainer>
   )
 }
@@ -665,6 +724,12 @@ function EntryRow({
   onMove,
   onRemove,
   onSaveReasoning,
+  comments,
+  currentUserNuid,
+  onAddComment,
+  onEditComment,
+  isAddingComment,
+  isEditingComment,
 }: {
   entry: {
     id: string
@@ -680,8 +745,17 @@ function EntryRow({
   onMove: (direction: -1 | 1) => void
   onRemove: () => void
   onSaveReasoning: (reasoning: string) => void
+  // Comments are only offered for shared-list entries, not personal ones —
+  // omit these props entirely to hide the collapsible thread.
+  comments?: PreferenceListComment[]
+  currentUserNuid?: string
+  onAddComment?: (body: string) => void
+  onEditComment?: (commentId: string, body: string) => void
+  isAddingComment?: boolean
+  isEditingComment?: boolean
 }) {
   const [reasoning, setReasoning] = useState(entry.reasoning ?? '')
+  const [commentsOpen, setCommentsOpen] = useState(false)
 
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-gray-200 p-3 sm:flex-row sm:items-start">
@@ -757,6 +831,169 @@ function EntryRow({
           rows={2}
           className="border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 w-full rounded-md border bg-transparent px-2.5 py-1.5 text-sm outline-none focus-visible:ring-3 disabled:cursor-not-allowed disabled:opacity-60"
         />
+        {comments && (
+          <div className="border-t border-gray-100 pt-2">
+            <button
+              type="button"
+              onClick={() => setCommentsOpen((v) => !v)}
+              className="text-brand-blue inline-flex items-center gap-1 text-xs hover:underline"
+            >
+              {commentsOpen ? (
+                <ChevronUp size={12} />
+              ) : (
+                <ChevronDown size={12} />
+              )}
+              Comments ({comments.length})
+            </button>
+            {commentsOpen && (
+              <div className="mt-2">
+                <CommentThread
+                  comments={comments}
+                  currentUserNuid={currentUserNuid}
+                  onAdd={(body) => onAddComment?.(body)}
+                  onEdit={(commentId, body) => onEditComment?.(commentId, body)}
+                  isAdding={!!isAddingComment}
+                  isEditing={!!isEditingComment}
+                  placeholder="Add a comment on this applicant…"
+                />
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function CommentThread({
+  comments,
+  currentUserNuid,
+  onAdd,
+  onEdit,
+  isAdding,
+  isEditing,
+  placeholder,
+}: {
+  comments: PreferenceListComment[]
+  currentUserNuid?: string
+  onAdd: (body: string) => void
+  onEdit: (commentId: string, body: string) => void
+  isAdding: boolean
+  isEditing: boolean
+  placeholder: string
+}) {
+  const [newComment, setNewComment] = useState('')
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
+  const [editingBody, setEditingBody] = useState('')
+
+  function startEditing(comment: PreferenceListComment) {
+    setEditingCommentId(comment.id)
+    setEditingBody(comment.body)
+  }
+
+  function saveEdit() {
+    const body = editingBody.trim()
+    if (!editingCommentId || !body) return
+    onEdit(editingCommentId, body)
+    setEditingCommentId(null)
+  }
+
+  function postComment() {
+    const body = newComment.trim()
+    if (!body) return
+    onAdd(body)
+    setNewComment('')
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      {comments.map((c) => {
+        const editing = editingCommentId === c.id
+        const edited = c.updated_at !== c.created_at
+        const isOwn = c.author_nuid === currentUserNuid
+        return (
+          <div
+            key={c.id}
+            className="rounded-xl border border-gray-100 bg-white p-4"
+          >
+            {editing ? (
+              <div className="flex flex-col gap-2">
+                <textarea
+                  value={editingBody}
+                  onChange={(e) => setEditingBody(e.target.value)}
+                  rows={3}
+                  autoFocus
+                  aria-label="Edit comment"
+                  className="focus:border-brand-blue text-text-default placeholder:text-text-subtle w-full rounded-md border border-gray-200 p-3 text-sm focus:outline-none"
+                />
+                <div className="flex items-center gap-2">
+                  <Button
+                    onClick={saveEdit}
+                    disabled={isEditing || !editingBody.trim()}
+                  >
+                    Save
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setEditingCommentId(null)}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-text-muted text-xs">
+                    {c.author_name || c.author_nuid}
+                  </p>
+                  <p className="text-text-default mt-1 text-sm whitespace-pre-wrap">
+                    {c.body}
+                  </p>
+                  <p className="text-text-faint mt-1.5 text-xs">
+                    {new Date(c.created_at).toLocaleString()}
+                    {edited && ' · edited'}
+                  </p>
+                </div>
+                {isOwn && (
+                  <button
+                    type="button"
+                    onClick={() => startEditing(c)}
+                    className="text-text-faint hover:text-text-muted shrink-0"
+                    aria-label="Edit comment"
+                  >
+                    <Pencil size={14} />
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )
+      })}
+
+      <div className="rounded-xl border border-gray-100 bg-white p-4">
+        <textarea
+          value={newComment}
+          onChange={(e) => setNewComment(e.target.value)}
+          placeholder={placeholder}
+          rows={3}
+          className="focus:border-brand-blue text-text-default placeholder:text-text-subtle w-full rounded-md border border-gray-200 p-3 text-sm focus:outline-none"
+        />
+        <div className="mt-3">
+          <Button
+            onClick={postComment}
+            disabled={isAdding || !newComment.trim()}
+          >
+            {isAdding ? (
+              <>
+                <Loader2 className="animate-spin" size={14} />
+                Posting…
+              </>
+            ) : (
+              'Post comment'
+            )}
+          </Button>
+        </div>
       </div>
     </div>
   )

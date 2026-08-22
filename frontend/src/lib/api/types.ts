@@ -25,6 +25,7 @@ import type {
   InterviewReviewAssignment as GenInterviewReviewAssignment,
   InterviewScript as GenInterviewScript,
   PreferenceList as GenPreferenceList,
+  PreferenceListCommentDetail as GenPreferenceListCommentDetail,
   PreferenceListDeadline as GenPreferenceListDeadline,
   PreferenceListDetail as GenPreferenceListDetail,
   PreferenceListEntry as GenPreferenceListEntry,
@@ -276,8 +277,16 @@ export type PreferenceListPersonalEntryDetail = Omit<
   application_role: Role
 }
 
-// members/entries/personal_entries are nullable in the generated type (an
-// empty Go slice can encode as `null`); callers always want an array.
+// application_id absent means a comment on the group as a whole; present
+// means a comment on that one applicant/entry in the shared list.
+export type PreferenceListComment = Omit<
+  GenPreferenceListCommentDetail,
+  '$schema'
+>
+
+// members/entries/personal_entries/comments are nullable in the generated
+// type (an empty Go slice can encode as `null`); callers always want an
+// array.
 export type PreferenceListDetail = Omit<
   GenPreferenceListDetail,
   | '$schema'
@@ -285,12 +294,14 @@ export type PreferenceListDetail = Omit<
   | 'members'
   | 'entries'
   | 'personal_entries'
+  | 'comments'
   | 'meeting_day'
 > & {
   status: PreferenceListStatus
   members: PreferenceListMember[]
   entries: PreferenceListEntryDetail[]
   personal_entries: PreferenceListPersonalEntryDetail[]
+  comments: PreferenceListComment[]
   meeting_day?: MeetingDay
 }
 

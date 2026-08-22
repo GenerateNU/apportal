@@ -5,6 +5,7 @@
  * Generate application portal — applications, reviews, and the hiring pipeline.
  * OpenAPI spec version: 0.1.0
  */
+import type { PreferenceListDetailComments } from './preferenceListDetailComments';
 import type { PreferenceListDetailEntries } from './preferenceListDetailEntries';
 import type { PreferenceListDetailMembers } from './preferenceListDetailMembers';
 import type { PreferenceListDetailPersonalEntries } from './preferenceListDetailPersonalEntries';
@@ -12,6 +13,7 @@ import type { PreferenceListDetailPersonalEntries } from './preferenceListDetail
 export interface PreferenceListDetail {
   /** A URL to the JSON Schema for this object. */
   readonly $schema?: string;
+  comments: PreferenceListDetailComments;
   created_at: string;
   created_by: string;
   cycle_id: string;
