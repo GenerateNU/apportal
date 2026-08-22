@@ -74,7 +74,7 @@ func (h *preferenceListHandler) register(api huma.API) {
 		Method:        http.MethodPost,
 		Path:          "/preference-lists/{id}/members",
 		Summary:       "Add a lead as a collaborator on a preference list",
-		Description:   "Any current member (or a chief/admin) may add another lead, chief, or admin.",
+		Description:   "Any current member (or a chief/admin) may add another lead, chief, or admin. Rejected once the group has 4 members.",
 		Tags:          []string{"Preference lists"},
 		DefaultStatus: http.StatusCreated,
 		Errors:        []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound, http.StatusConflict, http.StatusUnprocessableEntity},
@@ -189,6 +189,10 @@ var validMeetingDays = map[string]bool{
 	"wednesday": true,
 	"thursday":  true,
 }
+
+// maxPreferenceListMembers caps how many leads can collaborate on one group
+// — a small, fixed team size, not a DB constraint, so it's easy to change.
+const maxPreferenceListMembers = 4
 
 // requireAccess rejects callers who aren't a member of the list and aren't a
 // chief/admin. Returns 404 (not 403) for a non-member so a list's existence
@@ -392,6 +396,13 @@ func (h *preferenceListHandler) addMember(ctx context.Context, in *AddPreference
 	}
 	if err := h.checkGroupNotLocked(ctx, list.CycleID); err != nil {
 		return nil, err
+	}
+	memberCount, err := h.store.CountPreferenceListMembers(ctx, in.ID)
+	if err != nil {
+		return nil, storeErr(err)
+	}
+	if memberCount >= maxPreferenceListMembers {
+		return nil, huma.Error422UnprocessableEntity("this group already has the maximum of 4 members")
 	}
 	target, err := h.store.GetUser(ctx, in.Body.LeadNUID)
 	if err != nil {
