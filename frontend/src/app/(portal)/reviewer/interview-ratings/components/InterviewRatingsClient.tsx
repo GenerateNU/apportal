@@ -498,21 +498,25 @@ export function InterviewRatingsClient() {
                 key={lane.key}
                 className={laneIndex % 2 === 1 ? 'bg-gray-50/60' : undefined}
               >
-                <button
-                  type="button"
-                  onClick={() => toggleLane(lane.key)}
-                  className="text-text-default hover:text-brand-blue sticky top-[2.2rem] z-[5] flex w-full items-center gap-1.5 border-t border-b border-gray-200 bg-inherit px-4 py-2 text-sm font-medium"
+                <div
+                  className={`grid border-t border-b border-gray-200 bg-inherit ${SWIMLANE_GRID_COLS_CLASS[visibleColumnDefs.length]}`}
                 >
-                  {collapsed ? (
-                    <ChevronRight size={14} />
-                  ) : (
-                    <ChevronDown size={14} />
-                  )}
-                  {lane.title}
-                  <span className="text-text-subtle font-normal">
-                    {lane.count}
-                  </span>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => toggleLane(lane.key)}
+                    className="text-text-default hover:text-brand-blue sticky top-[2.2rem] left-0 z-[6] col-span-full flex w-fit items-center gap-1.5 bg-inherit px-4 py-2 text-sm font-medium"
+                  >
+                    {collapsed ? (
+                      <ChevronRight size={14} />
+                    ) : (
+                      <ChevronDown size={14} />
+                    )}
+                    {lane.title}
+                    <span className="text-text-subtle font-normal">
+                      {lane.count}
+                    </span>
+                  </button>
+                </div>
                 {!collapsed && (
                   <div
                     className={`grid divide-x divide-gray-200 py-3 ${SWIMLANE_GRID_COLS_CLASS[visibleColumnDefs.length]}`}
