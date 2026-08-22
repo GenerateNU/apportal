@@ -5,7 +5,6 @@ import {
   deletePreferenceList,
   deletePreferenceListEntry,
   deletePreferenceListPersonalEntry,
-  getLeadMeetingAvailability,
   getPreferenceList,
   getPreferenceListDeadline,
   listPreferenceLists,
@@ -20,7 +19,6 @@ import {
 } from '@/generated/preference-lists/preference-lists'
 import type { RequestOptions } from '@/lib/api/orval-mutator'
 import type {
-  LeadMeetingAvailability,
   MeetingDay,
   PreferenceList,
   PreferenceListDeadline,
@@ -350,27 +348,5 @@ export function useSetPreferenceListMeetingDay() {
     onSuccess: (data, vars) => {
       queryClient.setQueryData(queryKeys.preferenceLists.detail(vars.id), data)
     },
-  })
-}
-
-// Bulk (one request for every candidate at once, not one per row) lookup of
-// each lead's own selected "Meeting Availability" options, keyed by nuid —
-// used to flag who's free for a list's chosen meeting day before adding them.
-export function useLeadMeetingAvailability(
-  nuids: string[],
-  opts?: RequestOptions
-) {
-  return useQuery({
-    queryKey: queryKeys.leadMeetingAvailability.bulk(nuids),
-    queryFn: async () => {
-      const items = ((await getLeadMeetingAvailability(
-        { nuids: nuids.join(',') },
-        opts
-      )) ?? []) as LeadMeetingAvailability[]
-      const byNuid = new Map<string, string[]>()
-      for (const item of items) byNuid.set(item.nuid, item.options)
-      return byNuid
-    },
-    enabled: nuids.length > 0,
   })
 }

@@ -291,10 +291,4 @@ export const queryKeys = {
     detail: (cycleId: string, role: Role) =>
       [...queryKeys.preferenceListDeadline.all, cycleId, role] as const,
   },
-
-  leadMeetingAvailability: {
-    all: ['lead-meeting-availability'] as const,
-    bulk: (nuids: string[]) =>
-      [...queryKeys.leadMeetingAvailability.all, 'bulk', nuids] as const,
-  },
 } as const

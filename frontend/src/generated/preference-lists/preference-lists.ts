@@ -28,8 +28,6 @@ import type {
   AddPreferenceListMemberInputBody,
   CreatePreferenceListInputBody,
   ErrorModel,
-  GetLeadMeetingAvailability200,
-  GetLeadMeetingAvailabilityParams,
   GetPreferenceListDeadlineParams,
   ListPreferenceLists200,
   ListPreferenceListsParams,
@@ -410,99 +408,6 @@ export const useCreatePreferenceList = <TError = ErrorModel | ErrorModel | Error
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Reviewer only. Resolved from each lead's own most recent application, for flagging who's free before adding them to a list.
- * @summary Get several leads' own meeting-availability answers
- */
-export const getLeadMeetingAvailability = (
-    params?: GetLeadMeetingAvailabilityParams,
- options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
-) => {
-      
-      
-      return customInstance<GetLeadMeetingAvailability200>(
-      {url: `/preference-lists/lead-availability`, method: 'GET',
-        params, signal
-    },
-      options);
-    }
-  
-
-
-
-export const getGetLeadMeetingAvailabilityQueryKey = (params?: GetLeadMeetingAvailabilityParams,) => {
-    return [
-    `/preference-lists/lead-availability`, ...(params ? [params]: [])
-    ] as const;
-    }
-
-    
-export const getGetLeadMeetingAvailabilityQueryOptions = <TData = Awaited<ReturnType<typeof getLeadMeetingAvailability>>, TError = ErrorModel | ErrorModel | ErrorModel>(params?: GetLeadMeetingAvailabilityParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getLeadMeetingAvailability>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getGetLeadMeetingAvailabilityQueryKey(params);
-
-  
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getLeadMeetingAvailability>>> = ({ signal }) => getLeadMeetingAvailability(params, requestOptions, signal);
-
-      
-
-      
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getLeadMeetingAvailability>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type GetLeadMeetingAvailabilityQueryResult = NonNullable<Awaited<ReturnType<typeof getLeadMeetingAvailability>>>
-export type GetLeadMeetingAvailabilityQueryError = ErrorModel | ErrorModel | ErrorModel
-
-
-export function useGetLeadMeetingAvailability<TData = Awaited<ReturnType<typeof getLeadMeetingAvailability>>, TError = ErrorModel | ErrorModel | ErrorModel>(
- params: undefined |  GetLeadMeetingAvailabilityParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getLeadMeetingAvailability>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getLeadMeetingAvailability>>,
-          TError,
-          Awaited<ReturnType<typeof getLeadMeetingAvailability>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetLeadMeetingAvailability<TData = Awaited<ReturnType<typeof getLeadMeetingAvailability>>, TError = ErrorModel | ErrorModel | ErrorModel>(
- params?: GetLeadMeetingAvailabilityParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getLeadMeetingAvailability>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getLeadMeetingAvailability>>,
-          TError,
-          Awaited<ReturnType<typeof getLeadMeetingAvailability>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetLeadMeetingAvailability<TData = Awaited<ReturnType<typeof getLeadMeetingAvailability>>, TError = ErrorModel | ErrorModel | ErrorModel>(
- params?: GetLeadMeetingAvailabilityParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getLeadMeetingAvailability>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-/**
- * @summary Get several leads' own meeting-availability answers
- */
-
-export function useGetLeadMeetingAvailability<TData = Awaited<ReturnType<typeof getLeadMeetingAvailability>>, TError = ErrorModel | ErrorModel | ErrorModel>(
- params?: GetLeadMeetingAvailabilityParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getLeadMeetingAvailability>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getGetLeadMeetingAvailabilityQueryOptions(params,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  query.queryKey = queryOptions.queryKey ;
-
-  return query;
-}
-
-
-
-/**
  * Chief only. Deletes every member and entry. Allowed even after every role's deadline has passed, for administrative cleanup.
  * @summary Delete a preference list
  */
