@@ -904,18 +904,12 @@ components:
           format: uri
           readOnly: true
           type: string
-        application_role:
-          enum:
-            - software_engineer
-            - software_designer
-          type: string
         cycle_id:
           type: string
         name:
           type: string
       required:
         - cycle_id
-        - application_role
         - name
       type: object
     CreateQuestionInputBody:
@@ -2073,11 +2067,6 @@ components:
           format: uri
           readOnly: true
           type: string
-        application_role:
-          enum:
-            - software_engineer
-            - software_designer
-          type: string
         created_at:
           format: date-time
           type: string
@@ -2102,7 +2091,6 @@ components:
       required:
         - id
         - cycle_id
-        - application_role
         - name
         - status
         - created_by
@@ -2152,11 +2140,6 @@ components:
           format: uri
           readOnly: true
           type: string
-        application_role:
-          enum:
-            - software_engineer
-            - software_designer
-          type: string
         created_at:
           format: date-time
           type: string
@@ -2182,6 +2165,12 @@ components:
             - "null"
         name:
           type: string
+        personal_entries:
+          items:
+            $ref: "#/components/schemas/PreferenceListPersonalEntryDetail"
+          type:
+            - array
+            - "null"
         status:
           type: string
         submitted_at:
@@ -2193,9 +2182,9 @@ components:
       required:
         - members
         - entries
+        - personal_entries
         - id
         - cycle_id
-        - application_role
         - name
         - status
         - created_by
@@ -2245,6 +2234,11 @@ components:
       properties:
         application_id:
           type: string
+        application_role:
+          enum:
+            - software_engineer
+            - software_designer
+          type: string
         created_at:
           format: date-time
           type: string
@@ -2269,6 +2263,7 @@ components:
       required:
         - full_name
         - email
+        - application_role
         - id
         - preference_list_id
         - application_id
@@ -2305,14 +2300,93 @@ components:
         - added_by
         - added_at
       type: object
-    PreferenceListSummary:
+    PreferenceListPersonalEntry:
       additionalProperties: false
       properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/PreferenceListPersonalEntry.json
+          format: uri
+          readOnly: true
+          type: string
+        application_id:
+          type: string
+        created_at:
+          format: date-time
+          type: string
+        id:
+          type: string
+        owner_nuid:
+          type: string
+        preference_list_id:
+          type: string
+        rank:
+          format: int64
+          type: integer
+        reasoning:
+          type: string
+        updated_at:
+          format: date-time
+          type: string
+      required:
+        - id
+        - preference_list_id
+        - owner_nuid
+        - application_id
+        - rank
+        - created_at
+        - updated_at
+      type: object
+    PreferenceListPersonalEntryDetail:
+      additionalProperties: false
+      properties:
+        application_id:
+          type: string
         application_role:
           enum:
             - software_engineer
             - software_designer
           type: string
+        created_at:
+          format: date-time
+          type: string
+        email:
+          type: string
+        full_name:
+          type: string
+        id:
+          type: string
+        owner_name:
+          type: string
+        owner_nuid:
+          type: string
+        preference_list_id:
+          type: string
+        rank:
+          format: int64
+          type: integer
+        reasoning:
+          type: string
+        updated_at:
+          format: date-time
+          type: string
+      required:
+        - owner_name
+        - full_name
+        - email
+        - application_role
+        - id
+        - preference_list_id
+        - owner_nuid
+        - application_id
+        - rank
+        - created_at
+        - updated_at
+      type: object
+    PreferenceListSummary:
+      additionalProperties: false
+      properties:
         created_at:
           format: date-time
           type: string
@@ -2352,7 +2426,6 @@ components:
         - member_names
         - id
         - cycle_id
-        - application_role
         - name
         - status
         - created_by
@@ -2481,6 +2554,25 @@ components:
           description: A URL to the JSON Schema for this object.
           examples:
             - https://example.com/schemas/ReorderPreferenceListEntriesInputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        application_ids:
+          items:
+            type: string
+          type:
+            - array
+            - "null"
+      required:
+        - application_ids
+      type: object
+    ReorderPreferenceListPersonalEntriesInputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/ReorderPreferenceListPersonalEntriesInputBody.json
           format: uri
           readOnly: true
           type: string
@@ -3274,6 +3366,19 @@ components:
           description: A URL to the JSON Schema for this object.
           examples:
             - https://example.com/schemas/UpsertPreferenceListEntryInputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        reasoning:
+          type: string
+      type: object
+    UpsertPreferenceListPersonalEntryInputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/UpsertPreferenceListPersonalEntryInputBody.json
           format: uri
           readOnly: true
           type: string
@@ -7647,7 +7752,7 @@ paths:
         - Lead assignments
   /preference-lists:
     get:
-      description: Reviewer only. Leads only see lists they're a member of; chiefs/admins see every list.
+      description: Reviewer only. Leads only see groups they're a member of; chiefs/admins see every group. Each group covers every role in the cycle.
       operationId: list-preference-lists
       parameters:
         - description: Cycle ID
@@ -7656,16 +7761,6 @@ paths:
           name: cycle_id
           schema:
             description: Cycle ID
-            type: string
-        - description: Applicant role
-          explode: false
-          in: query
-          name: role
-          schema:
-            description: Applicant role
-            enum:
-              - software_engineer
-              - software_designer
             type: string
       responses:
         "200":
@@ -7696,11 +7791,11 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorModel"
           description: Internal Server Error
-      summary: List preference lists for a cycle and role
+      summary: List preference list groups for a cycle
       tags:
         - Preference lists
     post:
-      description: Reviewer only. The creator is added as the list's first member. Rejected once the (cycle, role) deadline has passed.
+      description: Reviewer only. The creator is added as the group's first member. Rejected once every role's preference-list deadline for the cycle has passed.
       operationId: create-preference-list
       requestBody:
         content:
@@ -7739,7 +7834,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorModel"
           description: Internal Server Error
-      summary: Create a preference list
+      summary: Create a preference list group for a cycle
       tags:
         - Preference lists
   /preference-lists/lead-availability:
@@ -7788,7 +7883,7 @@ paths:
         - Preference lists
   /preference-lists/{id}:
     delete:
-      description: Chief only. Deletes every member and entry. Allowed even after the (cycle, role) deadline has passed, for administrative cleanup.
+      description: Chief only. Deletes every member and entry. Allowed even after every role's deadline has passed, for administrative cleanup.
       operationId: delete-preference-list
       parameters:
         - in: path
@@ -8051,7 +8146,7 @@ paths:
         - Preference lists
   /preference-lists/{id}/entry-order:
     put:
-      description: application_ids must be an exact permutation of the list's current entries, so a stale client can't silently drop one via reorder.
+      description: application_ids must be an exact permutation of the list's current entries for one role, so a stale client can't silently drop one via reorder.
       operationId: reorder-preference-list-entries
       parameters:
         - description: Preference list ID
@@ -8284,6 +8379,185 @@ paths:
                 $ref: "#/components/schemas/ErrorModel"
           description: Internal Server Error
       summary: Remove a collaborator from a preference list
+      tags:
+        - Preference lists
+  /preference-lists/{id}/personal-entries/{applicationId}:
+    delete:
+      operationId: delete-preference-list-personal-entry
+      parameters:
+        - description: Preference list ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Preference list ID
+            type: string
+        - description: Application ID
+          in: path
+          name: applicationId
+          required: true
+          schema:
+            description: Application ID
+            type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Remove an applicant from your own personal list
+      tags:
+        - Preference lists
+    put:
+      description: Every group member's personal list is visible to the whole group, but only its owner can write to it. Never deadline-gated.
+      operationId: upsert-preference-list-personal-entry
+      parameters:
+        - description: Preference list ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Preference list ID
+            type: string
+        - description: Application ID
+          in: path
+          name: applicationId
+          required: true
+          schema:
+            description: Application ID
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertPreferenceListPersonalEntryInputBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PreferenceListPersonalEntry"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Add an applicant to your own personal list within a group, or edit your reasoning
+      tags:
+        - Preference lists
+  /preference-lists/{id}/personal-entry-order:
+    put:
+      operationId: reorder-preference-list-personal-entries
+      parameters:
+        - description: Preference list ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Preference list ID
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReorderPreferenceListPersonalEntriesInputBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/PreferenceListPersonalEntryDetail"
+                type:
+                  - array
+                  - "null"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Reorder your own personal list's entries
       tags:
         - Preference lists
   /questions/{id}:

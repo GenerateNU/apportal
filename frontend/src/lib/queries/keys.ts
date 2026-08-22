@@ -279,8 +279,8 @@ export const queryKeys = {
   preferenceLists: {
     all: ['preference-lists'] as const,
     lists: () => [...queryKeys.preferenceLists.all, 'list'] as const,
-    list: (cycleId: string, role: Role) =>
-      [...queryKeys.preferenceLists.lists(), cycleId, role] as const,
+    list: (cycleId: string) =>
+      [...queryKeys.preferenceLists.lists(), cycleId] as const,
     details: () => [...queryKeys.preferenceLists.all, 'detail'] as const,
     detail: (id: string) =>
       [...queryKeys.preferenceLists.details(), id] as const,

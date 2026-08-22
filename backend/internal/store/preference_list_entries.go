@@ -21,13 +21,23 @@ type PreferenceListEntryUpsert struct {
 	UpdatedBy        string
 }
 
-// UpsertPreferenceListEntry adds a new entry at the end of the rank order, or
-// edits an existing one's reasoning without touching its rank — so editing
-// reasoning can never clobber a concurrent reorder.
+// UpsertPreferenceListEntry adds a new entry at the end of its role's rank
+// order, or edits an existing one's reasoning without touching its rank —
+// so editing reasoning can never clobber a concurrent reorder. Rank is
+// scoped to entries sharing the new application's own role, so each role
+// tab gets its own independent 1..N sequence within the same group.
 func (s *Store) UpsertPreferenceListEntry(ctx context.Context, in PreferenceListEntryUpsert) (models.PreferenceListEntry, error) {
 	const q = `
 		INSERT INTO preference_list_entries (preference_list_id, application_id, rank, reasoning, updated_by)
-		VALUES ($1, $2, (SELECT COALESCE(MAX(rank), 0) + 1 FROM preference_list_entries WHERE preference_list_id = $1), $3, $4)
+		VALUES (
+			$1, $2,
+			(SELECT COALESCE(MAX(e.rank), 0) + 1
+			 FROM preference_list_entries e
+			 JOIN applications a ON a.id = e.application_id
+			 WHERE e.preference_list_id = $1
+			   AND a.application_role = (SELECT application_role FROM applications WHERE id = $2)),
+			$3, $4
+		)
 		ON CONFLICT (preference_list_id, application_id) DO UPDATE SET
 			reasoning  = COALESCE(EXCLUDED.reasoning, preference_list_entries.reasoning),
 			updated_by = EXCLUDED.updated_by,
@@ -52,10 +62,17 @@ func (s *Store) DeletePreferenceListEntry(ctx context.Context, listID, applicati
 }
 
 // ListPreferenceListEntryApplicationIDs returns the current entries'
-// application ids, for the handler to validate a reorder request is an
-// exact permutation of them before calling ReorderPreferenceListEntries.
-func (s *Store) ListPreferenceListEntryApplicationIDs(ctx context.Context, listID string) ([]string, error) {
-	rows, err := s.db.Query(ctx, `SELECT application_id FROM preference_list_entries WHERE preference_list_id = $1`, listID)
+// application ids for one role, for the handler to validate a reorder
+// request is an exact permutation of that role's entries (a group's other
+// roles' entries are untouched by the same reorder call) before calling
+// ReorderPreferenceListEntries.
+func (s *Store) ListPreferenceListEntryApplicationIDs(ctx context.Context, listID string, role models.Role) ([]string, error) {
+	const q = `
+		SELECT e.application_id
+		FROM preference_list_entries e
+		JOIN applications a ON a.id = e.application_id
+		WHERE e.preference_list_id = $1 AND a.application_role = $2`
+	rows, err := s.db.Query(ctx, q, listID, role)
 	if err != nil {
 		return nil, err
 	}

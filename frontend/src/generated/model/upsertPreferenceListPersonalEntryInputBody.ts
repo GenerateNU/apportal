@@ -6,9 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ListPreferenceListsParams = {
-/**
- * Cycle ID
- */
-cycle_id?: string;
-};
+export interface UpsertPreferenceListPersonalEntryInputBody {
+  /** A URL to the JSON Schema for this object. */
+  readonly $schema?: string;
+  reasoning?: string;
+}

@@ -18,6 +18,13 @@ func (r Role) Valid() bool {
 	return false
 }
 
+// AllRoles enumerates every valid Role — used where callers need to check a
+// condition across every role rather than one specific one (e.g. whether a
+// whole cycle's preference-list review window has closed).
+func AllRoles() []Role {
+	return []Role{RoleSoftwareEngineer, RoleSoftwareDesigner}
+}
+
 type ApplicationStage string
 
 const (

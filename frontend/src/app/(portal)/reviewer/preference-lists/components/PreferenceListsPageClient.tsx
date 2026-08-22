@@ -54,33 +54,13 @@ export function PreferenceListsPageClient({ isChief }: { isChief: boolean }) {
     if (defaultId) setCycleId(defaultId)
   }
 
-  const roleParam = searchParams.get('role')
-  const [role, setRole] = useState<Role>(
-    roleParam === 'software_designer'
-      ? 'software_designer'
-      : 'software_engineer'
-  )
-
   const [dialogOpen, setDialogOpen] = useState(false)
-  const { data: lists = [] } = usePreferenceLists(cycleId, role)
+  const { data: lists = [] } = usePreferenceLists(cycleId)
 
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
-          <Select value={role} onValueChange={(v) => setRole(v as Role)}>
-            <SelectTrigger className="w-48" aria-label="Filter by role">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {ROLE_COLUMNS.map((r) => (
-                <SelectItem key={r} value={r}>
-                  {ROLE_LABEL[r]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
           <Select value={cycleId} onValueChange={setCycleId}>
             <SelectTrigger className="w-40" aria-label="Filter by cycle">
               <SelectValue />
@@ -98,18 +78,24 @@ export function PreferenceListsPageClient({ isChief }: { isChief: boolean }) {
         {cycleId && (
           <Button onClick={() => setDialogOpen(true)}>
             <Plus data-icon="inline-start" size={14} />
-            Create list
+            Create group
           </Button>
         )}
       </div>
 
-      {isChief && cycleId && <DeadlineEditor cycleId={cycleId} role={role} />}
+      {isChief && cycleId && (
+        <div className="flex flex-col gap-2">
+          {ROLE_COLUMNS.map((r) => (
+            <DeadlineEditor key={r} cycleId={cycleId} role={r} />
+          ))}
+        </div>
+      )}
 
       {!cycleId ? (
         <p className="text-text-faint px-1 text-sm">No cycles yet.</p>
       ) : lists.length === 0 ? (
         <p className="text-text-faint px-1 text-sm">
-          No preference lists yet for this cycle/role — create one to get
+          No preference list groups yet for this cycle — create one to get
           started.
         </p>
       ) : (
@@ -158,7 +144,6 @@ export function PreferenceListsPageClient({ isChief }: { isChief: boolean }) {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         cycleId={cycleId}
-        role={role}
       />
     </>
   )
@@ -202,12 +187,10 @@ function CreateListDialog({
   open,
   onOpenChange,
   cycleId,
-  role,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   cycleId: string
-  role: Role
 }) {
   const [name, setName] = useState('')
   const createList = useCreatePreferenceList()
@@ -217,7 +200,7 @@ function CreateListDialog({
     const trimmed = name.trim()
     if (!trimmed || !cycleId) return
     createList.mutate(
-      { cycleId, role, name: trimmed },
+      { cycleId, name: trimmed },
       {
         onSuccess: () => {
           setName('')
@@ -232,15 +215,15 @@ function CreateListDialog({
       <DialogContent className="sm:max-w-lg">
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <DialogHeader>
-            <DialogTitle>New preference list</DialogTitle>
+            <DialogTitle>New preference list group</DialogTitle>
             <DialogDescription>
-              You&apos;ll be added as its first member. Invite other leads once
-              it&apos;s created.
+              Covers every role in the cycle. You&apos;ll be added as its first
+              member. Invite other leads once it&apos;s created.
             </DialogDescription>
           </DialogHeader>
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="preference-list-name">List name</Label>
+            <Label htmlFor="preference-list-name">Group name</Label>
             <Input
               id="preference-list-name"
               autoFocus

@@ -38,13 +38,17 @@ import type {
   PreferenceListDetail,
   PreferenceListEntry,
   PreferenceListMember,
+  PreferenceListPersonalEntry,
   ReorderPreferenceListEntries200,
   ReorderPreferenceListEntriesInputBody,
+  ReorderPreferenceListPersonalEntries200,
+  ReorderPreferenceListPersonalEntriesInputBody,
   SetPreferenceListDeadlineInputBody,
   SetPreferenceListDeadlineParams,
   SetPreferenceListMeetingDayInputBody,
   UpdatePreferenceListInputBody,
-  UpsertPreferenceListEntryInputBody
+  UpsertPreferenceListEntryInputBody,
+  UpsertPreferenceListPersonalEntryInputBody
 } from '.././model';
 
 import { customInstance } from '../../lib/api/orval-mutator';
@@ -248,8 +252,8 @@ export const useSetPreferenceListDeadline = <TError = ErrorModel | ErrorModel | 
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Reviewer only. Leads only see lists they're a member of; chiefs/admins see every list.
- * @summary List preference lists for a cycle and role
+ * Reviewer only. Leads only see groups they're a member of; chiefs/admins see every group. Each group covers every role in the cycle.
+ * @summary List preference list groups for a cycle
  */
 export const listPreferenceLists = (
     params?: ListPreferenceListsParams,
@@ -321,7 +325,7 @@ export function useListPreferenceLists<TData = Awaited<ReturnType<typeof listPre
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
- * @summary List preference lists for a cycle and role
+ * @summary List preference list groups for a cycle
  */
 
 export function useListPreferenceLists<TData = Awaited<ReturnType<typeof listPreferenceLists>>, TError = ErrorModel | ErrorModel | ErrorModel>(
@@ -341,8 +345,8 @@ export function useListPreferenceLists<TData = Awaited<ReturnType<typeof listPre
 
 
 /**
- * Reviewer only. The creator is added as the list's first member. Rejected once the (cycle, role) deadline has passed.
- * @summary Create a preference list
+ * Reviewer only. The creator is added as the group's first member. Rejected once every role's preference-list deadline for the cycle has passed.
+ * @summary Create a preference list group for a cycle
  */
 export const createPreferenceList = (
     createPreferenceListInputBody: NonReadonly<CreatePreferenceListInputBody>,
@@ -390,7 +394,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type CreatePreferenceListMutationError = ErrorModel | ErrorModel | ErrorModel | ErrorModel
 
     /**
- * @summary Create a preference list
+ * @summary Create a preference list group for a cycle
  */
 export const useCreatePreferenceList = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPreferenceList>>, TError,{data: NonReadonly<CreatePreferenceListInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
@@ -499,7 +503,7 @@ export function useGetLeadMeetingAvailability<TData = Awaited<ReturnType<typeof 
 
 
 /**
- * Chief only. Deletes every member and entry. Allowed even after the (cycle, role) deadline has passed, for administrative cleanup.
+ * Chief only. Deletes every member and entry. Allowed even after every role's deadline has passed, for administrative cleanup.
  * @summary Delete a preference list
  */
 export const deletePreferenceList = (
@@ -845,7 +849,7 @@ export const useUpsertPreferenceListEntry = <TError = ErrorModel | ErrorModel | 
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * application_ids must be an exact permutation of the list's current entries, so a stale client can't silently drop one via reorder.
+ * application_ids must be an exact permutation of the list's current entries for one role, so a stale client can't silently drop one via reorder.
  * @summary Reorder a preference list's entries
  */
 export const reorderPreferenceListEntries = (
@@ -1098,6 +1102,198 @@ export const useRemovePreferenceListMember = <TError = ErrorModel | ErrorModel |
       > => {
 
       const mutationOptions = getRemovePreferenceListMemberMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * @summary Remove an applicant from your own personal list
+ */
+export const deletePreferenceListPersonalEntry = (
+    id: string,
+    applicationId: string,
+ options?: SecondParameter<typeof customInstance>,) => {
+      
+      
+      return customInstance<void>(
+      {url: `/preference-lists/${id}/personal-entries/${applicationId}`, method: 'DELETE'
+    },
+      options);
+    }
+  
+
+
+export const getDeletePreferenceListPersonalEntryMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deletePreferenceListPersonalEntry>>, TError,{id: string;applicationId: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof deletePreferenceListPersonalEntry>>, TError,{id: string;applicationId: string}, TContext> => {
+
+const mutationKey = ['deletePreferenceListPersonalEntry'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deletePreferenceListPersonalEntry>>, {id: string;applicationId: string}> = (props) => {
+          const {id,applicationId} = props ?? {};
+
+          return  deletePreferenceListPersonalEntry(id,applicationId,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeletePreferenceListPersonalEntryMutationResult = NonNullable<Awaited<ReturnType<typeof deletePreferenceListPersonalEntry>>>
+    
+    export type DeletePreferenceListPersonalEntryMutationError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel
+
+    /**
+ * @summary Remove an applicant from your own personal list
+ */
+export const useDeletePreferenceListPersonalEntry = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deletePreferenceListPersonalEntry>>, TError,{id: string;applicationId: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof deletePreferenceListPersonalEntry>>,
+        TError,
+        {id: string;applicationId: string},
+        TContext
+      > => {
+
+      const mutationOptions = getDeletePreferenceListPersonalEntryMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * Every group member's personal list is visible to the whole group, but only its owner can write to it. Never deadline-gated.
+ * @summary Add an applicant to your own personal list within a group, or edit your reasoning
+ */
+export const upsertPreferenceListPersonalEntry = (
+    id: string,
+    applicationId: string,
+    upsertPreferenceListPersonalEntryInputBody: NonReadonly<UpsertPreferenceListPersonalEntryInputBody>,
+ options?: SecondParameter<typeof customInstance>,) => {
+      
+      
+      return customInstance<PreferenceListPersonalEntry>(
+      {url: `/preference-lists/${id}/personal-entries/${applicationId}`, method: 'PUT',
+      headers: {'Content-Type': 'application/json', },
+      data: upsertPreferenceListPersonalEntryInputBody
+    },
+      options);
+    }
+  
+
+
+export const getUpsertPreferenceListPersonalEntryMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upsertPreferenceListPersonalEntry>>, TError,{id: string;applicationId: string;data: NonReadonly<UpsertPreferenceListPersonalEntryInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof upsertPreferenceListPersonalEntry>>, TError,{id: string;applicationId: string;data: NonReadonly<UpsertPreferenceListPersonalEntryInputBody>}, TContext> => {
+
+const mutationKey = ['upsertPreferenceListPersonalEntry'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof upsertPreferenceListPersonalEntry>>, {id: string;applicationId: string;data: NonReadonly<UpsertPreferenceListPersonalEntryInputBody>}> = (props) => {
+          const {id,applicationId,data} = props ?? {};
+
+          return  upsertPreferenceListPersonalEntry(id,applicationId,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpsertPreferenceListPersonalEntryMutationResult = NonNullable<Awaited<ReturnType<typeof upsertPreferenceListPersonalEntry>>>
+    export type UpsertPreferenceListPersonalEntryMutationBody = NonReadonly<UpsertPreferenceListPersonalEntryInputBody>
+    export type UpsertPreferenceListPersonalEntryMutationError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel
+
+    /**
+ * @summary Add an applicant to your own personal list within a group, or edit your reasoning
+ */
+export const useUpsertPreferenceListPersonalEntry = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upsertPreferenceListPersonalEntry>>, TError,{id: string;applicationId: string;data: NonReadonly<UpsertPreferenceListPersonalEntryInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof upsertPreferenceListPersonalEntry>>,
+        TError,
+        {id: string;applicationId: string;data: NonReadonly<UpsertPreferenceListPersonalEntryInputBody>},
+        TContext
+      > => {
+
+      const mutationOptions = getUpsertPreferenceListPersonalEntryMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * @summary Reorder your own personal list's entries
+ */
+export const reorderPreferenceListPersonalEntries = (
+    id: string,
+    reorderPreferenceListPersonalEntriesInputBody: NonReadonly<ReorderPreferenceListPersonalEntriesInputBody>,
+ options?: SecondParameter<typeof customInstance>,) => {
+      
+      
+      return customInstance<ReorderPreferenceListPersonalEntries200>(
+      {url: `/preference-lists/${id}/personal-entry-order`, method: 'PUT',
+      headers: {'Content-Type': 'application/json', },
+      data: reorderPreferenceListPersonalEntriesInputBody
+    },
+      options);
+    }
+  
+
+
+export const getReorderPreferenceListPersonalEntriesMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reorderPreferenceListPersonalEntries>>, TError,{id: string;data: NonReadonly<ReorderPreferenceListPersonalEntriesInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof reorderPreferenceListPersonalEntries>>, TError,{id: string;data: NonReadonly<ReorderPreferenceListPersonalEntriesInputBody>}, TContext> => {
+
+const mutationKey = ['reorderPreferenceListPersonalEntries'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reorderPreferenceListPersonalEntries>>, {id: string;data: NonReadonly<ReorderPreferenceListPersonalEntriesInputBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  reorderPreferenceListPersonalEntries(id,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReorderPreferenceListPersonalEntriesMutationResult = NonNullable<Awaited<ReturnType<typeof reorderPreferenceListPersonalEntries>>>
+    export type ReorderPreferenceListPersonalEntriesMutationBody = NonReadonly<ReorderPreferenceListPersonalEntriesInputBody>
+    export type ReorderPreferenceListPersonalEntriesMutationError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel
+
+    /**
+ * @summary Reorder your own personal list's entries
+ */
+export const useReorderPreferenceListPersonalEntries = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reorderPreferenceListPersonalEntries>>, TError,{id: string;data: NonReadonly<ReorderPreferenceListPersonalEntriesInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof reorderPreferenceListPersonalEntries>>,
+        TError,
+        {id: string;data: NonReadonly<ReorderPreferenceListPersonalEntriesInputBody>},
+        TContext
+      > => {
+
+      const mutationOptions = getReorderPreferenceListPersonalEntriesMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }

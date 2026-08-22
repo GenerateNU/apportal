@@ -4,16 +4,19 @@ import {
   createPreferenceList,
   deletePreferenceList,
   deletePreferenceListEntry,
+  deletePreferenceListPersonalEntry,
   getLeadMeetingAvailability,
   getPreferenceList,
   getPreferenceListDeadline,
   listPreferenceLists,
   removePreferenceListMember,
   reorderPreferenceListEntries,
+  reorderPreferenceListPersonalEntries,
   setPreferenceListDeadline,
   setPreferenceListMeetingDay,
   updatePreferenceList,
   upsertPreferenceListEntry,
+  upsertPreferenceListPersonalEntry,
 } from '@/generated/preference-lists/preference-lists'
 import type { RequestOptions } from '@/lib/api/orval-mutator'
 import type {
@@ -25,24 +28,20 @@ import type {
   PreferenceListEntry,
   PreferenceListEntryDetail,
   PreferenceListMember,
+  PreferenceListPersonalEntry,
+  PreferenceListPersonalEntryDetail,
   PreferenceListSummary,
   PreferenceListStatus,
   Role,
 } from '@/lib/api/types'
 import { queryKeys } from './keys'
 
-export function usePreferenceLists(
-  cycleId: string,
-  role: Role,
-  opts?: RequestOptions
-) {
+export function usePreferenceLists(cycleId: string, opts?: RequestOptions) {
   return useQuery({
-    queryKey: queryKeys.preferenceLists.list(cycleId, role),
+    queryKey: queryKeys.preferenceLists.list(cycleId),
     queryFn: async () => {
-      const lists = ((await listPreferenceLists(
-        { cycle_id: cycleId, role },
-        opts
-      )) ?? []) as PreferenceListSummary[]
+      const lists = ((await listPreferenceLists({ cycle_id: cycleId }, opts)) ??
+        []) as PreferenceListSummary[]
       return lists.map((list) => ({
         ...list,
         member_names: list.member_names ?? [],
@@ -74,21 +73,19 @@ export function useCreatePreferenceList() {
   return useMutation({
     mutationFn: (vars: {
       cycleId: string
-      role: Role
       name: string
       opts?: RequestOptions
     }) =>
       createPreferenceList(
         {
           cycle_id: vars.cycleId,
-          application_role: vars.role,
           name: vars.name,
         },
         vars.opts
       ),
     onSuccess: (_data, vars) => {
       queryClient.invalidateQueries({
-        queryKey: queryKeys.preferenceLists.list(vars.cycleId, vars.role),
+        queryKey: queryKeys.preferenceLists.list(vars.cycleId),
       })
     },
   })
@@ -100,7 +97,6 @@ export function useUpdatePreferenceList() {
     mutationFn: (vars: {
       id: string
       cycleId: string
-      role: Role
       body: { name?: string; status?: PreferenceListStatus }
       opts?: RequestOptions
     }) => updatePreferenceList(vars.id, vars.body, vars.opts),
@@ -109,7 +105,7 @@ export function useUpdatePreferenceList() {
         queryKey: queryKeys.preferenceLists.detail(vars.id),
       })
       queryClient.invalidateQueries({
-        queryKey: queryKeys.preferenceLists.list(vars.cycleId, vars.role),
+        queryKey: queryKeys.preferenceLists.list(vars.cycleId),
       })
     },
   })
@@ -121,12 +117,11 @@ export function useDeletePreferenceList() {
     mutationFn: (vars: {
       id: string
       cycleId: string
-      role: Role
       opts?: RequestOptions
     }) => deletePreferenceList(vars.id, vars.opts),
     onSuccess: (_data, vars) => {
       queryClient.invalidateQueries({
-        queryKey: queryKeys.preferenceLists.list(vars.cycleId, vars.role),
+        queryKey: queryKeys.preferenceLists.list(vars.cycleId),
       })
     },
   })
@@ -221,6 +216,75 @@ export function useReorderPreferenceListEntries() {
         { application_ids: vars.applicationIds },
         vars.opts
       ) as Promise<PreferenceListEntryDetail[]>,
+    onSuccess: (_data, vars) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.preferenceLists.detail(vars.listId),
+      })
+    },
+  })
+}
+
+// Personal-list mutations always act on the calling user's own entries —
+// there's no owner param, since "personal" only ever means "mine" for
+// writes. Reads come along for free in usePreferenceList's detail.personal_entries.
+
+export function useUpsertPersonalPreferenceListEntry() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (vars: {
+      listId: string
+      applicationId: string
+      reasoning?: string
+      opts?: RequestOptions
+    }) =>
+      upsertPreferenceListPersonalEntry(
+        vars.listId,
+        vars.applicationId,
+        { reasoning: vars.reasoning },
+        vars.opts
+      ) as Promise<PreferenceListPersonalEntry>,
+    onSuccess: (_data, vars) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.preferenceLists.detail(vars.listId),
+      })
+    },
+  })
+}
+
+export function useDeletePersonalPreferenceListEntry() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (vars: {
+      listId: string
+      applicationId: string
+      opts?: RequestOptions
+    }) =>
+      deletePreferenceListPersonalEntry(
+        vars.listId,
+        vars.applicationId,
+        vars.opts
+      ),
+    onSuccess: (_data, vars) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.preferenceLists.detail(vars.listId),
+      })
+    },
+  })
+}
+
+export function useReorderPersonalPreferenceListEntries() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (vars: {
+      listId: string
+      applicationIds: string[]
+      opts?: RequestOptions
+    }) =>
+      reorderPreferenceListPersonalEntries(
+        vars.listId,
+        { application_ids: vars.applicationIds },
+        vars.opts
+      ) as Promise<PreferenceListPersonalEntryDetail[]>,
     onSuccess: (_data, vars) => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.preferenceLists.detail(vars.listId),
