@@ -26,7 +26,7 @@ import { useQuestionsByCycleRoles } from '@/lib/queries/questions'
 import { useCurrentUser } from '@/lib/queries/users'
 import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 import { RATING_OPTIONS } from '@/lib/interview-ratings'
-import { PAGE_SIZE } from './constants'
+import { ORDERED_STAGES, PAGE_SIZE, stageLabel } from './constants'
 import { BulkActionBar } from './BulkActionBar'
 import {
   AVAILABILITY_DAY_OPTIONS,
@@ -167,9 +167,11 @@ export function ApplicationsClient() {
   // counted server-side over every row rather than the page in hand.
   const listParams = useMemo(() => {
     if (!activeCycle) return undefined
-    // Split filters into answer filters and rating filters
-    const ratingFilters = filters.filter((f) => f.isRatingFilter)
-    const questionFilters = filters.filter((f) => !f.isRatingFilter)
+    // The special filters travel as their own query params; everything else
+    // is an answer filter.
+    const ratingFilters = filters.filter((f) => f.special === 'rating')
+    const stageFilters = filters.filter((f) => f.special === 'stage')
+    const questionFilters = filters.filter((f) => !f.special)
 
     const answerFilters = [
       ...questionFilters.map((f) => ({
@@ -191,6 +193,13 @@ export function ApplicationsClient() {
         .filter(Boolean)
     })
 
+    // Labels are what the checkbox list shows; the API takes the enum values.
+    const stageValues = stageFilters.flatMap((f) =>
+      (Array.isArray(f.values) ? f.values : [f.values])
+        .map((label) => ORDERED_STAGES.find((s) => stageLabel[s] === label))
+        .filter(Boolean)
+    )
+
     return {
       cycle_id: activeCycle,
       role: activeRole,
@@ -201,6 +210,9 @@ export function ApplicationsClient() {
       ...(ratingValues.length > 0 && {
         rating_filters: ratingValues.join(','),
       }),
+      // Unlike the stage tabs below, this one holds in kanban too — it's an
+      // explicit chip, and dropping it silently would contradict the UI.
+      ...(stageValues.length > 0 && { stages: stageValues.join(',') }),
       // Kanban lays every stage out side by side, so it can neither filter by
       // one stage nor take a page — it asks for the whole set instead.
       ...(view === 'table' && {
@@ -291,6 +303,28 @@ export function ApplicationsClient() {
       else next.add(id)
       return next
     })
+  }
+
+  // The stage tabs and the stage filter chip say the same thing two ways, so
+  // only one is ever live — picking either clears the other.
+  function handleStageChange(stage: ApplicationStage | 'all') {
+    setActiveStage(stage)
+    setFilters((prev) => prev.filter((f) => f.special !== 'stage'))
+  }
+
+  function handleFilterChange(
+    filter: AnswerFilter | null,
+    action: 'add' | 'remove'
+  ) {
+    if (!filter) return
+    if (action === 'add') {
+      if (filter.special === 'stage') setActiveStage('all')
+      setFilters((prev) => [...prev, filter])
+    } else {
+      setFilters((prev) =>
+        prev.filter((f) => f.question_id !== filter.question_id)
+      )
+    }
   }
 
   function toggleSelectAll() {
@@ -453,7 +487,7 @@ export function ApplicationsClient() {
             applicants={filtered}
             stageCounts={stageCounts}
             activeStage={activeStage}
-            onStageChange={setActiveStage}
+            onStageChange={handleStageChange}
             columns={columns}
             questionsByCycleRole={questionsByCycleRole}
             answersByApplicationId={answersByApplicationId}
@@ -466,15 +500,7 @@ export function ApplicationsClient() {
             selectedApplicationId={selectedApplicationId}
             onSelectApplication={setSelectedApplicationId}
             filters={filters}
-            onFilterChange={(filter, action) => {
-              if (action === 'add' && filter) {
-                setFilters((prev) => [...prev, filter])
-              } else if (action === 'remove' && filter) {
-                setFilters((prev) =>
-                  prev.filter((f) => f.question_id !== filter.question_id)
-                )
-              }
-            }}
+            onFilterChange={handleFilterChange}
             bulkBar={
               isChief && selectedIds.size > 0 ? (
                 <BulkActionBar

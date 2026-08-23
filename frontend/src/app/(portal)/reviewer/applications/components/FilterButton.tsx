@@ -10,6 +10,7 @@ import {
   CheckSquare,
   MoreHorizontal,
   Star,
+  Layers,
   MessageSquare,
   ChevronRight,
 } from 'lucide-react'
@@ -25,6 +26,7 @@ import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
 import type { Question, QuestionType, Role } from '@/lib/api/types'
 import { RATING_OPTIONS } from '@/lib/interview-ratings'
+import { ORDERED_STAGES, stageLabel } from './constants'
 
 // The wire shape the backend expects: a substring for free-text questions, a
 // list of chosen labels for choice questions.
@@ -35,9 +37,57 @@ export interface AnswerFilter {
   question_text: string
   question_type: QuestionType
   values: FilterValue
-  // isRatingFilter marks this as a special rating filter, not a question filter
-  isRatingFilter?: boolean
+  // Set when the filter targets something on the application itself rather
+  // than an answer to one of its questions — those go out as their own query
+  // params, not as answer_filters.
+  special?: SpecialFilter
 }
+
+export type SpecialFilter = 'rating' | 'stage'
+
+const SPECIAL_FILTER_ID: Record<SpecialFilter, string> = {
+  rating: '__rating__',
+  stage: '__stage__',
+}
+
+// Synthetic "questions", so the pickers below treat these exactly like a
+// dropdown question and render the same checkbox list.
+function specialQuestion(
+  special: SpecialFilter,
+  question_text: string,
+  options: string[]
+): Question {
+  return {
+    id: SPECIAL_FILTER_ID[special],
+    question_text,
+    question_type: 'dropdown',
+    options,
+    display_order: -1,
+    is_required: false,
+    cycle_id: '',
+    role: 'backend_developer' as Role,
+    created_at: '',
+  }
+}
+
+const SPECIAL_QUESTIONS: { special: SpecialFilter; question: Question }[] = [
+  {
+    special: 'rating',
+    question: specialQuestion(
+      'rating',
+      'Interview Rating',
+      RATING_OPTIONS.map((r) => r.label)
+    ),
+  },
+  {
+    special: 'stage',
+    question: specialQuestion(
+      'stage',
+      'Stage',
+      ORDERED_STAGES.map((s) => stageLabel[s])
+    ),
+  },
+]
 
 // Question types whose answers are picked from a fixed option list, so the
 // filter offers checkboxes instead of a text box.
@@ -80,24 +130,12 @@ export function FilterChips({
     }
   }, [activeQuestionId])
 
-  // Synthetic "question" for the rating filter
-  const ratingFilterItem: Question = {
-    id: '__rating__',
-    question_text: 'Interview Rating',
-    question_type: 'dropdown',
-    options: RATING_OPTIONS.map((r) => r.label),
-    display_order: -1,
-    is_required: false,
-    cycle_id: '',
-    role: 'backend_developer' as Role,
-    created_at: '',
-  }
-
-  // One filter per question (plus rating), so anything already filtered on
-  // drops off the list of things you can add.
-  const hasRatingFilter = filters.some((f) => f.isRatingFilter)
+  // One filter per question (plus the special ones), so anything already
+  // filtered on drops off the list of things you can add.
   const availableColumns = [
-    ...(hasRatingFilter ? [] : [ratingFilterItem]),
+    ...SPECIAL_QUESTIONS.filter(
+      ({ special }) => !filters.some((f) => f.special === special)
+    ).map(({ question }) => question),
     ...columns.filter((q) => !filters.some((f) => f.question_id === q.id)),
   ]
 
@@ -132,7 +170,7 @@ export function FilterChips({
         question_text: q.question_text,
         question_type: q.question_type,
         values,
-        isRatingFilter: q.id === '__rating__',
+        special: specialOf(q.id),
       },
       'add'
     )
@@ -158,17 +196,17 @@ export function FilterChips({
             className="inline-flex h-7 items-center overflow-hidden rounded-md border border-gray-200 bg-gray-50 text-sm"
           >
             <div className="flex items-center gap-1.5 px-2">
-              {filter.isRatingFilter ? (
-                <Star className="text-text-muted h-3.5 w-3.5 shrink-0" />
-              ) : (
-                getIconForQuestionType(filter.question_type, 'h-3.5 w-3.5')
+              {getFilterIcon(
+                filter.special,
+                filter.question_type,
+                'h-3.5 w-3.5'
               )}
               <span className="text-text-default max-w-[11rem] truncate">
                 {filter.question_text}
               </span>
             </div>
             <div className="text-text-muted h-full border-l border-gray-200 px-2 leading-7">
-              {filter.isRatingFilter ? 'is' : middleText}
+              {middleText}
             </div>
             <div className="text-text-default h-full max-w-[12rem] truncate border-l border-gray-200 px-2 leading-7">
               {getDisplayValue(filter)}
@@ -240,7 +278,7 @@ export function FilterChips({
                     className="border-b border-gray-100 px-3 py-2 text-left last:border-b-0"
                   >
                     <div className="flex min-w-0 flex-1 items-center gap-3">
-                      {getIconForQuestionType(q.question_type)}
+                      {getFilterIcon(specialOf(q.id), q.question_type)}
                       <div className="min-w-0 flex-1">
                         <div className="text-text-default truncate text-sm font-medium">
                           {q.question_text}
@@ -361,11 +399,20 @@ function getOptionsForQuestion(question: Question): string[] {
   return question.options ?? []
 }
 
-function getIconForQuestionType(
+function specialOf(questionId: string): SpecialFilter | undefined {
+  return SPECIAL_QUESTIONS.find(({ question }) => question.id === questionId)
+    ?.special
+}
+
+function getFilterIcon(
+  special: SpecialFilter | undefined,
   questionType: QuestionType,
   size = 'h-4 w-4'
 ): React.ReactNode {
   const iconProps = { className: `${size} text-text-muted shrink-0` }
+
+  if (special === 'rating') return <Star {...iconProps} />
+  if (special === 'stage') return <Layers {...iconProps} />
 
   switch (questionType) {
     case 'short_answer':
