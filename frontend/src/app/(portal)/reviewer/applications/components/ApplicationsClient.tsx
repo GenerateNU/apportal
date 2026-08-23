@@ -35,7 +35,7 @@ import {
   shortDays,
 } from './meetingAvailability'
 import type { ApplicantApplication } from './types'
-import type { AnswerFilter } from './FilterButton'
+import type { AnswerFilter, FilterChangeHandler } from './FilterButton'
 import { TableView } from './TableView'
 import { KanbanView } from './KanbanView'
 import { ApplicationDetail } from './ApplicationDetail'
@@ -312,19 +312,21 @@ export function ApplicationsClient() {
     setFilters((prev) => prev.filter((f) => f.special !== 'stage'))
   }
 
-  function handleFilterChange(
-    filter: AnswerFilter | null,
-    action: 'add' | 'remove'
-  ) {
+  const handleFilterChange: FilterChangeHandler = (filter, action) => {
     if (!filter) return
-    if (action === 'add') {
-      if (filter.special === 'stage') setActiveStage('all')
-      setFilters((prev) => [...prev, filter])
-    } else {
+    if (action === 'remove') {
       setFilters((prev) =>
         prev.filter((f) => f.question_id !== filter.question_id)
       )
+      return
     }
+    if (filter.special === 'stage') setActiveStage('all')
+    // Editing keeps the chip where it is; adding appends.
+    setFilters((prev) =>
+      action === 'update'
+        ? prev.map((f) => (f.question_id === filter.question_id ? filter : f))
+        : [...prev, filter]
+    )
   }
 
   function toggleSelectAll() {

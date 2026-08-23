@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useMemo, useRef } from 'react'
 import type { Interview, Question, WrittenAnswer } from '@/lib/api/types'
 import type { ApplicantApplication, ApplicationStage } from './types'
-import type { AnswerFilter } from './FilterButton'
+import type { AnswerFilter, FilterChangeHandler } from './FilterButton'
 import { FILTER_STAGES } from './constants'
 import { isAvailabilityQuestion } from './meetingAvailability'
 import { ApplicantRow } from './ApplicantRow'
@@ -60,10 +60,7 @@ export function TableView({
   selectedApplicationId: string | null
   onSelectApplication: (id: string) => void
   filters: AnswerFilter[]
-  onFilterChange: (
-    filter: AnswerFilter | null,
-    action: 'add' | 'remove'
-  ) => void
+  onFilterChange: FilterChangeHandler
   // Rendered in the filter row's place while a selection is active. Owned by
   // the parent, which holds the selection and the bulk mutation.
   bulkBar?: React.ReactNode
