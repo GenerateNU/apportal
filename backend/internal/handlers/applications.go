@@ -162,6 +162,9 @@ type ListApplicationsInput struct {
 	RecordingReviewerNUID string `query:"recording_reviewer_nuid" doc:"Limit to applications this lead is assigned to review the interview recording of"`
 	Role                  string `query:"role"`
 	Stage                 string `query:"stage"`
+	// Stages is the any-of counterpart of Stage, for the filter menu's
+	// multi-select. Comma-separated for the same reason as RatingFilters.
+	Stages string `query:"stages" doc:"Comma-separated list of stages, e.g. \"accepted,rejected\"; an application matches any of them"`
 	// AnswerFilters is a JSON-encoded []AnswerFilterInput rather than a
 	// structured param because huma can only bind primitives from a query
 	// string — a []AnswerFilterInput field silently binds nothing (or panics,
@@ -198,6 +201,10 @@ func (h *applicationHandler) list(ctx context.Context, in *ListApplicationsInput
 	if err != nil {
 		return nil, err
 	}
+	stages, err := parseStages(in.Stages)
+	if err != nil {
+		return nil, err
+	}
 
 	filter := store.ApplicationFilter{
 		CycleID:               in.CycleID,
@@ -207,6 +214,7 @@ func (h *applicationHandler) list(ctx context.Context, in *ListApplicationsInput
 		RecordingReviewerNUID: in.RecordingReviewerNUID,
 		AnswerFilters:         answerFilters,
 		InterviewRatings:      ratingFilters,
+		Stages:                stages,
 		Search:                in.Search,
 		Offset:                in.Offset,
 		// Only a user listing their own applications by their own identity
@@ -247,6 +255,28 @@ func (h *applicationHandler) list(ctx context.Context, in *ListApplicationsInput
 		out.Body.StageCounts[string(stage)] = n
 	}
 	return out, nil
+}
+
+// parseStages decodes a comma-separated list of application stages.
+func parseStages(raw string) ([]models.ApplicationStage, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil, nil
+	}
+	parts := strings.Split(raw, ",")
+	stages := make([]models.ApplicationStage, 0, len(parts))
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		stage := models.ApplicationStage(part)
+		if !stage.Valid() {
+			return nil, huma.Error422UnprocessableEntity("invalid stage in stages: " + part)
+		}
+		stages = append(stages, stage)
+	}
+	return stages, nil
 }
 
 // parseRatingFilters decodes a comma-separated list of interview ratings.
