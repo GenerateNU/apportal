@@ -60,9 +60,6 @@ export function ApplicationsClient() {
   const [activeCycle, setActiveCycle] = useState<string>('')
   const [cycleDefaulted, setCycleDefaulted] = useState(false)
   const [search, setSearch] = useState('')
-  const [activeAvailability, setActiveAvailability] = useState<string | 'all'>(
-    'all'
-  )
   const [selectedApplicationId, setSelectedApplicationId] = useState<
     string | null
   >(null)
@@ -129,32 +126,34 @@ export function ApplicationsClient() {
     [questionsByCycleRole, activeCycle, activeRole]
   )
 
-  // The availability dropdown filters by day, but the stored answer holds the
-  // full option label ("Monday 6:00-7:30 PM") and the wording drifts between
-  // cycles. Expanding the day to the matching labels here — where the options
-  // are already loaded — keeps the server filter an exact any-of match and
-  // keeps it consistent with the day tags in the table, which come from the
-  // same list.
+  // The chip picks whole days, but the stored answer holds the full option
+  // label ("Monday 6:00-7:30 PM") and the wording drifts between cycles.
+  // Expanding each day to the matching labels here — where the options are
+  // already loaded — keeps the server filter an exact any-of match and keeps
+  // it consistent with the day tags in the table, which come from the same
+  // list.
   const availabilityFilter = useMemo(() => {
-    if (activeAvailability === 'all' || !availabilityQuestionId) return null
-    const day = AVAILABILITY_DAY_OPTIONS.find(
-      (d) => d.code === activeAvailability
+    const chip = filters.find((f) => f.special === 'availability')
+    if (!chip || !availabilityQuestionId) return null
+    const labels = Array.isArray(chip.values) ? chip.values : [chip.values]
+    const days = AVAILABILITY_DAY_OPTIONS.filter((d) =>
+      labels.includes(d.label)
     )
     const options =
       questionsByCycleRole[`${activeCycle}:${activeRole}`]?.find(
         (q) => q.id === availabilityQuestionId
       )?.options ?? []
     const values = options.filter((o) =>
-      o.toLowerCase().includes(day?.day ?? '')
+      days.some((d) => o.toLowerCase().includes(d.day))
     )
-    if (!day || values.length === 0) return null
+    if (values.length === 0) return null
     return {
       question_id: availabilityQuestionId,
       question_type: 'checkbox' as const,
       values,
     }
   }, [
-    activeAvailability,
+    filters,
     availabilityQuestionId,
     questionsByCycleRole,
     activeCycle,
@@ -167,8 +166,8 @@ export function ApplicationsClient() {
   // counted server-side over every row rather than the page in hand.
   const listParams = useMemo(() => {
     if (!activeCycle) return undefined
-    // The special filters travel as their own query params; everything else
-    // is an answer filter.
+    // Rating and stage travel as their own query params; the availability
+    // chip is expanded into an answer filter above; question filters go as-is.
     const ratingFilters = filters.filter((f) => f.special === 'rating')
     const stageFilters = filters.filter((f) => f.special === 'stage')
     const questionFilters = filters.filter((f) => !f.special)
@@ -428,23 +427,6 @@ export function ApplicationsClient() {
             </SelectContent>
           </Select>
 
-          <Select
-            value={activeAvailability}
-            onValueChange={setActiveAvailability}
-          >
-            <SelectTrigger className="w-56" aria-label="Filter by availability">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Any availability</SelectItem>
-              {AVAILABILITY_DAY_OPTIONS.map((option) => (
-                <SelectItem key={option.code} value={option.code}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
           <div className="relative w-full sm:w-60">
             <Search className="text-text-subtle absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
             <input
@@ -503,6 +485,7 @@ export function ApplicationsClient() {
             onSelectApplication={setSelectedApplicationId}
             filters={filters}
             onFilterChange={handleFilterChange}
+            hasAvailability={!!availabilityQuestionId}
             bulkBar={
               isChief && selectedIds.size > 0 ? (
                 <BulkActionBar

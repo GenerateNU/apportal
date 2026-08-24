@@ -11,6 +11,7 @@ import {
   MoreHorizontal,
   Star,
   Layers,
+  Clock,
   MessageSquare,
   ChevronRight,
 } from 'lucide-react'
@@ -27,6 +28,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import type { Question, QuestionType, Role } from '@/lib/api/types'
 import { RATING_OPTIONS } from '@/lib/interview-ratings'
 import { ORDERED_STAGES, stageLabel } from './constants'
+import { AVAILABILITY_DAY_OPTIONS } from './meetingAvailability'
 
 // The wire shape the backend expects: a substring for free-text questions, a
 // list of chosen labels for choice questions.
@@ -43,11 +45,12 @@ export interface AnswerFilter {
   special?: SpecialFilter
 }
 
-export type SpecialFilter = 'rating' | 'stage'
+export type SpecialFilter = 'rating' | 'stage' | 'availability'
 
 const SPECIAL_FILTER_ID: Record<SpecialFilter, string> = {
   rating: '__rating__',
   stage: '__stage__',
+  availability: '__availability__',
 }
 
 // Synthetic "questions", so the pickers below treat these exactly like a
@@ -87,6 +90,14 @@ const SPECIAL_QUESTIONS: { special: SpecialFilter; question: Question }[] = [
       ORDERED_STAGES.map((s) => stageLabel[s])
     ),
   },
+  {
+    special: 'availability',
+    question: specialQuestion(
+      'availability',
+      'Availability',
+      AVAILABILITY_DAY_OPTIONS.map((d) => d.label)
+    ),
+  },
 ]
 
 // Question types whose answers are picked from a fixed option list, so the
@@ -106,12 +117,16 @@ interface FilterChipsProps {
   filters: AnswerFilter[]
   columns: Question[]
   onFilterChange: FilterChangeHandler
+  // Availability is a per-cycle/role question, so the day filter is only
+  // offered where that question exists to match against.
+  hasAvailability?: boolean
 }
 
 export function FilterChips({
   filters,
   columns,
   onFilterChange,
+  hasAvailability,
 }: FilterChipsProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [filterValues, setFilterValues] = useState<Record<string, FilterValue>>(
@@ -136,7 +151,9 @@ export function FilterChips({
   // filtered on drops off the list of things you can add.
   const availableColumns = [
     ...SPECIAL_QUESTIONS.filter(
-      ({ special }) => !filters.some((f) => f.special === special)
+      ({ special }) =>
+        (special !== 'availability' || hasAvailability) &&
+        !filters.some((f) => f.special === special)
     ).map(({ question }) => question),
     ...columns.filter((q) => !filters.some((f) => f.question_id === q.id)),
   ]
@@ -516,6 +533,7 @@ function getFilterIcon(
 
   if (special === 'rating') return <Star {...iconProps} />
   if (special === 'stage') return <Layers {...iconProps} />
+  if (special === 'availability') return <Clock {...iconProps} />
 
   switch (questionType) {
     case 'short_answer':
