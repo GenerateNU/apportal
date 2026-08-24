@@ -326,6 +326,32 @@ export function useSetPreferenceListDeadline() {
         { role: vars.role },
         vars.opts
       ) as Promise<PreferenceListDeadline>,
+    // Optimistic because the picker reads the deadline straight back out of
+    // this cache entry — without it, every edit flashes the old time until
+    // the round trip lands.
+    onMutate: async (vars) => {
+      const key = queryKeys.preferenceListDeadline.detail(
+        vars.cycleId,
+        vars.role
+      )
+      await queryClient.cancelQueries({ queryKey: key })
+      const previous = queryClient.getQueryData<PreferenceListDeadline>(key)
+      if (previous) {
+        queryClient.setQueryData(key, {
+          ...previous,
+          closes_at: vars.closesAt ?? undefined,
+        })
+      }
+      return { previous }
+    },
+    onError: (_err, vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(
+          queryKeys.preferenceListDeadline.detail(vars.cycleId, vars.role),
+          context.previous
+        )
+      }
+    },
     onSuccess: (data, vars) => {
       queryClient.setQueryData(
         queryKeys.preferenceListDeadline.detail(vars.cycleId, vars.role),

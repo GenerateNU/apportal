@@ -10,6 +10,11 @@ import {
 } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
 
+function to24Hour(hours12: number, meridiem: 'AM' | 'PM') {
+  if (hours12 === 12) return meridiem === 'PM' ? 12 : 0
+  return meridiem === 'PM' ? hours12 + 12 : hours12
+}
+
 function DateTimePicker({
   value,
   onValueChange,
@@ -22,65 +27,50 @@ function DateTimePicker({
   disabled?: boolean
 }) {
   const [open, setOpen] = React.useState(false)
-  const [month, setMonth] = React.useState<Date>(value || new Date())
-  const [hours24, setHours24] = React.useState<number>(
-    value ? value.getHours() : 0
-  )
-  const [minutes, setMinutes] = React.useState<string>(
-    value ? String(value.getMinutes()).padStart(2, '0') : '00'
-  )
+  // Which month the grid shows. null follows `value`, which usually arrives
+  // asynchronously — mirroring it into state would freeze the grid (and the
+  // displayed time) on whatever was set before the fetch resolved.
+  const [browsing, setBrowsing] = React.useState<Date | null>(null)
+  // Raw input text, live only while a time field is being typed in; the
+  // committed time always comes from `value`.
+  const [hourDraft, setHourDraft] = React.useState<string | null>(null)
+  const [minuteDraft, setMinuteDraft] = React.useState<string | null>(null)
 
+  const month = browsing ?? new Date(value ?? new Date())
+
+  const hours24 = value?.getHours() ?? 0
+  const minutes = value?.getMinutes() ?? 0
   const hours12 = hours24 % 12 || 12
-  const meridiem = hours24 >= 12 ? 'PM' : 'AM'
+  const meridiem: 'AM' | 'PM' = hours24 >= 12 ? 'PM' : 'AM'
 
-  const handleHourChange = (newHour12: number) => {
-    const newHour24 =
-      newHour12 === 12
-        ? meridiem === 'PM'
-          ? 12
-          : 0
-        : meridiem === 'PM'
-          ? newHour12 + 12
-          : newHour12
-    setHours24(newHour24)
-
-    const newDate = new Date(value || month)
-    newDate.setHours(newHour24)
-    newDate.setMinutes(parseInt(minutes) || 0)
-    onValueChange(newDate)
-  }
-
-  const handleMeridiemChange = (newMeridiem: 'AM' | 'PM') => {
-    let newHour24 = hours24
-    if (newMeridiem === 'AM' && hours24 >= 12) {
-      newHour24 = hours24 - 12
-    } else if (newMeridiem === 'PM' && hours24 < 12) {
-      newHour24 = hours24 + 12
+  // Each control edits one field of the current value and leaves the rest
+  // alone. Seconds are always dropped — a deadline picked to the second is
+  // noise the UI can't even show.
+  const emit = (parts: { day?: number; hours?: number; minutes?: number }) => {
+    const next = value ? new Date(value) : new Date()
+    if (!value) next.setHours(0, 0, 0, 0)
+    next.setSeconds(0, 0)
+    if (parts.day !== undefined) {
+      next.setFullYear(month.getFullYear(), month.getMonth(), parts.day)
     }
-    setHours24(newHour24)
-
-    const newDate = new Date(value || month)
-    newDate.setHours(newHour24)
-    newDate.setMinutes(parseInt(minutes) || 0)
-    onValueChange(newDate)
+    if (parts.hours !== undefined) next.setHours(parts.hours)
+    if (parts.minutes !== undefined) next.setMinutes(parts.minutes)
+    onValueChange(next)
   }
 
-  const handleDateSelect = (day: number) => {
-    const newDate = new Date(month)
-    newDate.setDate(day)
-    newDate.setHours(hours24)
-    newDate.setMinutes(parseInt(minutes) || 0)
-    onValueChange(newDate)
+  const commitHours = (raw: string) => {
+    setHourDraft(null)
+    const parsed = parseInt(raw)
+    if (isNaN(parsed) || parsed < 1 || parsed > 12) return
+    const next = to24Hour(parsed, meridiem)
+    if (next !== hours24) emit({ hours: next })
   }
 
-  const handleMinutesChange = (newMinutes: string) => {
-    const parsedMin = Math.min(59, Math.max(0, parseInt(newMinutes) || 0))
-    setMinutes(String(parsedMin).padStart(2, '0'))
-
-    const newDate = new Date(value || month)
-    newDate.setHours(hours24)
-    newDate.setMinutes(parsedMin)
-    onValueChange(newDate)
+  const commitMinutes = (raw: string) => {
+    setMinuteDraft(null)
+    const parsed = parseInt(raw)
+    if (isNaN(parsed) || parsed < 0 || parsed > 59) return
+    if (parsed !== minutes) emit({ minutes: parsed })
   }
 
   const daysInMonth = new Date(
@@ -100,11 +90,17 @@ function DateTimePicker({
   const year = month.getFullYear()
 
   const formattedValue = value
-    ? `${value.toLocaleDateString()} ${hours12}:${minutes} ${meridiem}`
+    ? `${value.toLocaleDateString()} ${hours12}:${String(minutes).padStart(2, '0')} ${meridiem}`
     : ''
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next)
+        if (!next) setBrowsing(null)
+      }}
+    >
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -127,21 +123,21 @@ function DateTimePicker({
           <div className="flex items-center justify-between gap-2">
             <button
               onClick={() =>
-                setMonth(new Date(month.getFullYear(), month.getMonth() - 1))
+                setBrowsing(new Date(month.getFullYear(), month.getMonth() - 1))
               }
               className="text-text-subtle hover:text-text-default rounded-md p-1.5 transition hover:bg-gray-100"
             >
               ←
             </button>
             <button
-              onClick={() => setMonth(new Date())}
+              onClick={() => setBrowsing(new Date())}
               className="text-text-default flex-1 rounded-md py-1 text-center text-sm font-medium transition hover:bg-gray-100"
             >
               {monthName} {year}
             </button>
             <button
               onClick={() =>
-                setMonth(new Date(month.getFullYear(), month.getMonth() + 1))
+                setBrowsing(new Date(month.getFullYear(), month.getMonth() + 1))
               }
               className="text-text-subtle hover:text-text-default rounded-md p-1.5 transition hover:bg-gray-100"
             >
@@ -177,7 +173,7 @@ function DateTimePicker({
                 return (
                   <button
                     key={day}
-                    onClick={() => handleDateSelect(day)}
+                    onClick={() => emit({ day })}
                     className={cn(
                       'text-text-default relative h-8 w-8 rounded-md text-sm font-medium transition-colors',
                       isSelected
@@ -203,34 +199,9 @@ function DateTimePicker({
                   type="number"
                   min="1"
                   max="12"
-                  value={String(hours12).padStart(2, '0')}
-                  onChange={(e) => {
-                    const val = e.target.value
-                    const parsed = parseInt(val)
-                    if (
-                      val === '' ||
-                      (!isNaN(parsed) && parsed >= 1 && parsed <= 12)
-                    ) {
-                      setHours24(
-                        val === ''
-                          ? 0
-                          : parsed === 12
-                            ? meridiem === 'PM'
-                              ? 12
-                              : 0
-                            : meridiem === 'PM'
-                              ? parsed + 12
-                              : parsed
-                      )
-                    }
-                  }}
-                  onBlur={(e) => {
-                    const val = e.target.value
-                    const parsed = parseInt(val)
-                    if (!isNaN(parsed) && parsed >= 1 && parsed <= 12) {
-                      handleHourChange(parsed)
-                    }
-                  }}
+                  value={hourDraft ?? String(hours12).padStart(2, '0')}
+                  onChange={(e) => setHourDraft(e.target.value)}
+                  onBlur={(e) => commitHours(e.target.value)}
                   onWheel={(e) => e.currentTarget.blur()}
                   className="focus:border-primary focus:ring-primary/20 h-8 w-10 rounded-md border border-gray-300 text-center text-sm font-medium focus:ring-2 focus:outline-none"
                 />
@@ -239,49 +210,32 @@ function DateTimePicker({
                   type="number"
                   min="0"
                   max="59"
-                  value={minutes}
-                  onChange={(e) => {
-                    const val = e.target.value
-                    if (
-                      val === '' ||
-                      (parseInt(val) >= 0 && parseInt(val) <= 59)
-                    ) {
-                      setMinutes(val)
-                    }
-                  }}
-                  onBlur={(e) => {
-                    const val = e.target.value
-                    const parsed = parseInt(val)
-                    if (!isNaN(parsed) && parsed >= 0 && parsed <= 59) {
-                      handleMinutesChange(String(parsed).padStart(2, '0'))
-                    }
-                  }}
+                  value={minuteDraft ?? String(minutes).padStart(2, '0')}
+                  onChange={(e) => setMinuteDraft(e.target.value)}
+                  onBlur={(e) => commitMinutes(e.target.value)}
                   onWheel={(e) => e.currentTarget.blur()}
                   className="focus:border-primary focus:ring-primary/20 h-8 w-10 rounded-md border border-gray-300 text-center text-sm font-medium focus:ring-2 focus:outline-none"
                 />
                 <div className="ml-1 flex gap-1">
-                  <button
-                    onClick={() => handleMeridiemChange('AM')}
-                    className={cn(
-                      'h-8 rounded-md px-2 text-xs font-medium transition',
-                      meridiem === 'AM'
-                        ? 'bg-primary text-white'
-                        : 'border border-gray-300 text-gray-600 hover:bg-gray-100'
-                    )}
-                  >
-                    AM
-                  </button>
-                  <button
-                    onClick={() => handleMeridiemChange('PM')}
-                    className={cn(
-                      'h-8 rounded-md px-2 text-xs font-medium transition',
-                      meridiem === 'PM'
-                        ? 'bg-primary text-white'
-                        : 'border border-gray-300 text-gray-600 hover:bg-gray-100'
-                    )}
-                  >
-                    PM
-                  </button>
+                  {(['AM', 'PM'] as const).map((m) => (
+                    <button
+                      key={m}
+                      onClick={() => {
+                        // Re-clicking the active half would emit an unchanged
+                        // date — a write that saves nothing.
+                        if (m !== meridiem)
+                          emit({ hours: to24Hour(hours12, m) })
+                      }}
+                      className={cn(
+                        'h-8 rounded-md px-2 text-xs font-medium transition',
+                        meridiem === m
+                          ? 'bg-primary text-white'
+                          : 'border border-gray-300 text-gray-600 hover:bg-gray-100'
+                      )}
+                    >
+                      {m}
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>

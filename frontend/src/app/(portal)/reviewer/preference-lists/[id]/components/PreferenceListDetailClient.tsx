@@ -493,6 +493,11 @@ export function PreferenceListDetailClient({
               Clear
             </button>
           )}
+          {setDeadline.isError && (
+            <span className="text-xs text-red-600">
+              Couldn&apos;t save the deadline — try again.
+            </span>
+          )}
         </div>
       )}
 
