@@ -132,20 +132,26 @@ function challengeRepoSearchUrl(query: string): string {
 function ChallengeCard({
   applicantNuid,
   applicationId,
+  role,
 }: {
   applicantNuid: string
   applicationId: string
+  role: Role
 }) {
   const { data: score } = useChallengeScore(applicantNuid)
   const { data: submission } = useSubmission(applicationId)
   const { data: applicant } = useApplicant(applicantNuid)
   const [showHistory, setShowHistory] = useState(false)
 
-  if (!score && !submission) return null
+  // The challenge is engineer-only — try a best-effort repo match for every
+  // engineering interviewee, not just those who already have a score, since
+  // a repo can exist even if they never finished (or started) an attempt.
+  const repoQueries =
+    role === 'software_engineer' && applicant
+      ? buildChallengeRepoQueries(applicant.full_name)
+      : []
 
-  const repoQueries = applicant
-    ? buildChallengeRepoQueries(applicant.full_name)
-    : []
+  if (!score && !submission && repoQueries.length === 0) return null
 
   return (
     <div className="mb-4 flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
@@ -186,39 +192,6 @@ function ChallengeCard({
               </div>
             ))}
           </div>
-
-          {repoQueries.length > 0 && (
-            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs">
-              <a
-                href={challengeRepoSearchUrl(repoQueries[0])}
-                target="_blank"
-                rel="noreferrer"
-                title="Best-effort name match — the challenge server doesn't expose the applicant's exact repo, so this searches the org for repos matching their name."
-                className="text-brand-blue inline-flex w-fit items-center gap-1 hover:underline"
-              >
-                Find challenge repo (best-effort match)
-                <ExternalLink size={10} />
-              </a>
-              {repoQueries.length > 1 && (
-                <span className="text-text-faint">
-                  · No match?{' '}
-                  {repoQueries.slice(1).map((query, i) => (
-                    <span key={query}>
-                      {i > 0 && ' · '}
-                      <a
-                        href={challengeRepoSearchUrl(query)}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-brand-blue hover:underline"
-                      >
-                        try {i === 0 ? 'last name only' : 'first name only'}
-                      </a>
-                    </span>
-                  ))}
-                </span>
-              )}
-            </div>
-          )}
 
           {score.attempts.length > 1 && (
             <button
@@ -264,6 +237,39 @@ function ChallengeCard({
         <p className="text-text-faint text-sm">
           No finished challenge attempt yet.
         </p>
+      )}
+
+      {repoQueries.length > 0 && (
+        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs">
+          <a
+            href={challengeRepoSearchUrl(repoQueries[0])}
+            target="_blank"
+            rel="noreferrer"
+            title="Best-effort name match — the challenge server doesn't expose the applicant's exact repo, so this searches the org for repos matching their name."
+            className="text-brand-blue inline-flex w-fit items-center gap-1 hover:underline"
+          >
+            Find challenge repo (best-effort match)
+            <ExternalLink size={10} />
+          </a>
+          {repoQueries.length > 1 && (
+            <span className="text-text-faint">
+              · No match?{' '}
+              {repoQueries.slice(1).map((query, i) => (
+                <span key={query}>
+                  {i > 0 && ' · '}
+                  <a
+                    href={challengeRepoSearchUrl(query)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-brand-blue hover:underline"
+                  >
+                    try {i === 0 ? 'last name only' : 'first name only'}
+                  </a>
+                </span>
+              ))}
+            </span>
+          )}
+        </div>
       )}
     </div>
   )
@@ -548,6 +554,7 @@ export function InterviewConductClient({
           <ChallengeCard
             applicantNuid={applicantNuid}
             applicationId={applicationId}
+            role={role}
           />
 
           <div className="mb-4 flex flex-col gap-2 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
