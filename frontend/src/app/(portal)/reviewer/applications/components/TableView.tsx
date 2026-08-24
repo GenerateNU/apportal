@@ -33,6 +33,7 @@ export function TableView({
   onSelectApplication,
   filters,
   onFilterChange,
+  hasAvailability,
   bulkBar,
   loading,
   hasMore,
@@ -61,6 +62,7 @@ export function TableView({
   onSelectApplication: (id: string) => void
   filters: AnswerFilter[]
   onFilterChange: FilterChangeHandler
+  hasAvailability?: boolean
   // Rendered in the filter row's place while a selection is active. Owned by
   // the parent, which holds the selection and the bulk mutation.
   bulkBar?: React.ReactNode
@@ -140,6 +142,7 @@ export function TableView({
             filters={filters}
             columns={columns}
             onFilterChange={onFilterChange}
+            hasAvailability={hasAvailability}
           />
         )}
         <div className="flex shrink-0 items-center gap-1 overflow-x-auto">
