@@ -61,6 +61,7 @@ export default async function ApplicationPage({
         cycleId={application.cycle_id}
         role={role}
         applicantNuid={application.user_nuid}
+        stage={application.stage}
       />
     </HydrationBoundary>
   )
