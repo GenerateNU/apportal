@@ -13,10 +13,14 @@ const preferenceListEntryColumns = `id, preference_list_id, application_id, rank
 // PreferenceListEntryUpsert adds an applicant to a list or edits their
 // reasoning. Reasoning nil means "leave whatever's there" (same
 // COALESCE-preserve contract as RecordingReviewUpsert.Comments) — pass an
-// empty string, not nil, to explicitly clear it.
+// empty string, not nil, to explicitly clear it. Role is the application's
+// own role, passed in by the caller (already fetched to validate cycle)
+// rather than re-derived here, and used both to scope the rank sequence and
+// to key the insert lock below.
 type PreferenceListEntryUpsert struct {
 	PreferenceListID string
 	ApplicationID    string
+	Role             models.Role
 	Reasoning        *string
 	UpdatedBy        string
 }
@@ -27,6 +31,23 @@ type PreferenceListEntryUpsert struct {
 // scoped to entries sharing the new application's own role, so each role
 // tab gets its own independent 1..N sequence within the same group.
 func (s *Store) UpsertPreferenceListEntry(ctx context.Context, in PreferenceListEntryUpsert) (models.PreferenceListEntry, error) {
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return models.PreferenceListEntry{}, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	// Serializes concurrent inserts for the same (list, role): without this,
+	// two members adding different applicants of the same role at nearly the
+	// same instant can both read the same MAX(rank) before either commits,
+	// producing duplicate ranks. Transaction-scoped — released automatically
+	// on commit/rollback — and keyed on (list, role), so it only blocks
+	// inserts targeting this exact role tab, not unrelated ones.
+	const lockQ = `SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))`
+	if _, err := tx.Exec(ctx, lockQ, in.PreferenceListID, string(in.Role)); err != nil {
+		return models.PreferenceListEntry{}, err
+	}
+
 	const q = `
 		INSERT INTO preference_list_entries (preference_list_id, application_id, rank, reasoning, updated_by)
 		VALUES (
@@ -34,8 +55,7 @@ func (s *Store) UpsertPreferenceListEntry(ctx context.Context, in PreferenceList
 			(SELECT COALESCE(MAX(e.rank), 0) + 1
 			 FROM preference_list_entries e
 			 JOIN applications a ON a.id = e.application_id
-			 WHERE e.preference_list_id = $1
-			   AND a.application_role = (SELECT application_role FROM applications WHERE id = $2)),
+			 WHERE e.preference_list_id = $1 AND a.application_role = $5),
 			$3, $4
 		)
 		ON CONFLICT (preference_list_id, application_id) DO UPDATE SET
@@ -43,11 +63,18 @@ func (s *Store) UpsertPreferenceListEntry(ctx context.Context, in PreferenceList
 			updated_by = EXCLUDED.updated_by,
 			updated_at = NOW()
 		RETURNING ` + preferenceListEntryColumns
-	rows, err := s.db.Query(ctx, q, in.PreferenceListID, in.ApplicationID, in.Reasoning, in.UpdatedBy)
+	rows, err := tx.Query(ctx, q, in.PreferenceListID, in.ApplicationID, in.Reasoning, in.UpdatedBy, in.Role)
 	if err != nil {
 		return models.PreferenceListEntry{}, err
 	}
-	return pgx.CollectExactlyOneRow(rows, pgx.RowToStructByPos[models.PreferenceListEntry])
+	entry, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByPos[models.PreferenceListEntry])
+	if err != nil {
+		return models.PreferenceListEntry{}, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return models.PreferenceListEntry{}, err
+	}
+	return entry, nil
 }
 
 func (s *Store) DeletePreferenceListEntry(ctx context.Context, listID, applicationID string) error {

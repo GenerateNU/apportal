@@ -49,6 +49,7 @@ func (h *preferenceListHandler) upsertPersonalEntry(ctx context.Context, in *Ups
 		PreferenceListID: in.ID,
 		OwnerNUID:        currentActor(ctx).NUID,
 		ApplicationID:    in.ApplicationID,
+		Role:             app.Role,
 		Reasoning:        in.Body.Reasoning,
 	})
 	if err != nil {

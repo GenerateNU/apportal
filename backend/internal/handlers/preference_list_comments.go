@@ -64,7 +64,7 @@ func (h *preferenceListHandler) updateComment(ctx context.Context, in *UpdatePre
 	if err := h.requireAccess(ctx, in.ID); err != nil {
 		return nil, err
 	}
-	comment, err := h.store.UpdatePreferenceListComment(ctx, in.CommentID, currentActor(ctx).NUID, in.Body.Body)
+	comment, err := h.store.UpdatePreferenceListComment(ctx, in.ID, in.CommentID, currentActor(ctx).NUID, in.Body.Body)
 	if err != nil {
 		return nil, storeErr(err)
 	}

@@ -197,11 +197,19 @@ export function PreferenceListDetailClient({
   const createComment = useCreatePreferenceListComment()
   const updateComment = useUpdatePreferenceListComment()
 
+  // Resyncs from the poll while the field isn't focused, so a teammate's
+  // concurrent rename shows up locally — but never overwrites the name
+  // mid-edit, only once you're not actively typing in it. Adjusted during
+  // render (React's documented pattern for "reset state when a prop
+  // changes") rather than in an effect, to avoid an extra render pass.
   const [name, setName] = useState('')
-  const [nameSeeded, setNameSeeded] = useState(false)
-  if (!nameSeeded && list) {
-    setName(list.name)
-    setNameSeeded(true)
+  const [nameFocused, setNameFocused] = useState(false)
+  const [prevListName, setPrevListName] = useState<string | undefined>(
+    undefined
+  )
+  if (list && list.name !== prevListName) {
+    setPrevListName(list.name)
+    if (!nameFocused) setName(list.name)
   }
 
   if (isError) {
@@ -376,7 +384,11 @@ export function PreferenceListDetailClient({
           <Input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            onBlur={saveName}
+            onFocus={() => setNameFocused(true)}
+            onBlur={() => {
+              setNameFocused(false)
+              saveName()
+            }}
             disabled={groupLocked}
             className="max-w-sm text-lg font-semibold"
           />
@@ -759,7 +771,17 @@ function EntryRow({
   isAddingComment?: boolean
   isEditingComment?: boolean
 }) {
+  // Same resync-when-unfocused treatment as the group name above (adjusted
+  // during render, not in an effect), so a teammate's concurrent reasoning
+  // edit — picked up by the 8s poll — shows here instead of being
+  // permanently masked by this row's own local state.
   const [reasoning, setReasoning] = useState(entry.reasoning ?? '')
+  const [reasoningFocused, setReasoningFocused] = useState(false)
+  const [prevReasoning, setPrevReasoning] = useState(entry.reasoning)
+  if (entry.reasoning !== prevReasoning) {
+    setPrevReasoning(entry.reasoning)
+    if (!reasoningFocused) setReasoning(entry.reasoning ?? '')
+  }
   const [commentsOpen, setCommentsOpen] = useState(false)
 
   return (
@@ -827,7 +849,9 @@ function EntryRow({
           id={`reasoning-${entry.id}`}
           value={reasoning}
           onChange={(e) => setReasoning(e.target.value)}
+          onFocus={() => setReasoningFocused(true)}
           onBlur={() => {
+            setReasoningFocused(false)
             if (reasoning !== (entry.reasoning ?? ''))
               onSaveReasoning(reasoning)
           }}
