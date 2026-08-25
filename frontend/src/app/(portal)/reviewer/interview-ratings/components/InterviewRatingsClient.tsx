@@ -36,7 +36,7 @@ import {
 import { useInterviewsByApplicationIdBatches } from '@/lib/queries/interviews'
 import { useRecordingReviewsByInterviewIds } from '@/lib/queries/recording-reviews'
 import { useChiefs, useCurrentUser, useLeads } from '@/lib/queries/users'
-import { RATING_LABEL } from '@/lib/interview-ratings'
+import { RATING_COLORS, RATING_LABEL } from '@/lib/interview-ratings'
 import { ROLE_CHIP_CLASS, ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 import {
   stageBadge,
@@ -57,14 +57,6 @@ const INTERVIEW_STAGES: ApplicationStage[] = [
   'interview_conducted',
   'interview_review',
 ]
-
-const RATING_COLORS: Record<InterviewRating, { bg: string; text: string }> = {
-  must_hire: { bg: 'bg-green-100', text: 'text-green-700' },
-  great: { bg: 'bg-teal-100', text: 'text-teal-700' },
-  good: { bg: 'bg-blue-100', text: 'text-blue-700' },
-  neutral: { bg: 'bg-gray-100', text: 'text-gray-700' },
-  do_not_hire: { bg: 'bg-red-100', text: 'text-red-700' },
-}
 
 type Row = {
   application: ApplicationSummary

@@ -64,7 +64,11 @@ import {
   useUser,
 } from '@/lib/queries/users'
 import { useWrittenReviews } from '@/lib/queries/written-reviews'
-import { RATING_LABEL, RATING_OPTIONS } from '@/lib/interview-ratings'
+import {
+  RATING_COLORS,
+  RATING_LABEL,
+  RATING_OPTIONS,
+} from '@/lib/interview-ratings'
 import { ROLE_CHIP_CLASS, ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 import {
   REVIEW_STATE_BADGE,
@@ -512,6 +516,13 @@ export function InterviewConductClient({
             >
               {ROLE_LABEL[role]}
             </span>
+            {interview?.rating && (
+              <span
+                className={`w-fit rounded-md px-2 py-0.5 text-xs font-medium ${RATING_COLORS[interview.rating].bg} ${RATING_COLORS[interview.rating].text}`}
+              >
+                {RATING_LABEL[interview.rating]}
+              </span>
+            )}
             {interviewerName && (
               <span className="text-text-subtle text-sm">
                 Interviewer: {interviewerName}
