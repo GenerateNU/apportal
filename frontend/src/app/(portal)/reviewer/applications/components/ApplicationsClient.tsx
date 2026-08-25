@@ -1,7 +1,7 @@
 'use client'
 import { PageContainer } from '@/components/PageContainer'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Search, List, Columns } from 'lucide-react'
 import {
   Select,
@@ -16,6 +16,7 @@ import type {
   Role,
   WrittenAnswer,
 } from '@/lib/api/types'
+import { usePersistedFilters } from '@/hooks/usePersistedFilters'
 import { useAnswersByApplicationIdBatches } from '@/lib/queries/answers'
 import {
   useInfiniteApplications,
@@ -45,6 +46,21 @@ type View = 'table' | 'kanban'
 // How long typing settles before the search hits the server. Long enough that
 // a typed word is one request, short enough to still feel live.
 const SEARCH_DEBOUNCE_MS = 250
+
+// Persisted across visits (not just in-session) so leaving the table to look
+// at an applicant and coming back doesn't reset a filter set that took several
+// chips to build. Versioned, like the chief-review queue's key: if a default
+// below ever changes, bump this so the old one can't resurrect itself.
+const FILTERS_STORAGE_KEY = 'applications-filters-v1'
+
+type StoredFilters = {
+  view: View
+  cycleId: string
+  role: Role
+  stage: ApplicationStage | 'all'
+  search: string
+  filters: AnswerFilter[]
+}
 
 export function ApplicationsClient() {
   const { data: currentUser } = useCurrentUser()
@@ -96,6 +112,65 @@ export function ApplicationsClient() {
     setCycleDefaulted(true)
   }
 
+  // Every stored value can outlive what it points at — a cycle can be removed,
+  // a role retired — so each is checked against the current options and
+  // otherwise left at its default.
+  const restoreFilters = useCallback(
+    (stored: Partial<StoredFilters>) => {
+      if (stored.view === 'table' || stored.view === 'kanban') {
+        setView(stored.view)
+      }
+      if (stored.cycleId && cycles.some((c) => c.id === stored.cycleId)) {
+        setActiveCycle(stored.cycleId)
+        setCycleDefaulted(true)
+      }
+      if (stored.role && ROLE_COLUMNS.includes(stored.role)) {
+        setActiveRole(stored.role)
+      }
+
+      const stage =
+        stored.stage &&
+        ORDERED_STAGES.includes(stored.stage as ApplicationStage)
+          ? (stored.stage as ApplicationStage)
+          : 'all'
+      if (stage !== 'all') setActiveStage(stage)
+      if (Array.isArray(stored.filters)) {
+        // The stage tabs and the stage chip say the same thing two ways and
+        // only one is ever live (see handleStageChange) — a snapshot holding
+        // both is stale, and the tab is what's visible.
+        setFilters(
+          stage === 'all'
+            ? stored.filters
+            : stored.filters.filter((f) => f.special !== 'stage')
+        )
+      }
+
+      // Both, so a restored term doesn't fire a second query a debounce later.
+      if (stored.search) {
+        setSearch(stored.search)
+        setDebouncedSearch(stored.search)
+      }
+    },
+    [cycles]
+  )
+
+  // Held back until the cycle list is in hand, since a stored cycle id is only
+  // safe to apply once there's something to check it against. The debounced
+  // search rather than the live one, so typing doesn't write once per keystroke.
+  usePersistedFilters<StoredFilters>(
+    FILTERS_STORAGE_KEY,
+    {
+      view,
+      cycleId: activeCycle,
+      role: activeRole,
+      stage: activeStage,
+      search: debouncedSearch,
+      filters,
+    },
+    restoreFilters,
+    cycles.length > 0
+  )
+
   // Taken from the selected cycle+role rather than from the results, since a
   // filter that matches nothing would otherwise empty the question list the
   // filter UI itself is built from. Every application in view is this pair.
@@ -113,6 +188,32 @@ export function ApplicationsClient() {
     })
     return map
   }, [uniquePairs, questionQueries])
+
+  // A restored chip — or one left behind by a role switch — can point at a
+  // question the current cycle/role doesn't have, which empties the table with
+  // nothing on screen to explain it. Only prune once the questions are loaded;
+  // doing it while they're pending would drop every chip. Specials are
+  // synthetic questions (__rating__ and friends) and always apply.
+  const questionsLoaded =
+    uniquePairs.length > 0 && questionQueries.every((q) => q.isSuccess)
+  const knownQuestionIds = useMemo(
+    () =>
+      Object.values(questionsByCycleRole)
+        .flat()
+        .map((q) => q.id)
+        .sort()
+        .join(','),
+    [questionsByCycleRole]
+  )
+  useEffect(() => {
+    if (!questionsLoaded) return
+    const known = new Set(knownQuestionIds.split(','))
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setFilters((prev) => {
+      const next = prev.filter((f) => f.special || known.has(f.question_id))
+      return next.length === prev.length ? prev : next
+    })
+  }, [questionsLoaded, knownQuestionIds])
 
   // "Meeting Availability for the Fall Semester" is a regular checkbox
   // question authored per cycle/role in the admin builder, not a dedicated
