@@ -58,6 +58,12 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL('/', request.url))
   }
 
+  // Prevent CDN/ISR caching of responses that may contain Set-Cookie headers.
+  // Without this, CDNs can cache auth tokens and serve them to different users,
+  // causing session cross-contamination (users logged in as each other).
+  // See: https://github.com/supabase/supabase-js/issues/1682
+  response.headers.set('Cache-Control', 'private, no-store')
+
   return response
 }
 
