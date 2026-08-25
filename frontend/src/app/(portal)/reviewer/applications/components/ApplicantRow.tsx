@@ -3,16 +3,7 @@ import type { ApplicantApplication } from './types'
 import { formatDate } from '@/lib/utils'
 import { AnswerCell } from './AnswerCell'
 import { StageSelect } from './StageSelect'
-import { RATING_LABEL } from '@/lib/interview-ratings'
-import type { InterviewRating } from '@/lib/api/types'
-
-const RATING_COLORS: Record<InterviewRating, { bg: string; text: string }> = {
-  must_hire: { bg: 'bg-green-100', text: 'text-green-700' },
-  great: { bg: 'bg-teal-100', text: 'text-teal-700' },
-  good: { bg: 'bg-blue-100', text: 'text-blue-700' },
-  neutral: { bg: 'bg-gray-100', text: 'text-gray-700' },
-  do_not_hire: { bg: 'bg-red-100', text: 'text-red-700' },
-}
+import { RATING_COLORS, RATING_LABEL } from '@/lib/interview-ratings'
 
 export function ApplicantRow({
   applicant,
