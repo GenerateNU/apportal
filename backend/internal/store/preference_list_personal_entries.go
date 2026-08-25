@@ -13,19 +13,35 @@ const preferenceListPersonalEntryColumns = `id, preference_list_id, owner_nuid, 
 // PreferenceListPersonalEntryUpsert adds an applicant to a lead's own
 // personal list within a group, or edits their reasoning. Reasoning nil
 // means "leave whatever's there" — same COALESCE-preserve contract as
-// PreferenceListEntryUpsert.
+// PreferenceListEntryUpsert. Role is the application's own role, passed in
+// by the caller rather than re-derived here — see PreferenceListEntryUpsert.
 type PreferenceListPersonalEntryUpsert struct {
 	PreferenceListID string
 	OwnerNUID        string
 	ApplicationID    string
+	Role             models.Role
 	Reasoning        *string
 }
 
 // UpsertPersonalPreferenceListEntry mirrors UpsertPreferenceListEntry, but
 // scoped to one owner's personal list within the group: rank is a separate
 // 1..N sequence per (list, owner, role), independent of the shared list's
-// ranks and every other owner's.
+// ranks and every other owner's. Same advisory-lock-around-insert treatment
+// as UpsertPreferenceListEntry, keyed on (list, owner, role), to prevent two
+// concurrent adds to the same owner's personal list computing the same
+// MAX(rank)+1.
 func (s *Store) UpsertPersonalPreferenceListEntry(ctx context.Context, in PreferenceListPersonalEntryUpsert) (models.PreferenceListPersonalEntry, error) {
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return models.PreferenceListPersonalEntry{}, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	const lockQ = `SELECT pg_advisory_xact_lock(hashtext($1 || ':' || $2), hashtext($3))`
+	if _, err := tx.Exec(ctx, lockQ, in.PreferenceListID, in.OwnerNUID, string(in.Role)); err != nil {
+		return models.PreferenceListPersonalEntry{}, err
+	}
+
 	const q = `
 		INSERT INTO preference_list_personal_entries (preference_list_id, owner_nuid, application_id, rank, reasoning)
 		VALUES (
@@ -33,19 +49,25 @@ func (s *Store) UpsertPersonalPreferenceListEntry(ctx context.Context, in Prefer
 			(SELECT COALESCE(MAX(pe.rank), 0) + 1
 			 FROM preference_list_personal_entries pe
 			 JOIN applications a ON a.id = pe.application_id
-			 WHERE pe.preference_list_id = $1 AND pe.owner_nuid = $2
-			   AND a.application_role = (SELECT application_role FROM applications WHERE id = $3)),
+			 WHERE pe.preference_list_id = $1 AND pe.owner_nuid = $2 AND a.application_role = $5),
 			$4
 		)
 		ON CONFLICT (preference_list_id, owner_nuid, application_id) DO UPDATE SET
 			reasoning  = COALESCE(EXCLUDED.reasoning, preference_list_personal_entries.reasoning),
 			updated_at = NOW()
 		RETURNING ` + preferenceListPersonalEntryColumns
-	rows, err := s.db.Query(ctx, q, in.PreferenceListID, in.OwnerNUID, in.ApplicationID, in.Reasoning)
+	rows, err := tx.Query(ctx, q, in.PreferenceListID, in.OwnerNUID, in.ApplicationID, in.Reasoning, in.Role)
 	if err != nil {
 		return models.PreferenceListPersonalEntry{}, err
 	}
-	return pgx.CollectExactlyOneRow(rows, pgx.RowToStructByPos[models.PreferenceListPersonalEntry])
+	entry, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByPos[models.PreferenceListPersonalEntry])
+	if err != nil {
+		return models.PreferenceListPersonalEntry{}, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return models.PreferenceListPersonalEntry{}, err
+	}
+	return entry, nil
 }
 
 func (s *Store) DeletePersonalPreferenceListEntry(ctx context.Context, listID, ownerNUID, applicationID string) error {
