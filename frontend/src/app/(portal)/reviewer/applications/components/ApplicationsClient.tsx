@@ -521,16 +521,6 @@ export function ApplicationsClient() {
           return selectedApp ? (
             <ApplicationDetail
               applicant={selectedApp}
-              columns={columns}
-              rowQuestions={
-                questionsByCycleRole[
-                  `${selectedApp.cycleId}:${selectedApp.role}`
-                ] ?? []
-              }
-              answers={answersByApplicationId[selectedApplicationId] ?? []}
-              answersLoading={
-                !!answersLoadingByApplicationId[selectedApplicationId]
-              }
               onClose={() => setSelectedApplicationId(null)}
             />
           ) : null
