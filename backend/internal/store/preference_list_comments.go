@@ -37,16 +37,19 @@ func (s *Store) CreatePreferenceListComment(ctx context.Context, listID string, 
 	return detail, nil
 }
 
-// UpdatePreferenceListComment edits a comment's body. Scoped to authorNUID so
-// a lead can only edit their own comments — ErrNotFound covers both "doesn't
-// exist" and "isn't yours" without distinguishing the two to the caller.
-func (s *Store) UpdatePreferenceListComment(ctx context.Context, commentID, authorNUID, body string) (models.PreferenceListCommentDetail, error) {
+// UpdatePreferenceListComment edits a comment's body. Scoped to both listID
+// and authorNUID — listID so a comment id from one list can't be reached
+// through a different list's URL (mirrors RemovePreferenceListMember's
+// (id, preference_list_id) scoping), authorNUID so a lead can only edit
+// their own comments. ErrNotFound covers "doesn't exist", "isn't yours", and
+// "isn't in this list" alike, without distinguishing them to the caller.
+func (s *Store) UpdatePreferenceListComment(ctx context.Context, listID, commentID, authorNUID, body string) (models.PreferenceListCommentDetail, error) {
 	var detail models.PreferenceListCommentDetail
 	const q = `
-		UPDATE preference_list_comments SET body = $3, updated_at = NOW()
-		WHERE id = $1 AND author_nuid = $2
+		UPDATE preference_list_comments SET body = $4, updated_at = NOW()
+		WHERE id = $1 AND preference_list_id = $2 AND author_nuid = $3
 		RETURNING ` + preferenceListCommentColumns
-	rows, err := s.db.Query(ctx, q, commentID, authorNUID, body)
+	rows, err := s.db.Query(ctx, q, commentID, listID, authorNUID, body)
 	if err != nil {
 		return detail, err
 	}

@@ -507,6 +507,7 @@ func (h *preferenceListHandler) upsertEntry(ctx context.Context, in *UpsertPrefe
 	entry, err := h.store.UpsertPreferenceListEntry(ctx, store.PreferenceListEntryUpsert{
 		PreferenceListID: in.ID,
 		ApplicationID:    in.ApplicationID,
+		Role:             app.Role,
 		Reasoning:        in.Body.Reasoning,
 		UpdatedBy:        currentActor(ctx).NUID,
 	})
@@ -530,6 +531,9 @@ func (h *preferenceListHandler) deleteEntry(ctx context.Context, in *PreferenceL
 	app, err := h.store.GetApplication(ctx, in.ApplicationID)
 	if err != nil {
 		return nil, storeErr(err)
+	}
+	if app.CycleID != list.CycleID {
+		return nil, huma.Error422UnprocessableEntity("application is not in this list's cycle")
 	}
 	if err := h.checkEntryNotLocked(ctx, list.CycleID, app.Role); err != nil {
 		return nil, err
