@@ -55,6 +55,7 @@ import {
   useRecordingReviews,
   useUpsertRecordingReview,
 } from '@/lib/queries/recording-reviews'
+import { useReviewQuestions } from '@/lib/queries/review-questions'
 import { useSubmission } from '@/lib/queries/submissions'
 import {
   useChiefs,
@@ -62,6 +63,7 @@ import {
   useLeads,
   useUser,
 } from '@/lib/queries/users'
+import { useWrittenReviews } from '@/lib/queries/written-reviews'
 import { RATING_LABEL, RATING_OPTIONS } from '@/lib/interview-ratings'
 import { ROLE_CHIP_CLASS, ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 import {
@@ -310,6 +312,16 @@ export function InterviewConductClient({
   const { data: applicant } = useApplicant(applicantNuid)
   const { data: answers = [] } = useAnswers(applicationId)
   const { data: questions = [] } = useQuestions(cycleId, role)
+  // What other leads said about this applicant's written application during
+  // lead review — so an interviewer doesn't have to separately open the
+  // lead-review page to see it. The backend already withholds other
+  // reviewers' answers from a plain lead until a chief releases them for
+  // this cycle/role, same as the lead-review page itself.
+  const { data: reviewQuestions = [] } = useReviewQuestions(cycleId, role)
+  const { data: writtenReviews = [] } = useWrittenReviews(applicationId)
+  const otherWrittenReviews = writtenReviews.filter(
+    (r) => r.reviewer_nuid !== currentUser?.nuid
+  )
   const { data: assignment } = useInterviewAssignment(applicationId)
   const { data: reviewerAssignments = [] } =
     useRecordingReviewerAssignments(applicationId)
@@ -592,6 +604,51 @@ export function InterviewConductClient({
               />
             ))}
           </div>
+
+          {otherWrittenReviews.length > 0 && (
+            <div className="mt-6">
+              <h2 className="text-text-faint mb-3 text-xs font-semibold tracking-wide uppercase">
+                Lead review comments
+              </h2>
+              <div className="flex flex-col gap-3">
+                {otherWrittenReviews.map((r) => (
+                  <div
+                    key={r.id}
+                    className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm"
+                  >
+                    <span className="text-text-muted text-xs">
+                      Reviewer {r.reviewer_name || r.reviewer_nuid}
+                    </span>
+                    <div className="mt-2 flex flex-col gap-2">
+                      {reviewQuestions.map((q) => {
+                        const a = r.answers.find(
+                          (ans) => ans.review_question_id === q.id
+                        )
+                        if (!a) return null
+                        const display =
+                          a.score != null
+                            ? `${a.score}/10`
+                            : a.answer_options?.length
+                              ? a.answer_options.join(', ')
+                              : a.answer_text
+                        if (!display) return null
+                        return (
+                          <div key={q.id}>
+                            <p className="text-text-muted text-xs font-medium">
+                              {q.question_text}
+                            </p>
+                            <p className="text-text-default text-sm whitespace-pre-wrap">
+                              {display}
+                            </p>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Interview + recording reviews */}

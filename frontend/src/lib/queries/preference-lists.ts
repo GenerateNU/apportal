@@ -374,8 +374,14 @@ export function useSetPreferenceListMeetingDay() {
         { meeting_day: vars.meetingDay ?? undefined },
         vars.opts
       ) as Promise<PreferenceList>,
-    onSuccess: (data, vars) => {
-      queryClient.setQueryData(queryKeys.preferenceLists.detail(vars.id), data)
+    // The endpoint returns a bare PreferenceList, not the full
+    // PreferenceListDetail (members/entries/personal_entries/comments) that's
+    // actually cached under this key — writing it in directly would strip
+    // those fields and crash the next render. Invalidate and refetch instead.
+    onSuccess: (_data, vars) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.preferenceLists.detail(vars.id),
+      })
     },
   })
 }
