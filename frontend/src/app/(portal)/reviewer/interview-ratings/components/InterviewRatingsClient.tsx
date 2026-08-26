@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import Link from 'next/link'
 import {
   ArrowRight,
@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { PageContainer } from '@/components/PageContainer'
 import { Button } from '@/components/ui/button'
+import { usePersistedFilters } from '@/hooks/usePersistedFilters'
 import {
   Dialog,
   DialogContent,
@@ -114,6 +115,16 @@ const SWIMLANE_GRID_COLS_CLASS: Record<number, string> = {
   6: 'grid-cols-[repeat(6,20rem)]',
 }
 
+const FILTERS_STORAGE_KEY = 'interview-ratings-filters-v1'
+
+type StoredFilters = {
+  cycleId: string
+  role: Role | 'all'
+  groupByInterviewer: boolean
+  interviewerFilter: string
+  searchQuery: string
+}
+
 function emptyRatingBuckets(): Record<RatingKey, Row[]> {
   return {
     must_hire: [],
@@ -141,6 +152,45 @@ export function InterviewRatingsClient() {
   const [interviewerFilter, setInterviewerFilter] = useState('all')
   const [collapsedLanes, setCollapsedLanes] = useState<Set<string>>(new Set())
   const [searchQuery, setSearchQuery] = useState('')
+
+  // Every stored value can outlive what it points at — a cycle can be
+  // removed, a role retired — so each is checked before being restored.
+  const restoreFilters = useCallback(
+    (stored: Partial<StoredFilters>) => {
+      if (stored.cycleId && cycles.some((c) => c.id === stored.cycleId)) {
+        setCycleId(stored.cycleId)
+      }
+      if (stored.role === 'all' || ROLE_COLUMNS.includes(stored.role as Role)) {
+        setActiveRole(stored.role as Role | 'all')
+      }
+      if (typeof stored.groupByInterviewer === 'boolean') {
+        setGroupByInterviewer(stored.groupByInterviewer)
+      }
+      if (typeof stored.interviewerFilter === 'string') {
+        setInterviewerFilter(stored.interviewerFilter)
+      }
+      if (typeof stored.searchQuery === 'string') {
+        setSearchQuery(stored.searchQuery)
+      }
+    },
+    [cycles]
+  )
+
+  // So following a card into an interview and coming back restores this
+  // exact view instead of resetting to defaults.
+  usePersistedFilters<StoredFilters>(
+    FILTERS_STORAGE_KEY,
+    {
+      cycleId,
+      role: activeRole,
+      groupByInterviewer,
+      interviewerFilter,
+      searchQuery,
+    },
+    restoreFilters,
+    cycles.length > 0
+  )
+
   // The `released` value being confirmed; null while the dialog is closed.
   const [confirmingRelease, setConfirmingRelease] = useState<boolean | null>(
     null
