@@ -8,10 +8,22 @@ import {
   ChevronDown,
   ChevronRight,
   Clock,
+  Loader2,
+  Lock,
+  Unlock,
   Users,
   LayoutList,
 } from 'lucide-react'
 import { PageContainer } from '@/components/PageContainer'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -35,6 +47,10 @@ import {
 } from '@/lib/queries/interview-assignments'
 import { useInterviewsByApplicationIdBatches } from '@/lib/queries/interviews'
 import { useRecordingReviewsByInterviewIds } from '@/lib/queries/recording-reviews'
+import {
+  useReviewGates,
+  useSetReviewRelease,
+} from '@/lib/queries/review-releases'
 import { useChiefs, useCurrentUser, useLeads } from '@/lib/queries/users'
 import { RATING_COLORS, RATING_LABEL } from '@/lib/interview-ratings'
 import { ROLE_CHIP_CLASS, ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
@@ -125,6 +141,10 @@ export function InterviewRatingsClient() {
   const [interviewerFilter, setInterviewerFilter] = useState('all')
   const [collapsedLanes, setCollapsedLanes] = useState<Set<string>>(new Set())
   const [searchQuery, setSearchQuery] = useState('')
+  // The `released` value being confirmed; null while the dialog is closed.
+  const [confirmingRelease, setConfirmingRelease] = useState<boolean | null>(
+    null
+  )
 
   const { data: applications = [] } = useApplications(
     {
@@ -139,6 +159,47 @@ export function InterviewRatingsClient() {
     (r) => r === 'chief' || r === 'admin'
   )
   const showSwimlanes = groupByInterviewer && isChief
+
+  // The blind-review gate is per cycle x applicant role, so the button acts on
+  // whichever roles the page is currently showing — both, under "All roles".
+  const releaseRoles = activeRole === 'all' ? ROLE_COLUMNS : [activeRole]
+  const { data: reviewGates = [] } = useReviewGates(isChief ? cycleId : '')
+  const setRelease = useSetReviewRelease()
+  const recordingGates = reviewGates.filter(
+    (g) =>
+      g.kind === 'recording' && (activeRole === 'all' || g.role === activeRole)
+  )
+  const allReleased =
+    recordingGates.length > 0 && recordingGates.every((g) => g.released)
+  const submittedReviews = recordingGates.reduce(
+    (n, g) => n + g.submitted_count,
+    0
+  )
+  const assignedReviews = recordingGates.reduce(
+    (n, g) => n + g.assigned_count,
+    0
+  )
+  const scopeLabel =
+    activeRole === 'all'
+      ? 'all applicants'
+      : `${ROLE_LABEL[activeRole].toLowerCase()} applicants`
+
+  function confirmRelease() {
+    if (confirmingRelease === null) return
+    const released = confirmingRelease
+    // One call per role — the endpoint gates a single role at a time.
+    Promise.all(
+      releaseRoles.map((role) =>
+        setRelease.mutateAsync({
+          cycleId,
+          body: { role, kind: 'recording', released },
+        })
+      )
+    )
+      .then(() => setConfirmingRelease(null))
+      // Left open on failure; the dialog shows the error.
+      .catch(() => {})
+  }
 
   // Nuid -> display name, for the interviewer shown per row/lane — same
   // lookup MyInterviewsClient uses for its chief "viewing" dropdown.
@@ -348,6 +409,23 @@ export function InterviewRatingsClient() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
+          {isChief && recordingGates.length > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-text-muted text-xs">
+                {submittedReviews}/{assignedReviews} reviews in
+              </span>
+              <Button
+                size="sm"
+                variant={allReleased ? 'outline' : 'default'}
+                onClick={() => setConfirmingRelease(!allReleased)}
+                disabled={setRelease.isPending}
+              >
+                {allReleased ? <Lock size={14} /> : <Unlock size={14} />}
+                {allReleased ? 'Hide reviews' : 'Release reviews'}
+              </Button>
+            </div>
+          )}
+
           <div className="relative w-64">
             <Input
               type="text"
@@ -557,6 +635,51 @@ export function InterviewRatingsClient() {
           ))}
         </div>
       )}
+
+      <Dialog
+        open={confirmingRelease !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setConfirmingRelease(null)
+            setRelease.reset()
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {confirmingRelease
+                ? 'Release interview reviews?'
+                : 'Hide interview reviews?'}
+            </DialogTitle>
+            <DialogDescription>
+              {confirmingRelease
+                ? `Every reviewer will be able to read all interview recording reviews for ${scopeLabel} in this cycle, including any still in draft. You can hide them again afterwards.`
+                : `Reviewers will go back to seeing only their own interview recording review for ${scopeLabel} in this cycle.`}
+            </DialogDescription>
+          </DialogHeader>
+          {setRelease.isError && (
+            <p className="text-destructive text-sm">
+              Couldn&apos;t update the gate. Try again.
+            </p>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setConfirmingRelease(null)}
+              disabled={setRelease.isPending}
+            >
+              Cancel
+            </Button>
+            <Button onClick={confirmRelease} disabled={setRelease.isPending}>
+              {setRelease.isPending && (
+                <Loader2 className="animate-spin" size={14} />
+              )}
+              {confirmingRelease ? 'Release' : 'Hide'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PageContainer>
   )
 }
