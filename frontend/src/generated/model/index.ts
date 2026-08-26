@@ -237,6 +237,7 @@ export * from './reorderPreferenceListEntriesInputBodyApplicationIds';
 export * from './reorderPreferenceListPersonalEntries200';
 export * from './reorderPreferenceListPersonalEntriesInputBody';
 export * from './reorderPreferenceListPersonalEntriesInputBodyApplicationIds';
+export * from './replaceDraftPickInputBody';
 export * from './reviewAnswerSubmission';
 export * from './reviewGate';
 export * from './reviewGateRole';

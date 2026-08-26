@@ -1,6 +1,6 @@
 'use client'
 
-import { ArrowLeft, ArrowRight, X } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Pencil, X } from 'lucide-react'
 import type { DraftBoard } from '@/lib/api/types'
 import { snakeSeat } from './snake'
 
@@ -10,11 +10,14 @@ import { snakeSeat } from './snake'
 export function DraftBoardGrid({
   board,
   canEdit,
+  onChangePick,
   onRemovePick,
   removingPick,
 }: {
   board: DraftBoard
   canEdit: boolean
+  // Swap who's in a slot that's already filled, without reopening it.
+  onChangePick: (pickNumber: number) => void
   onRemovePick: (pickNumber: number) => void
   removingPick: number | null
 }) {
@@ -102,15 +105,27 @@ export function DraftBoardGrid({
                         )}
                       </div>
                       {pick && canEdit && (
-                        <button
-                          type="button"
-                          onClick={() => onRemovePick(slot)}
-                          disabled={removingPick === slot}
-                          aria-label={`Undo pick ${slot}`}
-                          className="text-text-faint hover:text-text-muted shrink-0 disabled:opacity-40"
-                        >
-                          <X size={13} />
-                        </button>
+                        <div className="flex shrink-0 items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => onChangePick(slot)}
+                            aria-label={`Change pick ${slot}`}
+                            title="Change this pick"
+                            className="text-text-faint hover:text-text-muted"
+                          >
+                            <Pencil size={12} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onRemovePick(slot)}
+                            disabled={removingPick === slot}
+                            aria-label={`Undo pick ${slot}`}
+                            title="Undo this pick"
+                            className="text-text-faint hover:text-text-muted disabled:opacity-40"
+                          >
+                            <X size={13} />
+                          </button>
+                        </div>
                       )}
                     </div>
                   </td>

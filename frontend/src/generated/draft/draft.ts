@@ -33,6 +33,7 @@ import type {
   ListDraftedApplications200,
   MakeDraftPickInputBody,
   OpenDraftInputBody,
+  ReplaceDraftPickInputBody,
   SetDraftTeamsInputBody,
   UpdateDraftInputBody
 } from '.././model';
@@ -582,6 +583,72 @@ export const useRemoveDraftPick = <TError = ErrorModel | ErrorModel | ErrorModel
       > => {
 
       const mutationOptions = getRemoveDraftPickMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * Chief only. Done in place, so the slot never reopens and the team on the clock doesn't change. The outgoing applicant returns to their previous stage and the incoming one moves to accepted.
+ * @summary Swap the applicant in a slot that's already been picked
+ */
+export const replaceDraftPick = (
+    id: string,
+    pickNumber: number,
+    replaceDraftPickInputBody: NonReadonly<ReplaceDraftPickInputBody>,
+ options?: SecondParameter<typeof customInstance>,) => {
+      
+      
+      return customInstance<DraftPick>(
+      {url: `/drafts/${id}/picks/${pickNumber}`, method: 'PUT',
+      headers: {'Content-Type': 'application/json', },
+      data: replaceDraftPickInputBody
+    },
+      options);
+    }
+  
+
+
+export const getReplaceDraftPickMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof replaceDraftPick>>, TError,{id: string;pickNumber: number;data: NonReadonly<ReplaceDraftPickInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof replaceDraftPick>>, TError,{id: string;pickNumber: number;data: NonReadonly<ReplaceDraftPickInputBody>}, TContext> => {
+
+const mutationKey = ['replaceDraftPick'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof replaceDraftPick>>, {id: string;pickNumber: number;data: NonReadonly<ReplaceDraftPickInputBody>}> = (props) => {
+          const {id,pickNumber,data} = props ?? {};
+
+          return  replaceDraftPick(id,pickNumber,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReplaceDraftPickMutationResult = NonNullable<Awaited<ReturnType<typeof replaceDraftPick>>>
+    export type ReplaceDraftPickMutationBody = NonReadonly<ReplaceDraftPickInputBody>
+    export type ReplaceDraftPickMutationError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel
+
+    /**
+ * @summary Swap the applicant in a slot that's already been picked
+ */
+export const useReplaceDraftPick = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof replaceDraftPick>>, TError,{id: string;pickNumber: number;data: NonReadonly<ReplaceDraftPickInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof replaceDraftPick>>,
+        TError,
+        {id: string;pickNumber: number;data: NonReadonly<ReplaceDraftPickInputBody>},
+        TContext
+      > => {
+
+      const mutationOptions = getReplaceDraftPickMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }
