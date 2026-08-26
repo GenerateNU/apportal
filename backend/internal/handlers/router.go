@@ -115,6 +115,7 @@ func registerHandlers(api huma.API, st *store.Store, storageClient *storage.Clie
 	(&challengeScoreHandler{store: st}).register(api)
 	(&preferenceListHandler{store: st}).register(api)
 	(&selectionHandler{store: st}).register(api)
+	(&draftHandler{store: st}).register(api)
 }
 
 // OpenAPIYAML builds the same Huma API used at runtime and returns its OpenAPI

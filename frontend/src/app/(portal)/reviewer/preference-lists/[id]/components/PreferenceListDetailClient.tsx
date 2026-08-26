@@ -43,6 +43,7 @@ import type {
 } from '@/lib/api/types'
 import { useAnswersByApplicationIdBatches } from '@/lib/queries/answers'
 import { useApplications } from '@/lib/queries/applications'
+import { useDraftedApplications } from '@/lib/queries/drafts'
 import {
   useAddPreferenceListMember,
   useCreatePreferenceListComment,
@@ -172,6 +173,13 @@ export function PreferenceListDetailClient({
           : [...prev, filter]
     )
   }
+
+  // Already claimed on a draft board — shown as a marker on the entry rather
+  // than removed from the list, so undoing a pick needs no repair here.
+  const { data: draftedByApplicationId = {} } = useDraftedApplications(
+    list?.cycle_id ?? '',
+    { poll: true }
+  )
 
   // Availability is about applicants, not leads: each applicant answers a
   // "Meeting Availability" question on their own application, and they're
@@ -665,6 +673,7 @@ export function PreferenceListDetailClient({
                       entry.application_id,
                       entry.application_role
                     )}
+                    draftedBy={draftedByApplicationId[entry.application_id]}
                     index={index}
                     total={entries.length}
                     locked={locked}
@@ -778,6 +787,7 @@ export function PreferenceListDetailClient({
 function EntryRow({
   entry,
   availabilityBadge,
+  draftedBy,
   index,
   total,
   locked,
@@ -799,6 +809,8 @@ function EntryRow({
     reasoning?: string
   }
   availabilityBadge?: { label: string; className: string }
+  // The team that took them on a draft board, if any.
+  draftedBy?: string
   index: number
   total: number
   locked: boolean
@@ -861,9 +873,20 @@ function EntryRow({
         <div className="flex items-center justify-between gap-2">
           <div>
             <div className="flex items-center gap-1.5">
-              <p className="text-text-default text-sm font-medium">
+              <p
+                className={`text-sm font-medium ${
+                  draftedBy
+                    ? 'text-text-faint line-through'
+                    : 'text-text-default'
+                }`}
+              >
                 {entry.full_name}
               </p>
+              {draftedBy && (
+                <span className="text-text-muted rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium">
+                  Drafted · {draftedBy}
+                </span>
+              )}
               {availabilityBadge && (
                 <span
                   className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${availabilityBadge.className}`}

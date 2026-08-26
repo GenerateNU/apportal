@@ -292,6 +292,16 @@ export const queryKeys = {
       [...queryKeys.preferenceLists.details(), id] as const,
   },
 
+  drafts: {
+    all: ['drafts'] as const,
+    board: (cycleId: string, role: Role) =>
+      [...queryKeys.drafts.all, 'board', cycleId, role] as const,
+    // Every board in the cycle at once — what marks an applicant as taken
+    // wherever they're still listed.
+    drafted: (cycleId: string) =>
+      [...queryKeys.drafts.all, 'drafted', cycleId] as const,
+  },
+
   preferenceListDeadline: {
     all: ['preference-list-deadline'] as const,
     detail: (cycleId: string, role: Role) =>
