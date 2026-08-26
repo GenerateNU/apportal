@@ -84,12 +84,9 @@ function ReviewerName({ nuid }: { nuid: string }) {
 // Which list page linked into this interview — carried through the `from`
 // query param so "Back" (and paging via Previous/Next) returns wherever the
 // reviewer actually came from, instead of always assuming My Interviews.
-const BACK_LINK: Record<string, { href: string; label: string }> = {
-  'interview-ratings': {
-    href: '/reviewer/interview-ratings',
-    label: 'Back to Interview Ratings',
-  },
-}
+// Interview Ratings additionally carries its filters via `ratingsQuery`, so
+// going back (or paging through several interviews) restores that exact
+// filtered view instead of resetting it.
 const DEFAULT_BACK_LINK = {
   href: '/reviewer/my-interviews',
   label: 'Back to My interviews',
@@ -109,8 +106,21 @@ export function InterviewConductClient({
   const router = useRouter()
   const searchParams = useSearchParams()
   const from = searchParams.get('from') ?? ''
-  const backLink = BACK_LINK[from] ?? DEFAULT_BACK_LINK
-  const queueQuery = from ? `?from=${encodeURIComponent(from)}` : ''
+  const ratingsQuery = searchParams.get('ratingsQuery') ?? ''
+  const backLink =
+    from === 'interview-ratings'
+      ? {
+          href: ratingsQuery
+            ? `/reviewer/interview-ratings?${ratingsQuery}`
+            : '/reviewer/interview-ratings',
+          label: 'Back to Interview Ratings',
+        }
+      : DEFAULT_BACK_LINK
+  const queueQuery = from
+    ? `?from=${encodeURIComponent(from)}${
+        ratingsQuery ? `&ratingsQuery=${encodeURIComponent(ratingsQuery)}` : ''
+      }`
+    : ''
   const [scriptOpen, setScriptOpen] = useState(true)
   const { data: currentUser } = useCurrentUser()
   const { data: applicant } = useApplicant(applicantNuid)

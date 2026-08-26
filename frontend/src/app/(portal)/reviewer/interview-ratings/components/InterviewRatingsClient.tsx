@@ -1,7 +1,8 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { usePathname, useSearchParams } from 'next/navigation'
 import {
   ArrowRight,
   CheckCircle2,
@@ -131,16 +132,47 @@ export function InterviewRatingsClient() {
   const { data: chiefs = [] } = useChiefs()
   const { data: currentUser } = useCurrentUser()
 
-  const [cycleId, setCycleId] = useState('')
+  const pathname = usePathname()
+  const initialParams = useSearchParams()
+
+  const [cycleId, setCycleId] = useState(() => initialParams.get('cycle') ?? '')
   if (!cycleId && cycles.length > 0) {
     const defaultId = pickDefaultCycleId(cycles)
     if (defaultId) setCycleId(defaultId)
   }
-  const [activeRole, setActiveRole] = useState<Role | 'all'>('all')
-  const [groupByInterviewer, setGroupByInterviewer] = useState(true)
-  const [interviewerFilter, setInterviewerFilter] = useState('all')
+  const [activeRole, setActiveRole] = useState<Role | 'all'>(
+    () => (initialParams.get('role') as Role | 'all') || 'all'
+  )
+  const [groupByInterviewer, setGroupByInterviewer] = useState(
+    () => initialParams.get('view') !== 'rating'
+  )
+  const [interviewerFilter, setInterviewerFilter] = useState(
+    () => initialParams.get('interviewer') ?? 'all'
+  )
   const [collapsedLanes, setCollapsedLanes] = useState<Set<string>>(new Set())
-  const [searchQuery, setSearchQuery] = useState('')
+  const [searchQuery, setSearchQuery] = useState(
+    () => initialParams.get('q') ?? ''
+  )
+
+  // Mirrored into the URL (via history, not the router, so a filter change
+  // doesn't cost a server round trip) purely so following a card into an
+  // interview and coming back restores this exact view instead of resetting.
+  const filterQuery = useMemo(() => {
+    const params = new URLSearchParams()
+    if (cycleId) params.set('cycle', cycleId)
+    if (activeRole !== 'all') params.set('role', activeRole)
+    if (!groupByInterviewer) params.set('view', 'rating')
+    if (interviewerFilter !== 'all')
+      params.set('interviewer', interviewerFilter)
+    if (searchQuery) params.set('q', searchQuery)
+    return params.toString()
+  }, [cycleId, activeRole, groupByInterviewer, interviewerFilter, searchQuery])
+
+  useEffect(() => {
+    const url = filterQuery ? `${pathname}?${filterQuery}` : pathname
+    window.history.replaceState(null, '', url)
+  }, [filterQuery, pathname])
+
   // The `released` value being confirmed; null while the dialog is closed.
   const [confirmingRelease, setConfirmingRelease] = useState<boolean | null>(
     null
@@ -609,6 +641,7 @@ export function InterviewRatingsClient() {
                               reviewedCount={reviewedCount}
                               showInterviewer={false}
                               showRole={activeRole === 'all'}
+                              backQuery={filterQuery}
                             />
                           )
                         )}
@@ -631,6 +664,7 @@ export function InterviewRatingsClient() {
               showInterviewer
               showRole={activeRole === 'all'}
               nameByNuid={nameByNuid}
+              backQuery={filterQuery}
             />
           ))}
         </div>
@@ -691,6 +725,7 @@ function RatingColumn({
   showInterviewer,
   showRole,
   nameByNuid,
+  backQuery,
 }: {
   ratingKey: RatingKey
   title: string
@@ -698,6 +733,7 @@ function RatingColumn({
   showInterviewer: boolean
   showRole: boolean
   nameByNuid: Map<string, string>
+  backQuery: string
 }) {
   return (
     <div className="flex w-80 shrink-0 flex-col px-4 pt-3">
@@ -737,6 +773,7 @@ function RatingColumn({
               reviewedCount={reviewedCount}
               showInterviewer={showInterviewer}
               showRole={showRole}
+              backQuery={backQuery}
             />
           )
         )}
@@ -753,6 +790,7 @@ function RatingCard({
   reviewedCount,
   showInterviewer,
   showRole,
+  backQuery,
 }: {
   application: ApplicationSummary
   interview: Interview | null | undefined
@@ -761,6 +799,7 @@ function RatingCard({
   reviewedCount: number
   showInterviewer: boolean
   showRole: boolean
+  backQuery: string
 }) {
   const state: ReviewState = interview?.submitted_at
     ? 'submitted'
@@ -775,7 +814,9 @@ function RatingCard({
 
   return (
     <Link
-      href={`/reviewer/my-interviews/${application.id}?from=interview-ratings`}
+      href={`/reviewer/my-interviews/${application.id}?from=interview-ratings${
+        backQuery ? `&ratingsQuery=${encodeURIComponent(backQuery)}` : ''
+      }`}
       className="group flex flex-col gap-2 rounded-lg border border-gray-200 bg-white p-3 shadow-sm transition-shadow hover:shadow-md"
     >
       <div className="flex items-center justify-between gap-2">
