@@ -1,8 +1,9 @@
 'use client'
 
 import { ArrowLeft, ArrowRight, Pencil, X } from 'lucide-react'
+import { Avatar } from '@/components/ui/avatar'
 import type { DraftBoard } from '@/lib/api/types'
-import { snakeSeat } from './snake'
+import { SECTION_HEADER_CLASS } from './constants'
 
 // The board: one row per round, one column per team in order. Odd rounds run
 // left to right, even rounds right to left — the arrow on each row says which,
@@ -31,113 +32,131 @@ export function DraftBoardGrid({
   const rounds = Array.from({ length: board.rounds }, (_, i) => i + 1)
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
-      <table className="w-full min-w-max border-collapse">
-        <thead>
-          <tr className="bg-gray-50">
-            <th className="text-text-muted w-24 border-r border-b border-gray-100 px-3 py-2 text-left text-xs font-medium">
-              Round
-            </th>
-            {teams.map((team) => (
-              <th
-                key={team.id}
-                className="text-text-default min-w-52 border-r border-b border-gray-100 px-3 py-2 text-left text-xs font-semibold last:border-r-0"
-              >
-                {team.name}
-                {team.member_names.length > 0 && (
-                  <span className="text-text-faint block truncate text-[11px] font-normal">
-                    {team.member_names.join(', ')}
-                  </span>
-                )}
+    <div className="flex flex-col gap-3">
+      <h2 className={SECTION_HEADER_CLASS}>Board</h2>
+      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
+        <table className="w-full min-w-max border-collapse">
+          <thead>
+            <tr>
+              <th className="text-text-muted w-20 border-r border-b border-gray-100 bg-gray-50 px-4 py-3 text-left text-xs font-medium">
+                Round
               </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rounds.map((round) => (
-            <tr key={round} className="border-b border-gray-100">
-              <td className="text-text-muted border-r border-gray-100 px-3 py-2 align-top text-xs">
-                <span className="inline-flex items-center gap-1">
-                  {round}
-                  {round % 2 === 1 ? (
-                    <ArrowRight size={11} />
-                  ) : (
-                    <ArrowLeft size={11} />
+              {teams.map((team) => (
+                <th
+                  key={team.id}
+                  className="min-w-56 border-r border-b border-gray-100 bg-gray-50 px-4 py-3 text-left last:border-r-0"
+                >
+                  <span className="text-text-default block text-sm font-semibold">
+                    {team.name}
+                  </span>
+                  {team.member_names.length > 0 && (
+                    <span className="text-text-subtle mt-0.5 block truncate text-xs font-normal">
+                      {team.member_names.join(', ')}
+                    </span>
                   )}
-                </span>
-              </td>
-              {teams.map((_, seat) => {
-                // Which slot this cell holds is the snake formula run
-                // backwards: find the pick number in this round that lands on
-                // this seat.
-                const slot =
-                  (round - 1) * teams.length +
-                  (round % 2 === 1 ? seat : teams.length - 1 - seat) +
-                  1
-                const pick = pickBySlot.get(slot)
-                const onTheClock = board.on_the_clock === slot
-                return (
-                  <td
-                    key={seat}
-                    className={`border-r border-gray-100 px-3 py-2 align-top last:border-r-0 ${
-                      onTheClock ? 'bg-blue-50' : ''
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <span className="text-text-faint block text-[11px]">
-                          #{slot}
-                        </span>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rounds.map((round) => (
+              <tr
+                key={round}
+                className="border-b border-gray-100 last:border-b-0"
+              >
+                <td className="text-text-subtle border-r border-gray-100 px-4 py-3 align-top text-xs">
+                  <span className="inline-flex items-center gap-1 font-medium">
+                    {round}
+                    {round % 2 === 1 ? (
+                      <ArrowRight size={11} />
+                    ) : (
+                      <ArrowLeft size={11} />
+                    )}
+                  </span>
+                </td>
+                {teams.map((_, seat) => {
+                  // Which slot this cell holds is the snake run backwards: the
+                  // pick number in this round that lands on this seat.
+                  const slot =
+                    (round - 1) * teams.length +
+                    (round % 2 === 1 ? seat : teams.length - 1 - seat) +
+                    1
+                  const pick = pickBySlot.get(slot)
+                  const onTheClock = board.on_the_clock === slot
+                  return (
+                    <td
+                      key={seat}
+                      className="border-r border-gray-100 p-2 align-top last:border-r-0"
+                    >
+                      <div
+                        className={`group flex min-h-16 items-start gap-2.5 rounded-lg border px-3 py-2.5 transition-shadow ${
+                          pick
+                            ? 'border-gray-200 bg-white shadow-sm hover:shadow-md'
+                            : onTheClock
+                              ? 'border-brand-blue border-dashed bg-blue-50'
+                              : 'border-gray-100 bg-gray-50/60'
+                        }`}
+                      >
                         {pick ? (
-                          <span className="text-text-default block truncate text-sm font-medium">
-                            {pick.full_name || pick.application_id}
-                          </span>
+                          <>
+                            <Avatar name={pick.full_name} size="sm" />
+                            <div className="min-w-0 flex-1">
+                              <span className="text-text-default block truncate text-sm font-medium">
+                                {pick.full_name || pick.application_id}
+                              </span>
+                              <span className="text-text-subtle block text-xs">
+                                Pick #{slot}
+                              </span>
+                            </div>
+                            {canEdit && (
+                              <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                                <button
+                                  type="button"
+                                  onClick={() => onChangePick(slot)}
+                                  aria-label={`Change pick ${slot}`}
+                                  title="Change this pick"
+                                  className="text-text-subtle hover:text-brand-blue rounded p-0.5 transition-colors"
+                                >
+                                  <Pencil size={12} />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => onRemovePick(slot)}
+                                  disabled={removingPick === slot}
+                                  aria-label={`Undo pick ${slot}`}
+                                  title="Undo this pick"
+                                  className="text-text-subtle hover:text-destructive rounded p-0.5 transition-colors disabled:opacity-40"
+                                >
+                                  <X size={13} />
+                                </button>
+                              </div>
+                            )}
+                          </>
                         ) : (
-                          <span
-                            className={`block text-sm ${
-                              onTheClock
-                                ? 'text-brand-blue font-medium'
-                                : 'text-text-faint'
-                            }`}
-                          >
-                            {onTheClock ? 'On the clock' : '—'}
-                          </span>
+                          <div className="flex flex-1 flex-col justify-center">
+                            <span
+                              className={`text-sm ${
+                                onTheClock
+                                  ? 'text-brand-blue font-semibold'
+                                  : 'text-text-subtle'
+                              }`}
+                            >
+                              {onTheClock ? 'On the clock' : 'Open'}
+                            </span>
+                            <span className="text-text-subtle text-xs">
+                              Pick #{slot}
+                            </span>
+                          </div>
                         )}
                       </div>
-                      {pick && canEdit && (
-                        <div className="flex shrink-0 items-center gap-1">
-                          <button
-                            type="button"
-                            onClick={() => onChangePick(slot)}
-                            aria-label={`Change pick ${slot}`}
-                            title="Change this pick"
-                            className="text-text-faint hover:text-text-muted"
-                          >
-                            <Pencil size={12} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => onRemovePick(slot)}
-                            disabled={removingPick === slot}
-                            aria-label={`Undo pick ${slot}`}
-                            title="Undo this pick"
-                            className="text-text-faint hover:text-text-muted disabled:opacity-40"
-                          >
-                            <X size={13} />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </td>
-                )
-              })}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+                    </td>
+                  )
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }
-
-// Re-exported for the on-the-clock header, which needs the same mapping.
-export { snakeSeat }
