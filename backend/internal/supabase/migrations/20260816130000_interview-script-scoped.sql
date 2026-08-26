@@ -30,6 +30,11 @@ UPDATE interview_script
 SET cycle_id = (SELECT id FROM cycles WHERE status = 'open' ORDER BY created_at DESC LIMIT 1),
     application_role = 'software_engineer';
 
+-- A database with no open cycle (a fresh preview branch) has nothing to scope
+-- the seeded row to; drop it rather than fail the NOT NULL below, since
+-- GetOrCreateInterviewScript reseeds the same defaults on first access.
+DELETE FROM interview_script WHERE cycle_id IS NULL;
+
 INSERT INTO interview_script (
   cycle_id, application_role, intro_speech, recording_reminder, questions,
   closing_note, challenge_intro, challenge_tracks, post_interview_checklist, updated_by
