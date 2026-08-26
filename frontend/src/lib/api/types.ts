@@ -14,6 +14,10 @@ import type {
   ChiefReviewDetail as GenChiefReviewDetail,
   ChiefReviewDetailVote,
   Cycle as GenCycle,
+  Draft as GenDraft,
+  DraftBoard as GenDraftBoard,
+  DraftPickDetail as GenDraftPickDetail,
+  DraftTeamDetail as GenDraftTeamDetail,
   ChallengeAttempt as GenChallengeAttempt,
   ChallengeScore as GenChallengeScore,
   CodeChallenge as GenCodeChallenge,
@@ -313,4 +317,30 @@ export type PreferenceListDeadline = Omit<
   '$schema' | 'application_role'
 > & {
   application_role: Role
+}
+
+// The snake draft board. Orval leaves the generated members/teams/picks
+// collections nullable and the role/status as loose strings; these pin the
+// shapes the board actually renders.
+export type Draft = Omit<GenDraft, '$schema' | 'application_role'> & {
+  application_role: Role
+  status: DraftStatus
+}
+
+export type DraftStatus = 'setup' | 'active' | 'complete'
+
+export type DraftTeamDetail = Omit<GenDraftTeamDetail, 'member_names'> & {
+  member_names: string[]
+}
+
+export type DraftPickDetail = GenDraftPickDetail
+
+export type DraftBoard = Omit<
+  GenDraftBoard,
+  '$schema' | 'application_role' | 'teams' | 'picks'
+> & {
+  application_role: Role
+  status: DraftStatus
+  teams: DraftTeamDetail[]
+  picks: DraftPickDetail[]
 }
