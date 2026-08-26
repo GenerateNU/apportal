@@ -18,6 +18,7 @@ export function OnTheClockPanel({
   teamList,
   pool,
   takenByApplicationId,
+  canPick,
   onPick,
   picking,
   error,
@@ -28,6 +29,8 @@ export function OnTheClockPanel({
   pool: ApplicationSummary[]
   // Application id -> the team that already took them, across every board.
   takenByApplicationId: Record<string, string>
+  // Only the operator picks; everyone else is following along.
+  canPick: boolean
   onPick: (applicationId: string) => void
   picking: boolean
   error?: string
@@ -70,18 +73,20 @@ export function OnTheClockPanel({
             </p>
           )}
         </div>
-        <SearchableSelect
-          options={available.map((a) => ({
-            value: a.id,
-            label: a.full_name || a.user_nuid,
-          }))}
-          onValueChange={onPick}
-          placeholder="Pick someone else…"
-          searchPlaceholder="Search applicants…"
-          emptyText="No applicants left."
-          className="w-72"
-          ariaLabel="Pick an applicant not on this team's list"
-        />
+        {canPick && (
+          <SearchableSelect
+            options={available.map((a) => ({
+              value: a.id,
+              label: a.full_name || a.user_nuid,
+            }))}
+            onValueChange={onPick}
+            placeholder="Pick someone else…"
+            searchPlaceholder="Search applicants…"
+            emptyText="No applicants left."
+            className="w-72"
+            ariaLabel="Pick an applicant not on this team's list"
+          />
+        )}
       </div>
 
       {error && <p className="text-sm text-red-600">{error}</p>}
@@ -124,16 +129,18 @@ export function OnTheClockPanel({
                       Taken · {takenBy}
                     </span>
                   ) : (
-                    <Button
-                      size="sm"
-                      onClick={() => onPick(entry.application_id)}
-                      disabled={picking}
-                    >
-                      {picking && (
-                        <Loader2 className="animate-spin" size={13} />
-                      )}
-                      Pick
-                    </Button>
+                    canPick && (
+                      <Button
+                        size="sm"
+                        onClick={() => onPick(entry.application_id)}
+                        disabled={picking}
+                      >
+                        {picking && (
+                          <Loader2 className="animate-spin" size={13} />
+                        )}
+                        Pick
+                      </Button>
+                    )
                   )}
                 </li>
               )
