@@ -22,13 +22,17 @@ interviewer_nuid?: string;
  */
 recording_reviewer_nuid?: string;
 role?: string;
+/**
+ * Comma-separated list of applicant roles, e.g. "software_engineer,software_designer"; an application matches any of them
+ */
+roles?: string;
 stage?: string;
 /**
  * Comma-separated list of stages, e.g. "accepted,rejected"; an application matches any of them
  */
 stages?: string;
 /**
- * JSON array of answer filters, e.g. [{"question_id":"…","question_type":"checkbox","values":["Yes"]}]. Values may be a string or an array of strings; a filter matches any of them, and separate filters are AND'd.
+ * JSON array of answer filters, e.g. [{"question_id":"…","question_type":"checkbox","values":["Yes"]}]. Use question_ids for a question authored once per applicant role. Values may be a string or an array of strings; a filter matches any of them, and separate filters are AND'd.
  */
 answer_filters?: string;
 /**

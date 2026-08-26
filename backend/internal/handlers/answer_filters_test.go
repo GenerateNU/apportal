@@ -25,26 +25,38 @@ func TestParseAnswerFilters(t *testing.T) {
 			// in place of a one-element array.
 			"free text",
 			`[{"question_id":"q1","question_type":"short_answer","values":"boston"}]`,
-			[]store.AnswerFilter{{QuestionID: "q1", Match: store.MatchContains, Values: []string{"boston"}}},
+			[]store.AnswerFilter{{QuestionIDs: []string{"q1"}, Match: store.MatchContains, Values: []string{"boston"}}},
 		},
 		{
 			// Checkbox answers live in answer_options, so they match on the
 			// JSONB array rather than the scalar text column.
 			"checkbox",
 			`[{"question_id":"q2","question_type":"checkbox","values":["Yes","No"]}]`,
-			[]store.AnswerFilter{{QuestionID: "q2", Match: store.MatchAnyOption, Values: []string{"Yes", "No"}}},
+			[]store.AnswerFilter{{QuestionIDs: []string{"q2"}, Match: store.MatchAnyOption, Values: []string{"Yes", "No"}}},
+		},
+		{
+			// question_ids carries the same question's per-role copies, and is
+			// unioned with question_id rather than replacing it.
+			"question_ids",
+			`[{"question_ids":["q5","q6"],"question_type":"checkbox","values":["Mon"]}]`,
+			[]store.AnswerFilter{{QuestionIDs: []string{"q5", "q6"}, Match: store.MatchAnyOption, Values: []string{"Mon"}}},
+		},
+		{
+			"question_id and question_ids together",
+			`[{"question_id":"q5","question_ids":["q6"],"question_type":"checkbox","values":["Mon"]}]`,
+			[]store.AnswerFilter{{QuestionIDs: []string{"q5", "q6"}, Match: store.MatchAnyOption, Values: []string{"Mon"}}},
 		},
 		{
 			// Dropdown and multiple_choice both store a single label in
 			// answer_text, so they match exactly, not by substring.
 			"dropdown",
 			`[{"question_id":"q3","question_type":"dropdown","values":["Fall"]}]`,
-			[]store.AnswerFilter{{QuestionID: "q3", Match: store.MatchAnyOf, Values: []string{"Fall"}}},
+			[]store.AnswerFilter{{QuestionIDs: []string{"q3"}, Match: store.MatchAnyOf, Values: []string{"Fall"}}},
 		},
 		{
 			"multiple choice",
 			`[{"question_id":"q4","question_type":"multiple_choice","values":["A"]}]`,
-			[]store.AnswerFilter{{QuestionID: "q4", Match: store.MatchAnyOf, Values: []string{"A"}}},
+			[]store.AnswerFilter{{QuestionIDs: []string{"q4"}, Match: store.MatchAnyOf, Values: []string{"A"}}},
 		},
 		{
 			// A half-built filter from the UI is dropped rather than rejected,
@@ -57,7 +69,7 @@ func TestParseAnswerFilters(t *testing.T) {
 		{
 			"blank entries within an array dropped",
 			`[{"question_id":"q2","question_type":"checkbox","values":["Yes",""]}]`,
-			[]store.AnswerFilter{{QuestionID: "q2", Match: store.MatchAnyOption, Values: []string{"Yes"}}},
+			[]store.AnswerFilter{{QuestionIDs: []string{"q2"}, Match: store.MatchAnyOption, Values: []string{"Yes"}}},
 		},
 	}
 	for _, tc := range cases {

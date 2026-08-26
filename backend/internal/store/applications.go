@@ -48,12 +48,14 @@ const (
 	MatchAnyOption AnswerMatch = "any_option"
 )
 
-// AnswerFilter narrows the list to applications whose answer to one question
-// matches. Values is OR'd within a filter; separate filters are AND'd.
+// AnswerFilter narrows the list to applications whose answer to one of the
+// given questions matches. Values is OR'd within a filter; separate filters
+// are AND'd. QuestionIDs holds more than one id when the same question is
+// authored once per applicant role and the filter spans them.
 type AnswerFilter struct {
-	QuestionID string
-	Match      AnswerMatch
-	Values     []string
+	QuestionIDs []string
+	Match       AnswerMatch
+	Values      []string
 }
 
 // ApplicationFilter holds optional list filters; empty fields are ignored.
@@ -61,7 +63,11 @@ type ApplicationFilter struct {
 	CycleID  string
 	UserNUID string
 	Role     *models.Role
-	Stage    *models.ApplicationStage
+	// Roles matches any of several applicant roles, for the filter menu's
+	// multi-select. Combined with Role it narrows further, so callers should
+	// set one or the other.
+	Roles []models.Role
+	Stage *models.ApplicationStage
 	// Stages matches any of several stages, for callers that span more than one
 	// (the review pool covers both submitted and lead_review). Combined with
 	// Stage it narrows further, so callers should set one or the other.
@@ -275,7 +281,7 @@ func applicationsFrom(f ApplicationFilter, scope applicationFilterScope) (string
 	// below, so drop those before they reach the query.
 	answerFilters := make([]AnswerFilter, 0, len(f.AnswerFilters))
 	for _, af := range f.AnswerFilters {
-		if af.QuestionID == "" || len(af.Values) == 0 {
+		if len(af.QuestionIDs) == 0 || len(af.Values) == 0 {
 			continue
 		}
 		answerFilters = append(answerFilters, af)
@@ -284,15 +290,15 @@ func applicationsFrom(f ApplicationFilter, scope applicationFilterScope) (string
 	query := ` FROM applications a JOIN users u ON u.nuid = a.user_nuid`
 	args := []any{}
 
-	// One join per answer filter, each pinned to that filter's question. The
+	// One join per answer filter, each pinned to that filter's questions. The
 	// match itself goes in the WHERE clause below, which is what turns these
 	// into inner joins: an application with no answer to a filtered question
 	// drops out.
 	for i, af := range answerFilters {
 		joinAlias := `wa` + strconv.Itoa(i)
-		args = append(args, af.QuestionID)
+		args = append(args, af.QuestionIDs)
 		query += ` LEFT JOIN written_answers ` + joinAlias + ` ON ` + joinAlias +
-			`.application_id = a.id AND ` + joinAlias + `.question_id = $` + strconv.Itoa(len(args))
+			`.application_id = a.id AND ` + joinAlias + `.question_id = ANY($` + strconv.Itoa(len(args)) + `::uuid[])`
 	}
 
 	query += ` WHERE 1 = 1`
@@ -307,6 +313,14 @@ func applicationsFrom(f ApplicationFilter, scope applicationFilterScope) (string
 	if f.Role != nil {
 		args = append(args, *f.Role)
 		query += ` AND a.application_role = $` + strconv.Itoa(len(args))
+	}
+	if len(f.Roles) > 0 {
+		roles := make([]string, len(f.Roles))
+		for i, r := range f.Roles {
+			roles[i] = string(r)
+		}
+		args = append(args, roles)
+		query += ` AND a.application_role = ANY($` + strconv.Itoa(len(args)) + `::application_role[])`
 	}
 	if scope != applicationFilterExceptStage {
 		if f.Stage != nil {

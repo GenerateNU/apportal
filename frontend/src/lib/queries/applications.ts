@@ -36,7 +36,12 @@ export interface ApplicationListParams {
   // the reviewer-side counterpart of interviewer_nuid.
   recording_reviewer_nuid?: string
   stage?: ApplicationStage
+  // Comma-separated any-of counterparts of stage/role, and the interview
+  // ratings filter — all built by the filter menu.
+  stages?: string
   role?: Role
+  roles?: string
+  rating_filters?: string
   answer_filters?: AnswerFilterParam[]
   // Substring match on the applicant's name, NUID, or email. Server-side
   // because it has to narrow the whole match, not just the fetched page.

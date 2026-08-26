@@ -10,12 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import type {
-  ApplicationStage,
-  Question,
-  Role,
-  WrittenAnswer,
-} from '@/lib/api/types'
+import type { ApplicationStage, Role, WrittenAnswer } from '@/lib/api/types'
 import { usePersistedFilters } from '@/hooks/usePersistedFilters'
 import { useAnswersByApplicationIdBatches } from '@/lib/queries/answers'
 import {
@@ -23,21 +18,15 @@ import {
   useUpdateApplication,
 } from '@/lib/queries/applications'
 import { pickDefaultCycleId, useCycles } from '@/lib/queries/cycles'
-import { useQuestionsByCycleRoles } from '@/lib/queries/questions'
 import { useCurrentUser } from '@/lib/queries/users'
-import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
-import { RATING_OPTIONS } from '@/lib/interview-ratings'
-import { ORDERED_STAGES, PAGE_SIZE, stageLabel } from './constants'
+import { ROLE_COLUMNS } from '@/lib/roles'
+import { ORDERED_STAGES, PAGE_SIZE } from './constants'
 import { BulkActionBar } from './BulkActionBar'
-import {
-  AVAILABILITY_DAY_OPTIONS,
-  availabilityOptionsFor,
-  findAvailabilityQuestionId,
-  shortDays,
-} from './meetingAvailability'
+import { availabilityOptionsFor, shortDays } from './meetingAvailability'
 import type { ApplicantApplication } from './types'
 import type { AnswerFilter, FilterChangeHandler } from './FilterButton'
 import { TableView } from './TableView'
+import { useApplicationFilters } from './useApplicationFilters'
 import { KanbanView } from './KanbanView'
 import { ApplicationDetail } from './ApplicationDetail'
 
@@ -50,13 +39,17 @@ const SEARCH_DEBOUNCE_MS = 250
 // Persisted across visits (not just in-session) so leaving the table to look
 // at an applicant and coming back doesn't reset a filter set that took several
 // chips to build. Versioned, like the chief-review queue's key: if a default
-// below ever changes, bump this so the old one can't resurrect itself.
-const FILTERS_STORAGE_KEY = 'applications-filters-v1'
+// below ever changes, bump this so the old one can't resurrect itself. v2
+// dropped the standalone role, which is a filter chip now.
+const FILTERS_STORAGE_KEY = 'applications-filters-v2'
+
+// The table opens on one role, which is what the server prefetch in ../page.tsx
+// is keyed to. The Role chip is what widens it from there.
+const DEFAULT_ROLES: Role[] = [ROLE_COLUMNS[0]]
 
 type StoredFilters = {
   view: View
   cycleId: string
-  role: Role
   stage: ApplicationStage | 'all'
   search: string
   filters: AnswerFilter[]
@@ -72,7 +65,6 @@ export function ApplicationsClient() {
   const [activeStage, setActiveStage] = useState<ApplicationStage | 'all'>(
     'all'
   )
-  const [activeRole, setActiveRole] = useState<Role>(ROLE_COLUMNS[0])
   const [activeCycle, setActiveCycle] = useState<string>('')
   const [cycleDefaulted, setCycleDefaulted] = useState(false)
   const [search, setSearch] = useState('')
@@ -124,10 +116,6 @@ export function ApplicationsClient() {
         setActiveCycle(stored.cycleId)
         setCycleDefaulted(true)
       }
-      if (stored.role && ROLE_COLUMNS.includes(stored.role)) {
-        setActiveRole(stored.role)
-      }
-
       const stage =
         stored.stage &&
         ORDERED_STAGES.includes(stored.stage as ApplicationStage)
@@ -162,7 +150,6 @@ export function ApplicationsClient() {
     {
       view,
       cycleId: activeCycle,
-      role: activeRole,
       stage: activeStage,
       search: debouncedSearch,
       filters,
@@ -171,95 +158,20 @@ export function ApplicationsClient() {
     cycles.length > 0
   )
 
-  // Taken from the selected cycle+role rather than from the results, since a
-  // filter that matches nothing would otherwise empty the question list the
-  // filter UI itself is built from. Every application in view is this pair.
-  const uniquePairs = useMemo(
-    () => (activeCycle ? [{ cycleId: activeCycle, role: activeRole }] : []),
-    [activeCycle, activeRole]
-  )
-
-  const questionQueries = useQuestionsByCycleRoles(uniquePairs)
-  const questionsByCycleRole = useMemo(() => {
-    const map: Record<string, Question[]> = {}
-    uniquePairs.forEach((pair, i) => {
-      const data = questionQueries[i]?.data
-      if (data) map[`${pair.cycleId}:${pair.role}`] = data
-    })
-    return map
-  }, [uniquePairs, questionQueries])
-
-  // A restored chip — or one left behind by a role switch — can point at a
-  // question the current cycle/role doesn't have, which empties the table with
-  // nothing on screen to explain it. Only prune once the questions are loaded;
-  // doing it while they're pending would drop every chip. Specials are
-  // synthetic questions (__rating__ and friends) and always apply.
-  const questionsLoaded =
-    uniquePairs.length > 0 && questionQueries.every((q) => q.isSuccess)
-  const knownQuestionIds = useMemo(
-    () =>
-      Object.values(questionsByCycleRole)
-        .flat()
-        .map((q) => q.id)
-        .sort()
-        .join(','),
-    [questionsByCycleRole]
-  )
-  useEffect(() => {
-    if (!questionsLoaded) return
-    const known = new Set(knownQuestionIds.split(','))
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setFilters((prev) => {
-      const next = prev.filter((f) => f.special || known.has(f.question_id))
-      return next.length === prev.length ? prev : next
-    })
-  }, [questionsLoaded, knownQuestionIds])
-
-  // "Meeting Availability for the Fall Semester" is a regular checkbox
-  // question authored per cycle/role in the admin builder, not a dedicated
-  // field — every application on screen shares one cycle+role, so there's at
-  // most one such question in view at a time.
-  const availabilityQuestionId = useMemo(
-    () =>
-      findAvailabilityQuestionId(
-        questionsByCycleRole[`${activeCycle}:${activeRole}`]
-      ),
-    [questionsByCycleRole, activeCycle, activeRole]
-  )
-
-  // The chip picks whole days, but the stored answer holds the full option
-  // label ("Monday 6:00-7:30 PM") and the wording drifts between cycles.
-  // Expanding each day to the matching labels here — where the options are
-  // already loaded — keeps the server filter an exact any-of match and keeps
-  // it consistent with the day tags in the table, which come from the same
-  // list.
-  const availabilityFilter = useMemo(() => {
-    const chip = filters.find((f) => f.special === 'availability')
-    if (!chip || !availabilityQuestionId) return null
-    const labels = Array.isArray(chip.values) ? chip.values : [chip.values]
-    const days = AVAILABILITY_DAY_OPTIONS.filter((d) =>
-      labels.includes(d.label)
-    )
-    const options =
-      questionsByCycleRole[`${activeCycle}:${activeRole}`]?.find(
-        (q) => q.id === availabilityQuestionId
-      )?.options ?? []
-    const values = options.filter((o) =>
-      days.some((d) => o.toLowerCase().includes(d.day))
-    )
-    if (values.length === 0) return null
-    return {
-      question_id: availabilityQuestionId,
-      question_type: 'checkbox' as const,
-      values,
-    }
-  }, [
-    filters,
-    availabilityQuestionId,
+  // Which questions the chips can be built from, and the query params they
+  // translate to — shared with the preference-list applicant pool.
+  const {
+    columns,
     questionsByCycleRole,
-    activeCycle,
-    activeRole,
-  ])
+    availabilityQuestionIdByRole,
+    hasAvailability,
+    filterParams,
+  } = useApplicationFilters({
+    cycleId: activeCycle,
+    defaultRoles: DEFAULT_ROLES,
+    filters,
+    setFilters,
+  })
 
   // Every filter is applied in SQL, so the page the table renders is already
   // the answer — nothing below narrows it further. That is what makes the
@@ -267,52 +179,10 @@ export function ApplicationsClient() {
   // counted server-side over every row rather than the page in hand.
   const listParams = useMemo(() => {
     if (!activeCycle) return undefined
-    // Rating and stage travel as their own query params; the availability
-    // chip is expanded into an answer filter above; question filters go as-is.
-    const ratingFilters = filters.filter((f) => f.special === 'rating')
-    const stageFilters = filters.filter((f) => f.special === 'stage')
-    const questionFilters = filters.filter((f) => !f.special)
-
-    const answerFilters = [
-      ...questionFilters.map((f) => ({
-        question_id: f.question_id,
-        question_type: f.question_type,
-        values: f.values,
-      })),
-      ...(availabilityFilter ? [availabilityFilter] : []),
-    ]
-
-    // Convert rating filter values back to rating enum values
-    const ratingValues = ratingFilters.flatMap((f) => {
-      const vals = Array.isArray(f.values) ? f.values : [f.values]
-      return vals
-        .map((label) => {
-          const rating = RATING_OPTIONS.find((r) => r.label === label)
-          return rating?.value
-        })
-        .filter(Boolean)
-    })
-
-    // Labels are what the checkbox list shows; the API takes the enum values.
-    const stageValues = stageFilters.flatMap((f) =>
-      (Array.isArray(f.values) ? f.values : [f.values])
-        .map((label) => ORDERED_STAGES.find((s) => stageLabel[s] === label))
-        .filter(Boolean)
-    )
-
     return {
       cycle_id: activeCycle,
-      role: activeRole,
+      ...filterParams,
       ...(debouncedSearch && { search: debouncedSearch }),
-      // Each of these is omitted when inactive so an unfiltered first page
-      // keys identically to the server prefetch in ../page.tsx.
-      ...(answerFilters.length > 0 && { answer_filters: answerFilters }),
-      ...(ratingValues.length > 0 && {
-        rating_filters: ratingValues.join(','),
-      }),
-      // Unlike the stage tabs below, this one holds in kanban too — it's an
-      // explicit chip, and dropping it silently would contradict the UI.
-      ...(stageValues.length > 0 && { stages: stageValues.join(',') }),
       // Kanban lays every stage out side by side, so it can neither filter by
       // one stage nor take a page — it asks for the whole set instead.
       ...(view === 'table' && {
@@ -320,15 +190,7 @@ export function ApplicationsClient() {
         limit: PAGE_SIZE,
       }),
     }
-  }, [
-    activeCycle,
-    activeRole,
-    activeStage,
-    debouncedSearch,
-    filters,
-    availabilityFilter,
-    view,
-  ])
+  }, [activeCycle, activeStage, debouncedSearch, filterParams, view])
 
   const {
     applications,
@@ -383,12 +245,12 @@ export function ApplicationsClient() {
       map[app.id] = shortDays(
         availabilityOptionsFor(
           answersByApplicationId[app.id],
-          availabilityQuestionId
+          availabilityQuestionIdByRole[app.role]
         )
       )
     }
     return map
-  }, [applications, answersByApplicationId, availabilityQuestionId])
+  }, [applications, answersByApplicationId, availabilityQuestionIdByRole])
 
   // No client-side narrowing left: search, availability, and stage are all in
   // the query above, so these rows are the page as the database returned it.
@@ -460,33 +322,6 @@ export function ApplicationsClient() {
     setApplyingBulk(false)
   }
 
-  // One column per distinct question across the visible rows' cycle/role
-  // combinations, ordered the same way the application form displays them —
-  // every response the application actually collected, and nothing else
-  // (no separate Name/Email columns sourced from the applicant record).
-  // Roles within a cycle each get their own copy of common fields (e.g.
-  // "First Name") as separate question rows, so we dedupe by text rather
-  // than id — otherwise every role duplicates its own column. This is the
-  // full set; the table drops meeting availability on its own, since only it
-  // has somewhere else to show it.
-  const columns = useMemo(() => {
-    const byText = new Map<string, Question>()
-    for (const questions of Object.values(questionsByCycleRole)) {
-      for (const q of questions) {
-        const key = q.question_text.trim().toLowerCase()
-        const existing = byText.get(key)
-        if (!existing || q.display_order < existing.display_order) {
-          byText.set(key, q)
-        }
-      }
-    }
-    return [...byText.values()].sort(
-      (a, b) =>
-        a.display_order - b.display_order ||
-        a.created_at.localeCompare(b.created_at)
-    )
-  }, [questionsByCycleRole])
-
   // min-h-0 is what makes the table's own pane the scroll container: without
   // it this flex item can't shrink below its content, so it grows to the
   // table's full height and the ancestor in (portal)/layout.tsx scrolls
@@ -499,22 +334,6 @@ export function ApplicationsClient() {
         </h1>
 
         <div className="flex flex-wrap items-center gap-3">
-          <Select
-            value={activeRole}
-            onValueChange={(val) => setActiveRole(val as Role)}
-          >
-            <SelectTrigger className="w-56" aria-label="Filter by role">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {ROLE_COLUMNS.map((role) => (
-                <SelectItem key={role} value={role}>
-                  {ROLE_LABEL[role]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
           <Select value={activeCycle} onValueChange={setActiveCycle}>
             <SelectTrigger className="w-40" aria-label="Filter by cycle">
               <SelectValue />
@@ -586,7 +405,7 @@ export function ApplicationsClient() {
             onSelectApplication={setSelectedApplicationId}
             filters={filters}
             onFilterChange={handleFilterChange}
-            hasAvailability={!!availabilityQuestionId}
+            hasAvailability={hasAvailability}
             bulkBar={
               isChief && selectedIds.size > 0 ? (
                 <BulkActionBar

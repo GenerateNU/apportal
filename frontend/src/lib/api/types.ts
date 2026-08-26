@@ -71,7 +71,10 @@ export type ReviewerRole = 'tl' | 'chief'
 // the same reason as ReviewerRole: it crosses the wire JSON-encoded inside a
 // string param, so the generated types only see the string.
 export interface AnswerFilterParam {
-  question_id: string
+  question_id?: string
+  // The any-of counterpart of question_id, for a question the form authors
+  // once per applicant role — one filter spanning every role in view.
+  question_ids?: string[]
   question_type: QuestionType
   // A substring for free-text questions, the chosen labels for choice ones.
   // A filter matches any of them; separate filters are AND'd.
