@@ -32,9 +32,13 @@ export function useSetReviewRelease() {
       queryClient.invalidateQueries({
         queryKey: queryKeys.reviewGates.list(vars.cycleId),
       })
-      // Releasing changes what other reviewers' written-review lists return.
+      // Releasing changes what other reviewers' review lists return, so the
+      // redacted copies already in cache have to go.
       queryClient.invalidateQueries({
-        queryKey: queryKeys.writtenReviews.all,
+        queryKey:
+          vars.body.kind === 'recording'
+            ? queryKeys.recordingReviews.all
+            : queryKeys.writtenReviews.all,
       })
     },
   })
