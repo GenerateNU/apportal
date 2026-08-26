@@ -39,7 +39,10 @@ export const queryKeys = {
       interviewer_nuid?: string
       recording_reviewer_nuid?: string
       stage?: ApplicationStage
+      stages?: string
       role?: Role
+      roles?: string
+      rating_filters?: string
       answer_filters?: AnswerFilterParam[]
     }) => [...queryKeys.applications.lists(), params ?? {}] as const,
     // Namespaced away from `list` because an infinite query caches
@@ -50,7 +53,10 @@ export const queryKeys = {
       user_nuid?: string
       assigned_to?: string
       stage?: ApplicationStage
+      stages?: string
       role?: Role
+      roles?: string
+      rating_filters?: string
       answer_filters?: AnswerFilterParam[]
       search?: string
       limit?: number

@@ -17,7 +17,11 @@ const maxAnswerFilters = 25
 // Values is deliberately loose — a single string for free-text questions, an
 // array for choice questions — so the UI can send the shape it already holds.
 type AnswerFilterInput struct {
-	QuestionID   string              `json:"question_id"`
+	QuestionID string `json:"question_id"`
+	// QuestionIDs is the any-of counterpart of QuestionID, for a question the
+	// form authors once per applicant role: the filter matches an answer to
+	// any of them. Both may be set; they're unioned.
+	QuestionIDs  []string            `json:"question_ids"`
 	QuestionType models.QuestionType `json:"question_type"`
 	Values       json.RawMessage     `json:"values"`
 }
@@ -38,7 +42,16 @@ func parseAnswerFilters(raw string) ([]store.AnswerFilter, error) {
 	}
 	out := make([]store.AnswerFilter, 0, len(in))
 	for _, f := range in {
-		if f.QuestionID == "" {
+		ids := make([]string, 0, len(f.QuestionIDs)+1)
+		if f.QuestionID != "" {
+			ids = append(ids, f.QuestionID)
+		}
+		for _, id := range f.QuestionIDs {
+			if strings.TrimSpace(id) != "" {
+				ids = append(ids, id)
+			}
+		}
+		if len(ids) == 0 {
 			return nil, huma.Error422UnprocessableEntity("answer_filters entries need a question_id")
 		}
 		if !f.QuestionType.Valid() {
@@ -61,9 +74,9 @@ func parseAnswerFilters(raw string) ([]store.AnswerFilter, error) {
 			match = store.MatchAnyOf
 		}
 		out = append(out, store.AnswerFilter{
-			QuestionID: f.QuestionID,
-			Match:      match,
-			Values:     values,
+			QuestionIDs: ids,
+			Match:       match,
+			Values:      values,
 		})
 	}
 	return out, nil

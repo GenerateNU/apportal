@@ -44,7 +44,7 @@ func (h *applicationHandler) register(api huma.API) {
 		Method:      http.MethodGet,
 		Path:        "/applications",
 		Summary:     "List applications",
-		Description: "Reviewer queue; filter by cycle_id, role, stage, answer_filters, and rating_filters. Applicants may list their own by passing user_nuid.",
+		Description: "Reviewer queue; filter by cycle_id, role/roles, stage, answer_filters, and rating_filters. Applicants may list their own by passing user_nuid.",
 		Tags:        []string{"Applications"},
 		Errors:      []int{http.StatusUnauthorized},
 	}, h.list)
@@ -161,7 +161,10 @@ type ListApplicationsInput struct {
 	// InterviewerNUID: the lead's own "interviews assigned to me to review" queue.
 	RecordingReviewerNUID string `query:"recording_reviewer_nuid" doc:"Limit to applications this lead is assigned to review the interview recording of"`
 	Role                  string `query:"role"`
-	Stage                 string `query:"stage"`
+	// Roles is the any-of counterpart of Role, for the filter menu's
+	// multi-select. Comma-separated for the same reason as RatingFilters.
+	Roles string `query:"roles" doc:"Comma-separated list of applicant roles, e.g. \"software_engineer,software_designer\"; an application matches any of them"`
+	Stage string `query:"stage"`
 	// Stages is the any-of counterpart of Stage, for the filter menu's
 	// multi-select. Comma-separated for the same reason as RatingFilters.
 	Stages string `query:"stages" doc:"Comma-separated list of stages, e.g. \"accepted,rejected\"; an application matches any of them"`
@@ -169,7 +172,7 @@ type ListApplicationsInput struct {
 	// structured param because huma can only bind primitives from a query
 	// string — a []AnswerFilterInput field silently binds nothing (or panics,
 	// depending on how the client serializes it).
-	AnswerFilters string `query:"answer_filters" doc:"JSON array of answer filters, e.g. [{\"question_id\":\"…\",\"question_type\":\"checkbox\",\"values\":[\"Yes\"]}]. Values may be a string or an array of strings; a filter matches any of them, and separate filters are AND'd."`
+	AnswerFilters string `query:"answer_filters" doc:"JSON array of answer filters, e.g. [{\"question_id\":\"…\",\"question_type\":\"checkbox\",\"values\":[\"Yes\"]}]. Use question_ids for a question authored once per applicant role. Values may be a string or an array of strings; a filter matches any of them, and separate filters are AND'd."`
 	// RatingFilters is a comma-separated list of interview ratings to filter by,
 	// e.g. "must_hire,great". Applications match if their interview has any of
 	// these ratings.
@@ -205,6 +208,10 @@ func (h *applicationHandler) list(ctx context.Context, in *ListApplicationsInput
 	if err != nil {
 		return nil, err
 	}
+	roles, err := parseRoles(in.Roles)
+	if err != nil {
+		return nil, err
+	}
 
 	filter := store.ApplicationFilter{
 		CycleID:               in.CycleID,
@@ -214,6 +221,7 @@ func (h *applicationHandler) list(ctx context.Context, in *ListApplicationsInput
 		RecordingReviewerNUID: in.RecordingReviewerNUID,
 		AnswerFilters:         answerFilters,
 		InterviewRatings:      ratingFilters,
+		Roles:                 roles,
 		Stages:                stages,
 		Search:                in.Search,
 		Offset:                in.Offset,
@@ -255,6 +263,28 @@ func (h *applicationHandler) list(ctx context.Context, in *ListApplicationsInput
 		out.Body.StageCounts[string(stage)] = n
 	}
 	return out, nil
+}
+
+// parseRoles decodes a comma-separated list of applicant roles.
+func parseRoles(raw string) ([]models.Role, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil, nil
+	}
+	parts := strings.Split(raw, ",")
+	roles := make([]models.Role, 0, len(parts))
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		role := models.Role(part)
+		if !role.Valid() {
+			return nil, huma.Error422UnprocessableEntity("invalid role in roles: " + part)
+		}
+		roles = append(roles, role)
+	}
+	return roles, nil
 }
 
 // parseStages decodes a comma-separated list of application stages.

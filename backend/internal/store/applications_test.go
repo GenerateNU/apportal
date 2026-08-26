@@ -27,37 +27,37 @@ func TestListApplicationsQueryAnswerFilters(t *testing.T) {
 			filter: ApplicationFilter{
 				CycleID: "c1",
 				AnswerFilters: []AnswerFilter{
-					{QuestionID: "q1", Match: MatchContains, Values: []string{"boston"}},
+					{QuestionIDs: []string{"q1"}, Match: MatchContains, Values: []string{"boston"}},
 				},
 			},
 			wantSQL: []string{
-				`LEFT JOIN written_answers wa0 ON wa0.application_id = a.id AND wa0.question_id = $1`,
+				`LEFT JOIN written_answers wa0 ON wa0.application_id = a.id AND wa0.question_id = ANY($1::uuid[])`,
 				`AND a.cycle_id = $2`,
 				`AND (wa0.answer_text ILIKE $3 ESCAPE '\')`,
 			},
-			wantArgs: []any{"q1", "c1", "%boston%"},
+			wantArgs: []any{[]string{"q1"}, "c1", "%boston%"},
 		},
 		{
 			name: "checkbox matches the answer_options array",
 			filter: ApplicationFilter{
 				AnswerFilters: []AnswerFilter{
-					{QuestionID: "q2", Match: MatchAnyOption, Values: []string{"Yes", "Maybe"}},
+					{QuestionIDs: []string{"q2"}, Match: MatchAnyOption, Values: []string{"Yes", "Maybe"}},
 				},
 			},
 			wantSQL: []string{
 				`AND (wa0.answer_options @> jsonb_build_array($2::text) OR wa0.answer_options @> jsonb_build_array($3::text))`,
 			},
-			wantArgs: []any{"q2", "Yes", "Maybe"},
+			wantArgs: []any{[]string{"q2"}, "Yes", "Maybe"},
 		},
 		{
 			name: "single-choice matches answer_text exactly",
 			filter: ApplicationFilter{
 				AnswerFilters: []AnswerFilter{
-					{QuestionID: "q3", Match: MatchAnyOf, Values: []string{"Fall"}},
+					{QuestionIDs: []string{"q3"}, Match: MatchAnyOf, Values: []string{"Fall"}},
 				},
 			},
 			wantSQL:  []string{`AND wa0.answer_text = ANY($2::text[])`},
-			wantArgs: []any{"q3", []string{"Fall"}},
+			wantArgs: []any{[]string{"q3"}, []string{"Fall"}},
 		},
 		{
 			// Two filters get their own join each, and the placeholder run has
@@ -65,27 +65,43 @@ func TestListApplicationsQueryAnswerFilters(t *testing.T) {
 			name: "two filters, each with its own join",
 			filter: ApplicationFilter{
 				AnswerFilters: []AnswerFilter{
-					{QuestionID: "q1", Match: MatchContains, Values: []string{"a"}},
-					{QuestionID: "q2", Match: MatchAnyOption, Values: []string{"b"}},
+					{QuestionIDs: []string{"q1"}, Match: MatchContains, Values: []string{"a"}},
+					{QuestionIDs: []string{"q2"}, Match: MatchAnyOption, Values: []string{"b"}},
 				},
 			},
 			wantSQL: []string{
-				`written_answers wa0 ON wa0.application_id = a.id AND wa0.question_id = $1`,
-				`written_answers wa1 ON wa1.application_id = a.id AND wa1.question_id = $2`,
+				`written_answers wa0 ON wa0.application_id = a.id AND wa0.question_id = ANY($1::uuid[])`,
+				`written_answers wa1 ON wa1.application_id = a.id AND wa1.question_id = ANY($2::uuid[])`,
 				`AND (wa0.answer_text ILIKE $3 ESCAPE '\')`,
 				`AND (wa1.answer_options @> jsonb_build_array($4::text))`,
 			},
-			wantArgs: []any{"q1", "q2", "%a%", "b"},
+			wantArgs: []any{[]string{"q1"}, []string{"q2"}, "%a%", "b"},
 		},
 		{
 			// LIKE metacharacters in user input are literals, not wildcards.
 			name: "wildcards in the search term are escaped",
 			filter: ApplicationFilter{
 				AnswerFilters: []AnswerFilter{
-					{QuestionID: "q1", Match: MatchContains, Values: []string{"100%_x"}},
+					{QuestionIDs: []string{"q1"}, Match: MatchContains, Values: []string{"100%_x"}},
 				},
 			},
-			wantArgs: []any{"q1", `%100\%\_x%`},
+			wantArgs: []any{[]string{"q1"}, `%100\%\_x%`},
+		},
+		{
+			// The same question authored once per applicant role: one filter,
+			// one join, matching an answer to either copy.
+			name: "a filter spanning several question ids joins on any of them",
+			filter: ApplicationFilter{
+				AnswerFilters: []AnswerFilter{
+					{QuestionIDs: []string{"q1", "q2"}, Match: MatchAnyOf, Values: []string{"Fall"}},
+				},
+			},
+			wantSQL: []string{
+				`LEFT JOIN written_answers wa0 ON wa0.application_id = a.id AND wa0.question_id = ANY($1::uuid[])`,
+				`AND wa0.answer_text = ANY($2::text[])`,
+			},
+			wantArgs:  []any{[]string{"q1", "q2"}, []string{"Fall"}},
+			wantNoSQL: []string{`wa1`},
 		},
 		{
 			// A filter with nothing to match on can't narrow anything, so it
@@ -93,7 +109,7 @@ func TestListApplicationsQueryAnswerFilters(t *testing.T) {
 			name: "valueless filters are dropped entirely",
 			filter: ApplicationFilter{
 				AnswerFilters: []AnswerFilter{
-					{QuestionID: "q1", Match: MatchContains, Values: nil},
+					{QuestionIDs: []string{"q1"}, Match: MatchContains, Values: nil},
 				},
 			},
 			wantArgs:  []any{},
@@ -179,7 +195,7 @@ func TestCountAndStageCountsShareThePredicate(t *testing.T) {
 		Search:  "ho",
 		Stage:   stagePtr(models.StageSubmitted),
 		AnswerFilters: []AnswerFilter{
-			{QuestionID: "q1", Match: MatchContains, Values: []string{"boston"}},
+			{QuestionIDs: []string{"q1"}, Match: MatchContains, Values: []string{"boston"}},
 		},
 		Limit:  &limit,
 		Offset: 50,

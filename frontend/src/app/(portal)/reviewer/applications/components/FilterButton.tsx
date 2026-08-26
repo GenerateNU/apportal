@@ -12,6 +12,7 @@ import {
   Star,
   Layers,
   Clock,
+  Briefcase,
   MessageSquare,
   ChevronRight,
 } from 'lucide-react'
@@ -27,6 +28,7 @@ import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
 import type { Question, QuestionType, Role } from '@/lib/api/types'
 import { RATING_OPTIONS } from '@/lib/interview-ratings'
+import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 import { ORDERED_STAGES, stageLabel } from './constants'
 import { AVAILABILITY_DAY_OPTIONS } from './meetingAvailability'
 
@@ -45,12 +47,13 @@ export interface AnswerFilter {
   special?: SpecialFilter
 }
 
-export type SpecialFilter = 'rating' | 'stage' | 'availability'
+export type SpecialFilter = 'rating' | 'stage' | 'availability' | 'role'
 
 const SPECIAL_FILTER_ID: Record<SpecialFilter, string> = {
   rating: '__rating__',
   stage: '__stage__',
   availability: '__availability__',
+  role: '__role__',
 }
 
 // Synthetic "questions", so the pickers below treat these exactly like a
@@ -74,6 +77,14 @@ function specialQuestion(
 }
 
 const SPECIAL_QUESTIONS: { special: SpecialFilter; question: Question }[] = [
+  {
+    special: 'role',
+    question: specialQuestion(
+      'role',
+      'Role',
+      ROLE_COLUMNS.map((r) => ROLE_LABEL[r])
+    ),
+  },
   {
     special: 'rating',
     question: specialQuestion(
@@ -120,6 +131,9 @@ interface FilterChipsProps {
   // Availability is a per-cycle/role question, so the day filter is only
   // offered where that question exists to match against.
   hasAvailability?: boolean
+  // Specials the host page owns some other way — the preference list picks
+  // role with its own tabs, since entries and their ranks are per-role.
+  hiddenSpecials?: SpecialFilter[]
 }
 
 export function FilterChips({
@@ -127,6 +141,7 @@ export function FilterChips({
   columns,
   onFilterChange,
   hasAvailability,
+  hiddenSpecials,
 }: FilterChipsProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [filterValues, setFilterValues] = useState<Record<string, FilterValue>>(
@@ -153,6 +168,7 @@ export function FilterChips({
     ...SPECIAL_QUESTIONS.filter(
       ({ special }) =>
         (special !== 'availability' || hasAvailability) &&
+        !hiddenSpecials?.includes(special) &&
         !filters.some((f) => f.special === special)
     ).map(({ question }) => question),
     ...columns.filter((q) => !filters.some((f) => f.question_id === q.id)),
@@ -531,6 +547,7 @@ function getFilterIcon(
 ): React.ReactNode {
   const iconProps = { className: `${size} text-text-muted shrink-0` }
 
+  if (special === 'role') return <Briefcase {...iconProps} />
   if (special === 'rating') return <Star {...iconProps} />
   if (special === 'stage') return <Layers {...iconProps} />
   if (special === 'availability') return <Clock {...iconProps} />
