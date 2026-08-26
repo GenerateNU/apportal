@@ -359,7 +359,6 @@ export function PreferenceListDetailClient({
       : []
   }
 
-
   function saveName() {
     const trimmed = name.trim()
     if (!list || !trimmed || trimmed === list.name) return
