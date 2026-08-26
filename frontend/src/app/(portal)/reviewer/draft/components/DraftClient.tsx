@@ -2,8 +2,9 @@
 
 import { useState } from 'react'
 import { Loader2 } from 'lucide-react'
+import { Avatar } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
-import { SearchableSelect } from '@/components/ui/searchable-select'
+import { Input } from '@/components/ui/input'
 import {
   Dialog,
   DialogContent,
@@ -40,15 +41,15 @@ import {
 } from '@/lib/queries/preference-lists'
 import { useCurrentUser } from '@/lib/queries/users'
 import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
+import {
+  DRAFT_STATUS_BADGE,
+  DRAFT_STATUS_LABEL,
+  SECTION_CLASS,
+  SECTION_HEADER_CLASS,
+} from './constants'
 import { DraftBoardGrid } from './DraftBoardGrid'
 import { DraftSetup } from './DraftSetup'
 import { OnTheClockPanel } from './OnTheClockPanel'
-
-const STATUS_BADGE: Record<string, string> = {
-  setup: 'bg-gray-100 text-gray-700',
-  active: 'bg-green-100 text-green-700',
-  complete: 'bg-blue-100 text-blue-700',
-}
 
 export function DraftClient() {
   const { data: currentUser } = useCurrentUser()
@@ -99,6 +100,7 @@ export function DraftClient() {
   const resetDraft = useResetDraft()
   // Which filled slot is being reassigned; null while that dialog is closed.
   const [changingSlot, setChangingSlot] = useState<number | null>(null)
+  const [changeQuery, setChangeQuery] = useState('')
   const deleteDraft = useDeleteDraft()
   // Which teardown is being confirmed; null while the dialog is closed.
   const [confirming, setConfirming] = useState<'reset' | 'delete' | null>(null)
@@ -115,12 +117,12 @@ export function DraftClient() {
     order ?? board?.teams.map((t) => t.preference_list_id) ?? []
   const effectiveRounds = rounds ?? board?.rounds ?? 1
 
-  function moveInOrder(index: number, direction: -1 | 1) {
+  function reorderSeats(from: number, to: number) {
+    if (from === to || from < 0 || to < 0) return
     const next = [...effectiveOrder]
-    const target = index + direction
-    if (target < 0 || target >= next.length) return
-    const [moved] = next.splice(index, 1)
-    next.splice(target, 0, moved)
+    if (from >= next.length || to >= next.length) return
+    const [moved] = next.splice(from, 1)
+    next.splice(to, 0, moved)
     setOrder(next)
   }
 
@@ -137,10 +139,27 @@ export function DraftClient() {
   )
   // Everyone this board could still take, plus whoever holds the slot now, so
   // the current pick is visible in the list rather than missing from it.
-  const changeOptions = pool.filter(
-    (a) =>
-      !takenByApplicationId[a.id] || a.id === changingSlotPick?.application_id
-  )
+  const changeOptions = pool
+    .filter(
+      (a) =>
+        !takenByApplicationId[a.id] || a.id === changingSlotPick?.application_id
+    )
+    .filter((a) =>
+      changeQuery.trim()
+        ? (a.full_name || a.user_nuid)
+            .toLowerCase()
+            .includes(changeQuery.trim().toLowerCase())
+        : true
+    )
+    .sort((a, b) =>
+      (a.full_name || a.user_nuid).localeCompare(b.full_name || b.user_nuid)
+    )
+
+  function closeChangeDialog() {
+    setChangingSlot(null)
+    setChangeQuery('')
+    replacePick.reset()
+  }
 
   function pick(applicationId: string) {
     setPickError('')
@@ -167,9 +186,9 @@ export function DraftClient() {
       <div className="flex flex-wrap items-center gap-3">
         {board && (
           <span
-            className={`rounded-md px-2 py-0.5 text-xs font-medium capitalize ${STATUS_BADGE[board.status]}`}
+            className={`rounded-md px-2 py-0.5 text-xs font-medium ${DRAFT_STATUS_BADGE[board.status]}`}
           >
-            {board.status}
+            {DRAFT_STATUS_LABEL[board.status]}
           </span>
         )}
         <Select value={role} onValueChange={(v) => setRole(v as Role)}>
@@ -204,7 +223,7 @@ export function DraftClient() {
     return (
       <>
         {header}
-        <p className="text-text-faint text-sm">Loading…</p>
+        <p className="text-text-muted text-sm">Loading…</p>
       </>
     )
   }
@@ -214,27 +233,29 @@ export function DraftClient() {
     return (
       <>
         {header}
-        <div className="rounded-xl border border-gray-200 bg-white p-5 text-sm shadow-sm">
+        <div className={SECTION_CLASS}>
+          <h2 className={SECTION_HEADER_CLASS}>{ROLE_LABEL[role]} draft</h2>
           {isChief ? (
-            <div className="flex flex-col items-start gap-3">
-              <p className="text-text-muted">
-                No {ROLE_LABEL[role].toLowerCase()} draft board for this cycle
-                yet.
+            <>
+              <p className="text-text-muted text-sm">
+                No board yet for this cycle and role. Opening one lets you set
+                the order before anyone picks.
               </p>
-              <Button
-                onClick={() => openDraft.mutate({ cycleId, role })}
-                disabled={openDraft.isPending}
-              >
-                {openDraft.isPending && (
-                  <Loader2 className="animate-spin" size={14} />
-                )}
-                Open the board
-              </Button>
-            </div>
+              <div>
+                <Button
+                  onClick={() => openDraft.mutate({ cycleId, role })}
+                  disabled={openDraft.isPending}
+                >
+                  {openDraft.isPending && (
+                    <Loader2 className="animate-spin" size={14} />
+                  )}
+                  Open the board
+                </Button>
+              </div>
+            </>
           ) : (
-            <p className="text-text-muted">
-              The {ROLE_LABEL[role].toLowerCase()} draft hasn&apos;t been opened
-              yet.
+            <p className="text-text-muted text-sm">
+              This draft hasn&apos;t been opened yet.
             </p>
           )}
         </div>
@@ -253,7 +274,10 @@ export function DraftClient() {
             order={effectiveOrder}
             rounds={effectiveRounds}
             onToggle={toggleInOrder}
-            onMove={moveInOrder}
+            onMove={(index, direction) =>
+              reorderSeats(index, index + direction)
+            }
+            onReorder={reorderSeats}
             onRoundsChange={(n) => setRounds(Math.max(1, n))}
             onSave={() =>
               setTeams.mutate({
@@ -271,9 +295,13 @@ export function DraftClient() {
             starting={updateDraft.isPending}
           />
         ) : (
-          <p className="text-text-faint text-sm">
-            The draft order is still being set.
-          </p>
+          <div className={SECTION_CLASS}>
+            <h2 className={SECTION_HEADER_CLASS}>Draft order</h2>
+            <p className="text-text-muted text-sm">
+              The order is still being set. The board appears here once the
+              draft starts.
+            </p>
+          </div>
         )}
       </>
     )
@@ -336,6 +364,7 @@ export function DraftClient() {
           >
             {board.status === 'complete' ? 'Reopen draft' : 'Mark complete'}
           </Button>
+          <span className="mx-1 h-5 w-px bg-gray-200" aria-hidden />
           <Button
             variant="outline"
             className="text-destructive hover:text-destructive"
@@ -355,7 +384,7 @@ export function DraftClient() {
 
       <Dialog
         open={changingSlot !== null}
-        onOpenChange={(open) => !open && setChangingSlot(null)}
+        onOpenChange={(open) => !open && closeChangeDialog()}
       >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -367,31 +396,71 @@ export function DraftClient() {
             </DialogDescription>
           </DialogHeader>
           {replacePick.isError && (
-            <p className="text-sm text-red-600">
+            <p className="text-destructive text-sm">
               Couldn&apos;t change that pick — they may already be picked in
               another slot.
             </p>
           )}
-          <SearchableSelect
-            options={changeOptions.map((a) => ({
-              value: a.id,
-              label: a.full_name || a.user_nuid,
-            }))}
-            onValueChange={(applicationId) => {
-              if (changingSlot === null) return
-              replacePick.mutate(
-                { ...draftScope, pickNumber: changingSlot, applicationId },
-                { onSuccess: () => setChangingSlot(null) }
-              )
-            }}
-            placeholder="Choose an applicant…"
-            searchPlaceholder="Search applicants…"
-            emptyText="No applicants left."
-            className="w-full"
-            ariaLabel="Choose who takes this slot"
+          {/* Listed inline rather than behind a dropdown: a Popover portals to
+              the body, which a modal Dialog makes unclickable — and picking a
+              person is the only thing this dialog is for. */}
+          <Input
+            value={changeQuery}
+            onChange={(e) => setChangeQuery(e.target.value)}
+            placeholder="Search applicants…"
+            aria-label="Search applicants"
+            className="h-9"
           />
+          <div className="-mx-1 max-h-72 overflow-y-auto px-1">
+            {changeOptions.length === 0 ? (
+              <p className="text-text-muted py-3 text-sm">
+                No applicants match.
+              </p>
+            ) : (
+              <ul className="flex flex-col gap-1">
+                {changeOptions.map((a) => {
+                  const current = a.id === changingSlotPick?.application_id
+                  return (
+                    <li key={a.id}>
+                      <button
+                        type="button"
+                        disabled={current || replacePick.isPending}
+                        onClick={() => {
+                          if (changingSlot === null) return
+                          replacePick.mutate(
+                            {
+                              ...draftScope,
+                              pickNumber: changingSlot,
+                              applicationId: a.id,
+                            },
+                            { onSuccess: closeChangeDialog }
+                          )
+                        }}
+                        className="hover:bg-muted flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left transition-colors disabled:cursor-default disabled:hover:bg-transparent"
+                      >
+                        <Avatar name={a.full_name || a.user_nuid} size="sm" />
+                        <div className="min-w-0 flex-1">
+                          <span className="text-text-default block truncate text-sm font-medium">
+                            {a.full_name || a.user_nuid}
+                          </span>
+                          <span className="text-text-subtle block truncate text-xs">
+                            {a.email}
+                          </span>
+                        </div>
+                        {current && (
+                          <span className="text-text-muted shrink-0 rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium">
+                            Current
+                          </span>
+                        )}
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+          </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setChangingSlot(null)}>
+            <Button variant="outline" onClick={closeChangeDialog}>
               Cancel
             </Button>
           </DialogFooter>
