@@ -217,6 +217,9 @@ func pickNumbers(picks []models.DraftPickDetail) []int {
 // two operators submitting at once, or a stale board.
 var ErrDraftSlotTaken = errors.New("draft slot already filled")
 
+// ErrNoChange means the write asked for the state the row is already in.
+var ErrNoChange = errors.New("nothing to change")
+
 // MakeDraftPick fills the given slot and moves the applicant to accepted,
 // remembering the stage they came from so an undo can put it back. Slot 0
 // means "whichever is on the clock".
@@ -276,6 +279,94 @@ func (s *Store) MakeDraftPick(ctx context.Context, draft models.Draft, slot int,
 		RETURNING id, draft_id, pick_number, draft_team_id, application_id, previous_stage, picked_by, picked_at`
 	teamID := teams[SnakePosition(slot, len(teams))].ID
 	rows, err := tx.Query(ctx, insert, draft.ID, slot, teamID, applicationID, previousStage, pickedBy)
+	if err != nil {
+		return pick, err
+	}
+	pick, err = pgx.CollectExactlyOneRow(rows, pgx.RowToStructByPos[models.DraftPick])
+	if err != nil {
+		return pick, err
+	}
+
+	const accept = `UPDATE applications SET stage = 'accepted' WHERE id = $1`
+	if _, err := tx.Exec(ctx, accept, applicationID); err != nil {
+		return pick, err
+	}
+	return pick, tx.Commit(ctx)
+}
+
+// ErrDraftAlreadyPicked is returned when the applicant is already claimed in
+// another slot on the same board.
+var ErrDraftAlreadyPicked = errors.New("applicant already drafted on this board")
+
+// ReplaceDraftPick swaps the applicant in a slot that's already filled — the
+// team changed its mind. Done in place rather than as a remove plus a re-pick,
+// so the slot never opens: an empty slot mid-board is the one on the clock,
+// which would drag the draft backwards while everyone waits.
+//
+// The outgoing applicant goes back to the stage they were in, and the incoming
+// one's stage is captured in its place, so undo still works afterwards.
+func (s *Store) ReplaceDraftPick(ctx context.Context, draft models.Draft, pickNumber int, applicationID, pickedBy string) (models.DraftPick, error) {
+	var pick models.DraftPick
+
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return pick, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtext($1))`, draft.ID); err != nil {
+		return pick, err
+	}
+
+	var oldApplicationID, oldPreviousStage string
+	const current = `
+		SELECT application_id, previous_stage FROM draft_picks
+		WHERE draft_id = $1 AND pick_number = $2 FOR UPDATE`
+	if err := tx.QueryRow(ctx, current, draft.ID, pickNumber).Scan(&oldApplicationID, &oldPreviousStage); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return pick, ErrNotFound
+		}
+		return pick, err
+	}
+	if oldApplicationID == applicationID {
+		return pick, ErrNoChange
+	}
+
+	// Claimed in another slot on this board — the unique constraint would
+	// catch it, but a named conflict tells the operator what actually happened.
+	var takenElsewhere bool
+	const taken = `
+		SELECT EXISTS (SELECT 1 FROM draft_picks
+		               WHERE draft_id = $1 AND application_id = $2 AND pick_number <> $3)`
+	if err := tx.QueryRow(ctx, taken, draft.ID, applicationID, pickNumber).Scan(&takenElsewhere); err != nil {
+		return pick, err
+	}
+	if takenElsewhere {
+		return pick, ErrDraftAlreadyPicked
+	}
+
+	var newPreviousStage string
+	const stageQ = `SELECT stage FROM applications WHERE id = $1 AND cycle_id = $2 AND application_role = $3`
+	if err := tx.QueryRow(ctx, stageQ, applicationID, draft.CycleID, string(draft.ApplicationRole)).Scan(&newPreviousStage); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return pick, ErrNotFound
+		}
+		return pick, err
+	}
+
+	// Put the outgoing applicant back before the incoming one is accepted, so
+	// a swap between two rows can't leave both in the same stage.
+	const restore = `UPDATE applications SET stage = $2 WHERE id = $1 AND stage = 'accepted'`
+	if _, err := tx.Exec(ctx, restore, oldApplicationID, oldPreviousStage); err != nil {
+		return pick, err
+	}
+
+	const update = `
+		UPDATE draft_picks
+		SET application_id = $3, previous_stage = $4, picked_by = $5, picked_at = NOW()
+		WHERE draft_id = $1 AND pick_number = $2
+		RETURNING id, draft_id, pick_number, draft_team_id, application_id, previous_stage, picked_by, picked_at`
+	rows, err := tx.Query(ctx, update, draft.ID, pickNumber, applicationID, newPreviousStage, pickedBy)
 	if err != nil {
 		return pick, err
 	}

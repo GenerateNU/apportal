@@ -6,6 +6,7 @@ import {
   makeDraftPick,
   openDraft,
   removeDraftPick,
+  replaceDraftPick,
   resetDraft,
   setDraftTeams,
   updateDraft,
@@ -185,5 +186,26 @@ export function useDeleteDraft() {
       draftId: string
       opts?: RequestOptions
     }) => deleteDraft(vars.draftId, vars.opts)
+  )
+}
+
+// Swaps the applicant in an already-filled slot. In place, so the slot never
+// reopens and the team on the clock stays put.
+export function useReplaceDraftPick() {
+  return useDraftMutation(
+    (vars: {
+      cycleId: string
+      role: Role
+      draftId: string
+      pickNumber: number
+      applicationId: string
+      opts?: RequestOptions
+    }) =>
+      replaceDraftPick(
+        vars.draftId,
+        vars.pickNumber,
+        { application_id: vars.applicationId },
+        vars.opts
+      )
   )
 }

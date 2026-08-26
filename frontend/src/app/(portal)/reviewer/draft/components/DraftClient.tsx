@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { SearchableSelect } from '@/components/ui/searchable-select'
 import {
   Dialog,
   DialogContent,
@@ -28,6 +29,7 @@ import {
   useMakeDraftPick,
   useOpenDraft,
   useRemoveDraftPick,
+  useReplaceDraftPick,
   useResetDraft,
   useSetDraftTeams,
   useUpdateDraft,
@@ -93,7 +95,10 @@ export function DraftClient() {
   const setTeams = useSetDraftTeams()
   const makePick = useMakeDraftPick()
   const removePick = useRemoveDraftPick()
+  const replacePick = useReplaceDraftPick()
   const resetDraft = useResetDraft()
+  // Which filled slot is being reassigned; null while that dialog is closed.
+  const [changingSlot, setChangingSlot] = useState<number | null>(null)
   const deleteDraft = useDeleteDraft()
   // Which teardown is being confirmed; null while the dialog is closed.
   const [confirming, setConfirming] = useState<'reset' | 'delete' | null>(null)
@@ -126,6 +131,16 @@ export function DraftClient() {
         : [...effectiveOrder, id]
     )
   }
+
+  const changingSlotPick = board?.picks.find(
+    (p) => p.pick_number === changingSlot
+  )
+  // Everyone this board could still take, plus whoever holds the slot now, so
+  // the current pick is visible in the list rather than missing from it.
+  const changeOptions = pool.filter(
+    (a) =>
+      !takenByApplicationId[a.id] || a.id === changingSlotPick?.application_id
+  )
 
   function pick(applicationId: string) {
     setPickError('')
@@ -284,6 +299,7 @@ export function DraftClient() {
       <DraftBoardGrid
         board={board}
         canEdit={isChief}
+        onChangePick={setChangingSlot}
         removingPick={removingPick}
         onRemovePick={(pickNumber) => {
           setRemovingPick(pickNumber)
@@ -336,6 +352,51 @@ export function DraftClient() {
           </Button>
         </div>
       )}
+
+      <Dialog
+        open={changingSlot !== null}
+        onOpenChange={(open) => !open && setChangingSlot(null)}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Change pick #{changingSlot}</DialogTitle>
+            <DialogDescription>
+              {changingSlotPick
+                ? `${changingSlotPick.full_name || changingSlotPick.application_id} goes back to the stage they were in before this pick, and whoever you choose takes the slot. The order and whose turn it is don't change.`
+                : 'Choose who takes this slot.'}
+            </DialogDescription>
+          </DialogHeader>
+          {replacePick.isError && (
+            <p className="text-sm text-red-600">
+              Couldn&apos;t change that pick — they may already be picked in
+              another slot.
+            </p>
+          )}
+          <SearchableSelect
+            options={changeOptions.map((a) => ({
+              value: a.id,
+              label: a.full_name || a.user_nuid,
+            }))}
+            onValueChange={(applicationId) => {
+              if (changingSlot === null) return
+              replacePick.mutate(
+                { ...draftScope, pickNumber: changingSlot, applicationId },
+                { onSuccess: () => setChangingSlot(null) }
+              )
+            }}
+            placeholder="Choose an applicant…"
+            searchPlaceholder="Search applicants…"
+            emptyText="No applicants left."
+            className="w-full"
+            ariaLabel="Choose who takes this slot"
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setChangingSlot(null)}>
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={confirming !== null}

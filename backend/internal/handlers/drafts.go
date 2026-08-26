@@ -75,6 +75,16 @@ func (h *draftHandler) register(api huma.API) {
 	}, h.pick)
 
 	huma.Register(api, huma.Operation{
+		OperationID: "replace-draft-pick",
+		Method:      http.MethodPut,
+		Path:        "/drafts/{id}/picks/{pick_number}",
+		Summary:     "Swap the applicant in a slot that's already been picked",
+		Description: "Chief only. Done in place, so the slot never reopens and the team on the clock doesn't change. The outgoing applicant returns to their previous stage and the incoming one moves to accepted.",
+		Tags:        []string{"Draft"},
+		Errors:      []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound, http.StatusConflict, http.StatusUnprocessableEntity},
+	}, h.replacePick)
+
+	huma.Register(api, huma.Operation{
 		OperationID:   "remove-draft-pick",
 		Method:        http.MethodDelete,
 		Path:          "/drafts/{id}/picks/{pick_number}",
@@ -304,6 +314,52 @@ func (h *draftHandler) pick(ctx context.Context, in *MakeDraftPickInput) (*Draft
 	if err != nil {
 		if errors.Is(err, store.ErrDraftSlotTaken) {
 			return nil, huma.Error409Conflict("that slot has already been filled")
+		}
+		return nil, storeErr(err)
+	}
+	return &DraftPickOutput{Body: pick}, nil
+}
+
+type ReplaceDraftPickInput struct {
+	ID         string `path:"id" doc:"Draft ID"`
+	PickNumber int    `path:"pick_number" doc:"Which slot to change" minimum:"1"`
+	Body       struct {
+		ApplicationID string `json:"application_id"`
+	}
+}
+
+func (h *draftHandler) replacePick(ctx context.Context, in *ReplaceDraftPickInput) (*DraftPickOutput, error) {
+	if err := requireChief(ctx); err != nil {
+		return nil, err
+	}
+	if in.Body.ApplicationID == "" {
+		return nil, huma.Error422UnprocessableEntity("application_id is required")
+	}
+	draft, err := h.store.GetDraftByID(ctx, in.ID)
+	if err != nil {
+		return nil, storeErr(err)
+	}
+	if draft.Status == models.DraftSetup {
+		return nil, huma.Error409Conflict("the draft hasn't started")
+	}
+	pick, err := h.store.ReplaceDraftPick(ctx, draft, in.PickNumber, in.Body.ApplicationID, currentActor(ctx).NUID)
+	if err != nil {
+		switch {
+		case errors.Is(err, store.ErrNoChange):
+			// Re-picking the applicant already in the slot is a no-op, not a
+			// failure — hand back the slot as it stands.
+			picks, listErr := h.store.ListDraftPicks(ctx, draft.ID)
+			if listErr != nil {
+				return nil, storeErr(listErr)
+			}
+			for _, p := range picks {
+				if p.PickNumber == in.PickNumber {
+					return &DraftPickOutput{Body: p.DraftPick}, nil
+				}
+			}
+			return nil, huma.Error404NotFound("not found")
+		case errors.Is(err, store.ErrDraftAlreadyPicked):
+			return nil, huma.Error409Conflict("that applicant is already picked in another slot")
 		}
 		return nil, storeErr(err)
 	}
