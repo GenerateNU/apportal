@@ -274,6 +274,7 @@ export function DraftClient() {
           teamList={teamList}
           pool={pool}
           takenByApplicationId={takenByApplicationId}
+          canPick={isChief}
           onPick={pick}
           picking={makePick.isPending}
           error={pickError}

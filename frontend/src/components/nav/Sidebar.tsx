@@ -96,6 +96,7 @@ const sectionsByRole: Record<Role, NavSection[]> = {
           href: '/reviewer/draft',
           label: 'Draft',
           icon: Shuffle,
+          chiefOnly: true,
         },
       ],
     },
