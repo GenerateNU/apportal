@@ -161,10 +161,18 @@ export function DraftClient() {
     replacePick.reset()
   }
 
+  // The pool row behind an id, so a predicted pick shows the person rather
+  // than their id in the beat before the refetch lands.
+  function applicantFor(applicationId: string) {
+    const a = pool.find((x) => x.id === applicationId)
+    if (!a) return undefined
+    return { fullName: a.full_name || a.user_nuid, email: a.email }
+  }
+
   function pick(applicationId: string) {
     setPickError('')
     makePick.mutate(
-      { ...draftScope, applicationId },
+      { ...draftScope, applicationId, applicant: applicantFor(applicationId) },
       {
         onError: () =>
           setPickError(
@@ -432,6 +440,10 @@ export function DraftClient() {
                               ...draftScope,
                               pickNumber: changingSlot,
                               applicationId: a.id,
+                              applicant: {
+                                fullName: a.full_name || a.user_nuid,
+                                email: a.email,
+                              },
                             },
                             { onSuccess: closeChangeDialog }
                           )
