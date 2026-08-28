@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { ArrowRight, Plus, X } from 'lucide-react'
+import { ArrowRight, LayoutGrid, Plus, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -32,17 +32,11 @@ import {
   usePreferenceLists,
   useSetPreferenceListDeadline,
 } from '@/lib/queries/preference-lists'
+import {
+  PREFERENCE_LIST_STATUS_BADGE,
+  PREFERENCE_LIST_STATUS_LABEL,
+} from '@/lib/preference-list-status'
 import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
-
-const STATUS_BADGE: Record<string, string> = {
-  draft: 'bg-gray-100 text-gray-500',
-  submitted: 'bg-green-50 text-green-700',
-}
-
-const STATUS_LABEL: Record<string, string> = {
-  draft: 'Draft',
-  submitted: 'Submitted',
-}
 
 export function PreferenceListsPageClient({ isChief }: { isChief: boolean }) {
   const searchParams = useSearchParams()
@@ -75,12 +69,23 @@ export function PreferenceListsPageClient({ isChief }: { isChief: boolean }) {
           </Select>
         </div>
 
-        {cycleId && (
-          <Button onClick={() => setDialogOpen(true)}>
-            <Plus data-icon="inline-start" size={14} />
-            Create group
-          </Button>
-        )}
+        <div className="flex items-center gap-3">
+          {isChief && cycleId && (
+            <Link
+              href={`/reviewer/preference-lists/overview?cycle=${cycleId}`}
+              className="text-brand-blue inline-flex items-center gap-1.5 text-sm hover:underline"
+            >
+              <LayoutGrid size={14} />
+              Compare all groups
+            </Link>
+          )}
+          {cycleId && (
+            <Button onClick={() => setDialogOpen(true)}>
+              <Plus data-icon="inline-start" size={14} />
+              Create group
+            </Button>
+          )}
+        </div>
       </div>
 
       {isChief && cycleId && (
@@ -117,9 +122,9 @@ export function PreferenceListsPageClient({ isChief }: { isChief: boolean }) {
               </div>
               <div className="flex flex-wrap items-center gap-1.5">
                 <span
-                  className={`rounded-md px-1.5 py-0.5 text-xs font-medium ${STATUS_BADGE[list.status]}`}
+                  className={`rounded-md px-1.5 py-0.5 text-xs font-medium ${PREFERENCE_LIST_STATUS_BADGE[list.status]}`}
                 >
-                  {STATUS_LABEL[list.status]}
+                  {PREFERENCE_LIST_STATUS_LABEL[list.status]}
                 </span>
                 <span className="text-text-subtle text-xs">
                   {list.entry_count} entr{list.entry_count === 1 ? 'y' : 'ies'}

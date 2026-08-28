@@ -136,6 +136,132 @@ func (s *Store) GetPreferenceListDetail(ctx context.Context, id string) (models.
 	return detail, nil
 }
 
+// ListPreferenceListDetails bundles every group in a cycle with its full
+// detail (members, entries, personal entries, comments) — four bulk queries
+// total rather than one GetPreferenceListDetail call per group — for a
+// chief/admin view that shows every group's board side by side.
+func (s *Store) ListPreferenceListDetails(ctx context.Context, cycleID string) ([]models.PreferenceListDetail, error) {
+	const listsQ = `SELECT ` + preferenceListColumns + ` FROM preference_lists WHERE cycle_id = $1 ORDER BY created_at DESC`
+	listRows, err := s.db.Query(ctx, listsQ, cycleID)
+	if err != nil {
+		return nil, err
+	}
+	lists, err := pgx.CollectRows(listRows, pgx.RowToStructByPos[models.PreferenceList])
+	if err != nil {
+		return nil, err
+	}
+	if len(lists) == 0 {
+		return []models.PreferenceListDetail{}, nil
+	}
+
+	ids := make([]string, len(lists))
+	for i, l := range lists {
+		ids[i] = l.ID
+	}
+
+	const membersQ = `
+		SELECT id, preference_list_id, lead_nuid, added_by, added_at
+		FROM preference_list_members
+		WHERE preference_list_id = ANY($1::uuid[])
+		ORDER BY preference_list_id, added_at`
+	memberRows, err := s.db.Query(ctx, membersQ, ids)
+	if err != nil {
+		return nil, err
+	}
+	members, err := pgx.CollectRows(memberRows, pgx.RowToStructByPos[models.PreferenceListMember])
+	if err != nil {
+		return nil, err
+	}
+	membersByList := map[string][]models.PreferenceListMember{}
+	for _, m := range members {
+		membersByList[m.PreferenceListID] = append(membersByList[m.PreferenceListID], m)
+	}
+
+	const entriesQ = `
+		SELECT e.id, e.preference_list_id, e.application_id, e.rank, e.reasoning, e.updated_by, e.created_at, e.updated_at,
+		       u.full_name, u.email, a.application_role
+		FROM preference_list_entries e
+		JOIN applications a ON a.id = e.application_id
+		JOIN users u ON u.nuid = a.user_nuid
+		WHERE e.preference_list_id = ANY($1::uuid[])
+		ORDER BY e.preference_list_id, e.rank`
+	entryRows, err := s.db.Query(ctx, entriesQ, ids)
+	if err != nil {
+		return nil, err
+	}
+	entries, err := pgx.CollectRows(entryRows, pgx.RowToStructByPos[models.PreferenceListEntryDetail])
+	if err != nil {
+		return nil, err
+	}
+	entriesByList := map[string][]models.PreferenceListEntryDetail{}
+	for _, e := range entries {
+		entriesByList[e.PreferenceListID] = append(entriesByList[e.PreferenceListID], e)
+	}
+
+	const personalEntriesQ = `
+		SELECT pe.id, pe.preference_list_id, pe.owner_nuid, pe.application_id, pe.rank, pe.reasoning, pe.created_at, pe.updated_at,
+		       ou.full_name, au.full_name, au.email, a.application_role
+		FROM preference_list_personal_entries pe
+		JOIN applications a ON a.id = pe.application_id
+		JOIN users au ON au.nuid = a.user_nuid
+		JOIN users ou ON ou.nuid = pe.owner_nuid
+		WHERE pe.preference_list_id = ANY($1::uuid[])
+		ORDER BY pe.preference_list_id, pe.owner_nuid, pe.rank`
+	personalRows, err := s.db.Query(ctx, personalEntriesQ, ids)
+	if err != nil {
+		return nil, err
+	}
+	personalEntries, err := pgx.CollectRows(personalRows, pgx.RowToStructByPos[models.PreferenceListPersonalEntryDetail])
+	if err != nil {
+		return nil, err
+	}
+	personalByList := map[string][]models.PreferenceListPersonalEntryDetail{}
+	for _, pe := range personalEntries {
+		personalByList[pe.PreferenceListID] = append(personalByList[pe.PreferenceListID], pe)
+	}
+
+	const commentsQ = `
+		SELECT ` + preferenceListCommentColumns + `
+		FROM preference_list_comments
+		WHERE preference_list_id = ANY($1::uuid[])
+		ORDER BY preference_list_id, created_at`
+	commentRows, err := s.db.Query(ctx, commentsQ, ids)
+	if err != nil {
+		return nil, err
+	}
+	comments, err := pgx.CollectRows(commentRows, pgx.RowToStructByPos[models.PreferenceListComment])
+	if err != nil {
+		return nil, err
+	}
+	authorNUIDs := make([]string, len(comments))
+	for i, c := range comments {
+		authorNUIDs[i] = c.AuthorNUID
+	}
+	names, err := s.namesByNUIDs(ctx, authorNUIDs)
+	if err != nil {
+		return nil, err
+	}
+	commentsByList := map[string][]models.PreferenceListCommentDetail{}
+	for _, c := range comments {
+		commentsByList[c.PreferenceListID] = append(commentsByList[c.PreferenceListID], models.PreferenceListCommentDetail{
+			PreferenceListComment: c,
+			AuthorName:            names[c.AuthorNUID],
+		})
+	}
+
+	details := make([]models.PreferenceListDetail, len(lists))
+	for i, l := range lists {
+		details[i] = models.PreferenceListDetail{
+			PreferenceList:  l,
+			Members:         membersByList[l.ID],
+			Entries:         entriesByList[l.ID],
+			PersonalEntries: personalByList[l.ID],
+			Comments:        commentsByList[l.ID],
+		}
+	}
+	return details, nil
+}
+
 // ListPreferenceLists returns every group for a cycle. Chiefs/admins pass
 // includeAll=true to see every group; anyone else only sees groups they
 // belong to — a group a lead isn't on shouldn't even reveal its name to

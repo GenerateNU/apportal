@@ -40,6 +40,16 @@ func (h *preferenceListHandler) register(api huma.API) {
 	}, h.list)
 
 	huma.Register(api, huma.Operation{
+		OperationID: "list-preference-list-details",
+		Method:      http.MethodGet,
+		Path:        "/preference-lists/details",
+		Summary:     "List every preference list group's full detail for a cycle",
+		Description: "Chief/admin only. Bundles every group's members, entries, personal entries, and comments in one call, for viewing every group side by side.",
+		Tags:        []string{"Preference lists"},
+		Errors:      []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusUnprocessableEntity},
+	}, h.listDetails)
+
+	huma.Register(api, huma.Operation{
 		OperationID: "get-preference-list",
 		Method:      http.MethodGet,
 		Path:        "/preference-lists/{id}",
@@ -329,6 +339,24 @@ func (h *preferenceListHandler) list(ctx context.Context, in *ListPreferenceList
 		return nil, storeErr(err)
 	}
 	return &PreferenceListsOutput{Body: items}, nil
+}
+
+type PreferenceListDetailsOutput struct {
+	Body []models.PreferenceListDetail
+}
+
+func (h *preferenceListHandler) listDetails(ctx context.Context, in *ListPreferenceListsInput) (*PreferenceListDetailsOutput, error) {
+	if err := requireChief(ctx); err != nil {
+		return nil, err
+	}
+	if in.CycleID == "" {
+		return nil, huma.Error422UnprocessableEntity("cycle_id is required")
+	}
+	items, err := h.store.ListPreferenceListDetails(ctx, in.CycleID)
+	if err != nil {
+		return nil, storeErr(err)
+	}
+	return &PreferenceListDetailsOutput{Body: items}, nil
 }
 
 func (h *preferenceListHandler) get(ctx context.Context, in *IDInput) (*PreferenceListDetailOutput, error) {
