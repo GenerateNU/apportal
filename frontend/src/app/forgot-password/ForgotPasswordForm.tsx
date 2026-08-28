@@ -1,20 +1,18 @@
 'use client'
 
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
-export default function LoginForm() {
-  const router = useRouter()
+export default function ForgotPasswordForm() {
   const searchParams = useSearchParams()
-  const redirectTo = searchParams.get('redirectTo') ?? '/'
-  const sessionExpired = searchParams.get('sessionExpired') === '1'
+  const linkInvalid = searchParams.get('error') === 'invalid_link'
 
   const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [sent, setSent] = useState(false)
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -22,9 +20,8 @@ export default function LoginForm() {
     setIsSubmitting(true)
 
     const supabase = createClient()
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/confirm?next=/reset-password`,
     })
 
     if (error) {
@@ -33,15 +30,33 @@ export default function LoginForm() {
       return
     }
 
-    router.push(redirectTo)
-    router.refresh()
+    setSent(true)
+    setIsSubmitting(false)
+  }
+
+  // Same confirmation whether or not the address has an account — the reset
+  // form must not become a way to test which emails are registered.
+  if (sent) {
+    return (
+      <div className="flex w-full flex-col gap-4">
+        <p className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-700">
+          If an account exists for {email}, a reset link is on its way. The link
+          expires in one hour.
+        </p>
+        <p className="text-text-secondary text-center text-sm">
+          <Link href="/login" className="text-brand-blue font-medium">
+            Back to sign in
+          </Link>
+        </p>
+      </div>
+    )
   }
 
   return (
     <form onSubmit={handleSubmit} className="flex w-full flex-col gap-4">
-      {sessionExpired && (
+      {linkInvalid && (
         <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-700">
-          Your session expired. Please sign in again.
+          That reset link is invalid or has expired. Request a new one below.
         </p>
       )}
 
@@ -64,33 +79,6 @@ export default function LoginForm() {
         />
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        <div className="flex items-baseline justify-between">
-          <label
-            htmlFor="password"
-            className="text-text-secondary text-sm font-medium"
-          >
-            Password
-          </label>
-          <Link
-            href="/forgot-password"
-            className="text-brand-blue text-sm font-medium"
-          >
-            Forgot password?
-          </Link>
-        </div>
-        <input
-          id="password"
-          name="password"
-          type="password"
-          required
-          autoComplete="current-password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          className="text-text-default focus:border-brand-blue focus:ring-brand-blue rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-1"
-        />
-      </div>
-
       {error && <p className="text-sm text-red-600">{error}</p>}
 
       <button
@@ -98,13 +86,13 @@ export default function LoginForm() {
         disabled={isSubmitting}
         className="bg-brand-blue text-brand-white mt-2 rounded-md px-3 py-2 text-sm font-semibold disabled:opacity-60"
       >
-        {isSubmitting ? 'Signing in…' : 'Sign in'}
+        {isSubmitting ? 'Sending…' : 'Send reset link'}
       </button>
 
       <p className="text-text-secondary text-center text-sm">
-        Don&apos;t have an account?{' '}
-        <Link href="/signup" className="text-brand-blue font-medium">
-          Sign up
+        Remembered it?{' '}
+        <Link href="/login" className="text-brand-blue font-medium">
+          Sign in
         </Link>
       </p>
     </form>
