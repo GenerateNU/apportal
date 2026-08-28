@@ -30,6 +30,8 @@ import type {
   CreatePreferenceListInputBody,
   ErrorModel,
   GetPreferenceListDeadlineParams,
+  ListPreferenceListDetails200,
+  ListPreferenceListDetailsParams,
   ListPreferenceLists200,
   ListPreferenceListsParams,
   PreferenceList,
@@ -411,6 +413,99 @@ export const useCreatePreferenceList = <TError = ErrorModel | ErrorModel | Error
       return useMutation(mutationOptions, queryClient);
     }
     /**
+ * Chief/admin only. Bundles every group's members, entries, personal entries, and comments in one call, for viewing every group side by side.
+ * @summary List every preference list group's full detail for a cycle
+ */
+export const listPreferenceListDetails = (
+    params?: ListPreferenceListDetailsParams,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<ListPreferenceListDetails200>(
+      {url: `/preference-lists/details`, method: 'GET',
+        params, signal
+    },
+      options);
+    }
+  
+
+
+
+export const getListPreferenceListDetailsQueryKey = (params?: ListPreferenceListDetailsParams,) => {
+    return [
+    `/preference-lists/details`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getListPreferenceListDetailsQueryOptions = <TData = Awaited<ReturnType<typeof listPreferenceListDetails>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(params?: ListPreferenceListDetailsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPreferenceListDetails>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListPreferenceListDetailsQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPreferenceListDetails>>> = ({ signal }) => listPreferenceListDetails(params, requestOptions, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPreferenceListDetails>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListPreferenceListDetailsQueryResult = NonNullable<Awaited<ReturnType<typeof listPreferenceListDetails>>>
+export type ListPreferenceListDetailsQueryError = ErrorModel | ErrorModel | ErrorModel | ErrorModel
+
+
+export function useListPreferenceListDetails<TData = Awaited<ReturnType<typeof listPreferenceListDetails>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
+ params: undefined |  ListPreferenceListDetailsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPreferenceListDetails>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listPreferenceListDetails>>,
+          TError,
+          Awaited<ReturnType<typeof listPreferenceListDetails>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListPreferenceListDetails<TData = Awaited<ReturnType<typeof listPreferenceListDetails>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
+ params?: ListPreferenceListDetailsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPreferenceListDetails>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listPreferenceListDetails>>,
+          TError,
+          Awaited<ReturnType<typeof listPreferenceListDetails>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListPreferenceListDetails<TData = Awaited<ReturnType<typeof listPreferenceListDetails>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
+ params?: ListPreferenceListDetailsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPreferenceListDetails>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List every preference list group's full detail for a cycle
+ */
+
+export function useListPreferenceListDetails<TData = Awaited<ReturnType<typeof listPreferenceListDetails>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
+ params?: ListPreferenceListDetailsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPreferenceListDetails>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListPreferenceListDetailsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+/**
  * Chief only. Deletes every member and entry. Allowed even after every role's deadline has passed, for administrative cleanup.
  * @summary Delete a preference list
  */

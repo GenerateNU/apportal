@@ -8,6 +8,7 @@ import {
   deletePreferenceListPersonalEntry,
   getPreferenceList,
   getPreferenceListDeadline,
+  listPreferenceListDetails,
   listPreferenceLists,
   removePreferenceListMember,
   reorderPreferenceListEntries,
@@ -66,6 +67,22 @@ export function usePreferenceList(
     queryFn: () => getPreferenceList(id, opts) as Promise<PreferenceListDetail>,
     enabled: !!id,
     refetchInterval: poll ? 8000 : false,
+  })
+}
+
+// Every group's full detail for a cycle in one request — the chief/admin
+// "all groups side by side" board, not the per-group detail page (which
+// keeps its own usePreferenceList above).
+export function usePreferenceListDetails(
+  cycleId: string,
+  opts?: RequestOptions
+) {
+  return useQuery({
+    queryKey: queryKeys.preferenceLists.allDetails(cycleId),
+    queryFn: async () =>
+      ((await listPreferenceListDetails({ cycle_id: cycleId }, opts)) ??
+        []) as PreferenceListDetail[],
+    enabled: !!cycleId,
   })
 }
 

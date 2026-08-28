@@ -8786,6 +8786,56 @@ paths:
       summary: Create a preference list group for a cycle
       tags:
         - Preference lists
+  /preference-lists/details:
+    get:
+      description: Chief/admin only. Bundles every group's members, entries, personal entries, and comments in one call, for viewing every group side by side.
+      operationId: list-preference-list-details
+      parameters:
+        - description: Cycle ID
+          explode: false
+          in: query
+          name: cycle_id
+          schema:
+            description: Cycle ID
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/PreferenceListDetail"
+                type:
+                  - array
+                  - "null"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: List every preference list group's full detail for a cycle
+      tags:
+        - Preference lists
   /preference-lists/{id}:
     delete:
       description: Chief only. Deletes every member and entry. Allowed even after every role's deadline has passed, for administrative cleanup.

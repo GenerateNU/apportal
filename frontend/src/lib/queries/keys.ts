@@ -290,6 +290,11 @@ export const queryKeys = {
     details: () => [...queryKeys.preferenceLists.all, 'detail'] as const,
     detail: (id: string) =>
       [...queryKeys.preferenceLists.details(), id] as const,
+    // Every group's full detail for a cycle at once, for the chief/admin
+    // "all groups side by side" board — a separate key from list()/detail(id)
+    // since it carries a different shape (full PreferenceListDetail[]).
+    allDetails: (cycleId: string) =>
+      [...queryKeys.preferenceLists.all, 'all-details', cycleId] as const,
   },
 
   drafts: {

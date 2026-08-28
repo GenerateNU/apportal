@@ -172,6 +172,8 @@ export * from './listInterviewsBulk200';
 export * from './listInterviewsBulkParams';
 export * from './listLeadAssignments200';
 export * from './listOpenApplicationTemplates200';
+export * from './listPreferenceListDetails200';
+export * from './listPreferenceListDetailsParams';
 export * from './listPreferenceLists200';
 export * from './listPreferenceListsParams';
 export * from './listRecordingReviewerAssignments200';
