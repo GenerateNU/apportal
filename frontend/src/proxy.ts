@@ -1,7 +1,12 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-const PUBLIC_PATHS = ['/login', '/signup']
+// Reachable without a session. /auth/confirm redeems the one-time token from
+// an emailed link, so it has to run for signed-in users too — otherwise
+// clicking a reset link in an already-authenticated browser bounces to / and
+// the token is never spent.
+const PUBLIC_PATHS = ['/login', '/signup', '/forgot-password', '/auth/confirm']
+const SIGNED_OUT_ONLY_PATHS = ['/login', '/signup', '/forgot-password']
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request })
@@ -54,7 +59,11 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(redirectUrl)
   }
 
-  if (user && isPublicPath) {
+  const isSignedOutOnlyPath = SIGNED_OUT_ONLY_PATHS.some((path) =>
+    request.nextUrl.pathname.startsWith(path)
+  )
+
+  if (user && isSignedOutOnlyPath) {
     return NextResponse.redirect(new URL('/', request.url))
   }
 
