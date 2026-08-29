@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 export default function ForgotPasswordForm() {
   const searchParams = useSearchParams()
   const linkInvalid = searchParams.get('error') === 'invalid_link'
+  const linkFailureReason = searchParams.get('reason')
 
   const [email, setEmail] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -57,6 +58,11 @@ export default function ForgotPasswordForm() {
       {linkInvalid && (
         <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-700">
           That reset link is invalid or has expired. Request a new one below.
+          {linkFailureReason && (
+            <span className="mt-1 block text-xs opacity-80">
+              {linkFailureReason}
+            </span>
+          )}
         </p>
       )}
 
