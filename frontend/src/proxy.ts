@@ -8,6 +8,16 @@ import { NextResponse, type NextRequest } from 'next/server'
 const PUBLIC_PATHS = ['/login', '/signup', '/forgot-password', '/auth/confirm']
 const SIGNED_OUT_ONLY_PATHS = ['/login', '/signup', '/forgot-password']
 
+// getSession() above may have rotated the refresh token, which invalidates the
+// one the browser still holds. Those new cookies live on the NextResponse.next()
+// we built for the pass-through case, so a redirect that returns a fresh
+// response instead would strand the browser on a spent token — every later
+// refresh fails with "Already Used" and the session dies mid-use.
+function copyAuthCookies(from: NextResponse, to: NextResponse) {
+  from.cookies.getAll().forEach((cookie) => to.cookies.set(cookie))
+  return to
+}
+
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request })
 
@@ -34,16 +44,15 @@ export async function proxy(request: NextRequest) {
 
   // getSession() (not getUser()) deliberately: Proxy runs on every request —
   // including prefetches, which Next.js strips the distinguishing headers
-  // from before Proxy sees them, so there's no way to skip them here. Two
-  // independent Supabase clients (this one and the browser's, which
-  // refreshes on every API call) racing to redeem the same one-time-use
-  // rotating refresh token was bouncing actively-used sessions to /login.
-  // getSession() only reads/refreshes the local cookie, no extra network
-  // hop to revalidate — Proxy is a UX/routing decision here, not the real
-  // security boundary: the backend independently re-verifies every bearer
-  // token against Supabase on every API call regardless of what Proxy
-  // decides, so a forged cookie that fooled this check would still fail
-  // every real data request.
+  // from before Proxy sees them, so there's no way to skip them here. Proxy
+  // is a UX/routing decision, not the real security boundary: the backend
+  // re-verifies every bearer token against Supabase on every API call, so a
+  // forged cookie that fooled this check would still fail every data request.
+  //
+  // Note getSession() is NOT network-free: within EXPIRY_MARGIN_MS (90s) of
+  // expiry it POSTs /token?grant_type=refresh_token and rotates the
+  // single-use refresh token. Whatever it hands back must reach the browser
+  // — see copyAuthCookies.
   const {
     data: { session },
   } = await supabase.auth.getSession()
@@ -56,7 +65,7 @@ export async function proxy(request: NextRequest) {
   if (!user && !isPublicPath) {
     const redirectUrl = new URL('/login', request.url)
     redirectUrl.searchParams.set('redirectTo', request.nextUrl.pathname)
-    return NextResponse.redirect(redirectUrl)
+    return copyAuthCookies(response, NextResponse.redirect(redirectUrl))
   }
 
   const isSignedOutOnlyPath = SIGNED_OUT_ONLY_PATHS.some((path) =>
@@ -64,7 +73,10 @@ export async function proxy(request: NextRequest) {
   )
 
   if (user && isSignedOutOnlyPath) {
-    return NextResponse.redirect(new URL('/', request.url))
+    return copyAuthCookies(
+      response,
+      NextResponse.redirect(new URL('/', request.url))
+    )
   }
 
   // Prevent CDN/ISR caching of responses that may contain Set-Cookie headers.
