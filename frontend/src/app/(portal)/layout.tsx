@@ -92,7 +92,11 @@ export default function PortalLayout({
       </MobileNavSheet>
 
       <main className="flex flex-1 flex-col overflow-hidden border border-gray-200 bg-white lg:rounded-tl-[25]">
-        <div className="flex flex-1 flex-col overflow-y-auto">{children}</div>
+        {/* overscroll-none: without it, scrolling past the end of a long page
+          chains to the viewport and rubber-bands the whole shell. */}
+        <div className="flex flex-1 flex-col overflow-y-auto overscroll-none">
+          {children}
+        </div>
       </main>
     </div>
   )

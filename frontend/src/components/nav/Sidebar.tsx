@@ -405,7 +405,7 @@ export default function Sidebar({
       </div>
 
       {/* Nav sections */}
-      <nav className="flex flex-1 flex-col gap-4 overflow-y-auto px-3 pt-2 pb-4">
+      <nav className="flex flex-1 flex-col gap-4 overflow-y-auto overscroll-none px-3 pt-2 pb-4">
         {sections.map((section) => (
           <NavSectionGroup
             key={section.id}
