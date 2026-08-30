@@ -44,7 +44,7 @@ func (h *preferenceListHandler) register(api huma.API) {
 		Method:      http.MethodGet,
 		Path:        "/preference-lists/details",
 		Summary:     "List every preference list group's full detail for a cycle",
-		Description: "Chief/admin only. Bundles every group's members, entries, personal entries, and comments in one call, for viewing every group side by side.",
+		Description: "Reviewer only. Bundles every group's members and ranked entries in one call, for viewing every group side by side. Personal entries and comments are chief/admin only — a lead sees every group's picks, not other leads' private working notes.",
 		Tags:        []string{"Preference lists"},
 		Errors:      []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusUnprocessableEntity},
 	}, h.listDetails)
@@ -346,7 +346,7 @@ type PreferenceListDetailsOutput struct {
 }
 
 func (h *preferenceListHandler) listDetails(ctx context.Context, in *ListPreferenceListsInput) (*PreferenceListDetailsOutput, error) {
-	if err := requireChief(ctx); err != nil {
+	if err := requireReviewer(ctx); err != nil {
 		return nil, err
 	}
 	if in.CycleID == "" {
@@ -355,6 +355,16 @@ func (h *preferenceListHandler) listDetails(ctx context.Context, in *ListPrefere
 	items, err := h.store.ListPreferenceListDetails(ctx, in.CycleID)
 	if err != nil {
 		return nil, storeErr(err)
+	}
+	// Comparing your group's picks against every other group is what leads
+	// open this for, and a ranked list is the shared artifact. Personal
+	// lists and in-group comments are private working notes, so they stay
+	// chief/admin only — the side-by-side board never rendered them anyway.
+	if !currentActor(ctx).HasAnyRole(models.UserRoleChief, models.UserRoleAdmin) {
+		for i := range items {
+			items[i].PersonalEntries = nil
+			items[i].Comments = nil
+		}
 	}
 	return &PreferenceListDetailsOutput{Body: items}, nil
 }

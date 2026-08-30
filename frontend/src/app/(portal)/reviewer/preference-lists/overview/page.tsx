@@ -8,23 +8,20 @@ import { PreferenceListsOverviewClient } from './components/PreferenceListsOverv
 // this at build time (the backend isn't running then).
 export const dynamic = 'force-dynamic'
 
-// Chief/admin only. Unlike the index page (visible to any reviewer, with
-// isChief only toggling deadline editors), this page's whole point is
-// cross-group visibility a lead shouldn't have, so it 404s outright — the
-// backend's list-preference-list-details route is chief-only too.
-async function isChief(): Promise<boolean> {
+// Any reviewer. Leads compare their group's picks against the others here;
+// the backend serves them every group's ranked entries but withholds
+// personal lists and in-group comments, which this board never rendered.
+async function isReviewer(): Promise<boolean> {
   try {
-    const user = await getCurrentUser(await getServerRequestOptions())
-    return (user.roles ?? []).some(
-      (role) => role === 'chief' || role === 'admin'
-    )
+    await getCurrentUser(await getServerRequestOptions())
+    return true
   } catch {
     return false
   }
 }
 
 export default async function PreferenceListsOverviewPage() {
-  if (!(await isChief())) notFound()
+  if (!(await isReviewer())) notFound()
 
   return (
     <PageContainer>

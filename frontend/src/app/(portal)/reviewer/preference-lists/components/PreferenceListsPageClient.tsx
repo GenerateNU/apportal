@@ -70,7 +70,7 @@ export function PreferenceListsPageClient({ isChief }: { isChief: boolean }) {
         </div>
 
         <div className="flex items-center gap-3">
-          {isChief && cycleId && (
+          {cycleId && (
             <Link
               href={`/reviewer/preference-lists/overview?cycle=${cycleId}`}
               className="text-brand-blue inline-flex items-center gap-1.5 text-sm hover:underline"

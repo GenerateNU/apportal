@@ -3,33 +3,32 @@
 import { useCallback, useMemo, useState } from 'react'
 import Link from 'next/link'
 import {
-  ArrowDown,
   ArrowLeft,
-  ArrowUp,
-  ChevronDown,
-  ChevronUp,
+  LayoutGrid,
   Loader2,
   Lock,
+  MoreHorizontal,
   Pencil,
   Trash2,
-  X,
 } from 'lucide-react'
 import { PageContainer } from '@/components/PageContainer'
-import { ReturnerBadge } from '@/components/ReturnerBadge'
 import { Button } from '@/components/ui/button'
-import { DateTimePicker } from '@/components/ui/datetime-picker'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { SearchableSelect } from '@/components/ui/searchable-select'
-import {
-  AVAILABILITY_DAY_OPTIONS,
   availabilityOptionsFor,
   findAvailabilityQuestionId,
   MEETING_DAY_LABEL,
@@ -38,12 +37,11 @@ import { APIError } from '@/lib/api/client'
 import type {
   ApplicationSummary,
   MeetingDay,
-  PreferenceListComment,
   PreferenceListStatus,
   Role,
 } from '@/lib/api/types'
 import { useAnswersByApplicationIdBatches } from '@/lib/queries/answers'
-import { useApplications } from '@/lib/queries/applications'
+import { useApplication, useApplications } from '@/lib/queries/applications'
 import { useDraftedApplications } from '@/lib/queries/drafts'
 import {
   useAddPreferenceListMember,
@@ -63,7 +61,12 @@ import {
   useUpsertPersonalPreferenceListEntry,
   useUpsertPreferenceListEntry,
 } from '@/lib/queries/preference-lists'
-import { useChiefs, useCurrentUser, useLeads } from '@/lib/queries/users'
+import {
+  useChiefs,
+  useCurrentUser,
+  useLeads,
+  useReviewerNames,
+} from '@/lib/queries/users'
 import { useQuestionsByCycleRoles } from '@/lib/queries/questions'
 import { ROLE_CHIP_CLASS, ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 import { usePersistedFilters } from '@/hooks/usePersistedFilters'
@@ -73,6 +76,13 @@ import type {
 } from '@/app/(portal)/reviewer/applications/components/FilterButton'
 import { FilterChips } from '@/app/(portal)/reviewer/applications/components/FilterButton'
 import { useApplicationFilters } from '@/app/(portal)/reviewer/applications/components/useApplicationFilters'
+import { ApplicationDetail } from '@/app/(portal)/reviewer/applications/components/ApplicationDetail'
+import { CommentThread } from './CommentThread'
+import type { PreferenceEntry } from './EntryRow'
+import { GroupSettings } from './GroupSettings'
+import { ListPicker } from './ListPicker'
+import { RankedList } from './RankedList'
+import { ReferencePane } from './ReferencePane'
 
 // True/false once we know; null when the applicant left no usable answer at
 // all (no answer to the availability question, or it predates it).
@@ -110,6 +120,18 @@ function deadlinePassed(closesAt: string | undefined | null): boolean {
   return !!closesAt && new Date(closesAt) < new Date()
 }
 
+// Coarse on purpose: the sticky header wants "is this urgent", not a clock.
+function deadlineLabel(closesAt: string | undefined): string | null {
+  if (!closesAt) return null
+  const remaining = new Date(closesAt).getTime() - Date.now()
+  if (remaining <= 0) return 'Closed'
+  const days = Math.floor(remaining / 86_400_000)
+  if (days >= 1) return `Closes in ${days}d`
+  const hours = Math.floor(remaining / 3_600_000)
+  if (hours >= 1) return `Closes in ${hours}h`
+  return `Closes in ${Math.max(1, Math.floor(remaining / 60_000))}m`
+}
+
 export function PreferenceListDetailClient({
   id,
   isChief,
@@ -126,16 +148,24 @@ export function PreferenceListDetailClient({
   const { data: leads = [] } = useLeads()
   const { data: chiefs = [] } = useChiefs()
   const { data: currentUser } = useCurrentUser()
+  const nameByNuid = useReviewerNames()
 
-  const nameByNuid = new Map<string, string>()
-  for (const u of [...leads, ...chiefs]) nameByNuid.set(u.nuid, u.full_name)
-
+  // Which list is being edited ('group' or a personal owner's nuid), and
+  // which one — if any — is shown beside it for reference.
   const [viewMode, setViewMode] = useState('group')
+  const [compareWith, setCompareWith] = useState('none')
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [editingName, setEditingName] = useState(false)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [roleTab, setRoleTab] = useState<Role>(ROLE_COLUMNS[0])
+  // The applicant whose slide-over is open, if any.
+  const [openApplicant, setOpenApplicant] = useState<PreferenceEntry | null>(
+    null
+  )
   const [filters, setFilters] = useState<AnswerFilter[]>([])
 
   // Role is a filter chip like everything else. Entries and their ranks are
-  // still per-role, so the applicants card renders one ranked section per
-  // role in view rather than merging them.
+  // still per-role, so the applicants card ranks one role at a time.
   const { roles, columns, hasAvailability, filterParams } =
     useApplicationFilters({
       cycleId: list?.cycle_id ?? '',
@@ -229,13 +259,23 @@ export function PreferenceListDetailClient({
     software_engineer: engineerDeadline,
     software_designer: designerDeadline,
   }
+  const closesAtByRole = Object.fromEntries(
+    ROLE_COLUMNS.map((r) => [r, deadlineQueryByRole[r].data?.closes_at])
+  ) as Record<Role, string | undefined>
   const lockedByRole = Object.fromEntries(
-    ROLE_COLUMNS.map((r) => [
-      r,
-      deadlinePassed(deadlineQueryByRole[r].data?.closes_at),
-    ])
+    ROLE_COLUMNS.map((r) => [r, deadlinePassed(closesAtByRole[r])])
   ) as Record<Role, boolean>
   const groupLocked = ROLE_COLUMNS.every((r) => lockedByRole[r])
+
+  // Only for an entry the current filters exclude from `applications` —
+  // otherwise the row's own summary is already cached and the drawer opens
+  // with no request at all.
+  const lazyApplication = useApplication(
+    openApplicant &&
+      !applications.some((a) => a.id === openApplicant.application_id)
+      ? openApplicant.application_id
+      : ''
+  )
 
   const updateList = useUpdatePreferenceList()
   const deleteList = useDeletePreferenceList()
@@ -252,19 +292,17 @@ export function PreferenceListDetailClient({
   const createComment = useCreatePreferenceListComment()
   const updateComment = useUpdatePreferenceListComment()
 
-  // Resyncs from the poll while the field isn't focused, so a teammate's
-  // concurrent rename shows up locally — but never overwrites the name
-  // mid-edit, only once you're not actively typing in it. Adjusted during
-  // render (React's documented pattern for "reset state when a prop
-  // changes") rather than in an effect, to avoid an extra render pass.
+  // Resyncs from the poll while the field isn't being edited, so a
+  // teammate's concurrent rename shows up locally — but never overwrites the
+  // name mid-edit. Adjusted during render (React's documented pattern for
+  // "reset state when a prop changes") rather than in an effect.
   const [name, setName] = useState('')
-  const [nameFocused, setNameFocused] = useState(false)
   const [prevListName, setPrevListName] = useState<string | undefined>(
     undefined
   )
   if (list && list.name !== prevListName) {
     setPrevListName(list.name)
-    if (!nameFocused) setName(list.name)
+    if (!editingName) setName(list.name)
   }
 
   if (isError) {
@@ -303,9 +341,9 @@ export function PreferenceListDetailClient({
         !memberNuids.has(u.nuid)
     )
     .sort((a, b) => a.full_name.localeCompare(b.full_name))
-  const atMemberCap = list.members.length >= MAX_PREFERENCE_LIST_MEMBERS
 
   const meetingDay = list.meeting_day
+  const activeRole = roles.includes(roleTab) ? roleTab : roles[0]
 
   function availabilityBadgeFor(applicationId: string, role: Role) {
     if (!meetingDay) return undefined
@@ -318,22 +356,27 @@ export function PreferenceListDetailClient({
 
   // Comments are scoped to the shared list only, not personal lists.
   // application_id absent is a comment on the group as a whole.
-  const comments = list.comments
-  const groupComments = comments.filter((c) => !c.application_id)
+  const groupComments = list.comments.filter((c) => !c.application_id)
   function commentsForEntry(applicationId: string) {
-    return comments.filter((c) => c.application_id === applicationId)
+    return list!.comments.filter((c) => c.application_id === applicationId)
   }
 
   const byName = (a: ApplicationSummary, b: ApplicationSummary) =>
     (a.full_name || a.user_nuid).localeCompare(b.full_name || b.user_nuid)
 
-  function entriesFor(role: Role) {
-    return list!.entries.filter((e) => e.application_role === role)
+  // 'group' reads the shared ranking; anything else is that owner's personal
+  // one. Both shapes carry the fields EntryRow renders.
+  function entriesForView(mode: string, role: Role): PreferenceEntry[] {
+    return mode === 'group'
+      ? list!.entries.filter((e) => e.application_role === role)
+      : list!.personal_entries.filter(
+          (e) => e.owner_nuid === mode && e.application_role === role
+        )
   }
 
-  // The pool spans every role in view, so each section offers only its own —
-  // adding someone under the wrong heading would file them under their real
-  // role anyway, where you weren't looking.
+  // The pool spans every role, so each tab offers only its own — adding
+  // someone under the wrong heading would file them under their real role
+  // anyway, where you weren't looking.
   function candidatesFor(role: Role, taken: Set<string>) {
     return applications
       .filter((a) => a.role === role && !taken.has(a.id))
@@ -356,52 +399,71 @@ export function PreferenceListDetailClient({
     return (nameByNuid.get(a) ?? a).localeCompare(nameByNuid.get(b) ?? b)
   })
 
-  const viewingOwnerNuid = viewMode === 'group' ? null : viewMode
-  const isViewingMine =
-    viewingOwnerNuid !== null && viewingOwnerNuid === currentUser?.nuid
-  function personalEntriesFor(role: Role) {
-    return viewingOwnerNuid
-      ? list!.personal_entries.filter(
-          (e) =>
-            e.owner_nuid === viewingOwnerNuid && e.application_role === role
-        )
-      : []
+  function listLabel(mode: string) {
+    if (mode === 'group') return 'Group list'
+    if (mode === currentUser?.nuid) return 'My list'
+    return `${nameByNuid.get(mode) ?? mode}'s list`
   }
 
+  const editingGroup = viewMode === 'group'
+  const isViewingMine = !editingGroup && viewMode === currentUser?.nuid
+  const editLocked = editingGroup ? lockedByRole[activeRole] : !isViewingMine
+
+  const entries = entriesForView(viewMode, activeRole)
+  const takenIds = new Set(entries.map((e) => e.application_id))
+
   function saveName() {
+    setEditingName(false)
     const trimmed = name.trim()
-    if (!list || !trimmed || trimmed === list.name) return
+    if (!trimmed || trimmed === list!.name) {
+      setName(list!.name)
+      return
+    }
     updateList.mutate({
-      id: list.id,
-      cycleId: list.cycle_id,
+      id: list!.id,
+      cycleId: list!.cycle_id,
       body: { name: trimmed },
     })
   }
 
   function toggleSubmitted() {
-    if (!list) return
     updateList.mutate({
-      id: list.id,
-      cycleId: list.cycle_id,
-      body: { status: list.status === 'submitted' ? 'draft' : 'submitted' },
+      id: list!.id,
+      cycleId: list!.cycle_id,
+      body: { status: list!.status === 'submitted' ? 'draft' : 'submitted' },
     })
   }
 
-  // Ranks are per-role, so a move reorders that role's ids and sends only
-  // those — the same slice the endpoint has always received.
-  function reorder(
-    entries: { application_id: string }[],
-    index: number,
-    direction: -1 | 1,
-    send: (applicationIds: string[]) => void
-  ) {
-    const target = index + direction
-    if (!list || target < 0 || target >= entries.length) return
-    const ids = entries.map((e) => e.application_id)
-    const [moved] = ids.splice(index, 1)
-    ids.splice(target, 0, moved)
-    send(ids)
+  function addEntry(applicationId: string) {
+    const vars = { listId: list!.id, applicationId }
+    if (editingGroup) upsertEntry.mutate(vars)
+    else upsertPersonalEntry.mutate(vars)
   }
+
+  function removeEntry(applicationId: string) {
+    const vars = { listId: list!.id, applicationId }
+    if (editingGroup) deleteEntry.mutate(vars)
+    else deletePersonalEntry.mutate(vars)
+  }
+
+  function reorder(applicationIds: string[]) {
+    const vars = { listId: list!.id, applicationIds }
+    if (editingGroup) reorderEntries.mutate(vars)
+    else reorderPersonalEntries.mutate(vars)
+  }
+
+  function saveReasoning(applicationId: string, reasoning: string) {
+    const vars = { listId: list!.id, applicationId, reasoning }
+    if (editingGroup) upsertEntry.mutate(vars)
+    else upsertPersonalEntry.mutate(vars)
+  }
+
+  const countdown = deadlineLabel(closesAtByRole[activeRole])
+
+  const summaryById = new Map(applications.map((a) => [a.id, a]))
+  const openApplicantSummary = openApplicant
+    ? (summaryById.get(openApplicant.application_id) ?? lazyApplication.data)
+    : undefined
 
   return (
     <PageContainer>
@@ -412,6 +474,96 @@ export function PreferenceListDetailClient({
         <ArrowLeft size={14} />
         Back to preference lists
       </Link>
+
+      {/* Sticky: on a long ranking you otherwise lose the list's name, its
+          status and how long is left the moment you start scrolling. */}
+      <div className="sticky top-0 z-10 -mx-4 flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 bg-white px-4 py-3 sm:-mx-8 sm:px-8">
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          {editingName ? (
+            <Input
+              value={name}
+              autoFocus
+              onChange={(e) => setName(e.target.value)}
+              onBlur={saveName}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') saveName()
+                if (e.key === 'Escape') {
+                  setName(list.name)
+                  setEditingName(false)
+                }
+              }}
+              aria-label="Group name"
+              className="max-w-sm text-lg font-semibold"
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={() => !groupLocked && setEditingName(true)}
+              disabled={groupLocked}
+              className="text-text-default group inline-flex min-w-0 items-center gap-1.5 text-lg font-semibold"
+            >
+              <span className="truncate">{list.name}</span>
+              {!groupLocked && (
+                <Pencil
+                  size={13}
+                  className="text-text-faint shrink-0 opacity-0 group-hover:opacity-100"
+                />
+              )}
+            </button>
+          )}
+          <span
+            className={`shrink-0 rounded-md px-2 py-0.5 text-xs font-medium ${STATUS_BADGE[list.status]}`}
+          >
+            {STATUS_LABEL[list.status]}
+          </span>
+          {meetingDay && (
+            <span className="bg-brand-blue/10 text-brand-blue shrink-0 rounded-md px-2 py-0.5 text-xs font-medium">
+              Meets {MEETING_DAY_LABEL[meetingDay]}
+            </span>
+          )}
+          {countdown && (
+            <span className="text-text-subtle shrink-0 text-xs">
+              {countdown}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {/* Cross-group comparison lives on its own board — the panes below
+              only reach the lists inside this group. */}
+          <Link
+            href={`/reviewer/preference-lists/overview?cycle=${list.cycle_id}`}
+            className="text-brand-blue inline-flex items-center gap-1.5 text-sm hover:underline"
+          >
+            <LayoutGrid size={14} />
+            Compare all groups
+          </Link>
+          <Button
+            onClick={toggleSubmitted}
+            variant={list.status === 'submitted' ? 'outline' : 'default'}
+            disabled={groupLocked || updateList.isPending}
+          >
+            {list.status === 'submitted' ? 'Mark as draft' : 'Submit'}
+          </Button>
+          {isChief && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" aria-label="More actions">
+                  <MoreHorizontal size={14} />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  variant="destructive"
+                  onSelect={() => setConfirmingDelete(true)}
+                >
+                  <Trash2 size={14} />
+                  Delete group
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
+      </div>
 
       {groupLocked ? (
         <div className="border-border bg-muted/40 text-text-muted flex items-center gap-2 rounded-lg border px-4 py-3 text-sm">
@@ -432,202 +584,88 @@ export function PreferenceListDetailClient({
         ))
       )}
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-1 items-center gap-3">
-          <Input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            onFocus={() => setNameFocused(true)}
-            onBlur={() => {
-              setNameFocused(false)
-              saveName()
-            }}
-            disabled={groupLocked}
-            className="max-w-sm text-lg font-semibold"
-          />
-          <span
-            className={`shrink-0 rounded-md px-2 py-0.5 text-xs font-medium ${STATUS_BADGE[list.status]}`}
-          >
-            {STATUS_LABEL[list.status]}
-          </span>
-          {meetingDay && (
-            <span className="bg-brand-blue/10 text-brand-blue shrink-0 rounded-md px-2 py-0.5 text-xs font-medium">
-              Meets {MEETING_DAY_LABEL[meetingDay]}
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            onClick={toggleSubmitted}
-            disabled={groupLocked || updateList.isPending}
-          >
-            {list.status === 'submitted' ? 'Mark as draft' : 'Submit'}
-          </Button>
-          {isChief && (
-            <Button
-              variant="outline"
-              onClick={() =>
-                deleteList.mutate({ id: list.id, cycleId: list.cycle_id })
-              }
-              disabled={deleteList.isPending}
-            >
-              <Trash2 data-icon="inline-start" size={14} />
-              Delete group
-            </Button>
-          )}
-        </div>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm">
-        <span className="text-text-muted font-medium">Meeting day:</span>
-        <Select
-          value={meetingDay ?? 'none'}
-          onValueChange={(value) =>
-            setMeetingDay.mutate({
-              id: list.id,
-              meetingDay: value === 'none' ? null : (value as MeetingDay),
-            })
-          }
-          disabled={groupLocked}
-        >
-          <SelectTrigger className="w-48" aria-label="Meeting day">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">Not set</SelectItem>
-            {AVAILABILITY_DAY_OPTIONS.map((d) => (
-              <SelectItem key={d.day} value={d.day}>
-                {d.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {isChief && (
-        // Every role, not just the ones in view: the deadline is a cycle-wide
-        // setting, and hiding one behind a filter chip would be a trap.
-        <div className="flex flex-col gap-2 rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm">
-          {ROLE_COLUMNS.map((r) => {
-            const closesAt = deadlineQueryByRole[r].data?.closes_at
-            return (
-              <div key={r} className="flex flex-wrap items-center gap-2">
-                <span className="text-text-muted font-medium">
-                  Deadline for every {ROLE_LABEL[r]} list this cycle:
-                </span>
-                <DateTimePicker
-                  value={closesAt ? new Date(closesAt) : undefined}
-                  onValueChange={(date) =>
-                    setDeadline.mutate({
-                      cycleId: list.cycle_id,
-                      role: r,
-                      closesAt: date.toISOString(),
-                    })
-                  }
-                  placeholder="No deadline set"
-                />
-                {closesAt && (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setDeadline.mutate({
-                        cycleId: list.cycle_id,
-                        role: r,
-                        closesAt: null,
-                      })
-                    }
-                    className="text-text-faint hover:text-text-muted inline-flex items-center gap-1 text-xs"
-                  >
-                    <X size={12} />
-                    Clear
-                  </button>
-                )}
-              </div>
-            )
-          })}
-          {setDeadline.isError && (
-            <span className="text-xs text-red-600">
-              Couldn&apos;t save the deadline — try again.
-            </span>
-          )}
-        </div>
-      )}
-
-      <div className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-        <h2 className="text-text-faint text-xs font-semibold tracking-wide uppercase">
-          Members ({list.members.length}/{MAX_PREFERENCE_LIST_MEMBERS})
-        </h2>
-        <div className="flex flex-wrap items-center gap-2">
-          {list.members.map((m) => (
-            <span
-              key={m.id}
-              className="bg-muted inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm"
-            >
-              {nameByNuid.get(m.lead_nuid) ?? m.lead_nuid}
-              {!groupLocked && (
-                <button
-                  type="button"
-                  onClick={() =>
-                    removeMember.mutate({ listId: list.id, memberId: m.id })
-                  }
-                  aria-label={`Remove ${nameByNuid.get(m.lead_nuid) ?? m.lead_nuid}`}
-                  className="text-text-faint hover:text-text-muted"
-                >
-                  <X size={12} />
-                </button>
-              )}
-            </span>
-          ))}
-        </div>
-        {!groupLocked && !atMemberCap && (
-          <SearchableSelect
-            options={availableToAdd.map((u) => ({
-              value: u.nuid,
-              label: u.full_name,
-            }))}
-            onValueChange={(nuid) =>
-              addMember.mutate({ listId: list.id, leadNuid: nuid })
-            }
-            placeholder="Add a member…"
-            searchPlaceholder="Search leads…"
-            emptyText="No matching leads."
-            className="w-64"
-            ariaLabel="Add a member"
-          />
-        )}
-        {!groupLocked && atMemberCap && (
-          <p className="text-text-faint text-xs">
-            This group has reached the maximum of {MAX_PREFERENCE_LIST_MEMBERS}{' '}
-            members.
-          </p>
-        )}
-      </div>
+      <GroupSettings
+        open={settingsOpen}
+        onToggle={() => setSettingsOpen((v) => !v)}
+        groupLocked={groupLocked}
+        isChief={isChief}
+        meetingDay={meetingDay}
+        onMeetingDayChange={(day) =>
+          setMeetingDay.mutate({ id: list.id, meetingDay: day })
+        }
+        closesAtByRole={closesAtByRole}
+        onSetDeadline={(role, closesAt) =>
+          setDeadline.mutate({ cycleId: list.cycle_id, role, closesAt })
+        }
+        deadlineError={setDeadline.isError}
+        members={list.members}
+        nameByNuid={nameByNuid}
+        availableToAdd={availableToAdd}
+        maxMembers={MAX_PREFERENCE_LIST_MEMBERS}
+        onAddMember={(nuid) =>
+          addMember.mutate({ listId: list.id, leadNuid: nuid })
+        }
+        onRemoveMember={(memberId) =>
+          removeMember.mutate({ listId: list.id, memberId })
+        }
+      />
 
       <div className="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-text-faint text-xs font-semibold tracking-wide uppercase">
-            Applicants
-          </h2>
-          <Select value={viewMode} onValueChange={setViewMode}>
-            <SelectTrigger className="w-48" aria-label="Viewing which list">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="group">Group list</SelectItem>
-              {personalOwnerNuids.map((nuid) => (
-                <SelectItem key={nuid} value={nuid}>
-                  {nuid === currentUser?.nuid
-                    ? 'My list'
-                    : `${nameByNuid.get(nuid) ?? nuid}'s list`}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        {roles.length > 1 && (
+          <div className="flex items-center gap-1 border-b border-gray-100 pb-3">
+            {roles.map((r) => (
+              <button
+                key={r}
+                type="button"
+                onClick={() => setRoleTab(r)}
+                aria-current={r === activeRole}
+                className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-sm font-medium ${
+                  r === activeRole
+                    ? 'bg-muted text-text-default'
+                    : 'text-text-muted hover:text-text-default'
+                }`}
+              >
+                <span
+                  className={`rounded px-1.5 py-0.5 text-[10px] ${ROLE_CHIP_CLASS[r]}`}
+                >
+                  {ROLE_LABEL[r]}
+                </span>
+                <span className="text-text-faint text-xs">
+                  {entriesForView(viewMode, r).length}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className="flex flex-wrap items-center gap-2">
+          <ListPicker
+            label="Editing"
+            value={viewMode}
+            onChange={setViewMode}
+            ariaLabel="Which list to edit"
+            options={[
+              { value: 'group', label: 'Group list' },
+              ...personalOwnerNuids.map((nuid) => ({
+                value: nuid,
+                label: listLabel(nuid),
+              })),
+            ]}
+          />
+          <ListPicker
+            label="beside"
+            value={compareWith}
+            onChange={setCompareWith}
+            ariaLabel="Which list to compare"
+            options={[
+              { value: 'none', label: 'Nothing' },
+              ...['group', ...personalOwnerNuids]
+                .filter((mode) => mode !== viewMode)
+                .map((mode) => ({ value: mode, label: listLabel(mode) })),
+            ]}
+          />
         </div>
 
-        {/* Role included: it picks which ranked sections below are on screen,
-            the same way the other chips pick which candidates are offered. */}
         <div className="flex flex-wrap items-center gap-2 border-b border-gray-100 pb-4">
           <FilterChips
             filters={filters}
@@ -637,132 +675,59 @@ export function PreferenceListDetailClient({
           />
         </div>
 
-        {roles.map((role) => {
-          const entries =
-            viewMode === 'group' ? entriesFor(role) : personalEntriesFor(role)
-          const taken = new Set(entries.map((e) => e.application_id))
-          const locked =
-            viewMode === 'group' ? lockedByRole[role] : !isViewingMine
-          const candidates = candidatesFor(role, taken)
-          return (
-            <section key={role} className="flex flex-col gap-2">
-              <div className="flex items-center gap-2">
-                <span
-                  className={`rounded-md px-2 py-0.5 text-xs font-medium ${ROLE_CHIP_CLASS[role]}`}
-                >
-                  {ROLE_LABEL[role]}
-                </span>
-                <span className="text-text-faint text-xs">
-                  {entries.length}
-                </span>
-              </div>
+        <div
+          className={
+            compareWith === 'none' ? undefined : 'grid gap-6 lg:grid-cols-2'
+          }
+        >
+          <RankedList
+            role={activeRole}
+            entries={entries}
+            candidates={candidatesFor(activeRole, takenIds)}
+            locked={editLocked}
+            emptyText={
+              editingGroup
+                ? 'No applicants on this list yet.'
+                : isViewingMine
+                  ? "You haven't added anyone to your personal list yet."
+                  : "This person hasn't added anyone to their personal list yet."
+            }
+            meetingDay={meetingDay}
+            availabilityBadgeFor={availabilityBadgeFor}
+            draftedByApplicationId={draftedByApplicationId}
+            onOpenSettings={() => setSettingsOpen(true)}
+            onOpenApplicant={setOpenApplicant}
+            onAdd={addEntry}
+            onReorder={reorder}
+            onRemove={removeEntry}
+            onSaveReasoning={saveReasoning}
+            commentsFor={editingGroup ? commentsForEntry : undefined}
+            currentUserNuid={currentUser?.nuid}
+            onAddComment={(applicationId, body) =>
+              createComment.mutate({ listId: list.id, applicationId, body })
+            }
+            onEditComment={(commentId, body) =>
+              updateComment.mutate({ listId: list.id, commentId, body })
+            }
+            isAddingComment={createComment.isPending}
+            isEditingComment={updateComment.isPending}
+          />
 
-              {entries.length === 0 ? (
-                <p className="text-text-faint text-sm">
-                  {viewMode === 'group'
-                    ? 'No applicants on this list yet.'
-                    : isViewingMine
-                      ? "You haven't added anyone to your personal list yet."
-                      : "This person hasn't added anyone to their personal list yet."}
-                </p>
-              ) : (
-                entries.map((entry, index) => (
-                  <EntryRow
-                    key={entry.id}
-                    entry={entry}
-                    availabilityBadge={availabilityBadgeFor(
-                      entry.application_id,
-                      entry.application_role
-                    )}
-                    draftedBy={draftedByApplicationId[entry.application_id]}
-                    index={index}
-                    total={entries.length}
-                    locked={locked}
-                    onMove={(direction) =>
-                      reorder(entries, index, direction, (applicationIds) =>
-                        viewMode === 'group'
-                          ? reorderEntries.mutate({
-                              listId: list.id,
-                              applicationIds,
-                            })
-                          : reorderPersonalEntries.mutate({
-                              listId: list.id,
-                              applicationIds,
-                            })
-                      )
-                    }
-                    onRemove={() =>
-                      viewMode === 'group'
-                        ? deleteEntry.mutate({
-                            listId: list.id,
-                            applicationId: entry.application_id,
-                          })
-                        : deletePersonalEntry.mutate({
-                            listId: list.id,
-                            applicationId: entry.application_id,
-                          })
-                    }
-                    onSaveReasoning={(reasoning) =>
-                      viewMode === 'group'
-                        ? upsertEntry.mutate({
-                            listId: list.id,
-                            applicationId: entry.application_id,
-                            reasoning,
-                          })
-                        : upsertPersonalEntry.mutate({
-                            listId: list.id,
-                            applicationId: entry.application_id,
-                            reasoning,
-                          })
-                    }
-                    // Comments are offered on the shared list only.
-                    comments={
-                      viewMode === 'group'
-                        ? commentsForEntry(entry.application_id)
-                        : undefined
-                    }
-                    currentUserNuid={currentUser?.nuid}
-                    onAddComment={(body) =>
-                      createComment.mutate({
-                        listId: list.id,
-                        applicationId: entry.application_id,
-                        body,
-                      })
-                    }
-                    onEditComment={(commentId, body) =>
-                      updateComment.mutate({ listId: list.id, commentId, body })
-                    }
-                    isAddingComment={createComment.isPending}
-                    isEditingComment={updateComment.isPending}
-                  />
-                ))
-              )}
-
-              {!locked && (
-                <SearchableSelect
-                  options={candidates.map((a) => ({
-                    value: a.id,
-                    label: a.full_name || a.user_nuid,
-                    badge: availabilityBadgeFor(a.id, role),
-                  }))}
-                  onValueChange={(applicationId) =>
-                    viewMode === 'group'
-                      ? upsertEntry.mutate({ listId: list.id, applicationId })
-                      : upsertPersonalEntry.mutate({
-                          listId: list.id,
-                          applicationId,
-                        })
-                  }
-                  placeholder={`Add a ${ROLE_LABEL[role].toLowerCase()}…`}
-                  searchPlaceholder="Search applicants…"
-                  emptyText="No matching applicants."
-                  className="w-72"
-                  ariaLabel={`Add a ${ROLE_LABEL[role].toLowerCase()} applicant`}
-                />
-              )}
-            </section>
-          )
-        })}
+          {compareWith !== 'none' && (
+            <ReferencePane
+              title={listLabel(compareWith)}
+              role={activeRole}
+              entries={entriesForView(compareWith, activeRole)}
+              presentIds={takenIds}
+              canAdd={!editLocked}
+              onAdd={addEntry}
+              onOpenApplicant={setOpenApplicant}
+              availabilityBadgeFor={availabilityBadgeFor}
+              draftedByApplicationId={draftedByApplicationId}
+              emptyText="Nothing on this list yet."
+            />
+          )}
+        </div>
       </div>
 
       <div className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
@@ -781,318 +746,59 @@ export function PreferenceListDetailClient({
           placeholder="Add a comment on this group…"
         />
       </div>
-    </PageContainer>
-  )
-}
 
-function EntryRow({
-  entry,
-  availabilityBadge,
-  draftedBy,
-  index,
-  total,
-  locked,
-  onMove,
-  onRemove,
-  onSaveReasoning,
-  comments,
-  currentUserNuid,
-  onAddComment,
-  onEditComment,
-  isAddingComment,
-  isEditingComment,
-}: {
-  entry: {
-    id: string
-    application_id: string
-    full_name: string
-    email: string
-    reasoning?: string
-    returner: boolean
-  }
-  availabilityBadge?: { label: string; className: string }
-  // The team that took them on a draft board, if any.
-  draftedBy?: string
-  index: number
-  total: number
-  locked: boolean
-  onMove: (direction: -1 | 1) => void
-  onRemove: () => void
-  onSaveReasoning: (reasoning: string) => void
-  // Comments are only offered for shared-list entries, not personal ones —
-  // omit these props entirely to hide the collapsible thread.
-  comments?: PreferenceListComment[]
-  currentUserNuid?: string
-  onAddComment?: (body: string) => void
-  onEditComment?: (commentId: string, body: string) => void
-  isAddingComment?: boolean
-  isEditingComment?: boolean
-}) {
-  // Same resync-when-unfocused treatment as the group name above (adjusted
-  // during render, not in an effect), so a teammate's concurrent reasoning
-  // edit — picked up by the 8s poll — shows here instead of being
-  // permanently masked by this row's own local state.
-  const [reasoning, setReasoning] = useState(entry.reasoning ?? '')
-  const [reasoningFocused, setReasoningFocused] = useState(false)
-  const [prevReasoning, setPrevReasoning] = useState(entry.reasoning)
-  if (entry.reasoning !== prevReasoning) {
-    setPrevReasoning(entry.reasoning)
-    if (!reasoningFocused) setReasoning(entry.reasoning ?? '')
-  }
-  const [commentsOpen, setCommentsOpen] = useState(false)
-
-  return (
-    <div className="flex flex-col gap-2 rounded-lg border border-gray-200 p-3 sm:flex-row sm:items-start">
-      <div className="flex shrink-0 flex-col items-center gap-1 sm:w-8">
-        <span className="text-text-subtle text-sm font-semibold">
-          {index + 1}
-        </span>
-        {!locked && (
-          <div className="flex flex-row gap-1 sm:flex-col">
-            <button
-              type="button"
-              onClick={() => onMove(-1)}
-              disabled={index === 0}
-              aria-label="Move up"
-              className="text-text-faint hover:text-text-muted disabled:opacity-30"
-            >
-              <ArrowUp size={14} />
-            </button>
-            <button
-              type="button"
-              onClick={() => onMove(1)}
-              disabled={index === total - 1}
-              aria-label="Move down"
-              className="text-text-faint hover:text-text-muted disabled:opacity-30"
-            >
-              <ArrowDown size={14} />
-            </button>
-          </div>
-        )}
-      </div>
-
-      <div className="flex flex-1 flex-col gap-1.5">
-        <div className="flex items-center justify-between gap-2">
-          <div>
-            <div className="flex items-center gap-1.5">
-              <p
-                className={`text-sm font-medium ${
-                  draftedBy
-                    ? 'text-text-faint line-through'
-                    : 'text-text-default'
-                }`}
-              >
-                {entry.full_name}
-              </p>
-              {entry.returner && <ReturnerBadge />}
-              {draftedBy && (
-                <span className="text-text-muted rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium">
-                  Drafted · {draftedBy}
-                </span>
-              )}
-              {availabilityBadge && (
-                <span
-                  className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${availabilityBadge.className}`}
-                >
-                  {availabilityBadge.label}
-                </span>
-              )}
-            </div>
-            <p className="text-text-subtle text-xs">{entry.email}</p>
-          </div>
-          {!locked && (
-            <button
-              type="button"
-              onClick={onRemove}
-              aria-label={`Remove ${entry.full_name}`}
-              className="text-text-faint hover:text-text-muted shrink-0"
-            >
-              <X size={14} />
-            </button>
-          )}
-        </div>
-        <Label className="sr-only" htmlFor={`reasoning-${entry.id}`}>
-          Reasoning
-        </Label>
-        <textarea
-          id={`reasoning-${entry.id}`}
-          value={reasoning}
-          onChange={(e) => setReasoning(e.target.value)}
-          onFocus={() => setReasoningFocused(true)}
-          onBlur={() => {
-            setReasoningFocused(false)
-            if (reasoning !== (entry.reasoning ?? ''))
-              onSaveReasoning(reasoning)
+      {openApplicant && openApplicantSummary && (
+        <ApplicationDetail
+          applicant={{
+            id: openApplicantSummary.id,
+            nuid: openApplicantSummary.user_nuid,
+            fullName: openApplicant.full_name,
+            email: openApplicant.email,
+            role: openApplicantSummary.role,
+            cycleId: openApplicantSummary.cycle_id,
+            stage: openApplicantSummary.stage,
+            submittedAt: openApplicantSummary.submitted_at,
+            returner: openApplicant.returner,
           }}
-          disabled={locked}
-          placeholder="Reasoning (optional)…"
-          rows={2}
-          className="border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 w-full rounded-md border bg-transparent px-2.5 py-1.5 text-sm outline-none focus-visible:ring-3 disabled:cursor-not-allowed disabled:opacity-60"
+          onClose={() => setOpenApplicant(null)}
         />
-        {comments && (
-          <div className="border-t border-gray-100 pt-2">
-            <button
-              type="button"
-              onClick={() => setCommentsOpen((v) => !v)}
-              className="text-brand-blue inline-flex items-center gap-1 text-xs hover:underline"
+      )}
+
+      <Dialog open={confirmingDelete} onOpenChange={setConfirmingDelete}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete this group?</DialogTitle>
+            <DialogDescription>
+              {list.name} and its ranked applicants, personal lists and comments
+              are deleted for everyone. This can&apos;t be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setConfirmingDelete(false)}
             >
-              {commentsOpen ? (
-                <ChevronUp size={12} />
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={deleteList.isPending}
+              onClick={() =>
+                deleteList.mutate({ id: list.id, cycleId: list.cycle_id })
+              }
+            >
+              {deleteList.isPending ? (
+                <>
+                  <Loader2 className="animate-spin" size={14} />
+                  Deleting…
+                </>
               ) : (
-                <ChevronDown size={12} />
+                'Delete group'
               )}
-              Comments ({comments.length})
-            </button>
-            {commentsOpen && (
-              <div className="mt-2">
-                <CommentThread
-                  comments={comments}
-                  currentUserNuid={currentUserNuid}
-                  onAdd={(body) => onAddComment?.(body)}
-                  onEdit={(commentId, body) => onEditComment?.(commentId, body)}
-                  isAdding={!!isAddingComment}
-                  isEditing={!!isEditingComment}
-                  placeholder="Add a comment on this applicant…"
-                />
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
-function CommentThread({
-  comments,
-  currentUserNuid,
-  onAdd,
-  onEdit,
-  isAdding,
-  isEditing,
-  placeholder,
-}: {
-  comments: PreferenceListComment[]
-  currentUserNuid?: string
-  onAdd: (body: string) => void
-  onEdit: (commentId: string, body: string) => void
-  isAdding: boolean
-  isEditing: boolean
-  placeholder: string
-}) {
-  const [newComment, setNewComment] = useState('')
-  const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
-  const [editingBody, setEditingBody] = useState('')
-
-  function startEditing(comment: PreferenceListComment) {
-    setEditingCommentId(comment.id)
-    setEditingBody(comment.body)
-  }
-
-  function saveEdit() {
-    const body = editingBody.trim()
-    if (!editingCommentId || !body) return
-    onEdit(editingCommentId, body)
-    setEditingCommentId(null)
-  }
-
-  function postComment() {
-    const body = newComment.trim()
-    if (!body) return
-    onAdd(body)
-    setNewComment('')
-  }
-
-  return (
-    <div className="flex flex-col gap-3">
-      {comments.map((c) => {
-        const editing = editingCommentId === c.id
-        const edited = c.updated_at !== c.created_at
-        const isOwn = c.author_nuid === currentUserNuid
-        return (
-          <div
-            key={c.id}
-            className="rounded-xl border border-gray-100 bg-white p-4"
-          >
-            {editing ? (
-              <div className="flex flex-col gap-2">
-                <textarea
-                  value={editingBody}
-                  onChange={(e) => setEditingBody(e.target.value)}
-                  rows={3}
-                  autoFocus
-                  aria-label="Edit comment"
-                  className="focus:border-brand-blue text-text-default placeholder:text-text-subtle w-full rounded-md border border-gray-200 p-3 text-sm focus:outline-none"
-                />
-                <div className="flex items-center gap-2">
-                  <Button
-                    onClick={saveEdit}
-                    disabled={isEditing || !editingBody.trim()}
-                  >
-                    Save
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => setEditingCommentId(null)}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-text-muted text-xs">
-                    {c.author_name || c.author_nuid}
-                  </p>
-                  <p className="text-text-default mt-1 text-sm whitespace-pre-wrap">
-                    {c.body}
-                  </p>
-                  <p className="text-text-faint mt-1.5 text-xs">
-                    {new Date(c.created_at).toLocaleString()}
-                    {edited && ' · edited'}
-                  </p>
-                </div>
-                {isOwn && (
-                  <button
-                    type="button"
-                    onClick={() => startEditing(c)}
-                    className="text-text-faint hover:text-text-muted shrink-0"
-                    aria-label="Edit comment"
-                  >
-                    <Pencil size={14} />
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-        )
-      })}
-
-      <div className="rounded-xl border border-gray-100 bg-white p-4">
-        <textarea
-          value={newComment}
-          onChange={(e) => setNewComment(e.target.value)}
-          placeholder={placeholder}
-          rows={3}
-          className="focus:border-brand-blue text-text-default placeholder:text-text-subtle w-full rounded-md border border-gray-200 p-3 text-sm focus:outline-none"
-        />
-        <div className="mt-3">
-          <Button
-            onClick={postComment}
-            disabled={isAdding || !newComment.trim()}
-          >
-            {isAdding ? (
-              <>
-                <Loader2 className="animate-spin" size={14} />
-                Posting…
-              </>
-            ) : (
-              'Post comment'
-            )}
-          </Button>
-        </div>
-      </div>
-    </div>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </PageContainer>
   )
 }
