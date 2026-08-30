@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
@@ -52,10 +52,8 @@ import {
 } from '@/lib/queries/recording-reviews'
 import { useReviewQuestions } from '@/lib/queries/review-questions'
 import {
-  useChiefs,
   useCurrentUser,
-  useLeads,
-  useUser,
+  useReviewerNames,
 } from '@/lib/queries/users'
 import { useWrittenReviews } from '@/lib/queries/written-reviews'
 import {
@@ -73,13 +71,6 @@ import { InterviewScriptContent } from '@/app/(portal)/reviewer/interview-script
 
 const TEXTAREA_CLASS =
   'border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 min-h-28 w-full rounded-lg border bg-transparent px-3.5 py-2.5 text-base transition-all outline-none focus-visible:ring-3 hover:border-gray-300 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 resize-none'
-
-// A reviewer's own comment is keyed by nuid on the wire; look their display
-// name up on demand rather than threading it through every list response.
-function ReviewerName({ nuid }: { nuid: string }) {
-  const { data: user } = useUser(nuid)
-  return <>{user?.full_name || nuid}</>
-}
 
 // Which list page linked into this interview — carried through the `from`
 // query param so "Back" (and paging via Previous/Next) returns wherever the
@@ -129,15 +120,14 @@ export function InterviewConductClient({
   const { data: assignment } = useInterviewAssignment(applicationId)
   const { data: reviewerAssignments = [] } =
     useRecordingReviewerAssignments(applicationId)
-  const { data: leads = [] } = useLeads()
-  const { data: chiefs = [] } = useChiefs()
-  const interviewerName = useMemo(() => {
-    if (!assignment?.interviewer_nuid) return null
-    const match = [...leads, ...chiefs].find(
-      (u) => u.nuid === assignment.interviewer_nuid
-    )
-    return match?.full_name ?? assignment.interviewer_nuid
-  }, [assignment, leads, chiefs])
+  const nameByNuid = useReviewerNames()
+  const nameFor = useCallback(
+    (nuid: string) => nameByNuid.get(nuid) ?? nuid,
+    [nameByNuid]
+  )
+  const interviewerName = assignment?.interviewer_nuid
+    ? nameFor(assignment.interviewer_nuid)
+    : null
   const { data: interview } = useInterview(applicationId)
   const upsertInterview = useUpsertInterview()
   const { data: recordingReviews = [] } = useRecordingReviews(
@@ -772,7 +762,7 @@ export function InterviewConductClient({
                           className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm"
                         >
                           <span className="text-text-muted text-xs">
-                            <ReviewerName nuid={r.reviewer_nuid} />
+                            {nameFor(r.reviewer_nuid)}
                           </span>
                           <p className="text-text-default mt-2 text-sm whitespace-pre-wrap">
                             {r.comments ?? (

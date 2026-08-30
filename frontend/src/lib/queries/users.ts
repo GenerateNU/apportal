@@ -10,7 +10,6 @@ import {
   createUser,
   getCurrentUser,
   getListUsersInfiniteQueryKey,
-  getUser,
   listUsers,
   updateUser,
   useListUsersInfinite,
@@ -81,6 +80,22 @@ export function useChiefReviewers(opts?: RequestOptions) {
   return { data, isLoading: queries.some((q) => q.isLoading) }
 }
 
+// nuid -> display name for anyone a review surface has to attribute something
+// to. Built from the role lists rather than per-nuid lookups because
+// GET /users/{nuid} is chief-only: a lead resolving reviewers one at a time
+// just collects 403s and falls back to rendering raw nuids.
+export function useReviewerNames() {
+  const { data: leads = [] } = useLeads()
+  const { data: chiefReviewers } = useChiefReviewers()
+  return useMemo(() => {
+    const byNuid = new Map<string, string>()
+    for (const u of [...leads, ...chiefReviewers]) {
+      byNuid.set(u.nuid, u.full_name)
+    }
+    return byNuid
+  }, [leads, chiefReviewers])
+}
+
 // Paginated member list for admin/members' infinite scroll. `limit` is a
 // fixed page size chosen by the caller.
 export function useMembersInfinite(limit: number, opts?: RequestOptions) {
@@ -95,14 +110,6 @@ export function useMembersInfinite(limit: number, opts?: RequestOptions) {
       request: opts,
     }
   )
-}
-
-export function useUser(nuid: string, opts?: RequestOptions) {
-  return useQuery({
-    queryKey: queryKeys.users.detail(nuid),
-    queryFn: () => getUser(nuid, opts) as Promise<User>,
-    enabled: !!nuid,
-  })
 }
 
 // Resolves the signed-in Supabase session to its backend user record
