@@ -52,7 +52,7 @@ import {
   useReviewGates,
   useSetReviewRelease,
 } from '@/lib/queries/review-releases'
-import { useChiefs, useCurrentUser, useLeads } from '@/lib/queries/users'
+import { useCurrentUser, useReviewerNames } from '@/lib/queries/users'
 import { RATING_COLORS, RATING_LABEL } from '@/lib/interview-ratings'
 import { ROLE_CHIP_CLASS, ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 import {
@@ -138,8 +138,6 @@ function emptyRatingBuckets(): Record<RatingKey, Row[]> {
 
 export function InterviewRatingsClient() {
   const { data: cycles = [] } = useCycles({})
-  const { data: leads = [] } = useLeads()
-  const { data: chiefs = [] } = useChiefs()
   const { data: currentUser } = useCurrentUser()
 
   const [cycleId, setCycleId] = useState('')
@@ -251,13 +249,8 @@ export function InterviewRatingsClient() {
       .catch(() => {})
   }
 
-  // Nuid -> display name, for the interviewer shown per row/lane — same
-  // lookup MyInterviewsClient uses for its chief "viewing" dropdown.
-  const nameByNuid = useMemo(() => {
-    const byNuid = new Map<string, string>()
-    for (const u of [...leads, ...chiefs]) byNuid.set(u.nuid, u.full_name)
-    return byNuid
-  }, [leads, chiefs])
+  // Nuid -> display name, for the interviewer shown per row/lane.
+  const nameByNuid = useReviewerNames()
 
   const applicationIds = useMemo(
     () => applications.map((a) => a.id),
