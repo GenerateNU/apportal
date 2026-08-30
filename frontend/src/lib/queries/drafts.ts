@@ -11,7 +11,6 @@ import {
   setDraftTeams,
   updateDraft,
 } from '@/generated/draft/draft'
-import { snakeSeat } from '@/app/(portal)/reviewer/draft/components/snake'
 import type { RequestOptions } from '@/lib/api/orval-mutator'
 import type {
   DraftBoard,
@@ -63,6 +62,13 @@ export function useDraftedApplications(
   })
 }
 
+// Which team holds a slot. Filling or emptying a slot never changes the
+// mapping — a pick is stamped with the team the mapping already gave it — so
+// the board's own slots stay valid across an optimistic update.
+export function ownerOfSlot(board: DraftBoard, slot: number) {
+  return board.slots?.find((s) => s.pick_number === slot)?.draft_team_id
+}
+
 // The lowest unfilled slot is what's on the clock, so undoing a pick mid-board
 // puts that slot back rather than the end of the board. Mirrors nextOpenSlot
 // and DraftBoard in the backend's store/drafts.go — a predicted board that
@@ -83,7 +89,7 @@ export function withOnTheClock(board: DraftBoard): DraftBoard {
   return {
     ...board,
     on_the_clock: slot,
-    on_the_clock_team_id: board.teams[snakeSeat(slot, board.teams.length)].id,
+    on_the_clock_team_id: ownerOfSlot(board, slot),
   }
 }
 
@@ -275,8 +281,8 @@ export function useMakeDraftPick() {
       // alone and let the server's answer stand rather than guess at one this
       // pick can't land in.
       if (!slot || board.picks.some((p) => p.pick_number === slot)) return board
-      const team = board.teams[snakeSeat(slot, board.teams.length)]
-      if (!team) return board
+      const teamId = ownerOfSlot(board, slot)
+      if (!teamId) return board
       return {
         ...board,
         picks: [
@@ -284,7 +290,7 @@ export function useMakeDraftPick() {
           predictedPick(
             board,
             slot,
-            team.id,
+            teamId,
             vars.applicationId,
             vars.applicant
           ),

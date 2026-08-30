@@ -716,7 +716,7 @@ export const useResetDraft = <TError = ErrorModel | ErrorModel | ErrorModel | Er
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Chief only, and only while the draft is in setup: the given preference list groups become the seats, in the given order.
+ * Chief only. In setup the given preference list groups become the seats, in the given order. While the draft is active the order may still be changed, but the set of teams may not: picks already made stay with the team that made them, and the rest of the round goes to the teams yet to pick in it.
  * @summary Set the draft order
  */
 export const setDraftTeams = (

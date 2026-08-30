@@ -32,7 +32,24 @@ function pick(pickNumber: number, applicationId: string, teamId: string) {
   } satisfies DraftPickDetail
 }
 
+// What the server returns for a board nobody has reordered: the plain snake.
+function snakeSlots(teams: DraftTeamDetail[], rounds: number) {
+  const slots = []
+  for (let n = 1; n <= rounds * teams.length; n++) {
+    const index = (n - 1) % teams.length
+    const round = Math.floor((n - 1) / teams.length) + 1
+    const seat = round % 2 === 0 ? teams.length - 1 - index : index
+    slots.push({ pick_number: n, draft_team_id: teams[seat].id })
+  }
+  return slots
+}
+
 function board(picks: DraftPickDetail[], over: Partial<DraftBoard> = {}) {
+  const teams = [
+    team('t1', 'Alpha', 0),
+    team('t2', 'Beta', 1),
+    team('t3', 'Gamma', 2),
+  ]
   return {
     id: 'd1',
     cycle_id: 'c1',
@@ -43,11 +60,8 @@ function board(picks: DraftPickDetail[], over: Partial<DraftBoard> = {}) {
     status: 'active',
     rounds: 2,
     on_the_clock: 0,
-    teams: [
-      team('t1', 'Alpha', 0),
-      team('t2', 'Beta', 1),
-      team('t3', 'Gamma', 2),
-    ],
+    teams,
+    slots: snakeSlots(teams, 2),
     picks,
     ...over,
   } as DraftBoard
