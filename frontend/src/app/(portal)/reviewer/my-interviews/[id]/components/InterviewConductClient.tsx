@@ -51,10 +51,7 @@ import {
   useUpsertRecordingReview,
 } from '@/lib/queries/recording-reviews'
 import { useReviewQuestions } from '@/lib/queries/review-questions'
-import {
-  useCurrentUser,
-  useReviewerNames,
-} from '@/lib/queries/users'
+import { useCurrentUser, useReviewerNames } from '@/lib/queries/users'
 import { useWrittenReviews } from '@/lib/queries/written-reviews'
 import {
   RATING_COLORS,
