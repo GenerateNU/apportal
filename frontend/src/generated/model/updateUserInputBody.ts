@@ -16,5 +16,7 @@ export interface UpdateUserInputBody {
   github_username?: string;
   graduation_year?: number;
   major?: string;
+  /** Marks someone who has worked on a Generate project before */
+  returner?: boolean;
   roles?: UpdateUserInputBodyRoles;
 }

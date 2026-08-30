@@ -40,8 +40,9 @@ const SEARCH_DEBOUNCE_MS = 250
 // at an applicant and coming back doesn't reset a filter set that took several
 // chips to build. Versioned, like the chief-review queue's key: if a default
 // below ever changes, bump this so the old one can't resurrect itself. v2
-// dropped the standalone role, which is a filter chip now.
-const FILTERS_STORAGE_KEY = 'applications-filters-v2'
+// dropped the standalone role, which is a filter chip now; v3 added the
+// Returner chip.
+const FILTERS_STORAGE_KEY = 'applications-filters-v3'
 
 // The table opens on one role, which is what the server prefetch in ../page.tsx
 // is keyed to. The Role chip is what widens it from there.
@@ -235,6 +236,7 @@ export function ApplicationsClient() {
         cycleId: app.cycle_id,
         stage: app.stage,
         submittedAt: app.submitted_at,
+        returner: app.returner,
       })),
     [applications]
   )

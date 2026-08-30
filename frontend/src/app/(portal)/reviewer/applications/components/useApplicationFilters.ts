@@ -8,6 +8,7 @@ import { RATING_OPTIONS } from '@/lib/interview-ratings'
 import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 import { ORDERED_STAGES, stageLabel } from './constants'
 import type { AnswerFilter } from './FilterButton'
+import { FIRST_TIME_OPTION, RETURNER_OPTION } from './FilterButton'
 import {
   AVAILABILITY_DAY_OPTIONS,
   findAvailabilityQuestionId,
@@ -224,6 +225,17 @@ export function useApplicationFilters({
       .map((label) => ORDERED_STAGES.find((s) => stageLabel[s] === label))
       .filter(Boolean)
 
+    // The flag is binary, so checking both sides is the same as not filtering
+    // — and checking neither can't be satisfied by anyone. Both collapse to
+    // "no filter" rather than an empty result.
+    const returnerLabels = filters
+      .filter((f) => f.special === 'returner')
+      .flatMap((f) => (Array.isArray(f.values) ? f.values : [f.values]))
+    const wantsReturner = returnerLabels.includes(RETURNER_OPTION)
+    const wantsFirstTime = returnerLabels.includes(FIRST_TIME_OPTION)
+    const returner =
+      wantsReturner === wantsFirstTime ? undefined : wantsReturner
+
     return {
       // Single role travels as `role`, which is what every caller sent before
       // the Role chip existed — same key, same warm cache.
@@ -233,6 +245,7 @@ export function useApplicationFilters({
         rating_filters: ratingValues.join(','),
       }),
       ...(stageValues.length > 0 && { stages: stageValues.join(',') }),
+      ...(returner === undefined ? {} : { returner }),
     }
   }, [filters, availabilityFilter, questionIdsByText, roles])
 

@@ -27,11 +27,12 @@ type UserUpdate struct {
 	GraduationYear *int
 	Major          *string
 	GithubUsername *string
+	Returner       *bool
 }
 
 // roles is selected as text[] so pgx scans the custom user_role[] reliably; on
 // write the parameter is cast back to user_role[].
-const userColumns = `nuid, email, full_name, roles::text[] AS roles, graduation_year, major, github_username, created_at, updated_at`
+const userColumns = `nuid, email, full_name, roles::text[] AS roles, graduation_year, major, github_username, created_at, updated_at, returner`
 
 // rolesText converts typed roles to the []string pgx encodes as a text array.
 // A nil slice stays nil so COALESCE leaves the existing value untouched.
@@ -136,11 +137,13 @@ func (s *Store) UpdateUser(ctx context.Context, nuid string, in UserUpdate) (mod
 			roles           = COALESCE($4::user_role[], roles),
 			graduation_year = COALESCE($5, graduation_year),
 			major           = COALESCE($6, major),
-			github_username = COALESCE($7, github_username)
+			github_username = COALESCE($7, github_username),
+			returner        = COALESCE($8, returner)
 		WHERE nuid = $1
 		RETURNING ` + userColumns
 	rows, err := s.db.Query(ctx, q, nuid, in.Email, in.FullName,
-		rolesText(in.Roles), in.GraduationYear, in.Major, in.GithubUsername)
+		rolesText(in.Roles), in.GraduationYear, in.Major, in.GithubUsername,
+		in.Returner)
 	if err != nil {
 		return models.User{}, err
 	}

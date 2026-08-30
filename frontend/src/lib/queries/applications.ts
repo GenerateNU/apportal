@@ -43,6 +43,9 @@ export interface ApplicationListParams {
   roles?: string
   rating_filters?: string
   answer_filters?: AnswerFilterParam[]
+  // Narrow to applicants who have (true) or haven't (false) worked on a
+  // Generate project before. Omit for both.
+  returner?: boolean
   // Substring match on the applicant's name, NUID, or email. Server-side
   // because it has to narrow the whole match, not just the fetched page.
   search?: string
@@ -128,17 +131,26 @@ export function useInfiniteApplications(
   }
 }
 
-// answer_filters crosses the wire as a JSON string: it is the one list-of-
-// objects param on this endpoint, and neither axios's bracket encoding nor a
-// repeated key binds to a struct slice server-side. Everything else passes
+// Two params don't cross the wire as they're typed here. answer_filters is
+// the one list-of-objects param on this endpoint, and neither axios's bracket
+// encoding nor a repeated key binds to a struct slice server-side, so it goes
+// as JSON. returner goes as "true"/"false" rather than a bool so an omitted
+// param stays distinguishable from an explicit false. Everything else passes
 // through untouched.
 function toListParams(
   params?: ApplicationListParams
 ): ListApplicationsParams | undefined {
   if (!params) return undefined
-  const { answer_filters, ...rest } = params
-  if (!answer_filters?.length) return rest
-  return { ...rest, answer_filters: JSON.stringify(answer_filters) }
+  const { answer_filters, returner, ...rest } = params
+  return {
+    ...rest,
+    ...(answer_filters?.length
+      ? { answer_filters: JSON.stringify(answer_filters) }
+      : {}),
+    ...(returner === undefined
+      ? {}
+      : { returner: returner ? 'true' : 'false' }),
+  }
 }
 
 export function useApplication(id: string, opts?: RequestOptions) {

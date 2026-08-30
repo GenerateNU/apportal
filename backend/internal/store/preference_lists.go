@@ -92,7 +92,7 @@ func (s *Store) GetPreferenceListDetail(ctx context.Context, id string) (models.
 
 	const entriesQ = `
 		SELECT e.id, e.preference_list_id, e.application_id, e.rank, e.reasoning, e.updated_by, e.created_at, e.updated_at,
-		       u.full_name, u.email, a.application_role
+		       u.full_name, u.email, a.application_role, u.returner
 		FROM preference_list_entries e
 		JOIN applications a ON a.id = e.application_id
 		JOIN users u ON u.nuid = a.user_nuid
@@ -110,7 +110,7 @@ func (s *Store) GetPreferenceListDetail(ctx context.Context, id string) (models.
 
 	const personalEntriesQ = `
 		SELECT pe.id, pe.preference_list_id, pe.owner_nuid, pe.application_id, pe.rank, pe.reasoning, pe.created_at, pe.updated_at,
-		       ou.full_name, au.full_name, au.email, a.application_role
+		       ou.full_name, au.full_name, au.email, a.application_role, au.returner
 		FROM preference_list_personal_entries pe
 		JOIN applications a ON a.id = pe.application_id
 		JOIN users au ON au.nuid = a.user_nuid
@@ -179,7 +179,7 @@ func (s *Store) ListPreferenceListDetails(ctx context.Context, cycleID string) (
 
 	const entriesQ = `
 		SELECT e.id, e.preference_list_id, e.application_id, e.rank, e.reasoning, e.updated_by, e.created_at, e.updated_at,
-		       u.full_name, u.email, a.application_role
+		       u.full_name, u.email, a.application_role, u.returner
 		FROM preference_list_entries e
 		JOIN applications a ON a.id = e.application_id
 		JOIN users u ON u.nuid = a.user_nuid
@@ -200,7 +200,7 @@ func (s *Store) ListPreferenceListDetails(ctx context.Context, cycleID string) (
 
 	const personalEntriesQ = `
 		SELECT pe.id, pe.preference_list_id, pe.owner_nuid, pe.application_id, pe.rank, pe.reasoning, pe.created_at, pe.updated_at,
-		       ou.full_name, au.full_name, au.email, a.application_role
+		       ou.full_name, au.full_name, au.email, a.application_role, au.returner
 		FROM preference_list_personal_entries pe
 		JOIN applications a ON a.id = pe.application_id
 		JOIN users au ON au.nuid = a.user_nuid

@@ -3,7 +3,18 @@
 import { useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { Avatar } from '@/components/ui/avatar'
+import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import type { User } from '@/lib/api/types'
+import { useSetReturner } from '@/lib/queries/users'
 import { USER_ROLE_LABEL } from '../lib/role-meta'
 import { RoleEditDialog } from './RoleEditDialog'
 
@@ -23,6 +34,8 @@ export function ApplicantRow({
   gridCols: string
 }) {
   const [showEdit, setShowEdit] = useState(false)
+  const [confirmReturner, setConfirmReturner] = useState(false)
+  const setReturner = useSetReturner()
 
   return (
     <>
@@ -50,6 +63,50 @@ export function ApplicantRow({
           {USER_ROLE_LABEL['applicant']}
           <ChevronDown className="text-text-faint h-3.5 w-3.5" />
         </button>
+
+        {/* Confirmed before it's applied: the flag follows the person across
+            every cycle, so a stray click is not a local mistake. The box only
+            ticks once the mutation's optimistic update lands. */}
+        <Checkbox
+          checked={user.returner}
+          disabled={setReturner.isPending}
+          onCheckedChange={() => setConfirmReturner(true)}
+          aria-label={`Mark ${user.full_name} as a returner`}
+        />
+
+        <Dialog open={confirmReturner} onOpenChange={setConfirmReturner}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>
+                {user.returner ? 'Unmark returner?' : 'Mark as returner?'}
+              </DialogTitle>
+              <DialogDescription>
+                {user.returner
+                  ? `${user.full_name} will stop showing the returner badge on every application they have, in this cycle and future ones.`
+                  : `${user.full_name} will show the returner badge on every application they have, in this cycle and future ones.`}
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setConfirmReturner(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  setReturner.mutate({
+                    nuid: user.nuid,
+                    returner: !user.returner,
+                  })
+                  setConfirmReturner(false)
+                }}
+              >
+                {user.returner ? 'Unmark' : 'Mark as returner'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         <RoleEditDialog
           open={showEdit}

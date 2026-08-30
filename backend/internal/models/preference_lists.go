@@ -85,6 +85,7 @@ type PreferenceListEntryDetail struct {
 	FullName        string `json:"full_name"`
 	Email           string `json:"email"`
 	ApplicationRole Role   `json:"application_role"`
+	Returner        bool   `json:"returner"`
 }
 
 // PreferenceListPersonalEntry is one lead's own private ranking of an
@@ -112,6 +113,7 @@ type PreferenceListPersonalEntryDetail struct {
 	FullName        string `json:"full_name"`
 	Email           string `json:"email"`
 	ApplicationRole Role   `json:"application_role"`
+	Returner        bool   `json:"returner"`
 }
 
 // PreferenceListComment is an open comment within a group's shared list —

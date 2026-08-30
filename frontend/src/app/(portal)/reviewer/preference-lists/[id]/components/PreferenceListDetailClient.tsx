@@ -15,6 +15,7 @@ import {
   X,
 } from 'lucide-react'
 import { PageContainer } from '@/components/PageContainer'
+import { ReturnerBadge } from '@/components/ReturnerBadge'
 import { Button } from '@/components/ui/button'
 import { DateTimePicker } from '@/components/ui/datetime-picker'
 import { Input } from '@/components/ui/input'
@@ -807,6 +808,7 @@ function EntryRow({
     full_name: string
     email: string
     reasoning?: string
+    returner: boolean
   }
   availabilityBadge?: { label: string; className: string }
   // The team that took them on a draft board, if any.
@@ -882,6 +884,7 @@ function EntryRow({
               >
                 {entry.full_name}
               </p>
+              {entry.returner && <ReturnerBadge />}
               {draftedBy && (
                 <span className="text-text-muted rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium">
                   Drafted · {draftedBy}

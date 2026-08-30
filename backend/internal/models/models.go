@@ -18,6 +18,10 @@ type User struct {
 	GithubUsername *string    `json:"github_username,omitempty"`
 	CreatedAt      time.Time  `json:"created_at"`
 	UpdatedAt      time.Time  `json:"updated_at"`
+	// Returner marks someone who has worked on a Generate project before.
+	// Set by a chief/admin, and deliberately on the person rather than an
+	// application so it carries across cycles.
+	Returner bool `json:"returner"`
 }
 
 type Cycle struct {
@@ -120,6 +124,7 @@ type Applicant struct {
 	Major          *string   `json:"major,omitempty"`
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`
+	Returner       bool      `json:"returner"`
 }
 
 type Application struct {
@@ -143,6 +148,10 @@ type ApplicationSummary struct {
 	Application
 	FullName string `json:"full_name"`
 	Email    string `json:"email"`
+	// Returner rides along from the joined user for the same reason the name
+	// does — every reviewer list shows it, and none should pay a per-row
+	// lookup for it.
+	Returner bool `json:"returner"`
 }
 
 type WrittenAnswer struct {

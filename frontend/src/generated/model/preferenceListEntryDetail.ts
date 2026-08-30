@@ -17,6 +17,7 @@ export interface PreferenceListEntryDetail {
   preference_list_id: string;
   rank: number;
   reasoning?: string;
+  returner: boolean;
   updated_at: string;
   updated_by: string;
 }

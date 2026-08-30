@@ -87,6 +87,10 @@ type ApplicationFilter struct {
 	// InterviewRatings limits results to applications whose interview has one
 	// of these ratings. Empty means no filter.
 	InterviewRatings []models.InterviewRating
+	// Returner limits results to applicants who have (or haven't) worked on a
+	// Generate project before. Nil means no filter — a plain bool couldn't
+	// tell "only first-timers" from "unset".
+	Returner *bool
 	// IncludeDraft allows draft applications into the results. Callers should
 	// only set this when listing a user's own applications by their own
 	// identity — drafts are otherwise invisible (reviewer queues, admin
@@ -155,8 +159,8 @@ func (s *Store) GetApplication(ctx context.Context, id string) (models.Applicati
 
 // applicationSummaryColumns matches models.ApplicationSummary's field order:
 // Application's fields (positionally, per applicationColumns) followed by the
-// joined applicant's full_name and email.
-const applicationSummaryColumns = `a.id, a.cycle_id, a.user_nuid, a.application_role, a.stage, a.availability, a.resume_url, a.submitted_at, a.updated_at, u.full_name, u.email`
+// joined applicant's full_name, email, and returner flag.
+const applicationSummaryColumns = `a.id, a.cycle_id, a.user_nuid, a.application_role, a.stage, a.availability, a.resume_url, a.submitted_at, a.updated_at, u.full_name, u.email, u.returner`
 
 // ApplicationPage is one page of the list plus, when asked for, the totals a
 // caller needs to size the scroll and label the stage tabs without a second
@@ -370,6 +374,10 @@ func applicationsFrom(f ApplicationFilter, scope applicationFilterScope) (string
 		query += ` AND EXISTS (SELECT 1 FROM interviews i` +
 			` WHERE i.application_id = a.id AND i.rating = ANY($` +
 			strconv.Itoa(len(args)) + `::interview_rating[]))`
+	}
+	if f.Returner != nil {
+		args = append(args, *f.Returner)
+		query += ` AND u.returner = $` + strconv.Itoa(len(args))
 	}
 	if !f.IncludeDraft {
 		query += ` AND a.stage != 'draft'`

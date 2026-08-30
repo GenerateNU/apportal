@@ -177,9 +177,12 @@ type ListApplicationsInput struct {
 	// e.g. "must_hire,great". Applications match if their interview has any of
 	// these ratings.
 	RatingFilters string `query:"rating_filters" doc:"Comma-separated list of interview ratings, e.g. \"must_hire,great\""`
-	Search        string `query:"search" doc:"Case-insensitive substring match on the applicant's name, NUID, or email"`
-	Limit         int    `query:"limit" doc:"Max results per page; omit (or 0) to return every match" minimum:"0" maximum:"200"`
-	Offset        int    `query:"offset" doc:"Number of results to skip" minimum:"0"`
+	// Returner is a string rather than a bool so an omitted param stays
+	// distinguishable from an explicit "false" (show only first-timers).
+	Returner string `query:"returner" doc:"\"true\" for applicants who worked on a Generate project before, \"false\" for first-timers; omit for both" enum:"true,false"`
+	Search   string `query:"search" doc:"Case-insensitive substring match on the applicant's name, NUID, or email"`
+	Limit    int    `query:"limit" doc:"Max results per page; omit (or 0) to return every match" minimum:"0" maximum:"200"`
+	Offset   int    `query:"offset" doc:"Number of results to skip" minimum:"0"`
 }
 
 func (h *applicationHandler) list(ctx context.Context, in *ListApplicationsInput) (*ApplicationsOutput, error) {
@@ -212,6 +215,10 @@ func (h *applicationHandler) list(ctx context.Context, in *ListApplicationsInput
 	if err != nil {
 		return nil, err
 	}
+	returner, err := parseReturner(in.Returner)
+	if err != nil {
+		return nil, err
+	}
 
 	filter := store.ApplicationFilter{
 		CycleID:               in.CycleID,
@@ -223,6 +230,7 @@ func (h *applicationHandler) list(ctx context.Context, in *ListApplicationsInput
 		InterviewRatings:      ratingFilters,
 		Roles:                 roles,
 		Stages:                stages,
+		Returner:              returner,
 		Search:                in.Search,
 		Offset:                in.Offset,
 		// Only a user listing their own applications by their own identity
@@ -263,6 +271,22 @@ func (h *applicationHandler) list(ctx context.Context, in *ListApplicationsInput
 		out.Body.StageCounts[string(stage)] = n
 	}
 	return out, nil
+}
+
+// parseReturner decodes the returner filter; empty means "don't filter".
+func parseReturner(raw string) (*bool, error) {
+	switch strings.TrimSpace(raw) {
+	case "":
+		return nil, nil
+	case "true":
+		v := true
+		return &v, nil
+	case "false":
+		v := false
+		return &v, nil
+	default:
+		return nil, huma.Error422UnprocessableEntity("invalid returner: " + raw)
+	}
 }
 
 // parseRoles decodes a comma-separated list of applicant roles.

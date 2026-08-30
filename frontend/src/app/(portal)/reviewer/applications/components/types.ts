@@ -11,4 +11,5 @@ export type ApplicantApplication = {
   cycleId: string
   stage: ApplicationStage
   submittedAt?: string
+  returner: boolean
 }
