@@ -16,6 +16,7 @@ export function ReferencePane({
   presentIds,
   canAdd,
   onAdd,
+  onOpenApplicant,
   availabilityBadgeFor,
   draftedByApplicationId,
   emptyText,
@@ -27,6 +28,7 @@ export function ReferencePane({
   presentIds: Set<string>
   canAdd: boolean
   onAdd: (applicationId: string) => void
+  onOpenApplicant: (entry: PreferenceEntry) => void
   availabilityBadgeFor: (
     applicationId: string,
     role: Role
@@ -61,15 +63,17 @@ export function ReferencePane({
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <span
-                      className={`text-sm font-medium ${
+                    <button
+                      type="button"
+                      onClick={() => onOpenApplicant(entry)}
+                      className={`text-sm font-medium underline-offset-2 hover:underline ${
                         draftedBy
                           ? 'text-text-faint line-through'
                           : 'text-text-default'
                       }`}
                     >
                       {entry.full_name}
-                    </span>
+                    </button>
                     {entry.returner && <ReturnerBadge />}
                     {draftedBy && (
                       <span className="text-text-muted rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium">

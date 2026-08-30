@@ -37,6 +37,7 @@ export function RankedList({
   availabilityBadgeFor,
   draftedByApplicationId,
   onOpenSettings,
+  onOpenApplicant,
   onAdd,
   onReorder,
   onRemove,
@@ -60,6 +61,7 @@ export function RankedList({
   ) => { label: string; className: string } | undefined
   draftedByApplicationId: Record<string, string | undefined>
   onOpenSettings: () => void
+  onOpenApplicant: (entry: PreferenceEntry) => void
   onAdd: (applicationId: string) => void
   onReorder: (applicationIds: string[]) => void
   onRemove: (applicationId: string) => void
@@ -179,6 +181,7 @@ export function RankedList({
                   draftedBy={draftedByApplicationId[entry.application_id]}
                   index={entries.indexOf(entry)}
                   locked={locked}
+                  onOpenApplicant={() => onOpenApplicant(entry)}
                   onRemove={() => onRemove(entry.application_id)}
                   onSaveReasoning={(reasoning) =>
                     onSaveReasoning(entry.application_id, reasoning)

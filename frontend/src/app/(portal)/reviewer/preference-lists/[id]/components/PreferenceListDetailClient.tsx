@@ -29,13 +29,6 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
   availabilityOptionsFor,
   findAvailabilityQuestionId,
   MEETING_DAY_LABEL,
@@ -48,7 +41,7 @@ import type {
   Role,
 } from '@/lib/api/types'
 import { useAnswersByApplicationIdBatches } from '@/lib/queries/answers'
-import { useApplications } from '@/lib/queries/applications'
+import { useApplication, useApplications } from '@/lib/queries/applications'
 import { useDraftedApplications } from '@/lib/queries/drafts'
 import {
   useAddPreferenceListMember,
@@ -83,9 +76,11 @@ import type {
 } from '@/app/(portal)/reviewer/applications/components/FilterButton'
 import { FilterChips } from '@/app/(portal)/reviewer/applications/components/FilterButton'
 import { useApplicationFilters } from '@/app/(portal)/reviewer/applications/components/useApplicationFilters'
+import { ApplicationDetail } from '@/app/(portal)/reviewer/applications/components/ApplicationDetail'
 import { CommentThread } from './CommentThread'
 import type { PreferenceEntry } from './EntryRow'
 import { GroupSettings } from './GroupSettings'
+import { ListPicker } from './ListPicker'
 import { RankedList } from './RankedList'
 import { ReferencePane } from './ReferencePane'
 
@@ -163,6 +158,10 @@ export function PreferenceListDetailClient({
   const [editingName, setEditingName] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [roleTab, setRoleTab] = useState<Role>(ROLE_COLUMNS[0])
+  // The applicant whose slide-over is open, if any.
+  const [openApplicant, setOpenApplicant] = useState<PreferenceEntry | null>(
+    null
+  )
   const [filters, setFilters] = useState<AnswerFilter[]>([])
 
   // Role is a filter chip like everything else. Entries and their ranks are
@@ -267,6 +266,16 @@ export function PreferenceListDetailClient({
     ROLE_COLUMNS.map((r) => [r, deadlinePassed(closesAtByRole[r])])
   ) as Record<Role, boolean>
   const groupLocked = ROLE_COLUMNS.every((r) => lockedByRole[r])
+
+  // Only for an entry the current filters exclude from `applications` —
+  // otherwise the row's own summary is already cached and the drawer opens
+  // with no request at all.
+  const lazyApplication = useApplication(
+    openApplicant &&
+      !applications.some((a) => a.id === openApplicant.application_id)
+      ? openApplicant.application_id
+      : ''
+  )
 
   const updateList = useUpdatePreferenceList()
   const deleteList = useDeletePreferenceList()
@@ -451,6 +460,11 @@ export function PreferenceListDetailClient({
 
   const countdown = deadlineLabel(closesAtByRole[activeRole])
 
+  const summaryById = new Map(applications.map((a) => [a.id, a]))
+  const openApplicantSummary = openApplicant
+    ? (summaryById.get(openApplicant.application_id) ?? lazyApplication.data)
+    : undefined
+
   return (
     <PageContainer>
       <Link
@@ -625,36 +639,31 @@ export function PreferenceListDetailClient({
         )}
 
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-text-muted text-sm">Editing</span>
-          <Select value={viewMode} onValueChange={setViewMode}>
-            <SelectTrigger className="w-44" aria-label="Which list to edit">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="group">Group list</SelectItem>
-              {personalOwnerNuids.map((nuid) => (
-                <SelectItem key={nuid} value={nuid}>
-                  {listLabel(nuid)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <span className="text-text-muted text-sm">beside</span>
-          <Select value={compareWith} onValueChange={setCompareWith}>
-            <SelectTrigger className="w-44" aria-label="Which list to compare">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">Nothing</SelectItem>
-              {['group', ...personalOwnerNuids]
+          <ListPicker
+            label="Editing"
+            value={viewMode}
+            onChange={setViewMode}
+            ariaLabel="Which list to edit"
+            options={[
+              { value: 'group', label: 'Group list' },
+              ...personalOwnerNuids.map((nuid) => ({
+                value: nuid,
+                label: listLabel(nuid),
+              })),
+            ]}
+          />
+          <ListPicker
+            label="beside"
+            value={compareWith}
+            onChange={setCompareWith}
+            ariaLabel="Which list to compare"
+            options={[
+              { value: 'none', label: 'Nothing' },
+              ...['group', ...personalOwnerNuids]
                 .filter((mode) => mode !== viewMode)
-                .map((mode) => (
-                  <SelectItem key={mode} value={mode}>
-                    {listLabel(mode)}
-                  </SelectItem>
-                ))}
-            </SelectContent>
-          </Select>
+                .map((mode) => ({ value: mode, label: listLabel(mode) })),
+            ]}
+          />
         </div>
 
         <div className="flex flex-wrap items-center gap-2 border-b border-gray-100 pb-4">
@@ -687,6 +696,7 @@ export function PreferenceListDetailClient({
             availabilityBadgeFor={availabilityBadgeFor}
             draftedByApplicationId={draftedByApplicationId}
             onOpenSettings={() => setSettingsOpen(true)}
+            onOpenApplicant={setOpenApplicant}
             onAdd={addEntry}
             onReorder={reorder}
             onRemove={removeEntry}
@@ -711,6 +721,7 @@ export function PreferenceListDetailClient({
               presentIds={takenIds}
               canAdd={!editLocked}
               onAdd={addEntry}
+              onOpenApplicant={setOpenApplicant}
               availabilityBadgeFor={availabilityBadgeFor}
               draftedByApplicationId={draftedByApplicationId}
               emptyText="Nothing on this list yet."
@@ -735,6 +746,23 @@ export function PreferenceListDetailClient({
           placeholder="Add a comment on this group…"
         />
       </div>
+
+      {openApplicant && openApplicantSummary && (
+        <ApplicationDetail
+          applicant={{
+            id: openApplicantSummary.id,
+            nuid: openApplicantSummary.user_nuid,
+            fullName: openApplicant.full_name,
+            email: openApplicant.email,
+            role: openApplicantSummary.role,
+            cycleId: openApplicantSummary.cycle_id,
+            stage: openApplicantSummary.stage,
+            submittedAt: openApplicantSummary.submitted_at,
+            returner: openApplicant.returner,
+          }}
+          onClose={() => setOpenApplicant(null)}
+        />
+      )}
 
       <Dialog open={confirmingDelete} onOpenChange={setConfirmingDelete}>
         <DialogContent className="sm:max-w-md">

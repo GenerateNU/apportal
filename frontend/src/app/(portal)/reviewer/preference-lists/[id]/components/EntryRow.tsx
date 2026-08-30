@@ -34,6 +34,7 @@ export function EntryRow({
   draftedBy,
   index,
   locked,
+  onOpenApplicant,
   onRemove,
   onSaveReasoning,
   comments,
@@ -49,6 +50,8 @@ export function EntryRow({
   draftedBy?: string
   index: number
   locked: boolean
+  // Opens the applicant slide-over. Omitted where there's nothing to open.
+  onOpenApplicant?: () => void
   onRemove: () => void
   onSaveReasoning: (reasoning: string) => void
   // Comments are only offered for shared-list entries, not personal ones —
@@ -117,19 +120,33 @@ export function EntryRow({
           )}
         </div>
 
-        {/* Chevron leads the name, the way Group settings above discloses
-            itself — one obvious control, and well clear of Remove. */}
+        {/* Two separate controls, deliberately: the chevron discloses this
+            row's reasoning and comments, the name opens the applicant. */}
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
           aria-expanded={expanded}
-          className="flex min-w-0 flex-1 items-start gap-1.5 text-left"
+          aria-label={`${expanded ? 'Hide' : 'Show'} reasoning and comments for ${entry.full_name}`}
+          className="text-text-faint hover:text-text-muted -m-1 shrink-0 p-1"
         >
-          <span className="text-text-faint pt-0.5">
-            {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="flex flex-wrap items-center gap-1.5">
+          {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+        </button>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-1.5">
+            {onOpenApplicant ? (
+              <button
+                type="button"
+                onClick={onOpenApplicant}
+                className={`text-sm font-medium underline-offset-2 hover:underline ${
+                  draftedBy
+                    ? 'text-text-faint line-through'
+                    : 'text-text-default'
+                }`}
+              >
+                {entry.full_name}
+              </button>
+            ) : (
               <span
                 className={`text-sm font-medium ${
                   draftedBy
@@ -139,33 +156,33 @@ export function EntryRow({
               >
                 {entry.full_name}
               </span>
-              {entry.returner && <ReturnerBadge />}
-              {draftedBy && (
-                <span className="text-text-muted rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium">
-                  Drafted · {draftedBy}
-                </span>
-              )}
-              {availabilityBadge && (
-                <span
-                  className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${availabilityBadge.className}`}
-                >
-                  {availabilityBadge.label}
-                </span>
-              )}
-              {commentCount > 0 && (
-                <span className="text-text-faint inline-flex items-center gap-0.5 text-[10px]">
-                  <MessageSquare size={10} />
-                  {commentCount}
-                </span>
-              )}
-            </span>
-            {!expanded && (
-              <span className="text-text-subtle mt-0.5 block truncate text-xs">
-                {reasoning || entry.email}
+            )}
+            {entry.returner && <ReturnerBadge />}
+            {draftedBy && (
+              <span className="text-text-muted rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium">
+                Drafted · {draftedBy}
               </span>
             )}
-          </span>
-        </button>
+            {availabilityBadge && (
+              <span
+                className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${availabilityBadge.className}`}
+              >
+                {availabilityBadge.label}
+              </span>
+            )}
+            {commentCount > 0 && (
+              <span className="text-text-faint inline-flex items-center gap-0.5 text-[10px]">
+                <MessageSquare size={10} />
+                {commentCount}
+              </span>
+            )}
+          </div>
+          {!expanded && (
+            <p className="text-text-subtle mt-0.5 truncate text-xs">
+              {reasoning || entry.email}
+            </p>
+          )}
+        </div>
 
         {!locked && (
           <button
