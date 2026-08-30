@@ -56,7 +56,7 @@ export async function proxy(request: NextRequest) {
   if (!user && !isPublicPath) {
     const redirectUrl = new URL('/login', request.url)
     redirectUrl.searchParams.set('redirectTo', request.nextUrl.pathname)
-    return NextResponse.redirect(redirectUrl)
+    return noStore(NextResponse.redirect(redirectUrl))
   }
 
   const isSignedOutOnlyPath = SIGNED_OUT_ONLY_PATHS.some((path) =>
@@ -64,15 +64,26 @@ export async function proxy(request: NextRequest) {
   )
 
   if (user && isSignedOutOnlyPath) {
-    return NextResponse.redirect(new URL('/', request.url))
+    return noStore(NextResponse.redirect(new URL('/', request.url)))
   }
 
-  // Prevent CDN/ISR caching of responses that may contain Set-Cookie headers.
-  // Without this, CDNs can cache auth tokens and serve them to different users,
-  // causing session cross-contamination (users logged in as each other).
-  // See: https://github.com/supabase/supabase-js/issues/1682
-  response.headers.set('Cache-Control', 'private, no-store')
+  return noStore(response)
+}
 
+// Every response Proxy returns is session-dependent: it either carries a
+// refreshed Supabase cookie or reflects a signed-in/signed-out routing
+// decision. None of it may sit in a shared cache.
+//
+// Cache-Control alone does not do this on Netlify. Netlify's CDN reads
+// Netlify-CDN-Cache-Control and falls back to a *default* of
+// `public, s-maxage=31536000, must-revalidate` — so `Cache-Control:
+// private, no-store` reaches the browser while the CDN still stores the
+// response for a year, keyed on the URL with the auth cookie absent from
+// Netlify-Vary. That is how one user's session ends up served to another.
+// See: https://docs.netlify.com/build/caching/caching-overview
+function noStore(response: NextResponse): NextResponse {
+  response.headers.set('Cache-Control', 'private, no-store')
+  response.headers.set('Netlify-CDN-Cache-Control', 'private, no-store')
   return response
 }
 
