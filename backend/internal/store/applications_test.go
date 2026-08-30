@@ -166,13 +166,13 @@ func TestListApplicationsQueryReturner(t *testing.T) {
 	// Nil is "don't filter", which is not the same as filtering on false —
 	// the latter is how the UI asks for first-timers only.
 	// u.returner is always in the SELECT list, so assert on the predicate.
-	query, args := listApplicationsQuery(ApplicationFilter{})
-	if strings.Contains(query, "AND u.returner") {
-		t.Fatalf("nil Returner should not filter: %s", query)
+	unfiltered, _ := listApplicationsQuery(ApplicationFilter{})
+	if strings.Contains(unfiltered, "AND u.returner") {
+		t.Fatalf("nil Returner should not filter: %s", unfiltered)
 	}
 
 	for _, want := range []bool{true, false} {
-		query, args = listApplicationsQuery(ApplicationFilter{
+		query, args := listApplicationsQuery(ApplicationFilter{
 			CycleID:  "c1",
 			Returner: &want,
 		})
