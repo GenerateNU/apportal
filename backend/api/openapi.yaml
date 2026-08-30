@@ -41,6 +41,8 @@ components:
           type: string
         nuid:
           type: string
+        returner:
+          type: boolean
         updated_at:
           format: date-time
           type: string
@@ -50,6 +52,7 @@ components:
         - full_name
         - created_at
         - updated_at
+        - returner
       type: object
     Application:
       additionalProperties: false
@@ -118,6 +121,8 @@ components:
           type: string
         resume_url:
           type: string
+        returner:
+          type: boolean
         role:
           enum:
             - software_engineer
@@ -149,6 +154,7 @@ components:
       required:
         - full_name
         - email
+        - returner
         - id
         - cycle_id
         - user_nuid
@@ -2558,6 +2564,8 @@ components:
           type: integer
         reasoning:
           type: string
+        returner:
+          type: boolean
         updated_at:
           format: date-time
           type: string
@@ -2567,6 +2575,7 @@ components:
         - full_name
         - email
         - application_role
+        - returner
         - id
         - preference_list_id
         - application_id
@@ -2671,6 +2680,8 @@ components:
           type: integer
         reasoning:
           type: string
+        returner:
+          type: boolean
         updated_at:
           format: date-time
           type: string
@@ -2679,6 +2690,7 @@ components:
         - full_name
         - email
         - application_role
+        - returner
         - id
         - preference_list_id
         - owner_nuid
@@ -3599,6 +3611,9 @@ components:
           type: integer
         major:
           type: string
+        returner:
+          description: Marks someone who has worked on a Generate project before
+          type: boolean
         roles:
           items:
             enum:
@@ -3843,6 +3858,8 @@ components:
           type: string
         nuid:
           type: string
+        returner:
+          type: boolean
         roles:
           items:
             enum:
@@ -3865,6 +3882,7 @@ components:
         - roles
         - created_at
         - updated_at
+        - returner
       type: object
     UsersOutputBody:
       additionalProperties: false
@@ -4239,6 +4257,16 @@ paths:
           name: rating_filters
           schema:
             description: Comma-separated list of interview ratings, e.g. "must_hire,great"
+            type: string
+        - description: "\"true\" for applicants who worked on a Generate project before, \"false\" for first-timers; omit for both"
+          explode: false
+          in: query
+          name: returner
+          schema:
+            description: "\"true\" for applicants who worked on a Generate project before, \"false\" for first-timers; omit for both"
+            enum:
+              - "true"
+              - "false"
             type: string
         - description: Case-insensitive substring match on the applicant's name, NUID, or email
           explode: false

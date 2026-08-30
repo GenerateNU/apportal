@@ -1,6 +1,7 @@
 import type { Interview, Question, WrittenAnswer } from '@/lib/api/types'
 import type { ApplicantApplication } from './types'
 import { formatDate } from '@/lib/utils'
+import { ReturnerBadge } from '@/components/ReturnerBadge'
 import { AnswerCell } from './AnswerCell'
 import { StageSelect } from './StageSelect'
 import { RATING_COLORS, RATING_LABEL } from '@/lib/interview-ratings'
@@ -78,15 +79,18 @@ export function ApplicantRow({
         </td>
       )}
       <td className="min-w-36 border-r border-gray-100 px-3 py-2 whitespace-nowrap">
-        {interview?.rating ? (
-          <span
-            className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${RATING_COLORS[interview.rating].bg} ${RATING_COLORS[interview.rating].text}`}
-          >
-            {RATING_LABEL[interview.rating]}
-          </span>
-        ) : (
-          <span className="text-text-faint text-sm">—</span>
-        )}
+        <div className="flex items-center gap-1.5">
+          {interview?.rating ? (
+            <span
+              className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${RATING_COLORS[interview.rating].bg} ${RATING_COLORS[interview.rating].text}`}
+            >
+              {RATING_LABEL[interview.rating]}
+            </span>
+          ) : (
+            <span className="text-text-faint text-sm">—</span>
+          )}
+          {applicant.returner && <ReturnerBadge />}
+        </div>
       </td>
       {columns.map((q) => {
         const rowQuestion = rowQuestions.find(

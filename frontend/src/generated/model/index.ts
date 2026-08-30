@@ -146,6 +146,7 @@ export * from './listAnswers200';
 export * from './listAnswersBulk200';
 export * from './listAnswersBulkParams';
 export * from './listApplicationsParams';
+export * from './listApplicationsReturner';
 export * from './listChiefReviewComments200';
 export * from './listChiefReviews200';
 export * from './listChiefReviewsBulk200';

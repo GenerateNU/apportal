@@ -15,6 +15,7 @@ export interface ApplicationSummary {
   full_name: string;
   id: string;
   resume_url?: string;
+  returner: boolean;
   role: ApplicationSummaryRole;
   stage: ApplicationSummaryStage;
   submitted_at?: string;

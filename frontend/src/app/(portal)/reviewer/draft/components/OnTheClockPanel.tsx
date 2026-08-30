@@ -2,6 +2,7 @@
 
 import { ArrowRight, Loader2 } from 'lucide-react'
 import { Avatar } from '@/components/ui/avatar'
+import { ReturnerBadge } from '@/components/ReturnerBadge'
 import { Button } from '@/components/ui/button'
 import { SearchableSelect } from '@/components/ui/searchable-select'
 import type {
@@ -120,14 +121,17 @@ export function OnTheClockPanel({
                   </span>
                   <Avatar name={entry.full_name} size="sm" />
                   <div className="min-w-0 flex-1">
-                    <span
-                      className={`block truncate text-sm font-medium ${
-                        takenBy
-                          ? 'text-text-subtle line-through'
-                          : 'text-text-default'
-                      }`}
-                    >
-                      {entry.full_name}
+                    <span className="flex items-center gap-1.5">
+                      <span
+                        className={`truncate text-sm font-medium ${
+                          takenBy
+                            ? 'text-text-subtle line-through'
+                            : 'text-text-default'
+                        }`}
+                      >
+                        {entry.full_name}
+                      </span>
+                      {entry.returner && <ReturnerBadge />}
                     </span>
                     <span className="text-text-subtle block truncate text-xs">
                       {entry.email}

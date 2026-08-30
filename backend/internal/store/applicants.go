@@ -21,7 +21,7 @@ type ApplicantUpsert struct {
 // Applicants were merged into the users table; these methods expose the
 // applicant-facing profile subset of a user. The "applicant" role is applied by
 // the users table default on insert and left untouched on update.
-const applicantColumns = `nuid, email, full_name, github_username, graduation_year, major, created_at, updated_at`
+const applicantColumns = `nuid, email, full_name, github_username, graduation_year, major, created_at, updated_at, returner`
 
 // UpsertApplicant inserts a new applicant user or updates the existing one keyed
 // by NUID. A clash on the unique email (belonging to a different NUID) is a

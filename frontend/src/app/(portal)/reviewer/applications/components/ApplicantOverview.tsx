@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { ExternalLink } from 'lucide-react'
 import { Avatar } from '@/components/ui/avatar'
+import { ReturnerBadge } from '@/components/ReturnerBadge'
 import type { ApplicationStage, Role } from '@/lib/api/types'
 import { useAnswers } from '@/lib/queries/answers'
 import { useApplicant } from '@/lib/queries/applicants'
@@ -111,6 +112,7 @@ export function ApplicantOverview({
                 {RATING_LABEL[interview.rating]}
               </span>
             )}
+            {applicant?.returner && <ReturnerBadge showLabel />}
           </div>
           <p className="text-text-muted mt-1 text-sm">{applicant?.email}</p>
         </div>

@@ -5,6 +5,7 @@
  * Generate application portal — applications, reviews, and the hiring pipeline.
  * OpenAPI spec version: 0.1.0
  */
+import type { ListApplicationsReturner } from './listApplicationsReturner';
 
 export type ListApplicationsParams = {
 cycle_id?: string;
@@ -39,6 +40,10 @@ answer_filters?: string;
  * Comma-separated list of interview ratings, e.g. "must_hire,great"
  */
 rating_filters?: string;
+/**
+ * "true" for applicants who worked on a Generate project before, "false" for first-timers; omit for both
+ */
+returner?: ListApplicationsReturner;
 /**
  * Case-insensitive substring match on the applicant's name, NUID, or email
  */

@@ -234,7 +234,9 @@ otp_expiry = 3600
 # opened on a different device than the one that requested it.
 [auth.email.template.recovery]
 subject = "Reset your Generate password"
-content_path = "./templates/recovery.html"
+# Relative to the project root (the directory holding supabase/), not to this
+# file — a bare ./templates/... fails to load however the CLI is invoked.
+content_path = "./supabase/templates/recovery.html"
 
 # Uncomment to customize email template
 # [auth.email.template.invite]

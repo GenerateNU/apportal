@@ -191,6 +191,7 @@ type UpdateUserInput struct {
 		GraduationYear *int              `json:"graduation_year,omitempty"`
 		Major          *string           `json:"major,omitempty"`
 		GithubUsername *string           `json:"github_username,omitempty"`
+		Returner       *bool             `json:"returner,omitempty" doc:"Marks someone who has worked on a Generate project before"`
 	}
 }
 
@@ -217,6 +218,7 @@ func (h *userHandler) update(ctx context.Context, in *UpdateUserInput) (*UserOut
 		GraduationYear: in.Body.GraduationYear,
 		Major:          in.Body.Major,
 		GithubUsername: in.Body.GithubUsername,
+		Returner:       in.Body.Returner,
 	})
 	if err != nil {
 		return nil, storeErr(err)

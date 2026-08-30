@@ -22,7 +22,7 @@ type RoleFilter = UserRole | 'all'
 type ViewType = 'staff' | 'applicants'
 
 const STAFF_GRID_COLS = 'grid-cols-[1fr_140px_160px]'
-const APPLICANTS_GRID_COLS = 'grid-cols-[1fr_100px_140px]'
+const APPLICANTS_GRID_COLS = 'grid-cols-[1fr_100px_140px_110px]'
 
 const MEMBERS_PAGE_SIZE = 10
 
@@ -85,7 +85,7 @@ export function MembersClient() {
   const headerLabel =
     view === 'staff'
       ? 'Manage which roles each team member holds.'
-      : 'View and update applicant status.'
+      : 'View applicant status and mark who has worked on a project before.'
 
   return (
     <PageContainer>
@@ -180,6 +180,7 @@ export function MembersClient() {
               <span>User</span>
               <span>Joined</span>
               <span>{view === 'staff' ? 'Role' : 'Status'}</span>
+              {view === 'applicants' && <span>Returner</span>}
             </div>
             <div className="divide-y divide-gray-100">
               {members.length === 0 ? (

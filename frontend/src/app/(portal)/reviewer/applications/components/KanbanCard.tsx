@@ -1,3 +1,4 @@
+import { ReturnerBadge } from '@/components/ReturnerBadge'
 import type { ApplicantApplication } from './types'
 import { StageSelect } from './StageSelect'
 
@@ -19,6 +20,7 @@ export function KanbanCard({
         <span className="text-text-secondary rounded bg-gray-100 px-1.5 py-0.5 text-xs capitalize">
           {applicant.role.replace('_', ' ')}
         </span>
+        {applicant.returner && <ReturnerBadge />}
         {availabilityDays.map((d) => (
           <span
             key={d}

@@ -16,5 +16,6 @@ export interface Applicant {
   graduation_year?: number;
   major?: string;
   nuid: string;
+  returner: boolean;
   updated_at: string;
 }

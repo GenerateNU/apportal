@@ -17,6 +17,7 @@ export interface User {
   graduation_year?: number;
   major?: string;
   nuid: string;
+  returner: boolean;
   roles: UserRoles;
   updated_at: string;
 }

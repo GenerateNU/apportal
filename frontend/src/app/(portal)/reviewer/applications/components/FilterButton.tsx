@@ -13,6 +13,7 @@ import {
   Layers,
   Clock,
   Briefcase,
+  Repeat,
   MessageSquare,
   ChevronRight,
 } from 'lucide-react'
@@ -47,14 +48,24 @@ export interface AnswerFilter {
   special?: SpecialFilter
 }
 
-export type SpecialFilter = 'rating' | 'stage' | 'availability' | 'role'
+export type SpecialFilter =
+  | 'rating'
+  | 'stage'
+  | 'availability'
+  | 'role'
+  | 'returner'
 
 const SPECIAL_FILTER_ID: Record<SpecialFilter, string> = {
   rating: '__rating__',
   stage: '__stage__',
   availability: '__availability__',
   role: '__role__',
+  returner: '__returner__',
 }
+
+// The two sides of the returner flag, as the checkbox list shows them.
+export const RETURNER_OPTION = 'Returner'
+export const FIRST_TIME_OPTION = 'First-time'
 
 // Synthetic "questions", so the pickers below treat these exactly like a
 // dropdown question and render the same checkbox list.
@@ -108,6 +119,13 @@ const SPECIAL_QUESTIONS: { special: SpecialFilter; question: Question }[] = [
       'Availability',
       AVAILABILITY_DAY_OPTIONS.map((d) => d.label)
     ),
+  },
+  {
+    special: 'returner',
+    question: specialQuestion('returner', 'Returner', [
+      RETURNER_OPTION,
+      FIRST_TIME_OPTION,
+    ]),
   },
 ]
 
@@ -551,6 +569,7 @@ function getFilterIcon(
   if (special === 'rating') return <Star {...iconProps} />
   if (special === 'stage') return <Layers {...iconProps} />
   if (special === 'availability') return <Clock {...iconProps} />
+  if (special === 'returner') return <Repeat {...iconProps} />
 
   switch (questionType) {
     case 'short_answer':
