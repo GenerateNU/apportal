@@ -25,6 +25,76 @@ func SnakePosition(pickNumber, teamCount int) int {
 	return index
 }
 
+// SlotOwners maps every slot on the board to the team that owns it.
+//
+// With no picks made this is the plain snake. It can't stay that way once a
+// chief reorders a live board: a pick already made belongs to whoever made
+// it, not to whoever now sits in that seat. So each round keeps its made
+// picks with their pickers and hands that round's remaining slots to the
+// teams yet to pick in it, in the new order.
+func SlotOwners(teams []models.DraftTeamDetail, picks []models.DraftPickDetail, rounds int) []models.DraftSlot {
+	count := len(teams)
+	if count == 0 || rounds <= 0 {
+		return nil
+	}
+	pickerBySlot := make(map[int]string, len(picks))
+	for _, p := range picks {
+		pickerBySlot[p.PickNumber] = p.DraftTeamID
+	}
+
+	owners := make([]models.DraftSlot, 0, rounds*count)
+	for round := 1; round <= rounds; round++ {
+		first := (round-1)*count + 1
+
+		// The seats this round runs through, in pick order — down the order
+		// on odd rounds, back up it on even ones.
+		seats := make([]string, count)
+		for k := range seats {
+			seats[k] = teams[SnakePosition(first+k, count)].ID
+		}
+
+		assigned := make([]string, count)
+		picked := make(map[string]bool, count)
+		open := make([]int, 0, count)
+		for k := 0; k < count; k++ {
+			if teamID, ok := pickerBySlot[first+k]; ok {
+				assigned[k] = teamID
+				picked[teamID] = true
+				continue
+			}
+			open = append(open, k)
+		}
+
+		next := 0
+		for _, teamID := range seats {
+			if picked[teamID] || next >= len(open) {
+				continue
+			}
+			assigned[open[next]] = teamID
+			next++
+		}
+
+		for k, teamID := range assigned {
+			owners = append(owners, models.DraftSlot{
+				PickNumber:  first + k,
+				DraftTeamID: teamID,
+			})
+		}
+	}
+	return owners
+}
+
+// ownerOf is the team holding a given slot, or "" if the board has no such
+// slot.
+func ownerOf(owners []models.DraftSlot, slot int) string {
+	for _, o := range owners {
+		if o.PickNumber == slot {
+			return o.DraftTeamID
+		}
+	}
+	return ""
+}
+
 func (s *Store) GetDraft(ctx context.Context, cycleID string, role models.Role) (models.Draft, error) {
 	const q = `SELECT ` + draftColumns + ` FROM drafts WHERE cycle_id = $1 AND application_role = $2`
 	rows, err := s.db.Query(ctx, q, cycleID, string(role))
@@ -101,8 +171,8 @@ func (s *Store) UpdateDraft(ctx context.Context, id string, in DraftUpdate) (mod
 
 // SetDraftTeams replaces the order wholesale: the seats are the given
 // preference lists, in the given order. Teams that drop out take their picks
-// with them (ON DELETE CASCADE), which is why the handler only allows this
-// while the draft is still in setup.
+// with them (ON DELETE CASCADE), which is why the handler holds the team set
+// fixed once picking has started — mid-draft only the order may change.
 func (s *Store) SetDraftTeams(ctx context.Context, draftID string, preferenceListIDs []string) error {
 	tx, err := s.db.Begin(ctx)
 	if err != nil {
@@ -177,6 +247,7 @@ func (s *Store) DraftBoard(ctx context.Context, draft models.Draft) (models.Draf
 	}
 	board.Teams = teams
 	board.Picks = picks
+	board.Slots = SlotOwners(teams, picks, draft.Rounds)
 	if draft.Status != models.DraftActive || len(teams) == 0 {
 		return board, nil
 	}
@@ -185,7 +256,7 @@ func (s *Store) DraftBoard(ctx context.Context, draft models.Draft) (models.Draf
 		return board, nil
 	}
 	board.OnTheClock = slot
-	board.OnTheClockTeamID = teams[SnakePosition(slot, len(teams))].ID
+	board.OnTheClockTeamID = ownerOf(board.Slots, slot)
 	return board, nil
 }
 
@@ -277,7 +348,7 @@ func (s *Store) MakeDraftPick(ctx context.Context, draft models.Draft, slot int,
 		INSERT INTO draft_picks (draft_id, pick_number, draft_team_id, application_id, previous_stage, picked_by)
 		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING id, draft_id, pick_number, draft_team_id, application_id, previous_stage, picked_by, picked_at`
-	teamID := teams[SnakePosition(slot, len(teams))].ID
+	teamID := ownerOf(SlotOwners(teams, picks, draft.Rounds), slot)
 	rows, err := tx.Query(ctx, insert, draft.ID, slot, teamID, applicationID, previousStage, pickedBy)
 	if err != nil {
 		return pick, err

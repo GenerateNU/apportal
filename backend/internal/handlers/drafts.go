@@ -59,7 +59,7 @@ func (h *draftHandler) register(api huma.API) {
 		Method:      http.MethodPut,
 		Path:        "/drafts/{id}/teams",
 		Summary:     "Set the draft order",
-		Description: "Chief only, and only while the draft is in setup: the given preference list groups become the seats, in the given order.",
+		Description: "Chief only. In setup the given preference list groups become the seats, in the given order. While the draft is active the order may still be changed, but the set of teams may not: picks already made stay with the team that made them, and the rest of the round goes to the teams yet to pick in it.",
 		Tags:        []string{"Draft"},
 		Errors:      []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound, http.StatusConflict, http.StatusUnprocessableEntity},
 	}, h.setTeams)
@@ -269,10 +269,21 @@ func (h *draftHandler) setTeams(ctx context.Context, in *SetDraftTeamsInput) (*D
 	if err != nil {
 		return nil, storeErr(err)
 	}
-	// Reordering mid-draft would reassign picks that have already been made to
-	// different teams, so the order is frozen once picking starts.
-	if draft.Status != models.DraftSetup {
-		return nil, huma.Error409Conflict("the draft order can only change while the draft is in setup")
+	// Mid-draft the order can still be corrected, but the team set can't:
+	// dropping a team cascades its picks away, losing the stage changes they
+	// made. A pick already made keeps the team that made it (see
+	// store.SlotOwners), so reordering only moves who's up next.
+	switch draft.Status {
+	case models.DraftComplete:
+		return nil, huma.Error409Conflict("a completed draft's order can't be changed")
+	case models.DraftActive:
+		existing, err := h.store.ListDraftTeams(ctx, in.ID)
+		if err != nil {
+			return nil, storeErr(err)
+		}
+		if !sameTeams(existing, in.Body.PreferenceListIDs) {
+			return nil, huma.Error409Conflict("teams can't be added or removed once picking has started — only reordered")
+		}
 	}
 	if err := h.store.SetDraftTeams(ctx, in.ID, in.Body.PreferenceListIDs); err != nil {
 		return nil, storeErr(err)
@@ -282,6 +293,25 @@ func (h *draftHandler) setTeams(ctx context.Context, in *SetDraftTeamsInput) (*D
 		return nil, storeErr(err)
 	}
 	return &DraftBoardOutput{Body: board}, nil
+}
+
+// sameTeams reports whether ids names exactly the teams already seated, in
+// any order.
+func sameTeams(existing []models.DraftTeamDetail, ids []string) bool {
+	if len(existing) != len(ids) {
+		return false
+	}
+	seated := make(map[string]bool, len(existing))
+	for _, t := range existing {
+		seated[t.PreferenceListID] = true
+	}
+	for _, id := range ids {
+		if !seated[id] {
+			return false
+		}
+		delete(seated, id)
+	}
+	return len(seated) == 0
 }
 
 type MakeDraftPickInput struct {
