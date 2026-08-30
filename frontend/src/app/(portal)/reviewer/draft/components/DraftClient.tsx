@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Loader2 } from 'lucide-react'
+import { ListOrdered, Loader2 } from 'lucide-react'
 import { Avatar } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -20,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { APIError } from '@/lib/api/client'
 import type { Role } from '@/lib/api/types'
 import { useApplications } from '@/lib/queries/applications'
 import { pickDefaultCycleId, useCycles } from '@/lib/queries/cycles'
@@ -50,6 +51,7 @@ import {
 import { DraftBoardGrid } from './DraftBoardGrid'
 import { DraftSetup } from './DraftSetup'
 import { OnTheClockPanel } from './OnTheClockPanel'
+import { ReorderTeamsDialog } from './ReorderTeamsDialog'
 
 export function DraftClient() {
   const { data: currentUser } = useCurrentUser()
@@ -104,6 +106,8 @@ export function DraftClient() {
   const deleteDraft = useDeleteDraft()
   // Which teardown is being confirmed; null while the dialog is closed.
   const [confirming, setConfirming] = useState<'reset' | 'delete' | null>(null)
+  const [reordering, setReordering] = useState(false)
+  const [reorderError, setReorderError] = useState('')
 
   // Setup-screen state. Seeded from the board once, then owned here so
   // reordering doesn't fight the 8s poll.
@@ -360,6 +364,18 @@ export function DraftClient() {
           >
             Add a round
           </Button>
+          {board.status === 'active' && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                setReorderError('')
+                setReordering(true)
+              }}
+            >
+              <ListOrdered data-icon="inline-start" size={14} />
+              Reorder pick order
+            </Button>
+          )}
           <Button
             variant="outline"
             onClick={() =>
@@ -389,6 +405,29 @@ export function DraftClient() {
           </Button>
         </div>
       )}
+
+      <ReorderTeamsDialog
+        board={board}
+        open={reordering}
+        onOpenChange={setReordering}
+        saving={setTeams.isPending}
+        error={reorderError}
+        onSave={(preferenceListIds) => {
+          setReorderError('')
+          setTeams.mutate(
+            { ...draftScope, preferenceListIds },
+            {
+              onSuccess: () => setReordering(false),
+              onError: (err) =>
+                setReorderError(
+                  err instanceof APIError
+                    ? err.message
+                    : "Couldn't save the new order — try again."
+                ),
+            }
+          )
+        }}
+      />
 
       <Dialog
         open={changingSlot !== null}

@@ -1308,6 +1308,12 @@ components:
         rounds:
           format: int64
           type: integer
+        slots:
+          items:
+            $ref: "#/components/schemas/DraftSlot"
+          type:
+            - array
+            - "null"
         status:
           type: string
         teams:
@@ -1322,6 +1328,7 @@ components:
       required:
         - teams
         - picks
+        - slots
         - on_the_clock
         - id
         - cycle_id
@@ -1406,6 +1413,18 @@ components:
         - previous_stage
         - picked_by
         - picked_at
+      type: object
+    DraftSlot:
+      additionalProperties: false
+      properties:
+        draft_team_id:
+          type: string
+        pick_number:
+          format: int64
+          type: integer
+      required:
+        - pick_number
+        - draft_team_id
       type: object
     DraftTeamDetail:
       additionalProperties: false
@@ -8351,7 +8370,7 @@ paths:
         - Draft
   /drafts/{id}/teams:
     put:
-      description: "Chief only, and only while the draft is in setup: the given preference list groups become the seats, in the given order."
+      description: "Chief only. In setup the given preference list groups become the seats, in the given order. While the draft is active the order may still be changed, but the set of teams may not: picks already made stay with the team that made them, and the rest of the round goes to the teams yet to pick in it."
       operationId: set-draft-teams
       parameters:
         - description: Draft ID

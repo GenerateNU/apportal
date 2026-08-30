@@ -7,6 +7,7 @@
  */
 import type { DraftBoardApplicationRole } from './draftBoardApplicationRole';
 import type { DraftBoardPicks } from './draftBoardPicks';
+import type { DraftBoardSlots } from './draftBoardSlots';
 import type { DraftBoardTeams } from './draftBoardTeams';
 
 export interface DraftBoard {
@@ -21,6 +22,7 @@ export interface DraftBoard {
   on_the_clock_team_id?: string;
   picks: DraftBoardPicks;
   rounds: number;
+  slots: DraftBoardSlots;
   status: string;
   teams: DraftBoardTeams;
   updated_at: string;

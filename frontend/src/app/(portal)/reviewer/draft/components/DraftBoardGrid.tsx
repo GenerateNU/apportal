@@ -8,6 +8,10 @@ import { SECTION_HEADER_CLASS } from './constants'
 // The board: one row per round, one column per team in order. Odd rounds run
 // left to right, even rounds right to left — the arrow on each row says which,
 // and it's why the team in the last column picks twice at the turn.
+//
+// Which slot a cell holds comes from board.slots rather than being derived
+// from the snake here: after a chief reorders a live board, a pick already
+// made stays with the team that made it, which the snake alone can't say.
 export function DraftBoardGrid({
   board,
   canEdit,
@@ -30,6 +34,12 @@ export function DraftBoardGrid({
   }
   const pickBySlot = new Map(board.picks.map((p) => [p.pick_number, p]))
   const rounds = Array.from({ length: board.rounds }, (_, i) => i + 1)
+  const slotByTeamRound = new Map(
+    (board.slots ?? []).map((slot) => [
+      `${slot.draft_team_id}:${Math.floor((slot.pick_number - 1) / teams.length) + 1}`,
+      slot.pick_number,
+    ])
+  )
 
   return (
     <div className="flex flex-col gap-3">
@@ -74,18 +84,21 @@ export function DraftBoardGrid({
                     )}
                   </span>
                 </td>
-                {teams.map((_, seat) => {
-                  // Which slot this cell holds is the snake run backwards: the
-                  // pick number in this round that lands on this seat.
-                  const slot =
-                    (round - 1) * teams.length +
-                    (round % 2 === 1 ? seat : teams.length - 1 - seat) +
-                    1
-                  const pick = pickBySlot.get(slot)
-                  const onTheClock = board.on_the_clock === slot
+                {teams.map((team) => {
+                  const slot = slotByTeamRound.get(`${team.id}:${round}`)
+                  const pick = slot ? pickBySlot.get(slot) : undefined
+                  const onTheClock = !!slot && board.on_the_clock === slot
+                  if (!slot) {
+                    return (
+                      <td
+                        key={team.id}
+                        className="border-r border-gray-100 p-2 align-top last:border-r-0"
+                      />
+                    )
+                  }
                   return (
                     <td
-                      key={seat}
+                      key={team.id}
                       className="border-r border-gray-100 p-2 align-top last:border-r-0"
                     >
                       <div

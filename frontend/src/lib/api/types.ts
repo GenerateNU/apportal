@@ -17,6 +17,7 @@ import type {
   Draft as GenDraft,
   DraftBoard as GenDraftBoard,
   DraftPickDetail as GenDraftPickDetail,
+  DraftSlot,
   DraftTeamDetail as GenDraftTeamDetail,
   ChallengeAttempt as GenChallengeAttempt,
   ChallengeScore as GenChallengeScore,
@@ -335,12 +336,17 @@ export type DraftTeamDetail = Omit<GenDraftTeamDetail, 'member_names'> & {
 
 export type DraftPickDetail = GenDraftPickDetail
 
+export type { DraftSlot }
+
 export type DraftBoard = Omit<
   GenDraftBoard,
-  '$schema' | 'application_role' | 'teams' | 'picks'
+  '$schema' | 'application_role' | 'teams' | 'picks' | 'slots'
 > & {
   application_role: Role
   status: DraftStatus
   teams: DraftTeamDetail[]
   picks: DraftPickDetail[]
+  // Slot -> owning team, straight from the server: once a live board has
+  // been reordered this no longer follows from the snake alone.
+  slots: DraftSlot[]
 }

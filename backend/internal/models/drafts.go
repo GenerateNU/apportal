@@ -70,6 +70,15 @@ type DraftPickDetail struct {
 	Email    string `json:"email"`
 }
 
+// DraftSlot names the team that owns one slot on the board. Sent explicitly
+// rather than left to the client to re-derive from the snake: once a live
+// board has been reordered, a slot's owner no longer follows from its pick
+// number alone.
+type DraftSlot struct {
+	PickNumber  int    `json:"pick_number"`
+	DraftTeamID string `json:"draft_team_id"`
+}
+
 // DraftBoard is the whole board in one response: the order, every pick made,
 // and which slot is on the clock. OnTheClock is 0 when the board is full or
 // not active.
@@ -77,6 +86,8 @@ type DraftBoard struct {
 	Draft
 	Teams []DraftTeamDetail `json:"teams"`
 	Picks []DraftPickDetail `json:"picks"`
+	// Every slot on the board, in pick order, with the team that owns it.
+	Slots []DraftSlot `json:"slots"`
 	// The lowest unfilled slot — undoing a pick mid-board makes that slot the
 	// next one, not the end of the list.
 	OnTheClock int `json:"on_the_clock"`
