@@ -36,6 +36,7 @@ import type {
   PreferenceListStatus,
   Role,
 } from '@/lib/api/types'
+import { useCurrentUser } from './users'
 import { queryKeys } from './keys'
 
 export function usePreferenceLists(cycleId: string, opts?: RequestOptions) {
@@ -221,6 +222,39 @@ export function useDeletePreferenceListEntry() {
   })
 }
 
+// A reorder request carries one role's slice of ids, not the whole list, so
+// the optimistic update refills exactly the positions (and ranks) that slice
+// already held — every other role's entries keep theirs. `inScope` narrows
+// further for personal lists, where the same application_id can appear under
+// several owners and only the caller's own entries are being reordered.
+function applyReorder<T extends { application_id: string; rank: number }>(
+  entries: T[],
+  applicationIds: string[],
+  inScope: (entry: T) => boolean = () => true
+): T[] {
+  const requested = new Set(applicationIds)
+  const isMoving = (entry: T) =>
+    requested.has(entry.application_id) && inScope(entry)
+
+  const slots = entries.filter(isMoving)
+  const byId = new Map(slots.map((e) => [e.application_id, e]))
+  const moved = applicationIds
+    .map((id) => byId.get(id))
+    .filter((e): e is T => !!e)
+  // A slice that doesn't line up with what's cached (a stale list, a
+  // concurrent edit) is left alone — onSettled refetches either way.
+  if (moved.length === 0 || moved.length !== slots.length) return entries
+
+  const ranks = slots.map((e) => e.rank)
+  let i = 0
+  return entries.map((entry) => {
+    if (!isMoving(entry)) return entry
+    const next = { ...moved[i], rank: ranks[i] }
+    i += 1
+    return next
+  })
+}
+
 export function useReorderPreferenceListEntries() {
   const queryClient = useQueryClient()
   return useMutation({
@@ -234,7 +268,34 @@ export function useReorderPreferenceListEntries() {
         { application_ids: vars.applicationIds },
         vars.opts
       ) as Promise<PreferenceListEntryDetail[]>,
-    onSuccess: (_data, vars) => {
+    // Dragging a row that snaps back for a round trip reads as a failed
+    // drag, so the new order is written to the cache immediately and rolled
+    // back only if the request actually fails.
+    onMutate: async (vars) => {
+      const key = queryKeys.preferenceLists.detail(vars.listId)
+      await queryClient.cancelQueries({ queryKey: key })
+      const previous = queryClient.getQueryData<PreferenceListDetail>(key)
+      queryClient.setQueryData<PreferenceListDetail>(
+        key,
+        (data) =>
+          data && {
+            ...data,
+            entries: applyReorder(data.entries, vars.applicationIds),
+          }
+      )
+      return { previous }
+    },
+    onError: (_error, vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(
+          queryKeys.preferenceLists.detail(vars.listId),
+          context.previous
+        )
+      }
+    },
+    // Settled rather than success: the rollback above restores a snapshot
+    // that the 8s poll may already have moved past.
+    onSettled: (_data, _error, vars) => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.preferenceLists.detail(vars.listId),
       })
@@ -292,6 +353,9 @@ export function useDeletePersonalPreferenceListEntry() {
 
 export function useReorderPersonalPreferenceListEntries() {
   const queryClient = useQueryClient()
+  // Writes are always "mine"; the optimistic update needs the nuid to avoid
+  // reordering another owner's copy of the same applicant.
+  const { data: currentUser } = useCurrentUser()
   return useMutation({
     mutationFn: (vars: {
       listId: string
@@ -303,7 +367,35 @@ export function useReorderPersonalPreferenceListEntries() {
         { application_ids: vars.applicationIds },
         vars.opts
       ) as Promise<PreferenceListPersonalEntryDetail[]>,
-    onSuccess: (_data, vars) => {
+    onMutate: async (vars) => {
+      const key = queryKeys.preferenceLists.detail(vars.listId)
+      await queryClient.cancelQueries({ queryKey: key })
+      const previous = queryClient.getQueryData<PreferenceListDetail>(key)
+      const ownerNuid = currentUser?.nuid
+      if (!ownerNuid) return { previous }
+      queryClient.setQueryData<PreferenceListDetail>(
+        key,
+        (data) =>
+          data && {
+            ...data,
+            personal_entries: applyReorder(
+              data.personal_entries,
+              vars.applicationIds,
+              (entry) => entry.owner_nuid === ownerNuid
+            ),
+          }
+      )
+      return { previous }
+    },
+    onError: (_error, vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(
+          queryKeys.preferenceLists.detail(vars.listId),
+          context.previous
+        )
+      }
+    },
+    onSettled: (_data, _error, vars) => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.preferenceLists.detail(vars.listId),
       })

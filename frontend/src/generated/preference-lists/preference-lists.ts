@@ -413,7 +413,7 @@ export const useCreatePreferenceList = <TError = ErrorModel | ErrorModel | Error
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Chief/admin only. Bundles every group's members, entries, personal entries, and comments in one call, for viewing every group side by side.
+ * Reviewer only. Bundles every group's members and ranked entries in one call, for viewing every group side by side. Personal entries and comments are chief/admin only — a lead sees every group's picks, not other leads' private working notes.
  * @summary List every preference list group's full detail for a cycle
  */
 export const listPreferenceListDetails = (
