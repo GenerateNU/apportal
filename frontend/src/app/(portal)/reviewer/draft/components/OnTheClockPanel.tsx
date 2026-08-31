@@ -20,6 +20,7 @@ import { roundOf } from './snake'
 export function OnTheClockPanel({
   board,
   teamList,
+  teamListLoading,
   pool,
   takenByApplicationId,
   canPick,
@@ -28,8 +29,11 @@ export function OnTheClockPanel({
   error,
 }: {
   board: DraftBoard
-  // The on-the-clock team's preference list, once it's loaded.
+  // The on-the-clock team's preference list, once it's loaded. Absent for a
+  // lead who isn't in that group — the list is membership-gated, so the
+  // request 404s rather than handing over another group's ranking.
   teamList?: PreferenceListDetail
+  teamListLoading: boolean
   pool: ApplicationSummary[]
   // Application id -> the team that already took them, across every board.
   takenByApplicationId: Record<string, string>
@@ -99,7 +103,15 @@ export function OnTheClockPanel({
       <div className="flex flex-col gap-3 p-5">
         {error && <p className="text-destructive text-sm">{error}</p>}
         <h3 className={SECTION_HEADER_CLASS}>{team.name}&apos;s list</h3>
-        {entries.length === 0 ? (
+        {teamListLoading ? (
+          <p className="text-text-muted text-sm">Loading their list…</p>
+        ) : !teamList ? (
+          // Not the same thing as an empty list, and saying so would be a
+          // guess about a ranking this viewer isn't allowed to read.
+          <p className="text-text-muted text-sm">
+            Only this group&apos;s members can see their ranked list.
+          </p>
+        ) : entries.length === 0 ? (
           <p className="text-text-muted text-sm">
             This group hasn&apos;t ranked anyone for this role.
           </p>

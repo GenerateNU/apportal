@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ListOrdered, Loader2 } from 'lucide-react'
+import { Eye, ListOrdered, Loader2 } from 'lucide-react'
 import { Avatar } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -78,10 +78,12 @@ export function DraftClient() {
   const { data: takenByApplicationId = {} } = useDraftedApplications(cycleId, {
     poll: true,
   })
+  // Only the operator picks, and the pool exists solely to pick from — so a
+  // roomful of leads watching a polling board doesn't each fetch it.
   const { data: pool = [] } = useApplications(
     cycleId ? { cycle_id: cycleId, role } : undefined,
     undefined,
-    { enabled: !!cycleId }
+    { enabled: !!cycleId && isChief }
   )
 
   // The on-the-clock team's own ranking, so the operator can pick straight
@@ -89,7 +91,7 @@ export function DraftClient() {
   const onTheClockTeam = board?.teams.find(
     (t) => t.id === board.on_the_clock_team_id
   )
-  const { data: teamList } = usePreferenceList(
+  const { data: teamList, isLoading: teamListLoading } = usePreferenceList(
     onTheClockTeam?.preference_list_id ?? ''
   )
 
@@ -201,6 +203,14 @@ export function DraftClient() {
             className={`rounded-md px-2 py-0.5 text-xs font-medium ${DRAFT_STATUS_BADGE[board.status]}`}
           >
             {DRAFT_STATUS_LABEL[board.status]}
+          </span>
+        )}
+        {/* Every control on this page is already chief-gated; this just says
+            so up front rather than leaving a lead hunting for the buttons. */}
+        {!isChief && (
+          <span className="text-text-muted inline-flex items-center gap-1 rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium">
+            <Eye size={12} />
+            View only
           </span>
         )}
         <Select value={role} onValueChange={(v) => setRole(v as Role)}>
@@ -327,6 +337,7 @@ export function DraftClient() {
         <OnTheClockPanel
           board={board}
           teamList={teamList}
+          teamListLoading={teamListLoading}
           pool={pool}
           takenByApplicationId={takenByApplicationId}
           canPick={isChief}
