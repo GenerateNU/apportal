@@ -14,6 +14,12 @@ import type {
   ChiefReviewDetail as GenChiefReviewDetail,
   ChiefReviewDetailVote,
   Cycle as GenCycle,
+  DecisionContext as GenDecisionContext,
+  DecisionRow as GenDecisionRow,
+  RecordingReviewDetail as GenRecordingReviewDetail,
+  DecisionTemplate as GenDecisionTemplate,
+  DecisionRowKind,
+  DecisionRowStatus,
   Draft as GenDraft,
   DraftBoard as GenDraftBoard,
   DraftPickDetail as GenDraftPickDetail,
@@ -349,4 +355,45 @@ export type DraftBoard = Omit<
   // Slot -> owning team, straight from the server: once a live board has
   // been reordered this no longer follows from the snake alone.
   slots: DraftSlot[]
+}
+
+// Decisions: the rejection letters and the per-applicant paragraphs that fill
+// them in. Orval types the role/kind/status as their own generated unions;
+// these alias them to the names the app already uses.
+export type DecisionKind =
+  (typeof DecisionRowKind)[keyof typeof DecisionRowKind]
+
+export type DecisionStatus =
+  (typeof DecisionRowStatus)[keyof typeof DecisionRowStatus]
+
+export type DecisionTemplate = Omit<
+  GenDecisionTemplate,
+  '$schema' | 'application_role' | 'kind'
+> & {
+  application_role: Role
+  kind: DecisionKind
+}
+
+export type DecisionRow = Omit<
+  GenDecisionRow,
+  '$schema' | 'application_role' | 'stage'
+> & {
+  application_role: Role
+  stage: ApplicationStage
+}
+
+// A recording review with its reviewer's name. Peers' comments are absent
+// (not empty) until a chief releases the cycle's recording reviews.
+export type RecordingReviewDetail = Omit<GenRecordingReviewDetail, 'rating'> & {
+  rating?: InterviewRating
+}
+
+// The review history behind one applicant's decision. Orval leaves the two
+// collections nullable; callers always want arrays.
+export type DecisionContext = Omit<
+  GenDecisionContext,
+  '$schema' | 'recording_reviews' | 'written_reviews'
+> & {
+  recording_reviews: RecordingReviewDetail[]
+  written_reviews: WrittenReviewDetail[]
 }

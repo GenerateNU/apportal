@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 	"net/http"
-	"strings"
 
 	"github.com/danielgtaylor/huma/v2"
 
@@ -128,12 +127,7 @@ func (h *recordingReviewHandler) listBulk(ctx context.Context, in *ListRecording
 	if err := requireReviewer(ctx); err != nil {
 		return nil, err
 	}
-	ids := make([]string, 0, 8)
-	for _, id := range strings.Split(in.InterviewIDs, ",") {
-		if id = strings.TrimSpace(id); id != "" {
-			ids = append(ids, id)
-		}
-	}
+	ids := splitIDs(in.InterviewIDs)
 	if len(ids) == 0 {
 		return &RecordingReviewsOutput{Body: []models.InterviewRecordingReview{}}, nil
 	}

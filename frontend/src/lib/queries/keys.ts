@@ -309,6 +309,30 @@ export const queryKeys = {
       [...queryKeys.drafts.all, 'drafted', cycleId] as const,
   },
 
+  decisions: {
+    all: ['decisions'] as const,
+    lists: () => [...queryKeys.decisions.all, 'list'] as const,
+    // Every filtered list for one cycle shares this prefix, so a write that
+    // moves a row between filters can invalidate them all at once.
+    listsForCycle: (cycleId: string) =>
+      [...queryKeys.decisions.lists(), cycleId] as const,
+    list: (
+      cycleId: string,
+      params?: {
+        role?: Role
+        kind?: string
+        interviewer_nuid?: string
+        search?: string
+      }
+    ) => [...queryKeys.decisions.listsForCycle(cycleId), params ?? {}] as const,
+    templates: (cycleId: string, role: Role) =>
+      [...queryKeys.decisions.all, 'templates', cycleId, role] as const,
+    // One entry per batch of applications fetched together. Keyed by the exact
+    // id list so a batch stays cached as more are loaded alongside it.
+    context: (applicationIds: string[]) =>
+      [...queryKeys.decisions.all, 'context', applicationIds] as const,
+  },
+
   preferenceListDeadline: {
     all: ['preference-list-deadline'] as const,
     detail: (cycleId: string, role: Role) =>

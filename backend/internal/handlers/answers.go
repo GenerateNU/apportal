@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"strings"
 
 	"github.com/danielgtaylor/huma/v2"
 
@@ -63,12 +62,7 @@ func (h *answerHandler) listBulk(ctx context.Context, in *ListAnswersBulkInput) 
 	if err := requireReviewer(ctx); err != nil {
 		return nil, err
 	}
-	ids := make([]string, 0, 8)
-	for _, id := range strings.Split(in.ApplicationIDs, ",") {
-		if id = strings.TrimSpace(id); id != "" {
-			ids = append(ids, id)
-		}
-	}
+	ids := splitIDs(in.ApplicationIDs)
 	if len(ids) == 0 {
 		return &AnswersOutput{Body: []models.WrittenAnswer{}}, nil
 	}

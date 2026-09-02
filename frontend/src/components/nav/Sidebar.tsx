@@ -22,6 +22,7 @@ import {
   Wand2,
   LogOut,
   CalendarClock,
+  MailCheck,
 } from 'lucide-react'
 import NavItem, { isNavItemActive } from './NavItem'
 import { Avatar } from '@/components/ui/avatar'
@@ -96,6 +97,11 @@ const sectionsByRole: Record<Role, NavSection[]> = {
           href: '/reviewer/draft',
           label: 'Draft',
           icon: Shuffle,
+        },
+        {
+          href: '/reviewer/decisions',
+          label: 'Decisions',
+          icon: MailCheck,
         },
       ],
     },
