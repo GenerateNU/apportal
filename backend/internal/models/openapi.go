@@ -66,3 +66,15 @@ func (CycleStatus) Schema(huma.Registry) *huma.Schema {
 		string(CycleDraft), string(CycleOpen), string(CycleClosed), string(CycleArchived),
 	)
 }
+
+func (DecisionKind) Schema(huma.Registry) *huma.Schema {
+	return enumSchema(
+		string(DecisionRejectionPostInterview), string(DecisionRejectionGeneric),
+	)
+}
+
+func (DecisionStatus) Schema(huma.Registry) *huma.Schema {
+	return enumSchema(
+		string(DecisionPending), string(DecisionReady), string(DecisionSent),
+	)
+}
