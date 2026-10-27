@@ -122,6 +122,7 @@ function DateTimePicker({
           {/* Month/Year Navigation */}
           <div className="flex items-center justify-between gap-2">
             <button
+              type="button"
               onClick={() =>
                 setBrowsing(new Date(month.getFullYear(), month.getMonth() - 1))
               }
@@ -130,12 +131,14 @@ function DateTimePicker({
               ←
             </button>
             <button
+              type="button"
               onClick={() => setBrowsing(new Date())}
               className="text-text-default flex-1 rounded-md py-1 text-center text-sm font-medium transition hover:bg-gray-100"
             >
               {monthName} {year}
             </button>
             <button
+              type="button"
               onClick={() =>
                 setBrowsing(new Date(month.getFullYear(), month.getMonth() + 1))
               }
@@ -172,6 +175,7 @@ function DateTimePicker({
                   new Date().getFullYear() === month.getFullYear()
                 return (
                   <button
+                    type="button"
                     key={day}
                     onClick={() => emit({ day })}
                     className={cn(
@@ -219,6 +223,7 @@ function DateTimePicker({
                 <div className="ml-1 flex gap-1">
                   {(['AM', 'PM'] as const).map((m) => (
                     <button
+                      type="button"
                       key={m}
                       onClick={() => {
                         // Re-clicking the active half would emit an unchanged

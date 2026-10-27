@@ -76,7 +76,7 @@ export function ApplicationView({
           <p className="text-text-muted mt-1 text-sm">{cycleName}</p>
         </div>
         {status && (
-          <span className="text-text-subtle inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-medium">
+          <span className="text-text-subtle inline-flex shrink-0 items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-medium">
             <span className="h-2 w-2 rounded-full bg-gray-400" />
             {status.label}
           </span>
@@ -84,7 +84,7 @@ export function ApplicationView({
       </header>
 
       <div className="border-border bg-muted/40 text-text-muted mb-6 flex items-center gap-2 rounded-lg border px-4 py-3 text-sm">
-        <Lock size={14} />
+        <Lock size={14} className="shrink-0" />
         You&apos;ve submitted this application. It can no longer be edited.
       </div>
 

@@ -269,7 +269,7 @@ export function AssignmentPlanClient() {
                   >
                     <input
                       type="checkbox"
-                      className="accent-primary"
+                      className="accent-primary shrink-0"
                       checked={excluded}
                       onChange={() => toggleExcluded(applicant.application_id)}
                     />
@@ -278,7 +278,7 @@ export function AssignmentPlanClient() {
                     >
                       {applicant.full_name}
                     </span>
-                    <span className="text-text-faint text-xs">
+                    <span className="text-text-faint min-w-0 truncate text-xs">
                       {applicant.email}
                     </span>
                   </label>
@@ -406,7 +406,7 @@ export function AssignmentPlanClient() {
                 are kept as they are.
               </span>
             </div>
-            <div className="ml-auto flex items-center gap-3">
+            <div className="ml-auto flex flex-wrap items-center gap-3">
               {commit.isSuccess && (
                 <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700">
                   <CheckCircle2 size={14} />

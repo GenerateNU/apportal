@@ -25,14 +25,14 @@ export function AvailabilityGrid({
         {OPTIONS.map((option) => (
           <label
             key={option.key}
-            className="text-text-default flex items-center gap-2 text-sm"
+            className="text-text-default flex cursor-pointer items-center gap-3 py-1.5 text-sm"
           >
             <input
               type="checkbox"
               checked={!!value[option.key]}
               onChange={() => toggle(option.key)}
               disabled={disabled}
-              className="accent-primary"
+              className="accent-primary h-4 w-4 shrink-0"
             />
             {option.label}
           </label>

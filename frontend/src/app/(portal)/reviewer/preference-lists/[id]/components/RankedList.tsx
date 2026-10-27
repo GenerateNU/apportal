@@ -75,7 +75,8 @@ export function RankedList({
 }) {
   const [hideDrafted, setHideDrafted] = useState(false)
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    // Without a threshold, a tap on the row's buttons starts a drag on touch.
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })

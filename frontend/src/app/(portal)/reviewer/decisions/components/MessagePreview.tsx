@@ -27,7 +27,7 @@ export function MessagePreview({
         <h4 className="text-text-faint text-xs font-semibold tracking-wide uppercase">
           Message{overridden && ' (edited by hand)'}
         </h4>
-        <div className="flex items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5">
           <CopyButton
             onClick={() =>
               copy(email, `${copyKeyPrefix}-email`, 'email address')
@@ -57,7 +57,7 @@ export function MessagePreview({
         <p className="text-text-muted border-b border-gray-200 px-3 py-2 text-xs">
           {rendered.subject}
         </p>
-        <pre className="text-text-default max-h-[28rem] overflow-y-auto px-3 py-3 font-sans text-sm break-words whitespace-pre-wrap">
+        <pre className="text-text-default px-3 py-3 font-sans text-sm break-words whitespace-pre-wrap lg:max-h-[28rem] lg:overflow-y-auto">
           {rendered.body}
         </pre>
       </div>
@@ -77,7 +77,12 @@ function CopyButton({
   icon?: React.ReactNode
 }) {
   return (
-    <Button size="xs" variant="outline" onClick={onClick}>
+    <Button
+      size="xs"
+      variant="outline"
+      onClick={onClick}
+      className="pointer-coarse:h-8 pointer-coarse:px-2.5"
+    >
       {copied ? <Check size={13} /> : (icon ?? <Copy size={13} />)}
       {copied ? 'Copied' : label}
     </Button>

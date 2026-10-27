@@ -124,7 +124,7 @@ export function TeamBuilder({
                         <button
                           type="button"
                           aria-label={`Remove ${nameOf(nuid)} from ${team.name}`}
-                          className="hover:text-destructive"
+                          className="hover:text-destructive -m-1 p-1"
                           onClick={() =>
                             update(team.id, {
                               leadNuids: team.leadNuids.filter(

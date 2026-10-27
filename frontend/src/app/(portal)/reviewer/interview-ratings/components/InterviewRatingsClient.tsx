@@ -107,12 +107,12 @@ const RATING_COLUMN_DEFS: { key: RatingKey; title: string }[] = [
 // picks them up — one entry per possible visible-column count, up to
 // RATING_COLUMN_DEFS.length.
 const SWIMLANE_GRID_COLS_CLASS: Record<number, string> = {
-  1: 'grid-cols-[repeat(1,20rem)]',
-  2: 'grid-cols-[repeat(2,20rem)]',
-  3: 'grid-cols-[repeat(3,20rem)]',
-  4: 'grid-cols-[repeat(4,20rem)]',
-  5: 'grid-cols-[repeat(5,20rem)]',
-  6: 'grid-cols-[repeat(6,20rem)]',
+  1: 'grid-cols-[repeat(1,17rem)] sm:grid-cols-[repeat(1,20rem)]',
+  2: 'grid-cols-[repeat(2,17rem)] sm:grid-cols-[repeat(2,20rem)]',
+  3: 'grid-cols-[repeat(3,17rem)] sm:grid-cols-[repeat(3,20rem)]',
+  4: 'grid-cols-[repeat(4,17rem)] sm:grid-cols-[repeat(4,20rem)]',
+  5: 'grid-cols-[repeat(5,17rem)] sm:grid-cols-[repeat(5,20rem)]',
+  6: 'grid-cols-[repeat(6,17rem)] sm:grid-cols-[repeat(6,20rem)]',
 }
 
 const FILTERS_STORAGE_KEY = 'interview-ratings-filters-v1'
@@ -469,7 +469,7 @@ export function InterviewRatingsClient() {
             </div>
           )}
 
-          <div className="relative w-64">
+          <div className="relative w-full sm:w-64">
             <Input
               type="text"
               placeholder="Search by name, NUID, or email..."
@@ -480,7 +480,8 @@ export function InterviewRatingsClient() {
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute top-1/2 right-2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                aria-label="Clear search"
+                className="absolute top-1/2 right-1 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600"
               >
                 ✕
               </button>
@@ -522,7 +523,7 @@ export function InterviewRatingsClient() {
               onValueChange={setInterviewerFilter}
             >
               <SelectTrigger
-                className="w-48"
+                className="min-w-40 flex-1 sm:w-48 sm:flex-none"
                 aria-label="Filter by interviewer"
               >
                 <SelectValue />
@@ -543,7 +544,10 @@ export function InterviewRatingsClient() {
             value={activeRole}
             onValueChange={(val) => setActiveRole(val as Role | 'all')}
           >
-            <SelectTrigger className="w-48" aria-label="Filter by role">
+            <SelectTrigger
+              className="min-w-40 flex-1 sm:w-48 sm:flex-none"
+              aria-label="Filter by role"
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -557,7 +561,10 @@ export function InterviewRatingsClient() {
           </Select>
 
           <Select value={cycleId} onValueChange={setCycleId}>
-            <SelectTrigger className="w-40" aria-label="Filter by cycle">
+            <SelectTrigger
+              className="min-w-40 flex-1 sm:w-40 sm:flex-none"
+              aria-label="Filter by cycle"
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -743,7 +750,7 @@ function RatingColumn({
   nameByNuid: Map<string, string>
 }) {
   return (
-    <div className="flex w-80 shrink-0 flex-col px-4 pt-3">
+    <div className="flex w-72 shrink-0 flex-col px-4 pt-3 sm:w-80">
       <div className="mb-3 flex items-center gap-2">
         {ratingKey === 'none' ? (
           <span className="text-text-default text-sm font-semibold">
@@ -758,7 +765,8 @@ function RatingColumn({
         )}
         <span className="text-text-subtle text-sm">{rows.length}</span>
       </div>
-      <div className="flex max-h-[70vh] flex-col gap-2 overflow-y-auto pr-1 pb-1">
+      {/* No nested vertical scroll on phones — it traps the page's swipe. */}
+      <div className="flex flex-col gap-2 pr-1 pb-1 sm:max-h-[70vh] sm:overflow-y-auto">
         {rows.map(
           ({
             application,

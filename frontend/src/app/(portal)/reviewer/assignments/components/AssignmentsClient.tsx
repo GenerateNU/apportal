@@ -210,9 +210,9 @@ export function AssignmentsClient() {
             {failed} assignment{failed === 1 ? '' : 's'} failed
           </span>
         )}
-        <div className="ml-auto flex items-center gap-2">
+        <div className="flex w-full items-center gap-2 sm:ml-auto sm:w-auto">
           <Select value={leadNuid} onValueChange={setLeadNuid}>
-            <SelectTrigger className="w-48">
+            <SelectTrigger className="min-w-0 flex-1 sm:w-48 sm:flex-none">
               <SelectValue placeholder="Select a lead…" />
             </SelectTrigger>
             <SelectContent>
@@ -259,7 +259,7 @@ export function AssignmentsClient() {
           )
           return (
             <section key={role}>
-              <div className="mb-3 flex items-center justify-between gap-3">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
                 <h2 className="text-text-default text-sm font-semibold">
                   {ROLE_LABEL[role]}{' '}
                   <span className="text-text-faint font-normal">
@@ -267,7 +267,7 @@ export function AssignmentsClient() {
                   </span>
                 </h2>
                 {isChief && gate && roleApps.length > 0 && (
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <span className="text-text-muted text-xs">
                       {gate.submitted_count}/{gate.assigned_count} reviews in
                     </span>
@@ -413,7 +413,7 @@ function AssignmentRow({
   onUnassign: (assignmentId: string) => void
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-gray-100 bg-white p-4">
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-gray-100 bg-white p-4">
       <input
         type="checkbox"
         className="accent-primary"
@@ -421,7 +421,9 @@ function AssignmentRow({
         onChange={onToggle}
         aria-label={`Select ${name}`}
       />
-      <span className="text-text-default text-sm font-medium">{name}</span>
+      <span className="text-text-default min-w-0 text-sm font-medium break-words">
+        {name}
+      </span>
       <span
         className={`inline-flex rounded-md px-2 py-0.5 text-xs font-medium ${ROLE_CHIP_CLASS[application.role]}`}
       >
@@ -441,7 +443,7 @@ function AssignmentRow({
               <button
                 type="button"
                 aria-label="Unassign"
-                className="hover:text-destructive"
+                className="hover:text-destructive -m-1 p-1"
                 onClick={() => onUnassign(a.id)}
               >
                 <X size={12} />

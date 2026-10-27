@@ -39,7 +39,7 @@ export default function RootPage() {
 
   if (isError && !isUnauthenticated) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-gray-50 px-4">
+      <div className="flex min-h-dvh flex-col items-center justify-center gap-6 bg-gray-50 px-4">
         <div className="flex w-full max-w-sm flex-col items-center gap-4 rounded-lg border border-gray-100 bg-white p-8 text-center shadow-sm">
           <h1 className="text-text-default text-lg font-semibold">
             Couldn&apos;t verify your sign-in
@@ -56,7 +56,7 @@ export default function RootPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-6 px-4">
+    <div className="flex min-h-dvh flex-col items-center justify-center gap-6 px-4">
       <div className="text-text-muted flex items-center gap-2 text-sm">
         <Loader2 className="animate-spin" size={16} />
         Loading…

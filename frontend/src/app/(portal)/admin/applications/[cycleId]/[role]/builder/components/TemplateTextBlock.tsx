@@ -47,7 +47,7 @@ export function TemplateTextBlock({
   }
 
   return (
-    <div className="rounded-xl border border-dashed border-gray-300 bg-white px-6 py-5">
+    <div className="rounded-xl border border-dashed border-gray-300 bg-white px-4 py-4 sm:px-6 sm:py-5">
       <p className="text-text-subtle mb-2 text-sm font-medium">{label}</p>
       <textarea
         value={text}

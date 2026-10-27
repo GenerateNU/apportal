@@ -49,7 +49,7 @@ export function TemplateDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>Rejection letters — {ROLE_LABEL[role]}</DialogTitle>
           <DialogDescription>
@@ -59,7 +59,7 @@ export function TemplateDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex gap-1.5">
+        <div className="flex flex-wrap gap-1.5">
           {KINDS.map((k) => (
             <Button
               key={k}

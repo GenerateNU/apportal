@@ -240,7 +240,7 @@ export function MyInterviewsClient() {
           {isChief && (
             <Select value={viewingNuid} onValueChange={setViewingNuid}>
               <SelectTrigger
-                className="w-48"
+                className="min-w-40 flex-1 sm:w-48 sm:flex-none"
                 aria-label="Viewing whose interviews"
               >
                 <SelectValue />
@@ -260,7 +260,10 @@ export function MyInterviewsClient() {
             value={activeRole}
             onValueChange={(val) => setActiveRole(val as Role | 'all')}
           >
-            <SelectTrigger className="w-48" aria-label="Filter by role">
+            <SelectTrigger
+              className="min-w-40 flex-1 sm:w-48 sm:flex-none"
+              aria-label="Filter by role"
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -274,7 +277,10 @@ export function MyInterviewsClient() {
           </Select>
 
           <Select value={cycleId} onValueChange={setCycleId}>
-            <SelectTrigger className="w-40" aria-label="Filter by cycle">
+            <SelectTrigger
+              className="min-w-40 flex-1 sm:w-40 sm:flex-none"
+              aria-label="Filter by cycle"
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -351,7 +357,7 @@ export function MyInterviewsClient() {
 
       {reviewingSections.length > 0 && (
         <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <h2 className="text-text-default text-sm font-semibold">
               Reviewing
             </h2>

@@ -176,7 +176,7 @@ export function DecisionsClient({ currentNUID }: { currentNUID: string }) {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search name, NUID, or email"
-          className="w-64"
+          className="w-full sm:w-64"
         />
       </div>
 

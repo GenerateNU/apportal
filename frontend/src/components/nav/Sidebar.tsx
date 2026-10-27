@@ -374,7 +374,7 @@ export default function Sidebar({
 
   return (
     <aside
-      className={`flex h-screen flex-col bg-gray-50 transition-[width] duration-200 ${collapsed ? 'w-16' : 'w-60'}`}
+      className={`flex h-dvh flex-col bg-gray-50 transition-[width] duration-200 ${collapsed ? 'w-16' : 'w-60'}`}
     >
       {/* Logo, with the rail toggle sharing the row. The collapsed rail is too
           narrow to fit both, so there the toggle stacks underneath. */}

@@ -140,6 +140,14 @@
   html {
     @apply font-sans;
   }
+  /* iOS Safari zooms the page on focusing any field under 16px. */
+  @media (pointer: coarse) {
+    input,
+    textarea,
+    select {
+      font-size: max(16px, 1em);
+    }
+  }
 }
 
 .dark {

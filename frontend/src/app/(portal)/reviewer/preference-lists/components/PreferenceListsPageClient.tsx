@@ -69,7 +69,7 @@ export function PreferenceListsPageClient({ isChief }: { isChief: boolean }) {
           </Select>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           {cycleId && (
             <Link
               href={`/reviewer/preference-lists/overview?cycle=${cycleId}`}
