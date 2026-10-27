@@ -1,6 +1,16 @@
 import { notFound } from 'next/navigation'
-import { PreferenceListDetailClient } from './components/PreferenceListDetailClient'
+import {
+  dehydrate,
+  HydrationBoundary,
+  QueryClient,
+} from '@tanstack/react-query'
+import { getPreferenceList } from '@/generated/preference-lists/preference-lists'
+import { getServerRequestOptions } from '@/lib/api/server-request-options'
+import type { PreferenceListDetail } from '@/lib/api/types'
 import { getServerCurrentUser } from '@/lib/auth/server-user'
+import { queryKeys } from '@/lib/queries/keys'
+import { prefetchUsersByRole } from '@/lib/queries/server-prefetch'
+import { PreferenceListDetailClient } from './components/PreferenceListDetailClient'
 
 // Auth-gated, live data fetched per request from the backend — never prerender
 // this at build time (the backend isn't running then).
@@ -25,8 +35,26 @@ export default async function PreferenceListDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const reviewer = await currentReviewer()
+  const queryClient = new QueryClient()
+  const requestOptions = await getServerRequestOptions()
+
+  // The rest of the page (applications, answers, deadlines) keys off this
+  // list's contents, so it loads client-side once the list is in hand.
+  const [reviewer] = await Promise.all([
+    currentReviewer(),
+    queryClient.prefetchQuery({
+      queryKey: queryKeys.preferenceLists.detail(id),
+      queryFn: () =>
+        getPreferenceList(id, requestOptions) as Promise<PreferenceListDetail>,
+    }),
+    prefetchUsersByRole(queryClient, 'lead', requestOptions),
+    prefetchUsersByRole(queryClient, 'chief', requestOptions),
+  ])
   if (!reviewer) notFound()
 
-  return <PreferenceListDetailClient id={id} isChief={reviewer.isChief} />
+  return (
+    <HydrationBoundary state={dehydrate(queryClient)}>
+      <PreferenceListDetailClient id={id} isChief={reviewer.isChief} />
+    </HydrationBoundary>
+  )
 }

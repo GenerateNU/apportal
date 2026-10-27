@@ -60,22 +60,27 @@ export function useDecisionTemplates(
 // One request for the batch rather than three per row (interview, then its
 // recording reviews, then the written ones) — a lead's queue loads its whole
 // context in a single round trip, so opening a row is instant.
+export async function fetchDecisionContext(
+  applicationIds: string[],
+  opts?: RequestOptions
+) {
+  const entries = ((await listDecisionContext(
+    { application_ids: applicationIds.join(',') },
+    opts
+  )) ?? []) as DecisionContext[]
+
+  const byApplicationId: Record<string, DecisionContext> = {}
+  for (const entry of entries) byApplicationId[entry.application_id] = entry
+  return byApplicationId
+}
+
 export function useDecisionContext(
   applicationIds: string[],
   opts?: RequestOptions
 ) {
   return useQuery({
     queryKey: queryKeys.decisions.context(applicationIds),
-    queryFn: async () => {
-      const entries = ((await listDecisionContext(
-        { application_ids: applicationIds.join(',') },
-        opts
-      )) ?? []) as DecisionContext[]
-
-      const byApplicationId: Record<string, DecisionContext> = {}
-      for (const entry of entries) byApplicationId[entry.application_id] = entry
-      return byApplicationId
-    },
+    queryFn: () => fetchDecisionContext(applicationIds, opts),
     enabled: applicationIds.length > 0,
   })
 }

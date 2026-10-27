@@ -1,4 +1,11 @@
 import { notFound } from 'next/navigation'
+import {
+  dehydrate,
+  HydrationBoundary,
+  QueryClient,
+} from '@tanstack/react-query'
+import { getServerRequestOptions } from '@/lib/api/server-request-options'
+import { prefetchInterviewScript } from '@/lib/queries/server-prefetch'
 import { InterviewScriptEditClient } from './components/InterviewScriptEditClient'
 import { getServerCurrentUser } from '@/lib/auth/server-user'
 
@@ -22,8 +29,24 @@ async function isChief(): Promise<boolean> {
   }
 }
 
-export default async function InterviewScriptEditPage() {
-  if (!(await isChief())) notFound()
+export default async function InterviewScriptEditPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ cycle?: string; role?: string }>
+}) {
+  const queryClient = new QueryClient()
+  const requestOptions = await getServerRequestOptions()
+  const [chief] = await Promise.all([
+    isChief(),
+    searchParams.then((sp) =>
+      prefetchInterviewScript(queryClient, sp, requestOptions)
+    ),
+  ])
+  if (!chief) notFound()
 
-  return <InterviewScriptEditClient />
+  return (
+    <HydrationBoundary state={dehydrate(queryClient)}>
+      <InterviewScriptEditClient />
+    </HydrationBoundary>
+  )
 }
