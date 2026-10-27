@@ -5,8 +5,8 @@ import ForgotPasswordForm from './ForgotPasswordForm'
 
 export default function ForgotPasswordPage() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-gray-50 px-4">
-      <div className="flex w-full max-w-sm flex-col gap-6 rounded-lg border border-gray-100 bg-white p-8 shadow-sm">
+    <div className="flex min-h-dvh flex-col items-center justify-center gap-6 bg-gray-50 px-4 py-8">
+      <div className="flex w-full max-w-sm flex-col gap-6 rounded-lg border border-gray-100 bg-white p-6 shadow-sm sm:p-8">
         <div className="flex flex-col items-center gap-2">
           <Image
             src="/GenerateNU Logo.png"

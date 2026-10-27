@@ -583,7 +583,7 @@ export function ChiefReviewQueueClient() {
                     return (
                       <div
                         key={application.id}
-                        className={`flex items-center justify-between gap-4 rounded-xl border p-4 transition-colors hover:bg-gray-50 ${
+                        className={`flex flex-col gap-3 rounded-xl border p-4 transition-colors hover:bg-gray-50 sm:flex-row sm:items-center sm:justify-between sm:gap-4 ${
                           highlightUnanimous === 'strong_interview'
                             ? 'border-status-open bg-status-open/5'
                             : highlightUnanimous === 'strong_no_interview'
@@ -591,7 +591,7 @@ export function ChiefReviewQueueClient() {
                               : 'border-gray-100 bg-white'
                         }`}
                       >
-                        <div className="flex items-center gap-3">
+                        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1.5">
                           <span className="text-text-default text-sm font-medium">
                             {application.full_name || application.user_nuid}
                           </span>
@@ -694,7 +694,7 @@ export function ChiefReviewQueueClient() {
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex shrink-0 flex-wrap items-center gap-2">
                           {submitted && ownVote && (
                             <span
                               className={`rounded-md px-2 py-0.5 text-xs font-medium ${CHIEF_VOTE_BADGE_CLASS[ownVote]}`}

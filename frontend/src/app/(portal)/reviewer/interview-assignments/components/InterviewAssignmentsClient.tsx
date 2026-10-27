@@ -244,12 +244,12 @@ export function InterviewAssignmentsClient() {
             {reviewerFailures === 1 ? '' : 's'} failed
           </span>
         )}
-        <div className="ml-auto flex flex-wrap items-center gap-2">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:ml-auto sm:w-auto">
           <Select
             value={bulkInterviewerNuid}
             onValueChange={setBulkInterviewerNuid}
           >
-            <SelectTrigger className="w-48">
+            <SelectTrigger className="w-full sm:w-48">
               <SelectValue placeholder="Select an interviewer…" />
             </SelectTrigger>
             <SelectContent>
@@ -279,7 +279,7 @@ export function InterviewAssignmentsClient() {
             )}
           </Button>
           <Select value={bulkReviewerNuid} onValueChange={setBulkReviewerNuid}>
-            <SelectTrigger className="w-48">
+            <SelectTrigger className="w-full sm:w-48">
               <SelectValue placeholder="Select a reviewer…" />
             </SelectTrigger>
             <SelectContent>
@@ -329,14 +329,14 @@ export function InterviewAssignmentsClient() {
           )
           return (
             <section key={role}>
-              <div className="mb-3 flex items-center justify-between gap-3">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
                 <h2 className="text-text-default text-sm font-semibold">
                   {ROLE_LABEL[role]}{' '}
                   <span className="text-text-faint font-normal">
                     ({roleApps.length})
                   </span>
                 </h2>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   {roleHasInterviewers && (
                     <Button
                       size="sm"
@@ -488,7 +488,7 @@ function InterviewAssignmentRow({
       <div className="flex min-w-0 items-center gap-2 sm:w-56 sm:shrink-0">
         <input
           type="checkbox"
-          className="accent-primary"
+          className="accent-primary size-4 shrink-0"
           checked={selected}
           onChange={onToggleSelected}
           aria-label={`Select ${name}`}
@@ -540,7 +540,7 @@ function InterviewAssignmentRow({
             <button
               type="button"
               aria-label="Unassign"
-              className="hover:text-destructive"
+              className="hover:text-destructive -m-1 p-1"
               onClick={() => onUnassignReviewer(r.id)}
             >
               <X size={12} />

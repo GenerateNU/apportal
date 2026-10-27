@@ -11,7 +11,7 @@ export default function GlobalError({
 }) {
   return (
     <html lang="en">
-      <body className="flex min-h-screen items-center justify-center bg-gray-50 px-4 font-sans antialiased">
+      <body className="flex min-h-dvh items-center justify-center bg-gray-50 px-4 font-sans antialiased">
         <div className="flex w-full max-w-sm flex-col items-center gap-4 rounded-lg border border-gray-100 bg-white p-8 text-center shadow-sm">
           <title>Something went wrong</title>
           <h1 className="text-lg font-semibold text-[#111111]">
@@ -21,7 +21,7 @@ export default function GlobalError({
             The application ran into an unexpected error. Please try again.
           </p>
           {error.digest && (
-            <p className="font-mono text-xs text-[#9ca3af]">
+            <p className="font-mono text-xs break-all text-[#9ca3af]">
               Reference: {error.digest}
             </p>
           )}

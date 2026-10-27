@@ -122,7 +122,7 @@ function ReviewerQueue({ lead }: { lead: PlannedReviewer }) {
   const applications = lead.applications ?? []
   return (
     <div className="flex flex-col gap-2 rounded-xl border border-gray-100 bg-white p-4">
-      <div className="flex items-baseline justify-between gap-2">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-2">
         <span className="text-text-default text-sm font-medium">
           {lead.full_name || lead.lead_nuid}
         </span>

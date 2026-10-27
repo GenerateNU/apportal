@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
+  ArrowDown,
   ArrowLeft,
   ArrowRight,
   Check,
@@ -67,7 +68,7 @@ import { ResponseField } from '@/app/(portal)/reviewer/applications/components/R
 import { InterviewScriptContent } from '@/app/(portal)/reviewer/interview-script/components/InterviewScriptContent'
 
 const TEXTAREA_CLASS =
-  'border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 min-h-28 w-full rounded-lg border bg-transparent px-3.5 py-2.5 text-base transition-all outline-none focus-visible:ring-3 hover:border-gray-300 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 resize-none'
+  'border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 min-h-40 lg:min-h-28 w-full rounded-lg border bg-transparent px-3.5 py-2.5 text-base transition-all outline-none focus-visible:ring-3 hover:border-gray-300 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 resize-none'
 
 // Which list page linked into this interview — carried through the `from`
 // query param so "Back" (and paging via Previous/Next) returns wherever the
@@ -286,7 +287,7 @@ export function InterviewConductClient({
     <div className="flex min-h-full flex-col lg:h-full">
       {/* Top bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 bg-white px-4 py-3 sm:px-8">
-        <div className="flex items-center gap-4">
+        <div className="flex min-w-0 flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-4">
           <Link
             href={backLink.href}
             className="text-text-muted hover:text-text-default inline-flex items-center gap-1 text-sm"
@@ -294,8 +295,8 @@ export function InterviewConductClient({
             <ArrowLeft size={14} />
             {backLink.label}
           </Link>
-          <div className="flex items-center gap-3 border-l border-gray-200 pl-4">
-            <h1 className="text-text-default text-lg font-semibold">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 sm:border-l sm:border-gray-200 sm:pl-4">
+            <h1 className="text-text-default min-w-0 text-lg font-semibold break-words">
               {applicant?.full_name ?? 'Applicant'}
             </h1>
             <span
@@ -317,7 +318,21 @@ export function InterviewConductClient({
             )}
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Stacked on phones, the write-up sits below the whole application. */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="lg:hidden"
+            onClick={() =>
+              document
+                .getElementById('interview-writeup')
+                ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            }
+          >
+            <ArrowDown data-icon="inline-start" size={14} />
+            Write-up
+          </Button>
           {interviewSubmitted && (
             <span
               className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium ${REVIEW_STATE_BADGE.submitted}`}
@@ -435,7 +450,7 @@ export function InterviewConductClient({
                             <p className="text-text-muted text-xs font-medium">
                               {q.question_text}
                             </p>
-                            <p className="text-text-default text-sm whitespace-pre-wrap">
+                            <p className="text-text-default text-sm break-words whitespace-pre-wrap">
                               {display}
                             </p>
                           </div>
@@ -452,7 +467,10 @@ export function InterviewConductClient({
         {/* Interview + recording reviews */}
         <div className="flex flex-col gap-6 px-4 py-4 sm:px-8 sm:py-6 lg:overflow-y-auto">
           {/* Interview write-up */}
-          <div className="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+          <div
+            id="interview-writeup"
+            className="flex scroll-mt-4 flex-col gap-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm"
+          >
             <h2 className="text-text-faint text-xs font-semibold tracking-wide uppercase">
               Interview
             </h2>
@@ -505,7 +523,7 @@ export function InterviewConductClient({
                     href={interview.recording_url}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-brand-blue inline-flex items-center gap-1 text-sm hover:underline"
+                    className="text-brand-blue inline-flex items-center gap-1 text-sm break-all hover:underline"
                   >
                     {interview.recording_url}
                     <ExternalLink size={12} />
@@ -542,7 +560,7 @@ export function InterviewConductClient({
                     href={interview.notes_url}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-brand-blue inline-flex items-center gap-1 text-sm hover:underline"
+                    className="text-brand-blue inline-flex items-center gap-1 text-sm break-all hover:underline"
                   >
                     {interview.notes_url}
                     <ExternalLink size={12} />
@@ -761,7 +779,7 @@ export function InterviewConductClient({
                           <span className="text-text-muted text-xs">
                             {nameFor(r.reviewer_nuid)}
                           </span>
-                          <p className="text-text-default mt-2 text-sm whitespace-pre-wrap">
+                          <p className="text-text-default mt-2 text-sm break-words whitespace-pre-wrap">
                             {r.comments ?? (
                               <span className="text-text-faint">
                                 Hidden until released.
@@ -825,7 +843,7 @@ export function InterviewConductClient({
                       </div>
                     ) : (
                       <div className="flex items-start justify-between gap-3">
-                        <div>
+                        <div className="min-w-0 break-words">
                           <p className="text-text-muted text-xs">
                             {c.author_name || c.author_nuid}
                           </p>
@@ -841,7 +859,7 @@ export function InterviewConductClient({
                           <button
                             type="button"
                             onClick={() => startEditingComment(c)}
-                            className="text-text-faint hover:text-text-muted shrink-0"
+                            className="text-text-faint hover:text-text-muted -m-2 shrink-0 p-2"
                             aria-label="Edit comment"
                           >
                             <Pencil size={14} />

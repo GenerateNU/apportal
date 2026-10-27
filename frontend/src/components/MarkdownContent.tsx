@@ -13,7 +13,9 @@ export function MarkdownContent({
   className?: string
 }) {
   return (
-    <div className={cn('flex flex-col gap-3', className)}>
+    <div
+      className={cn('flex flex-col gap-3 [overflow-wrap:anywhere]', className)}
+    >
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
@@ -52,6 +54,11 @@ export function MarkdownContent({
             <code className="rounded bg-gray-100 px-1 py-0.5 text-xs">
               {children}
             </code>
+          ),
+          table: ({ children }) => (
+            <div className="overflow-x-auto">
+              <table className="text-sm">{children}</table>
+            </div>
           ),
           pre: ({ children }) => (
             <pre className="overflow-x-auto">{children}</pre>

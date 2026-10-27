@@ -50,7 +50,7 @@ export function ApplicantRow({
           </div>
         </div>
 
-        <span className="text-text-secondary text-sm">
+        <span className="text-text-secondary hidden text-sm sm:block">
           {formatDate(user.created_at)}
         </span>
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, ArrowRight, Loader2 } from 'lucide-react'
+import { ArrowLeft, ArrowRight, ChevronDown, Loader2 } from 'lucide-react'
 import { HelpContact } from '@/components/HelpContact'
 import { MarkdownContent } from '@/components/MarkdownContent'
 import { Button } from '@/components/ui/button'
@@ -60,7 +60,7 @@ function apiErrorDetail(err: unknown): string {
 
 function Loading() {
   return (
-    <div className="text-text-muted flex items-center gap-2 px-8 py-10 text-sm">
+    <div className="text-text-muted flex items-center gap-2 px-4 py-10 text-sm sm:px-8">
       <Loader2 className="animate-spin" size={16} />
       Loading…
     </div>
@@ -83,7 +83,7 @@ export function NewApplicationForm({
 
   if (!currentUser) {
     return (
-      <div className="mx-auto w-full max-w-2xl px-8 py-10">
+      <div className="mx-auto w-full max-w-2xl px-4 py-10 sm:px-8">
         <p className="text-text-muted text-sm">Sign in to apply.</p>
       </div>
     )
@@ -277,6 +277,7 @@ function Form({
   // this only flips once it actually rejects a save/submit with a 403.
   const deadlineClosed = deadlineRejected
   const pendingScrollRef = useRef<string | null>(null)
+  const mobileOutlineRef = useRef<HTMLDetailsElement>(null)
 
   const pages = useMemo(() => groupQuestionsIntoPages(questions), [questions])
   const lastPage = Math.max(pages.length - 1, 0)
@@ -565,6 +566,7 @@ function Form({
 
   function handleOutlineNavigate(targetPage: number, questionId: string) {
     setSelectedQuestionId(questionId)
+    if (mobileOutlineRef.current) mobileOutlineRef.current.open = false
     if (targetPage === pageIndex) {
       const element = document.getElementById(`question-${questionId}`)
       if (element) {
@@ -647,7 +649,7 @@ function Form({
           <h1 className="text-text-default text-2xl font-semibold">
             {ROLE_LABEL[role]}
           </h1>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             {saveStatus === 'saving' && (
               <span className="text-text-subtle text-xs">Saving…</span>
             )}
@@ -695,6 +697,28 @@ function Form({
         </p>
       )}
 
+      {pages.length > 1 && (
+        <details
+          ref={mobileOutlineRef}
+          className="group mb-6 rounded-lg border border-gray-200 bg-white lg:hidden"
+        >
+          <summary className="text-text-default flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-medium [&::-webkit-details-marker]:hidden">
+            Jump to a question
+            <ChevronDown
+              size={16}
+              className="transition-transform group-open:rotate-180"
+            />
+          </summary>
+          <div className="max-h-[60dvh] overflow-y-auto border-t border-gray-100 px-1 py-3">
+            <QuestionOutline
+              pages={pages}
+              selectedQuestionId={selectedQuestionId}
+              onNavigate={handleOutlineNavigate}
+            />
+          </div>
+        </details>
+      )}
+
       <div className="grid grid-cols-1 items-start gap-12 lg:grid-cols-[280px_1fr]">
         <aside className="hidden lg:sticky lg:top-20 lg:block lg:max-h-[calc(100vh-80px)] lg:overflow-y-auto">
           <QuestionOutline
@@ -733,21 +757,23 @@ function Form({
             </MarkdownContent>
           )}
 
-          <div className="mt-8 flex items-center justify-end gap-3 border-t border-gray-100 pt-6">
+          <div className="mt-8 flex flex-wrap items-center justify-end gap-3 border-t border-gray-100 pt-6 sm:flex-nowrap">
             {pageIndex === lastPage
               ? missingRequired && (
-                  <p className="text-text-muted mr-auto text-xs">
+                  <p className="text-text-muted w-full text-xs sm:mr-auto sm:w-auto">
                     Answer all required questions (*) before submitting.
                   </p>
                 )
               : currentPageMissingRequired && (
-                  <p className="text-text-muted mr-auto text-xs">
+                  <p className="text-text-muted w-full text-xs sm:mr-auto sm:w-auto">
                     Answer all required questions (*) on this page before
                     continuing.
                   </p>
                 )}
             {submitError && (
-              <p className="text-destructive mr-auto text-xs">{submitError}</p>
+              <p className="text-destructive w-full text-xs sm:mr-auto sm:w-auto">
+                {submitError}
+              </p>
             )}
             {pageIndex > 0 && (
               <Button variant="outline" onClick={handlePrevPage}>

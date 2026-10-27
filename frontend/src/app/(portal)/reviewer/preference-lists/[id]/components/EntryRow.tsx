@@ -111,7 +111,7 @@ export function EntryRow({
             <button
               type="button"
               aria-label={`Reorder ${entry.full_name}`}
-              className="text-text-faint hover:text-text-muted cursor-grab touch-none active:cursor-grabbing"
+              className="text-text-faint hover:text-text-muted cursor-grab touch-none active:cursor-grabbing pointer-coarse:-m-2 pointer-coarse:p-2"
               {...attributes}
               {...listeners}
             >
@@ -127,7 +127,7 @@ export function EntryRow({
           onClick={() => setExpanded((v) => !v)}
           aria-expanded={expanded}
           aria-label={`${expanded ? 'Hide' : 'Show'} reasoning and comments for ${entry.full_name}`}
-          className="text-text-faint hover:text-text-muted -m-1 shrink-0 p-1"
+          className="text-text-faint hover:text-text-muted -m-1 shrink-0 p-1 pointer-coarse:-m-2 pointer-coarse:p-2"
         >
           {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
         </button>
@@ -189,7 +189,7 @@ export function EntryRow({
             type="button"
             onClick={onRemove}
             aria-label={`Remove ${entry.full_name}`}
-            className="text-text-faint hover:text-destructive shrink-0 border-l border-gray-100 pl-3"
+            className="text-text-faint hover:text-destructive shrink-0 border-l border-gray-100 pl-3 pointer-coarse:-my-2 pointer-coarse:py-2"
           >
             <X size={14} />
           </button>
@@ -197,7 +197,7 @@ export function EntryRow({
       </div>
 
       {expanded && (
-        <div className="flex flex-col gap-1.5 pl-7">
+        <div className="flex flex-col gap-1.5 sm:pl-7">
           <p className="text-text-subtle text-xs">{entry.email}</p>
           <div className="flex items-center justify-between gap-2">
             <Label className="text-xs" htmlFor={`reasoning-${entry.id}`}>

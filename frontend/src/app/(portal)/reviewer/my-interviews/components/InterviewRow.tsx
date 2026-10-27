@@ -125,7 +125,7 @@ export function InterviewRow({
             type="button"
             onClick={copyEmail}
             title={`Copy ${email}`}
-            className="rounded p-1 hover:bg-gray-100"
+            className="rounded p-2 hover:bg-gray-100 sm:p-1"
           >
             {copied ? (
               <Check className="h-4 w-4 text-green-600" />

@@ -27,14 +27,14 @@ export function CyclesClient() {
 
   return (
     <PageContainer>
-      <div className="flex items-start justify-between">
-        <div>
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
           <h1 className="text-text-default text-2xl font-semibold">Cycles</h1>
           <p className="text-text-muted mt-1 text-sm">
             Create recruiting cycles and open or close them for applicants.
           </p>
         </div>
-        <Button onClick={() => setShowCreate(true)}>
+        <Button className="shrink-0" onClick={() => setShowCreate(true)}>
           <Plus className="h-4 w-4" />
           New cycle
         </Button>

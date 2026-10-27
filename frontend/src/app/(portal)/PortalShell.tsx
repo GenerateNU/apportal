@@ -42,7 +42,7 @@ export function PortalShell({
   }
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden lg:flex-row lg:bg-gray-50 lg:pt-4 lg:pl-4">
+    <div className="flex h-dvh flex-col overflow-hidden lg:flex-row lg:bg-gray-50 lg:pt-4 lg:pl-4">
       <header className="flex h-14 shrink-0 items-center gap-3 border-b border-gray-100 px-4 lg:hidden">
         <button
           type="button"

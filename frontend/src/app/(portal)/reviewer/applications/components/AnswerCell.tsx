@@ -52,7 +52,9 @@ export function AnswerCell({
         applicationId={answer.application_id}
         questionId={answer.question_id}
         fileName={answer.answer_file_name}
-        className={truncate ? 'max-w-96 text-xs' : 'max-w-96 text-base'}
+        className={
+          truncate ? 'max-w-96 text-xs' : 'max-w-full text-base sm:max-w-96'
+        }
       />
     )
   }
@@ -63,8 +65,8 @@ export function AnswerCell({
         href={answer.answer_text}
         target="_blank"
         rel="noopener noreferrer"
-        className={`text-text-muted hover:text-text-default inline-flex max-w-96 items-center gap-1 truncate transition-colors ${
-          truncate ? 'text-xs' : 'text-base'
+        className={`text-text-muted hover:text-text-default inline-flex items-center gap-1 truncate transition-colors ${
+          truncate ? 'max-w-96 text-xs' : 'max-w-full text-base sm:max-w-96'
         }`}
         title={answer.answer_text}
       >

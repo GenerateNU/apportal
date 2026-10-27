@@ -88,6 +88,8 @@ export default function SignupForm() {
           id="nuid"
           name="nuid"
           type="text"
+          inputMode="numeric"
+          autoComplete="off"
           required
           value={nuid}
           onChange={(event) => setNuid(event.target.value)}

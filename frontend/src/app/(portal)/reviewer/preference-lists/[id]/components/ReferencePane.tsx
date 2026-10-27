@@ -104,7 +104,7 @@ export function ReferencePane({
                       type="button"
                       onClick={() => onAdd(entry.application_id)}
                       aria-label={`Add ${entry.full_name} to the list you're editing`}
-                      className="text-brand-blue hover:text-brand-blue/80 inline-flex shrink-0 items-center gap-0.5 text-xs"
+                      className="text-brand-blue hover:text-brand-blue/80 inline-flex shrink-0 items-center gap-0.5 text-xs pointer-coarse:-my-2 pointer-coarse:py-2"
                     >
                       <Plus size={12} />
                       Add

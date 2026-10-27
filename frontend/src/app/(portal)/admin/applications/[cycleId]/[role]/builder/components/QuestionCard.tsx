@@ -216,7 +216,7 @@ export function QuestionCard({
           <GripVertical className="h-5 w-5" />
         </button>
 
-        <div className="flex flex-1 flex-col gap-3">
+        <div className="flex min-w-0 flex-1 flex-col gap-3">
           <input
             value={text}
             onChange={(event) => setText(event.target.value)}
@@ -238,7 +238,7 @@ export function QuestionCard({
           )}
 
           {canHavePageBreak && (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <label className="text-text-subtle flex items-center gap-1.5 text-sm">
                 <input
                   type="checkbox"
@@ -255,7 +255,7 @@ export function QuestionCard({
                   onChange={(event) => setPageTitleDraft(event.target.value)}
                   onBlur={commitPageTitle}
                   placeholder="Page title"
-                  className="text-text-secondary rounded-md border border-transparent px-1.5 py-0.5 text-sm outline-none hover:border-gray-200 focus:border-gray-300"
+                  className="text-text-secondary min-w-0 rounded-md border border-transparent px-1.5 py-0.5 text-sm outline-none hover:border-gray-200 focus:border-gray-300"
                 />
               )}
             </div>
@@ -318,7 +318,7 @@ export function QuestionCard({
           )}
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-4">
           {confirmingDelete && hasPageBreak && (
             <span className="max-w-xs text-xs text-red-600">
               This question starts a page (&quot;{question.page_title}&quot;) —

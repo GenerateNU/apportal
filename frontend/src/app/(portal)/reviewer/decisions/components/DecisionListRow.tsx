@@ -54,6 +54,16 @@ export function DecisionListRow({
             )}
           </div>
           <p className="text-text-faint truncate text-xs">{row.email}</p>
+          {/* Narrow screens drop the kind and interviewer columns; keep them here. */}
+          <p className="text-text-muted truncate text-xs lg:hidden">
+            <span className="md:hidden">{KIND_LABEL[row.kind]}</span>
+            {row.kind === 'rejection_post_interview' && (
+              <>
+                <span className="md:hidden"> · </span>
+                {row.interviewer_name ?? 'No interviewer'}
+              </>
+            )}
+          </p>
         </div>
 
         <span

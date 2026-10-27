@@ -212,11 +212,11 @@ export function ReviewerPlanPanel({
                       onChange={() => toggleExcluded(applicant.application_id)}
                     />
                     <span
-                      className={`text-sm ${excluded ? 'text-text-faint line-through' : 'text-text-default'}`}
+                      className={`min-w-0 truncate text-sm ${excluded ? 'text-text-faint line-through' : 'text-text-default'}`}
                     >
                       {applicant.full_name}
                     </span>
-                    <span className="text-text-faint text-xs">
+                    <span className="text-text-faint min-w-0 truncate text-xs">
                       {applicant.email}
                     </span>
                   </label>
