@@ -1,8 +1,7 @@
 import { notFound } from 'next/navigation'
-import { getCurrentUser } from '@/generated/users/users'
-import { getServerRequestOptions } from '@/lib/api/server-request-options'
 import { DecisionQueueClient } from './components/DecisionQueueClient'
 import { DecisionsClient } from './components/DecisionsClient'
+import { getServerCurrentUser } from '@/lib/auth/server-user'
 
 // Auth-gated, live data fetched per request from the backend — never prerender
 // this at build time (the backend isn't running then).
@@ -15,7 +14,7 @@ export const dynamic = 'force-dynamic'
 // interviewees, and the template routes call requireChief.
 async function currentReviewer() {
   try {
-    const user = await getCurrentUser(await getServerRequestOptions())
+    const user = await getServerCurrentUser()
     const roles = user.roles ?? []
     if (!roles.some((r) => r === 'lead' || r === 'chief' || r === 'admin')) {
       return null

@@ -1,8 +1,7 @@
 import { notFound } from 'next/navigation'
 import { PageContainer } from '@/components/PageContainer'
-import { getCurrentUser } from '@/generated/users/users'
-import { getServerRequestOptions } from '@/lib/api/server-request-options'
 import { PreferenceListsOverviewClient } from './components/PreferenceListsOverviewClient'
+import { getServerCurrentUser } from '@/lib/auth/server-user'
 
 // Auth-gated, live data fetched per request from the backend — never prerender
 // this at build time (the backend isn't running then).
@@ -13,7 +12,7 @@ export const dynamic = 'force-dynamic'
 // personal lists and in-group comments, which this board never rendered.
 async function isReviewer(): Promise<boolean> {
   try {
-    await getCurrentUser(await getServerRequestOptions())
+    await getServerCurrentUser()
     return true
   } catch {
     return false

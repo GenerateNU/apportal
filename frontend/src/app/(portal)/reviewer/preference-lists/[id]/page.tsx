@@ -1,7 +1,6 @@
 import { notFound } from 'next/navigation'
-import { getCurrentUser } from '@/generated/users/users'
-import { getServerRequestOptions } from '@/lib/api/server-request-options'
 import { PreferenceListDetailClient } from './components/PreferenceListDetailClient'
+import { getServerCurrentUser } from '@/lib/auth/server-user'
 
 // Auth-gated, live data fetched per request from the backend — never prerender
 // this at build time (the backend isn't running then).
@@ -9,7 +8,7 @@ export const dynamic = 'force-dynamic'
 
 async function currentReviewer(): Promise<{ isChief: boolean } | null> {
   try {
-    const user = await getCurrentUser(await getServerRequestOptions())
+    const user = await getServerCurrentUser()
     return {
       isChief: (user.roles ?? []).some(
         (role) => role === 'chief' || role === 'admin'
