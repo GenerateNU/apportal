@@ -103,6 +103,9 @@ func (h *userHandler) create(ctx context.Context, in *CreateUserInput) (*UserOut
 			return nil, huma.Error422UnprocessableEntity("invalid role")
 		}
 	}
+	if err := requireNortheasternEmail(in.Body.Email); err != nil {
+		return nil, err
+	}
 
 	user, err := h.store.CreateUser(ctx, store.UserCreate{
 		NUID:           in.Body.NUID,
@@ -207,6 +210,9 @@ func (h *userHandler) update(ctx context.Context, in *UpdateUserInput) (*UserOut
 
 	normalizedEmail := in.Body.Email
 	if normalizedEmail != nil {
+		if err := requireNortheasternEmail(*normalizedEmail); err != nil {
+			return nil, err
+		}
 		lowercasedEmail := strings.ToLower(*normalizedEmail)
 		normalizedEmail = &lowercasedEmail
 	}

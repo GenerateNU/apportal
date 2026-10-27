@@ -26,6 +26,11 @@ export default function SignupForm() {
       return
     }
 
+    if (!email.trim().toLowerCase().endsWith('@northeastern.edu')) {
+      setError('Use your @northeastern.edu email')
+      return
+    }
+
     setIsSubmitting(true)
 
     const supabase = createClient()
@@ -110,6 +115,7 @@ export default function SignupForm() {
           type="email"
           required
           autoComplete="email"
+          placeholder="you@northeastern.edu"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           className="text-text-default focus:border-brand-blue focus:ring-brand-blue rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-1"
