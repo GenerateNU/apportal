@@ -32,7 +32,7 @@ export function ApplicationDetail({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex shrink-0 items-center justify-between py-2 pr-6 pl-2">
+        <div className="flex shrink-0 items-center justify-between py-2 pr-4 pl-2 sm:pr-6">
           <button
             type="button"
             onClick={onClose}
@@ -43,7 +43,7 @@ export function ApplicationDetail({
           </button>
           <Link
             href={`/reviewer/applications/${applicant.id}`}
-            className="text-text-muted hover:text-text-default inline-flex items-center gap-1 text-sm transition-colors"
+            className="text-text-muted hover:text-text-default inline-flex items-center gap-1 py-1.5 text-sm transition-colors"
           >
             <Maximize2 className="h-3 w-3" />
             Open full page
@@ -52,7 +52,7 @@ export function ApplicationDetail({
 
         {/* Content */}
         <div className="min-h-0 flex-1 overflow-y-auto">
-          <div className="px-6 py-6">
+          <div className="px-4 py-6 sm:px-6">
             <ApplicantOverview
               applicationId={applicant.id}
               cycleId={applicant.cycleId}

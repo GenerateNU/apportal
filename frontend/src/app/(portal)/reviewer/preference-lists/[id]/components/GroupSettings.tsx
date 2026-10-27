@@ -64,14 +64,14 @@ export function GroupSettings({
         type="button"
         onClick={onToggle}
         aria-expanded={open}
-        className="flex w-full items-center gap-2 px-5 py-3 text-left"
+        className="flex w-full items-center gap-2 px-4 py-3 text-left sm:px-5"
       >
         {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
         <span className="text-text-faint text-xs font-semibold tracking-wide uppercase">
           Group settings
         </span>
         {!open && (
-          <span className="text-text-subtle truncate text-xs">
+          <span className="text-text-subtle min-w-0 truncate text-xs">
             {meetingDay
               ? `Meets ${MEETING_DAY_LABEL[meetingDay]}`
               : 'No meeting day'}
@@ -83,7 +83,7 @@ export function GroupSettings({
       </button>
 
       {open && (
-        <div className="flex flex-col gap-5 border-t border-gray-100 px-5 py-4">
+        <div className="flex flex-col gap-5 border-t border-gray-100 px-4 py-4 sm:px-5">
           <div className="flex flex-wrap items-center gap-2 text-sm">
             <span className="text-text-muted font-medium">Meeting day:</span>
             <Select
@@ -165,7 +165,7 @@ export function GroupSettings({
                       type="button"
                       onClick={() => onRemoveMember(m.id)}
                       aria-label={`Remove ${nameByNuid.get(m.lead_nuid) ?? m.lead_nuid}`}
-                      className="text-text-faint hover:text-text-muted"
+                      className="text-text-faint hover:text-text-muted pointer-coarse:-m-1.5 pointer-coarse:p-1.5"
                     >
                       <X size={12} />
                     </button>
@@ -183,7 +183,7 @@ export function GroupSettings({
                 placeholder="Add a member…"
                 searchPlaceholder="Search leads…"
                 emptyText="No matching leads."
-                className="w-64"
+                className="w-full sm:w-64"
                 ariaLabel="Add a member"
               />
             )}

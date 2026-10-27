@@ -119,7 +119,7 @@ export function AddMemberDialog({
                     type="button"
                     onClick={() => toggleUser(u)}
                     aria-label={`Remove ${u.full_name}`}
-                    className="hover:text-text-default"
+                    className="hover:text-text-default -m-1 p-1"
                   >
                     <X className="h-3 w-3" />
                   </button>
@@ -196,7 +196,7 @@ export function AddMemberDialog({
                       type="button"
                       onClick={() => toggleUser(u)}
                       aria-label={`Remove ${u.full_name}`}
-                      className="hover:text-text-default"
+                      className="hover:text-text-default -m-1 p-1"
                     >
                       <X className="h-3 w-3" />
                     </button>

@@ -48,13 +48,13 @@ export function DraftBoardGrid({
         <table className="w-full min-w-max border-collapse">
           <thead>
             <tr>
-              <th className="text-text-muted w-20 border-r border-b border-gray-100 bg-gray-50 px-4 py-3 text-left text-xs font-medium">
+              <th className="text-text-muted w-14 border-r border-b border-gray-100 bg-gray-50 px-4 py-3 text-left text-xs font-medium sm:w-20">
                 Round
               </th>
               {teams.map((team) => (
                 <th
                   key={team.id}
-                  className="min-w-56 border-r border-b border-gray-100 bg-gray-50 px-4 py-3 text-left last:border-r-0"
+                  className="min-w-44 border-r border-b border-gray-100 bg-gray-50 px-4 py-3 text-left last:border-r-0 sm:min-w-56"
                 >
                   <span className="text-text-default block text-sm font-semibold">
                     {team.name}
@@ -74,7 +74,7 @@ export function DraftBoardGrid({
                 key={round}
                 className="border-b border-gray-100 last:border-b-0"
               >
-                <td className="text-text-subtle border-r border-gray-100 px-4 py-3 align-top text-xs">
+                <td className="text-text-subtle border-r border-gray-100 px-3 py-3 align-top text-xs sm:px-4">
                   <span className="inline-flex items-center gap-1 font-medium">
                     {round}
                     {round % 2 === 1 ? (
@@ -122,13 +122,14 @@ export function DraftBoardGrid({
                               </span>
                             </div>
                             {canEdit && (
-                              <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                              <div className="flex shrink-0 items-center gap-1 transition-opacity [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-focus-within:opacity-100 [@media(hover:hover)]:group-hover:opacity-100">
+                                {/* Hover-reveal only where hover exists; touch has no other way to see these. */}
                                 <button
                                   type="button"
                                   onClick={() => onChangePick(slot)}
                                   aria-label={`Change pick ${slot}`}
                                   title="Change this pick"
-                                  className="text-text-subtle hover:text-brand-blue rounded p-0.5 transition-colors"
+                                  className="text-text-subtle hover:text-brand-blue rounded p-0.5 transition-colors pointer-coarse:p-2"
                                 >
                                   <Pencil size={12} />
                                 </button>
@@ -138,7 +139,7 @@ export function DraftBoardGrid({
                                   disabled={removingPick === slot}
                                   aria-label={`Undo pick ${slot}`}
                                   title="Undo this pick"
-                                  className="text-text-subtle hover:text-destructive rounded p-0.5 transition-colors disabled:opacity-40"
+                                  className="text-text-subtle hover:text-destructive rounded p-0.5 transition-colors disabled:opacity-40 pointer-coarse:p-2"
                                 >
                                   <X size={13} />
                                 </button>

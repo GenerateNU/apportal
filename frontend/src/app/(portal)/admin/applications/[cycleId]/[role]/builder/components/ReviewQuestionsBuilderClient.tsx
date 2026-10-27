@@ -56,7 +56,8 @@ export function ReviewQuestionsBuilderClient({
   }
 
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    // Distance threshold lets taps and touch-scrolls through the handle work.
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
@@ -95,7 +96,7 @@ export function ReviewQuestionsBuilderClient({
         </div>
       </aside>
 
-      <div className="overflow-y-auto bg-gray-50 p-10">
+      <div className="overflow-y-auto bg-gray-50 p-4 sm:p-6 lg:p-10">
         <div className="mx-auto flex max-w-2xl flex-col gap-4">
           <DndContext
             sensors={sensors}
@@ -132,7 +133,7 @@ export function ReviewQuestionsBuilderClient({
                 ))}
                 {order.length === 0 && (
                   <p className="text-text-subtle mt-10 text-center text-sm">
-                    Add a block from the left to start building this rubric.
+                    Add a block to start building this rubric.
                   </p>
                 )}
               </div>

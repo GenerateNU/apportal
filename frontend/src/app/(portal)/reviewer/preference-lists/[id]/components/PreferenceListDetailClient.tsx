@@ -476,9 +476,10 @@ export function PreferenceListDetailClient({
       </Link>
 
       {/* Sticky: on a long ranking you otherwise lose the list's name, its
-          status and how long is left the moment you start scrolling. */}
-      <div className="sticky top-0 z-10 -mx-4 flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 bg-white px-4 py-3 sm:-mx-8 sm:px-8">
-        <div className="flex min-w-0 flex-1 items-center gap-2">
+          status and how long is left. Not on phones, where the wrapped bar
+          would cover a third of the screen. */}
+      <div className="z-10 -mx-4 flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 bg-white px-4 py-3 sm:sticky sm:top-0 sm:-mx-8 sm:px-8">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
           {editingName ? (
             <Input
               value={name}
@@ -506,7 +507,7 @@ export function PreferenceListDetailClient({
               {!groupLocked && (
                 <Pencil
                   size={13}
-                  className="text-text-faint shrink-0 opacity-0 group-hover:opacity-100"
+                  className="text-text-faint shrink-0 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:group-focus-visible:opacity-100"
                 />
               )}
             </button>
@@ -527,7 +528,7 @@ export function PreferenceListDetailClient({
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {/* Cross-group comparison lives on its own board — the panes below
               only reach the lists inside this group. */}
           <Link
@@ -610,9 +611,9 @@ export function PreferenceListDetailClient({
         }
       />
 
-      <div className="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+      <div className="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
         {roles.length > 1 && (
-          <div className="flex items-center gap-1 border-b border-gray-100 pb-3">
+          <div className="flex flex-wrap items-center gap-1 border-b border-gray-100 pb-3">
             {roles.map((r) => (
               <button
                 key={r}
@@ -730,7 +731,7 @@ export function PreferenceListDetailClient({
         </div>
       </div>
 
-      <div className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+      <div className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
         <h2 className="text-text-faint text-xs font-semibold tracking-wide uppercase">
           Group comments
         </h2>

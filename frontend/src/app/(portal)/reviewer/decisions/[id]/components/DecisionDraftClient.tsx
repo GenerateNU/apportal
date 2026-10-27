@@ -153,7 +153,7 @@ function DraftBody({
           <h1 className="text-text-default text-xl font-semibold">
             {row.full_name}
           </h1>
-          <p className="text-text-faint text-xs">{row.email}</p>
+          <p className="text-text-faint text-xs break-all">{row.email}</p>
         </div>
         <span
           className={`rounded-md px-2 py-0.5 text-xs font-medium ${ROLE_CHIP_CLASS[row.application_role]}`}
@@ -190,7 +190,7 @@ function DraftBody({
         </div>
       </div>
 
-      <div className="flex items-center justify-between gap-3 border-t border-gray-200 pt-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 pt-4">
         {previousHref ? (
           <Button asChild variant="ghost">
             <Link href={previousHref}>

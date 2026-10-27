@@ -205,8 +205,8 @@ export function ChiefReviewClient({
   return (
     <div className="flex min-h-full flex-col lg:h-full">
       {/* Top bar */}
-      <div className="flex items-center justify-between gap-3 border-b border-gray-100 bg-white px-4 py-3 sm:px-8">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-gray-100 bg-white px-4 py-3 sm:px-8">
+        <div className="flex min-w-0 items-center gap-4">
           <Link
             href="/reviewer/chief-review"
             className="text-text-muted hover:text-text-default inline-flex items-center gap-1 text-sm"
@@ -214,14 +214,14 @@ export function ChiefReviewClient({
             <ArrowLeft size={14} />
             Queue
           </Link>
-          <div className="border-l border-gray-100 pl-4">
-            <h1 className="text-text-default text-base font-semibold">
+          <div className="min-w-0 border-l border-gray-100 pl-4">
+            <h1 className="text-text-default truncate text-base font-semibold">
               {applicant?.full_name ?? 'Applicant'}
             </h1>
             <p className="text-text-muted text-xs">{ROLE_LABEL[role]}</p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <Link
             href={`/reviewer/my-reviews/${applicationId}`}
             className="text-text-muted hover:text-text-default text-sm underline-offset-2 hover:underline"
@@ -321,7 +321,7 @@ export function ChiefReviewClient({
                       key={r.id}
                       className="rounded-xl border border-gray-100 bg-white p-4"
                     >
-                      <div className="mb-2 flex items-center justify-between">
+                      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                         <span className="text-text-default text-sm font-medium">
                           Reviewer {r.reviewer_name || r.reviewer_nuid}
                         </span>
@@ -467,7 +467,7 @@ export function ChiefReviewClient({
                       </div>
                     ) : (
                       <div className="flex items-start justify-between gap-3">
-                        <div>
+                        <div className="min-w-0 break-words">
                           <p className="text-text-default text-sm whitespace-pre-wrap">
                             {c.body}
                           </p>
@@ -479,7 +479,7 @@ export function ChiefReviewClient({
                         <button
                           type="button"
                           onClick={() => startEditingComment(c)}
-                          className="text-text-faint hover:text-text-muted shrink-0"
+                          className="text-text-faint hover:text-text-muted -m-1.5 shrink-0 p-1.5"
                           aria-label="Edit comment"
                         >
                           <Pencil size={14} />
@@ -520,7 +520,7 @@ export function ChiefReviewClient({
           {/* Other chiefs' votes & comments */}
           {otherAuthors.length > 0 && (
             <section>
-              <div className="mb-4 flex items-center justify-between">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
                 <h2 className="text-text-subtle text-xs font-medium tracking-wider uppercase">
                   Other chiefs&apos; votes &amp; comments
                 </h2>
