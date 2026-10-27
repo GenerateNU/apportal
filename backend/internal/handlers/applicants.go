@@ -51,6 +51,9 @@ type UpsertApplicantInput struct {
 }
 
 func (h *applicantHandler) upsert(ctx context.Context, in *UpsertApplicantInput) (*ApplicantOutput, error) {
+	if err := requireNortheasternEmail(in.Body.Email); err != nil {
+		return nil, err
+	}
 	applicant, err := h.store.UpsertApplicant(ctx, store.ApplicantUpsert{
 		NUID:           in.Body.NUID,
 		Email:          in.Body.Email,
