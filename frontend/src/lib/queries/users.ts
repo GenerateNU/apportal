@@ -116,15 +116,13 @@ export function useMembersInfinite(limit: number, opts?: RequestOptions) {
 // (nuid/full_name/roles) — the backend derives identity from the request's
 // verified session, so this needs no arguments.
 export function useCurrentUser(opts?: RequestOptions) {
-  const { user, isLoading: isAuthLoading } = useAuth()
+  const { user } = useAuth()
 
-  const query = useQuery({
+  return useQuery({
     queryKey: queryKeys.users.me(user?.id ?? ''),
     queryFn: () => getCurrentUser(opts) as Promise<User>,
     enabled: !!user,
   })
-
-  return { ...query, isLoading: isAuthLoading || query.isLoading }
 }
 
 export function useCreateUser() {

@@ -6,12 +6,12 @@ import {
 } from '@tanstack/react-query'
 import { listCycles } from '@/generated/cycles/cycles'
 import { listReviewerProgress } from '@/generated/review-releases/review-releases'
-import { getCurrentUser } from '@/generated/users/users'
 import { getServerRequestOptions } from '@/lib/api/server-request-options'
 import { pickDefaultCycleId } from '@/lib/queries/cycles'
 import { queryKeys } from '@/lib/queries/keys'
 import { ROLE_COLUMNS } from '@/lib/roles'
 import { ReviewProgressClient } from './components/ReviewProgressClient'
+import { getServerCurrentUser } from '@/lib/auth/server-user'
 
 // Auth-gated, live data fetched per request from the backend — never prerender
 // this at build time (the backend isn't running then).
@@ -24,7 +24,7 @@ export const dynamic = 'force-dynamic'
 // would 403.
 async function isChief(): Promise<boolean> {
   try {
-    const user = await getCurrentUser(await getServerRequestOptions())
+    const user = await getServerCurrentUser()
     return (user.roles ?? []).some(
       (role) => role === 'chief' || role === 'admin'
     )

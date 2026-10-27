@@ -7,12 +7,12 @@ import {
 import { listCycles } from '@/generated/cycles/cycles'
 import { listCycleReviewQuestions } from '@/generated/review-questions/review-questions'
 import { listReviewQuestionAverages } from '@/generated/review-releases/review-releases'
-import { getCurrentUser } from '@/generated/users/users'
 import { getServerRequestOptions } from '@/lib/api/server-request-options'
 import { pickDefaultCycleId } from '@/lib/queries/cycles'
 import { queryKeys } from '@/lib/queries/keys'
 import { ROLE_COLUMNS } from '@/lib/roles'
 import { ReviewCalibrationClient } from './components/ReviewCalibrationClient'
+import { getServerCurrentUser } from '@/lib/auth/server-user'
 
 // Auth-gated, live data fetched per request from the backend — never prerender
 // this at build time (the backend isn't running then).
@@ -25,7 +25,7 @@ export const dynamic = 'force-dynamic'
 // rendering a page whose every request would 403.
 async function isChief(): Promise<boolean> {
   try {
-    const user = await getCurrentUser(await getServerRequestOptions())
+    const user = await getServerCurrentUser()
     return (user.roles ?? []).some(
       (role) => role === 'chief' || role === 'admin'
     )

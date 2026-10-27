@@ -1,6 +1,20 @@
 import { notFound } from 'next/navigation'
-import { getCurrentUser } from '@/generated/users/users'
+import {
+  dehydrate,
+  HydrationBoundary,
+  QueryClient,
+} from '@tanstack/react-query'
+import {
+  listDecisionTemplates,
+  listDecisions,
+} from '@/generated/decisions/decisions'
 import { getServerRequestOptions } from '@/lib/api/server-request-options'
+import type { DecisionRow, DecisionTemplate, Role } from '@/lib/api/types'
+import { getServerCurrentUser } from '@/lib/auth/server-user'
+import { defaultPipelineCycleId } from '@/lib/cycles'
+import type { DecisionListParams } from '@/lib/queries/decisions'
+import { queryKeys } from '@/lib/queries/keys'
+import { prefetchCycles } from '@/lib/queries/server-prefetch'
 import { DecisionQueueClient } from './components/DecisionQueueClient'
 import { DecisionsClient } from './components/DecisionsClient'
 
@@ -15,7 +29,7 @@ export const dynamic = 'force-dynamic'
 // interviewees, and the template routes call requireChief.
 async function currentReviewer() {
   try {
-    const user = await getCurrentUser(await getServerRequestOptions())
+    const user = await getServerCurrentUser()
     const roles = user.roles ?? []
     if (!roles.some((r) => r === 'lead' || r === 'chief' || r === 'admin')) {
       return null
@@ -29,10 +43,50 @@ async function currentReviewer() {
   }
 }
 
+// The chief board mounts filtered to this role; the lead queue is unfiltered.
+const CHIEF_DEFAULT_ROLE: Role = 'software_engineer'
+
 export default async function DecisionsPage() {
-  const reviewer = await currentReviewer()
+  const queryClient = new QueryClient()
+  const requestOptions = await getServerRequestOptions()
+  const [reviewer, cycles] = await Promise.all([
+    currentReviewer(),
+    prefetchCycles(queryClient, requestOptions),
+  ])
   if (!reviewer) notFound()
 
-  if (!reviewer.isChief) return <DecisionQueueClient />
-  return <DecisionsClient currentNUID={reviewer.nuid} />
+  const cycleId = defaultPipelineCycleId(cycles)
+  if (cycleId) {
+    const params: DecisionListParams | undefined = reviewer.isChief
+      ? { role: CHIEF_DEFAULT_ROLE }
+      : undefined
+    await Promise.all([
+      queryClient.prefetchQuery({
+        queryKey: queryKeys.decisions.list(cycleId, params),
+        queryFn: async () =>
+          ((await listDecisions(cycleId, params, requestOptions)) ??
+            []) as DecisionRow[],
+      }),
+      reviewer.isChief &&
+        queryClient.prefetchQuery({
+          queryKey: queryKeys.decisions.templates(cycleId, CHIEF_DEFAULT_ROLE),
+          queryFn: async () =>
+            ((await listDecisionTemplates(
+              cycleId,
+              { role: CHIEF_DEFAULT_ROLE },
+              requestOptions
+            )) ?? []) as DecisionTemplate[],
+        }),
+    ])
+  }
+
+  return (
+    <HydrationBoundary state={dehydrate(queryClient)}>
+      {reviewer.isChief ? (
+        <DecisionsClient currentNUID={reviewer.nuid} />
+      ) : (
+        <DecisionQueueClient />
+      )}
+    </HydrationBoundary>
+  )
 }

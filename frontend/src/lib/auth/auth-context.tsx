@@ -1,40 +1,33 @@
 'use client'
 
-import type { Session, User } from '@supabase/supabase-js'
+import type { User } from '@supabase/supabase-js'
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 type AuthContextValue = {
   user: User | null
-  session: Session | null
-  isLoading: boolean
   signOut: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+// initialUser comes from the server's read of the session cookie, so queries
+// gated on the user can run during SSR rather than after a client effect.
+export function AuthProvider({
+  initialUser,
+  children,
+}: {
+  initialUser: User | null
+  children: React.ReactNode
+}) {
   const [supabase] = useState(() => createClient())
-  const [session, setSession] = useState<Session | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [user, setUser] = useState<User | null>(initialUser)
 
   useEffect(() => {
-    supabase.auth
-      .getSession()
-      .then(({ data }) => {
-        setSession(data.session)
-        setIsLoading(false)
-      })
-      .catch(() => {
-        setSession(null)
-        setIsLoading(false)
-      })
-
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session)
-      setIsLoading(false)
+      setUser(session?.user ?? null)
     })
 
     return () => subscription.unsubscribe()
@@ -42,14 +35,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<AuthContextValue>(
     () => ({
-      user: session?.user ?? null,
-      session,
-      isLoading,
+      user,
       signOut: async () => {
         await supabase.auth.signOut()
       },
     }),
-    [session, isLoading, supabase]
+    [user, supabase]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

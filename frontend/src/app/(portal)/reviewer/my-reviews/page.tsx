@@ -5,11 +5,11 @@ import {
 } from '@tanstack/react-query'
 import { fetchApplicationPage } from '@/lib/queries/applications'
 import { listCycles } from '@/generated/cycles/cycles'
-import { getCurrentUser } from '@/generated/users/users'
 import { getServerRequestOptions } from '@/lib/api/server-request-options'
 import type { Cycle } from '@/lib/api/types'
 import { queryKeys } from '@/lib/queries/keys'
 import { ReviewQueueClient } from './components/ReviewQueueClient'
+import { getServerCurrentUser } from '@/lib/auth/server-user'
 
 // Auth-gated, live data fetched per request from the backend — never prerender
 // this at build time (the backend isn't running then).
@@ -23,7 +23,7 @@ export default async function ReviewQueuePage() {
   // keyed by the caller's own nuid — resolve that here so the prefetch lands
   // under the same key instead of one the browser has to refetch.
   const [me] = await Promise.all([
-    getCurrentUser(requestOptions),
+    getServerCurrentUser(),
     queryClient.prefetchQuery({
       queryKey: queryKeys.cycles.list({}),
       queryFn: async () =>

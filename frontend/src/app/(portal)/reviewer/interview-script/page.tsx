@@ -1,8 +1,14 @@
 import { notFound } from 'next/navigation'
+import {
+  dehydrate,
+  HydrationBoundary,
+  QueryClient,
+} from '@tanstack/react-query'
 import { PageContainer } from '@/components/PageContainer'
-import { getCurrentUser } from '@/generated/users/users'
 import { getServerRequestOptions } from '@/lib/api/server-request-options'
+import { prefetchInterviewScript } from '@/lib/queries/server-prefetch'
 import { InterviewScriptPageClient } from './components/InterviewScriptPageClient'
+import { getServerCurrentUser } from '@/lib/auth/server-user'
 
 // Auth-gated, live data fetched per request from the backend — never prerender
 // this at build time (the backend isn't running then).
@@ -13,7 +19,7 @@ export const dynamic = 'force-dynamic'
 // just decides whether to show the link at all.
 async function currentReviewer(): Promise<{ isChief: boolean } | null> {
   try {
-    const user = await getCurrentUser(await getServerRequestOptions())
+    const user = await getServerCurrentUser()
     return {
       isChief: (user.roles ?? []).some(
         (role) => role === 'chief' || role === 'admin'
@@ -24,8 +30,19 @@ async function currentReviewer(): Promise<{ isChief: boolean } | null> {
   }
 }
 
-export default async function InterviewScriptPage() {
-  const reviewer = await currentReviewer()
+export default async function InterviewScriptPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ cycle?: string; role?: string }>
+}) {
+  const queryClient = new QueryClient()
+  const requestOptions = await getServerRequestOptions()
+  const [reviewer] = await Promise.all([
+    currentReviewer(),
+    searchParams.then((sp) =>
+      prefetchInterviewScript(queryClient, sp, requestOptions)
+    ),
+  ])
   if (!reviewer) notFound()
 
   return (
@@ -39,7 +56,9 @@ export default async function InterviewScriptPage() {
           conducting an interview — one script per cycle and role.
         </p>
       </div>
-      <InterviewScriptPageClient isChief={reviewer.isChief} />
+      <HydrationBoundary state={dehydrate(queryClient)}>
+        <InterviewScriptPageClient isChief={reviewer.isChief} />
+      </HydrationBoundary>
     </PageContainer>
   )
 }
