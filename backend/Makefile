@@ -5,7 +5,15 @@ MAIN_PACKAGE := ./cmd/server
 BIN_DIR := bin
 BIN_PATH := $(BIN_DIR)/$(APP_NAME)
 
-.PHONY: help fmt fmt-check lint test test-cover vet tidy run dev build clean docker-build docker-up docker-down docker-logs prettier prettier-check openapi
+# Configs are passed explicitly (not via `doppler setup`) so *-prod can only touch prd.
+DOPPLER_PROJECT     ?= apportal-backend
+DOPPLER_DEV_CONFIG  ?= dev
+DOPPLER_PROD_CONFIG ?= prd
+
+DOPPLER_DEV  := doppler run --project $(DOPPLER_PROJECT) --config $(DOPPLER_DEV_CONFIG) --
+DOPPLER_PROD := doppler run --project $(DOPPLER_PROJECT) --config $(DOPPLER_PROD_CONFIG) --
+
+.PHONY: help fmt fmt-check lint test test-cover vet tidy run start-dev start-prod air build clean docker-build docker-up docker-down docker-logs prettier prettier-check openapi gen-migration migrate-dev migrate-prod revert-single-dev revert-single-prod
 
 help:
 	@printf '%s\n' \
@@ -16,12 +24,18 @@ help:
 		'  make test         Run Go tests' \
 		'  make test-cover    Run tests with coverage output' \
 		'  make tidy         Tidy Go modules' \
-		'  make run          Run the backend locally' \
-		'  make dev          Run with hot reload (rebuilds on file save)' \
+		'  make run          Run the backend locally using Doppler dev secrets' \
+		'  make start-dev    Run with hot reload using Doppler dev secrets' \
+		'  make start-prod   Run using Doppler prd secrets' \
 		'  make build        Build the backend binary' \
 		'  make openapi      Write the OpenAPI spec to api/openapi.yaml' \
+		'  make gen-migration MIGRATION_NAME=x  Generate a migration from model changes' \
+		'  make migrate-dev  Apply pending migrations using Doppler dev secrets' \
+		'  make migrate-prod Apply pending migrations using Doppler prd secrets' \
+		'  make revert-single-dev   Roll back the last migration (dev)' \
+		'  make revert-single-prod  Roll back the last migration (prd)' \
 		'  make docker-build Build the backend Docker image' \
-		'  make docker-up    Start the backend with Docker Compose' \
+		'  make docker-up    Start the backend with Docker Compose using Doppler dev secrets' \
 		'  make docker-down  Stop the Docker Compose stack' \
 		'  make prettier     Format markdown/yaml/json with Prettier' \
 		'  make clean        Remove build artifacts'
@@ -58,16 +72,21 @@ tidy:
 	@go mod tidy
 
 run:
-	@if [ -f .env ]; then set -a; . ./.env; set +a; fi; go run $(MAIN_PACKAGE)
+	@$(DOPPLER_DEV) go run $(MAIN_PACKAGE)
 
 AIR := $(shell command -v air 2>/dev/null || echo "$$(go env GOPATH)/bin/air")
 
-dev:
+air:
 	@if [ ! -x "$(AIR)" ]; then \
 		printf '%s\n' 'air not found; installing...'; \
 		go install github.com/air-verse/air@latest; \
 	fi
-	@if [ -f .env ]; then set -a; . ./.env; set +a; fi; "$(AIR)"
+
+start-dev: air
+	@$(DOPPLER_DEV) "$(AIR)"
+
+start-prod:
+	@$(DOPPLER_PROD) go run $(MAIN_PACKAGE)
 
 build:
 	@mkdir -p $(BIN_DIR)
@@ -78,6 +97,25 @@ openapi:
 	@go run ./cmd/openapi > api/openapi.yaml
 	@printf '%s\n' 'wrote api/openapi.yaml'
 
+gen-migration:
+	@if [ -z "$(MIGRATION_NAME)" ]; then \
+		printf '%s\n' 'MIGRATION_NAME is required, e.g. make gen-migration MIGRATION_NAME=<descriptive name>'; \
+		exit 1; \
+	fi
+	@$(DOPPLER_DEV) atlas migrate diff --env apportal $(MIGRATION_NAME)
+
+migrate-dev:
+	@$(DOPPLER_DEV) atlas migrate apply --env apportal
+
+migrate-prod:
+	@$(DOPPLER_PROD) atlas migrate apply --env apportal
+
+revert-single-dev:
+	@$(DOPPLER_DEV) atlas migrate down --env apportal
+
+revert-single-prod:
+	@$(DOPPLER_PROD) atlas migrate down --env apportal
+
 clean:
 	@rm -rf $(BIN_DIR)
 
@@ -85,7 +123,7 @@ docker-build:
 	@docker build -t $(APP_NAME) .
 
 docker-up:
-	@docker compose up --build
+	@$(DOPPLER_DEV) docker compose up --build
 
 docker-down:
 	@docker compose down

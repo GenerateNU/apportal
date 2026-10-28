@@ -1,0 +1,110 @@
+package application
+
+import (
+	"encoding/json"
+	"strings"
+
+	"github.com/danielgtaylor/huma/v2"
+
+	"github.com/GenerateNU/apportal/backend/internal/models"
+)
+
+// maxAnswerFilters caps the filter list because each one adds a join.
+const maxAnswerFilters = 25
+
+// AnswerFilterInput is one decoded entry of the answer_filters query param.
+// Values is deliberately loose — a single string for free-text questions, an
+// array for choice questions — so the UI can send the shape it already holds.
+type AnswerFilterInput struct {
+	QuestionID string `json:"question_id"`
+	// QuestionIDs is the any-of counterpart of QuestionID, for a question the
+	// form authors once per applicant role: the filter matches an answer to
+	// any of them. Both may be set; they're unioned.
+	QuestionIDs  []string            `json:"question_ids"`
+	QuestionType models.QuestionType `json:"question_type"`
+	Values       json.RawMessage     `json:"values"`
+}
+
+// parseAnswerFilters decodes the query param and maps each question type onto
+// the match the query should run, which is what decides whether the answer is
+// read from answer_options (checkbox) or answer_text (everything else).
+func parseAnswerFilters(raw string) ([]AnswerFilter, error) {
+	if strings.TrimSpace(raw) == "" {
+		return nil, nil
+	}
+	var in []AnswerFilterInput
+	if err := json.Unmarshal([]byte(raw), &in); err != nil {
+		return nil, huma.Error422UnprocessableEntity("answer_filters must be a JSON array of filters")
+	}
+	if len(in) > maxAnswerFilters {
+		return nil, huma.Error422UnprocessableEntity("too many answer_filters")
+	}
+	out := make([]AnswerFilter, 0, len(in))
+	for _, f := range in {
+		ids := make([]string, 0, len(f.QuestionIDs)+1)
+		if f.QuestionID != "" {
+			ids = append(ids, f.QuestionID)
+		}
+		for _, id := range f.QuestionIDs {
+			if strings.TrimSpace(id) != "" {
+				ids = append(ids, id)
+			}
+		}
+		if len(ids) == 0 {
+			return nil, huma.Error422UnprocessableEntity("answer_filters entries need a question_id")
+		}
+		if !f.QuestionType.Valid() {
+			return nil, huma.Error422UnprocessableEntity("invalid question_type in answer_filters")
+		}
+		values, err := decodeFilterValues(f.Values)
+		if err != nil {
+			return nil, err
+		}
+		// An empty value isn't a narrowing — the UI can hold a half-built
+		// filter — so it's dropped rather than rejected.
+		if len(values) == 0 {
+			continue
+		}
+		match := MatchContains
+		switch f.QuestionType {
+		case models.QuestionCheckbox:
+			match = MatchAnyOption
+		case models.QuestionDropdown, models.QuestionMultipleChoice:
+			match = MatchAnyOf
+		}
+		out = append(out, AnswerFilter{
+			QuestionIDs: ids,
+			Match:       match,
+			Values:      values,
+		})
+	}
+	return out, nil
+}
+
+// decodeFilterValues accepts either "text" or ["a","b"], normalizing both to a
+// slice. Blank entries are dropped so an empty text box doesn't match every
+// answer via `%%`.
+func decodeFilterValues(raw json.RawMessage) ([]string, error) {
+	if len(raw) == 0 {
+		return nil, nil
+	}
+	var one string
+	if err := json.Unmarshal(raw, &one); err == nil {
+		if strings.TrimSpace(one) == "" {
+			return nil, nil
+		}
+		return []string{one}, nil
+	}
+	var many []string
+	if err := json.Unmarshal(raw, &many); err != nil {
+		return nil, huma.Error422UnprocessableEntity("answer_filters values must be a string or an array of strings")
+	}
+	out := make([]string, 0, len(many))
+	for _, v := range many {
+		if strings.TrimSpace(v) == "" {
+			continue
+		}
+		out = append(out, v)
+	}
+	return out, nil
+}

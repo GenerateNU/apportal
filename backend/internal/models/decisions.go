@@ -39,15 +39,17 @@ const (
 // DecisionTemplate is one cycle × role × kind letter. Subject and body both
 // carry {{placeholders}}; the frontend's renderDecision fills them in.
 type DecisionTemplate struct {
-	ID              string       `json:"id"`
-	CycleID         string       `json:"cycle_id"`
-	ApplicationRole Role         `json:"application_role"`
-	Kind            DecisionKind `json:"kind"`
-	Subject         string       `json:"subject"`
-	Body            string       `json:"body"`
-	CreatedAt       time.Time    `json:"created_at"`
-	UpdatedAt       time.Time    `json:"updated_at"`
+	ID              string       `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	CycleID         string       `json:"cycle_id" gorm:"type:uuid;not null;uniqueIndex:decision_templates_cycle_id_application_role_kind_key,priority:1"`
+	ApplicationRole Role         `json:"application_role" gorm:"type:application_role;not null;uniqueIndex:decision_templates_cycle_id_application_role_kind_key,priority:2"`
+	Kind            DecisionKind `json:"kind" gorm:"type:decision_kind;not null;uniqueIndex:decision_templates_cycle_id_application_role_kind_key,priority:3"`
+	Subject         string       `json:"subject" gorm:"not null"`
+	Body            string       `json:"body" gorm:"not null"`
+	CreatedAt       time.Time    `json:"created_at" gorm:"not null;default:now()"`
+	UpdatedAt       time.Time    `json:"updated_at" gorm:"not null;default:now()"`
 	UpdatedBy       *string      `json:"updated_by,omitempty"`
+	Cycle           Cycle        `json:"-" gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
+	UpdatedByUser   *User        `json:"-" gorm:"foreignKey:UpdatedBy;references:NUID"`
 }
 
 // DecisionRow is one line of the decisions page (not a table): the applicant,
@@ -102,4 +104,22 @@ type DecisionContext struct {
 	WrittenReviews        []WrittenReviewDetail   `json:"written_reviews"`
 	WrittenReviewsBlind   bool                    `json:"written_reviews_blind"`
 	RecordingReviewsBlind bool                    `json:"recording_reviews_blind"`
+}
+
+type DecisionDraft struct {
+	ID            string            `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	ApplicationID string            `json:"application_id" gorm:"type:uuid;not null;uniqueIndex:decision_drafts_application_id_key"`
+	Kind          DecisionKind      `json:"kind" gorm:"type:decision_kind;not null"`
+	Feedback      *string           `json:"feedback,omitempty"`
+	Compliments   *string           `json:"compliments,omitempty"`
+	BodyOverride  *string           `json:"body_override,omitempty"`
+	AuthorNUID    *string           `json:"author_nuid,omitempty"`
+	SentAt        *time.Time        `json:"sent_at,omitempty"`
+	SentBy        *string           `json:"sent_by,omitempty"`
+	CreatedAt     time.Time         `json:"created_at" gorm:"not null;default:now()"`
+	UpdatedAt     time.Time         `json:"updated_at" gorm:"not null;default:now()"`
+	PreviousStage *ApplicationStage `json:"previous_stage,omitempty" gorm:"type:application_stage"`
+	Application   Application       `json:"-" gorm:"foreignKey:ApplicationID;references:ID;constraint:OnDelete:CASCADE"`
+	Author        *User             `json:"-" gorm:"foreignKey:AuthorNUID;references:NUID"`
+	Sender        *User             `json:"-" gorm:"foreignKey:SentBy;references:NUID"`
 }
