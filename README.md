@@ -16,7 +16,8 @@ pipeline, see [info.md](info.md).
 - [Node.js](https://nodejs.org/) 20+ and npm (frontend)
 - A [Supabase](https://supabase.com/) project (Postgres + auth)
 - Optionally [Docker](https://www.docker.com/) to run the backend in a container
-
+- [DopplerCLI](https://docs.doppler.com/docs/install-cli) for secret managment
+- [Atlas CLI](https://atlasgo.io/integrations/go-sdk) (backend) for migrations, plus `psql` to apply `internal/sql/run-always.sql`
 Enable the repo's git hooks once per clone:
 
 ```bash
@@ -34,31 +35,36 @@ machine or in Docker.
 
 ### Environment Variables
 
-Copy [backend/.env.example](backend/.env.example) to `backend/.env` and set:
+Secrets come from [Doppler](https://docs.doppler.com/docs/install-cli), project
+`apportal-backend`: config `dev` (local Supabase) and `prd` (hosted). Every
+target that needs them runs through `doppler run`, so there is no `backend/.env`.
+Run `doppler login` once; [backend/.env.example](backend/.env.example) lists the
+variable names.
 
 - `PORT` — defaults to `8080`
-- `DATABASE_URL` — Supabase Session Pooler URL for `make run`
-- `DATABASE_URL_DOCKER` — same Supabase Session Pooler URL for `make docker-up`
+- `DATABASE_URL` — Postgres URL for `make run` / `make start-dev`
+- `DATABASE_URL_DOCKER` — the same database as reached from inside the container, for `make docker-up`
 
 ### Run
 
 From [backend/](backend/):
 
 ```bash
-make run
+make run / make start-dev         # dev secrets
+make start-prod   # prd secrets
 ```
 
 ### Run with Hot Reload
 
-For development, `make dev` watches `.go` files and automatically rebuilds and
-restarts the server on save. It uses [air](https://github.com/air-verse/air)
+For development, `make start-dev` watches `.go` files and automatically rebuilds and
+restarts the server on save, using the Doppler `dev` config. It uses [air](https://github.com/air-verse/air)
 (configured in [backend/.air.toml](backend/.air.toml)) and installs it on first
 run if it isn't already present.
 
 From [backend/](backend/):
 
 ```bash
-make dev
+make start-dev
 ```
 
 ### Run with Docker
@@ -88,7 +94,7 @@ supabase stop --workdir internal    # tear down
 - Database: `postgresql://postgres:postgres@127.0.0.1:54322/postgres`
 - Studio (DB browser): <http://127.0.0.1:54323>
 
-Point the backend at it by setting `DATABASE_URL` in `backend/.env` to the
+Point the backend at it by setting `DATABASE_URL` in the Doppler `dev` config to the
 local database URL above instead of the hosted Supabase Session Pooler URL.
 Note that Supabase auth still requires `SUPABASE_URL` to point at a real
 project — logging in works against that, but any user without a matching row
@@ -102,7 +108,7 @@ users, applications, or cycles. If you need real-shaped data to test against
 can copy data from the hosted project into your local one.
 
 This isn't a maintained script, just a manual recipe — treat
-`DATABASE_URL_DOCKER` in `backend/.env` as the source (it already holds the
+`DATABASE_URL_DOCKER` in the Doppler `prd` config as the source (it holds the
 hosted Supabase Session Pooler URL) and the local `supabase_db_internal`
 Docker container as the destination. Run `pg_dump`/`psql` **inside** that
 container rather than with your host's client — the local Postgres image is
@@ -111,7 +117,7 @@ from a server newer than itself:
 
 ```bash
 # from backend/, with the local stack already running (supabase start)
-export PROD_URL=$(grep '^DATABASE_URL_DOCKER=' .env | cut -d'=' -f2-)
+export PROD_URL=$(doppler secrets get DATABASE_URL_DOCKER --plain --project apportal-backend --config prd)
 docker exec supabase_db_internal pg_dump "$PROD_URL" --data-only --schema=public -f /tmp/prod_data.sql
 docker exec supabase_db_internal psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f /tmp/prod_data.sql
 ```
@@ -124,16 +130,19 @@ wouldn't want that data sitting on.
 
 ### Testing Migrations
 
+Migrations are generated and applied with Atlas. From [backend/](backend/):
+
 ```bash
-supabase migration new <name>          # scaffold a new migration file, from backend/
-supabase db reset --workdir internal   # wipe and replay all migrations from scratch
+make gen-migration MIGRATION_NAME=<name>   # diff the GORM models into a new migration
+make migrate-dev                           # apply pending migrations (Doppler dev config)
 ```
 
-`supabase db reset` replays every file in
-[backend/internal/supabase/migrations/](backend/internal/supabase/migrations/)
-against a fresh database — the way to confirm a new migration actually
-applies cleanly (not just that it worked once against a database that
-already had earlier state) before merging.
+The files live in [backend/internal/migrations/](backend/internal/migrations/).
+To confirm a new migration applies cleanly against a fresh database (not just
+one that already had earlier state), point `MIGRATION_DB_CONNECTION_STRING` at
+an empty database, such as the local one above, and run `make migrate-dev`
+before merging. See [backend/docs/MIGRATIONS.md](backend/docs/MIGRATIONS.md)
+for generating, applying and reverting migrations.
 
 ### Health Endpoints
 
@@ -145,7 +154,8 @@ already had earlier state) before merging.
 
 From [backend/](backend/):
 
-- `make dev` — run with hot reload (rebuilds on file save)
+- `make start-dev` — run with hot reload (rebuilds on file save), Doppler `dev`
+- `make start-prod` — run against Doppler `prd`
 - `make fmt` — format Go code and supported docs
 - `make fmt-check` — check formatting without changing files
 - `make lint` — run `go vet` and `golangci-lint` (config in [backend/.golangci.yml](backend/.golangci.yml))

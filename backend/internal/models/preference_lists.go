@@ -34,15 +34,17 @@ func (s PreferenceListStatus) Valid() bool {
 // members have settled on for meeting to go through it together — nil until
 // they choose one.
 type PreferenceList struct {
-	ID          string               `json:"id"`
-	CycleID     string               `json:"cycle_id"`
-	Name        string               `json:"name"`
-	Status      PreferenceListStatus `json:"status"`
-	CreatedBy   string               `json:"created_by"`
+	ID          string               `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	CycleID     string               `json:"cycle_id" gorm:"type:uuid;not null;index:idx_preference_lists_cycle"`
+	Name        string               `json:"name" gorm:"not null"`
+	Status      PreferenceListStatus `json:"status" gorm:"not null;default:draft;check:preference_lists_status_check,status IN ('draft','submitted')"`
+	CreatedBy   string               `json:"created_by" gorm:"not null"`
 	SubmittedAt *time.Time           `json:"submitted_at,omitempty"`
-	CreatedAt   time.Time            `json:"created_at"`
-	UpdatedAt   time.Time            `json:"updated_at"`
-	MeetingDay  *string              `json:"meeting_day,omitempty"`
+	CreatedAt   time.Time            `json:"created_at" gorm:"not null;default:now()"`
+	UpdatedAt   time.Time            `json:"updated_at" gorm:"not null;default:now()"`
+	MeetingDay  *string              `json:"meeting_day,omitempty" gorm:"check:preference_lists_meeting_day_check,meeting_day IN ('monday','tuesday','wednesday','thursday')"`
+	Cycle       Cycle                `json:"-" gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
+	Creator     User                 `json:"-" gorm:"foreignKey:CreatedBy;references:NUID"`
 }
 
 // PreferenceListSummary adds membership/entry counts and member names for
@@ -52,26 +54,32 @@ type PreferenceListSummary struct {
 	PreferenceList
 	MemberCount int      `json:"member_count"`
 	EntryCount  int      `json:"entry_count"`
-	MemberNames []string `json:"member_names"`
+	MemberNames []string `json:"member_names" gorm:"serializer:pgarray"`
 }
 
 type PreferenceListMember struct {
-	ID               string    `json:"id"`
-	PreferenceListID string    `json:"preference_list_id"`
-	LeadNUID         string    `json:"lead_nuid"`
-	AddedBy          string    `json:"added_by"`
-	AddedAt          time.Time `json:"added_at"`
+	ID               string         `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	PreferenceListID string         `json:"preference_list_id" gorm:"type:uuid;not null;uniqueIndex:preference_list_members_preference_list_id_lead_nuid_key,priority:1"`
+	LeadNUID         string         `json:"lead_nuid" gorm:"not null;index:idx_preference_list_members_lead;uniqueIndex:preference_list_members_preference_list_id_lead_nuid_key,priority:2"`
+	AddedBy          string         `json:"added_by" gorm:"not null"`
+	AddedAt          time.Time      `json:"added_at" gorm:"not null;default:now()"`
+	PreferenceList   PreferenceList `json:"-" gorm:"foreignKey:PreferenceListID;references:ID;constraint:OnDelete:CASCADE"`
+	Lead             User           `json:"-" gorm:"foreignKey:LeadNUID;references:NUID"`
+	Adder            User           `json:"-" gorm:"foreignKey:AddedBy;references:NUID"`
 }
 
 type PreferenceListEntry struct {
-	ID               string    `json:"id"`
-	PreferenceListID string    `json:"preference_list_id"`
-	ApplicationID    string    `json:"application_id"`
-	Rank             int       `json:"rank"`
-	Reasoning        *string   `json:"reasoning,omitempty"`
-	UpdatedBy        string    `json:"updated_by"`
-	CreatedAt        time.Time `json:"created_at"`
-	UpdatedAt        time.Time `json:"updated_at"`
+	ID               string         `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	PreferenceListID string         `json:"preference_list_id" gorm:"type:uuid;not null;index:idx_preference_list_entries_list;uniqueIndex:preference_list_entries_preference_list_id_application_id_key,priority:1"`
+	ApplicationID    string         `json:"application_id" gorm:"type:uuid;not null;uniqueIndex:preference_list_entries_preference_list_id_application_id_key,priority:2"`
+	Rank             int            `json:"rank" gorm:"type:integer;not null"`
+	Reasoning        *string        `json:"reasoning,omitempty"`
+	UpdatedBy        string         `json:"updated_by" gorm:"not null"`
+	CreatedAt        time.Time      `json:"created_at" gorm:"not null;default:now()"`
+	UpdatedAt        time.Time      `json:"updated_at" gorm:"not null;default:now()"`
+	PreferenceList   PreferenceList `json:"-" gorm:"foreignKey:PreferenceListID;references:ID;constraint:OnDelete:CASCADE"`
+	Application      Application    `json:"-" gorm:"foreignKey:ApplicationID;references:ID;constraint:OnDelete:CASCADE"`
+	Updater          User           `json:"-" gorm:"foreignKey:UpdatedBy;references:NUID"`
 }
 
 // PreferenceListEntryDetail enriches an entry with the applicant's display
@@ -94,14 +102,17 @@ type PreferenceListEntryDetail struct {
 // owner can ever write to it, and (unlike PreferenceListEntry) it's never
 // deadline-gated.
 type PreferenceListPersonalEntry struct {
-	ID               string    `json:"id"`
-	PreferenceListID string    `json:"preference_list_id"`
-	OwnerNUID        string    `json:"owner_nuid"`
-	ApplicationID    string    `json:"application_id"`
-	Rank             int       `json:"rank"`
-	Reasoning        *string   `json:"reasoning,omitempty"`
-	CreatedAt        time.Time `json:"created_at"`
-	UpdatedAt        time.Time `json:"updated_at"`
+	ID               string         `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	PreferenceListID string         `json:"preference_list_id" gorm:"type:uuid;not null;index:idx_preference_list_personal_entries_list_owner,priority:1;uniqueIndex:preference_list_personal_entr_preference_list_id_owner_nuid_key,priority:1"`
+	OwnerNUID        string         `json:"owner_nuid" gorm:"not null;index:idx_preference_list_personal_entries_list_owner,priority:2;uniqueIndex:preference_list_personal_entr_preference_list_id_owner_nuid_key,priority:2"`
+	ApplicationID    string         `json:"application_id" gorm:"type:uuid;not null;uniqueIndex:preference_list_personal_entr_preference_list_id_owner_nuid_key,priority:3"`
+	Rank             int            `json:"rank" gorm:"type:integer;not null"`
+	Reasoning        *string        `json:"reasoning,omitempty"`
+	CreatedAt        time.Time      `json:"created_at" gorm:"not null;default:now()"`
+	UpdatedAt        time.Time      `json:"updated_at" gorm:"not null;default:now()"`
+	PreferenceList   PreferenceList `json:"-" gorm:"foreignKey:PreferenceListID;references:ID;constraint:OnDelete:CASCADE"`
+	Owner            User           `json:"-" gorm:"foreignKey:OwnerNUID;references:NUID"`
+	Application      Application    `json:"-" gorm:"foreignKey:ApplicationID;references:ID;constraint:OnDelete:CASCADE"`
 }
 
 // PreferenceListPersonalEntryDetail mirrors PreferenceListEntryDetail, plus
@@ -122,13 +133,16 @@ type PreferenceListPersonalEntryDetail struct {
 // a comment on that one applicant/entry. Scoped to the shared list only, not
 // personal lists.
 type PreferenceListComment struct {
-	ID               string    `json:"id"`
-	PreferenceListID string    `json:"preference_list_id"`
-	ApplicationID    *string   `json:"application_id,omitempty"`
-	AuthorNUID       string    `json:"author_nuid"`
-	Body             string    `json:"body"`
-	CreatedAt        time.Time `json:"created_at"`
-	UpdatedAt        time.Time `json:"updated_at"`
+	ID               string         `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	PreferenceListID string         `json:"preference_list_id" gorm:"type:uuid;not null;index:idx_preference_list_comments_list"`
+	ApplicationID    *string        `json:"application_id,omitempty" gorm:"type:uuid"`
+	AuthorNUID       string         `json:"author_nuid" gorm:"not null"`
+	Body             string         `json:"body" gorm:"not null"`
+	CreatedAt        time.Time      `json:"created_at" gorm:"not null;default:now()"`
+	UpdatedAt        time.Time      `json:"updated_at" gorm:"not null;default:now()"`
+	PreferenceList   PreferenceList `json:"-" gorm:"foreignKey:PreferenceListID;references:ID;constraint:OnDelete:CASCADE"`
+	Application      *Application   `json:"-" gorm:"foreignKey:ApplicationID;references:ID;constraint:OnDelete:CASCADE"`
+	Author           User           `json:"-" gorm:"foreignKey:AuthorNUID;references:NUID"`
 }
 
 // PreferenceListCommentDetail bundles a comment with the author's resolved
@@ -155,10 +169,12 @@ type PreferenceListDetail struct {
 // on PreferenceList itself, since one deadline governs every list sharing
 // that (cycle, role), not just the list that happens to store it.
 type PreferenceListDeadline struct {
-	ID              string     `json:"id"`
-	CycleID         string     `json:"cycle_id"`
-	ApplicationRole Role       `json:"application_role"`
+	ID              string     `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	CycleID         string     `json:"cycle_id" gorm:"type:uuid;not null;uniqueIndex:preference_list_deadlines_cycle_id_application_role_key,priority:1"`
+	ApplicationRole Role       `json:"application_role" gorm:"type:application_role;not null;uniqueIndex:preference_list_deadlines_cycle_id_application_role_key,priority:2"`
 	ClosesAt        *time.Time `json:"closes_at,omitempty"`
-	UpdatedAt       time.Time  `json:"updated_at"`
+	UpdatedAt       time.Time  `json:"updated_at" gorm:"not null;default:now()"`
 	UpdatedBy       *string    `json:"updated_by,omitempty"`
+	Cycle           Cycle      `json:"-" gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
+	UpdatedByUser   *User      `json:"-" gorm:"foreignKey:UpdatedBy;references:NUID"`
 }
