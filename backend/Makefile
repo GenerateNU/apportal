@@ -4,6 +4,7 @@ APP_NAME := apportal-backend
 MAIN_PACKAGE := ./cmd/server
 BIN_DIR := bin
 BIN_PATH := $(BIN_DIR)/$(APP_NAME)
+RUN_ALWAYS_SQL := internal/sql/run-always.sql
 
 # Configs are passed explicitly (not via `doppler setup`) so *-prod can only touch prd.
 DOPPLER_PROJECT     ?= apportal-backend
@@ -30,8 +31,8 @@ help:
 		'  make build        Build the backend binary' \
 		'  make openapi      Write the OpenAPI spec to api/openapi.yaml' \
 		'  make gen-migration MIGRATION_NAME=x  Generate a migration from model changes' \
-		'  make migrate-dev  Apply pending migrations using Doppler dev secrets' \
-		'  make migrate-prod Apply pending migrations using Doppler prd secrets' \
+		'  make migrate-dev  Apply pending migrations and run-always.sql using Doppler dev secrets' \
+		'  make migrate-prod Apply pending migrations and run-always.sql using Doppler prd secrets' \
 		'  make revert-single-dev   Roll back the last migration (dev)' \
 		'  make revert-single-prod  Roll back the last migration (prd)' \
 		'  make docker-build Build the backend Docker image' \
@@ -106,9 +107,11 @@ gen-migration:
 
 migrate-dev:
 	@$(DOPPLER_DEV) atlas migrate apply --env apportal
+	@$(DOPPLER_DEV) sh -c 'psql "$$MIGRATION_DB_CONNECTION_STRING" -v ON_ERROR_STOP=1 -f $(RUN_ALWAYS_SQL)'
 
 migrate-prod:
 	@$(DOPPLER_PROD) atlas migrate apply --env apportal
+	@$(DOPPLER_PROD) sh -c 'psql "$$MIGRATION_DB_CONNECTION_STRING" -v ON_ERROR_STOP=1 -f $(RUN_ALWAYS_SQL)'
 
 revert-single-dev:
 	@$(DOPPLER_DEV) atlas migrate down --env apportal

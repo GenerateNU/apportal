@@ -17,7 +17,7 @@ pipeline, see [info.md](info.md).
 - A [Supabase](https://supabase.com/) project (Postgres + auth)
 - Optionally [Docker](https://www.docker.com/) to run the backend in a container
 - [DopplerCLI](https://docs.doppler.com/docs/install-cli) for secret managment
-- [Atlas CLI](https://atlasgo.io/integrations/go-sdk) (backend) for migrations
+- [Atlas CLI](https://atlasgo.io/integrations/go-sdk) (backend) for migrations, plus `psql` to apply `internal/sql/run-always.sql`
 Enable the repo's git hooks once per clone:
 
 ```bash
@@ -130,16 +130,19 @@ wouldn't want that data sitting on.
 
 ### Testing Migrations
 
+Migrations are generated and applied with Atlas. From [backend/](backend/):
+
 ```bash
-supabase migration new <name>          # scaffold a new migration file, from backend/
-supabase db reset --workdir internal   # wipe and replay all migrations from scratch
+make gen-migration MIGRATION_NAME=<name>   # diff the GORM models into a new migration
+make migrate-dev                           # apply pending migrations (Doppler dev config)
 ```
 
-`supabase db reset` replays every file in
-[backend/internal/supabase/migrations/](backend/internal/supabase/migrations/)
-against a fresh database — the way to confirm a new migration actually
-applies cleanly (not just that it worked once against a database that
-already had earlier state) before merging.
+The files live in [backend/internal/migrations/](backend/internal/migrations/).
+To confirm a new migration applies cleanly against a fresh database (not just
+one that already had earlier state), point `MIGRATION_DB_CONNECTION_STRING` at
+an empty database, such as the local one above, and run `make migrate-dev`
+before merging. See [backend/docs/MIGRATIONS.md](backend/docs/MIGRATIONS.md)
+for generating, applying and reverting migrations.
 
 ### Health Endpoints
 
