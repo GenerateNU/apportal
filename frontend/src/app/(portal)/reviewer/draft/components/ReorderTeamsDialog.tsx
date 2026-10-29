@@ -65,7 +65,8 @@ export function ReorderTeamsDialog({
   }
 
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    // Without a threshold, a tap on the row's buttons starts a drag on touch.
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
@@ -187,7 +188,7 @@ function SeatRow({
       <button
         type="button"
         aria-label={`Reorder ${name}`}
-        className="text-text-faint hover:text-text-muted cursor-grab touch-none active:cursor-grabbing"
+        className="text-text-faint hover:text-text-muted -m-1.5 cursor-grab touch-none p-1.5 active:cursor-grabbing pointer-coarse:-m-2.5 pointer-coarse:p-2.5"
         {...attributes}
         {...listeners}
       >

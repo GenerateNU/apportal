@@ -39,17 +39,22 @@ import type {
 import { useCurrentUser } from './users'
 import { queryKeys } from './keys'
 
+export async function fetchPreferenceLists(
+  cycleId: string,
+  opts?: RequestOptions
+) {
+  const lists = ((await listPreferenceLists({ cycle_id: cycleId }, opts)) ??
+    []) as PreferenceListSummary[]
+  return lists.map((list) => ({
+    ...list,
+    member_names: list.member_names ?? [],
+  }))
+}
+
 export function usePreferenceLists(cycleId: string, opts?: RequestOptions) {
   return useQuery({
     queryKey: queryKeys.preferenceLists.list(cycleId),
-    queryFn: async () => {
-      const lists = ((await listPreferenceLists({ cycle_id: cycleId }, opts)) ??
-        []) as PreferenceListSummary[]
-      return lists.map((list) => ({
-        ...list,
-        member_names: list.member_names ?? [],
-      }))
-    },
+    queryFn: () => fetchPreferenceLists(cycleId, opts),
     enabled: !!cycleId,
   })
 }

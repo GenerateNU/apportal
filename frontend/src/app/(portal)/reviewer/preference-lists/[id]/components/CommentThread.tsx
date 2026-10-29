@@ -83,11 +83,11 @@ export function CommentThread({
               </div>
             ) : (
               <div className="flex items-start justify-between gap-3">
-                <div>
+                <div className="min-w-0">
                   <p className="text-text-muted text-xs">
                     {c.author_name || c.author_nuid}
                   </p>
-                  <p className="text-text-default mt-1 text-sm whitespace-pre-wrap">
+                  <p className="text-text-default mt-1 text-sm break-words whitespace-pre-wrap">
                     {c.body}
                   </p>
                   <p className="text-text-faint mt-1.5 text-xs">
@@ -99,7 +99,7 @@ export function CommentThread({
                   <button
                     type="button"
                     onClick={() => startEditing(c)}
-                    className="text-text-faint hover:text-text-muted shrink-0"
+                    className="text-text-faint hover:text-text-muted shrink-0 pointer-coarse:-m-2 pointer-coarse:p-2"
                     aria-label="Edit comment"
                   >
                     <Pencil size={14} />

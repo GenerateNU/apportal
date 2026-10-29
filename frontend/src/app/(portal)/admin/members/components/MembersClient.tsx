@@ -21,8 +21,10 @@ import { ApplicantRow } from './ApplicantRow'
 type RoleFilter = UserRole | 'all'
 type ViewType = 'staff' | 'applicants'
 
-const STAFF_GRID_COLS = 'grid-cols-[1fr_140px_160px]'
-const APPLICANTS_GRID_COLS = 'grid-cols-[1fr_100px_140px_110px]'
+// The Joined column is hidden below sm so rows fit a phone without scrolling.
+const STAFF_GRID_COLS = 'grid-cols-[1fr_auto] sm:grid-cols-[1fr_140px_160px]'
+const APPLICANTS_GRID_COLS =
+  'grid-cols-[1fr_auto_auto] sm:grid-cols-[1fr_100px_140px_110px]'
 
 const MEMBERS_PAGE_SIZE = 10
 
@@ -90,12 +92,12 @@ export function MembersClient() {
   return (
     <PageContainer>
       <div className="flex items-start justify-between gap-4">
-        <div>
+        <div className="min-w-0">
           <h1 className="text-text-default text-2xl font-semibold">Members</h1>
           <p className="text-text-muted mt-1 text-sm">{headerLabel}</p>
         </div>
         {view === 'staff' && (
-          <Button onClick={() => setShowAddMember(true)}>
+          <Button className="shrink-0" onClick={() => setShowAddMember(true)}>
             <UserPlus />
             Add user
           </Button>
@@ -129,7 +131,7 @@ export function MembersClient() {
           </button>
         </div>
 
-        <div className="relative max-w-md flex-1">
+        <div className="relative max-w-md min-w-48 flex-1">
           <Search className="text-text-faint pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
           <input
             value={search}
@@ -173,12 +175,12 @@ export function MembersClient() {
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
-          <div className="min-w-120">
+          <div className="sm:min-w-120">
             <div
               className={`text-text-subtle grid ${gridCols} gap-4 border-b border-gray-100 px-4 py-3 text-xs font-medium tracking-wide uppercase`}
             >
               <span>User</span>
-              <span>Joined</span>
+              <span className="hidden sm:block">Joined</span>
               <span>{view === 'staff' ? 'Role' : 'Status'}</span>
               {view === 'applicants' && <span>Returner</span>}
             </div>

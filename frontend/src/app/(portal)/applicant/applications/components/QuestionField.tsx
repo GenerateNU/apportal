@@ -80,7 +80,7 @@ function UrlOrFileAnswer({
 
   if (value.filePath && applicationId) {
     return (
-      <div className="flex items-center gap-3">
+      <div className="flex min-w-0 items-center gap-3">
         <FileAnswerLink
           applicationId={applicationId}
           questionId={questionId}
@@ -90,7 +90,7 @@ function UrlOrFileAnswer({
           <button
             type="button"
             onClick={() => onChange({})}
-            className="text-text-subtle hover:text-destructive"
+            className="text-text-subtle hover:text-destructive -m-2 shrink-0 p-2"
             aria-label="Remove file"
           >
             <X size={14} />
@@ -111,7 +111,7 @@ function UrlOrFileAnswer({
         disabled={disabled}
       />
       {!disabled && (
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <input
             ref={fileInputRef}
             type="file"
@@ -184,7 +184,7 @@ export function QuestionField({
   return (
     <div
       id={`question-${question.id}`}
-      className="flex scroll-mt-6 flex-col gap-3 rounded-lg border border-gray-200 bg-white p-5 shadow-sm"
+      className="flex scroll-mt-6 flex-col gap-3 rounded-lg border border-gray-200 bg-white p-4 shadow-sm sm:p-5"
     >
       <Label className="text-base">
         {index + 1}. {question.question_text}
@@ -232,7 +232,7 @@ export function QuestionField({
           {options.map((option) => (
             <label
               key={option}
-              className="text-text-default hover:text-text-default flex cursor-pointer items-center gap-3 text-base transition-colors"
+              className="text-text-default hover:text-text-default flex cursor-pointer items-center gap-3 py-1 text-base transition-colors"
             >
               <input
                 type="radio"
@@ -240,7 +240,7 @@ export function QuestionField({
                 checked={value.text === option}
                 onChange={() => onChange({ text: option })}
                 disabled={disabled}
-                className="accent-brand-blue h-4 w-4 cursor-pointer"
+                className="accent-brand-blue h-4 w-4 shrink-0 cursor-pointer"
               />
               {option}
             </label>
@@ -296,7 +296,7 @@ export function QuestionField({
             return (
               <label
                 key={option}
-                className="text-text-default hover:text-text-default flex cursor-pointer items-center gap-3 text-base transition-colors"
+                className="text-text-default hover:text-text-default flex cursor-pointer items-center gap-3 py-1 text-base transition-colors"
               >
                 <input
                   type="checkbox"
@@ -309,7 +309,7 @@ export function QuestionField({
                     })
                   }
                   disabled={disabled}
-                  className="accent-brand-blue h-4 w-4 cursor-pointer"
+                  className="accent-brand-blue h-4 w-4 shrink-0 cursor-pointer"
                 />
                 {option}
               </label>

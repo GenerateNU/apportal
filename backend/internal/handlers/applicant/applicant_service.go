@@ -11,6 +11,9 @@ type applicantService struct {
 }
 
 func (s *applicantService) upsert(ctx context.Context, in *UpsertApplicantInput) (*ApplicantOutput, error) {
+	if err := utils.RequireNortheasternEmail(in.Body.Email); err != nil {
+		return nil, err
+	}
 	applicant, err := s.applicantDB.UpsertApplicant(ctx, ApplicantUpsert{
 		NUID:           in.Body.NUID,
 		Email:          in.Body.Email,

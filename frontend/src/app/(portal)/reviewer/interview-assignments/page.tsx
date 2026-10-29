@@ -5,10 +5,10 @@ import {
   QueryClient,
 } from '@tanstack/react-query'
 import { fetchApplicationPage } from '@/lib/queries/applications'
-import { getCurrentUser } from '@/generated/users/users'
 import { getServerRequestOptions } from '@/lib/api/server-request-options'
 import { queryKeys } from '@/lib/queries/keys'
 import { InterviewAssignmentsClient } from './components/InterviewAssignmentsClient'
+import { getServerCurrentUser } from '@/lib/auth/server-user'
 
 // Auth-gated, live data fetched per request from the backend — never prerender
 // this at build time (the backend isn't running then).
@@ -21,7 +21,7 @@ export const dynamic = 'force-dynamic'
 // avoids rendering a page whose every request would 403.
 async function isChief(): Promise<boolean> {
   try {
-    const user = await getCurrentUser(await getServerRequestOptions())
+    const user = await getServerCurrentUser()
     return (user.roles ?? []).some(
       (role) => role === 'chief' || role === 'admin'
     )

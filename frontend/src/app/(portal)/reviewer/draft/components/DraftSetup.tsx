@@ -63,7 +63,8 @@ export function DraftSetup({
   starting: boolean
 }) {
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    // Without a threshold, a tap on the row's buttons starts a drag on touch.
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
@@ -248,7 +249,7 @@ function SeatRow({
       <button
         type="button"
         aria-label={`Drag ${name} to reorder`}
-        className="text-text-faint hover:text-text-subtle cursor-grab touch-none rounded-md p-1 hover:bg-gray-100 active:cursor-grabbing"
+        className="text-text-faint hover:text-text-subtle cursor-grab touch-none rounded-md p-1 hover:bg-gray-100 active:cursor-grabbing pointer-coarse:p-2"
         {...attributes}
         {...listeners}
       >
@@ -271,7 +272,7 @@ function SeatRow({
           onClick={() => onMove(index, -1)}
           disabled={index === 0}
           aria-label={`Move ${name} up`}
-          className="text-text-subtle hover:text-brand-blue disabled:hover:text-text-subtle rounded p-1 transition-colors disabled:opacity-30"
+          className="text-text-subtle hover:text-brand-blue disabled:hover:text-text-subtle rounded p-1 transition-colors disabled:opacity-30 pointer-coarse:p-2"
         >
           <ArrowUp size={14} />
         </button>
@@ -280,7 +281,7 @@ function SeatRow({
           onClick={() => onMove(index, 1)}
           disabled={index === total - 1}
           aria-label={`Move ${name} down`}
-          className="text-text-subtle hover:text-brand-blue disabled:hover:text-text-subtle rounded p-1 transition-colors disabled:opacity-30"
+          className="text-text-subtle hover:text-brand-blue disabled:hover:text-text-subtle rounded p-1 transition-colors disabled:opacity-30 pointer-coarse:p-2"
         >
           <ArrowDown size={14} />
         </button>
@@ -288,7 +289,7 @@ function SeatRow({
           type="button"
           onClick={onRemove}
           aria-label={`Remove ${name} from the draft`}
-          className="text-text-subtle hover:text-destructive rounded p-1 transition-colors"
+          className="text-text-subtle hover:text-destructive rounded p-1 transition-colors pointer-coarse:p-2"
         >
           <X size={14} />
         </button>

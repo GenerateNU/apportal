@@ -70,8 +70,8 @@ export function OnTheClockPanel({
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
       {/* The brand-blue band is the page's focal point — from across a room
           it's the only thing that has to be legible. */}
-      <div className="bg-brand-blue text-brand-white flex flex-wrap items-center justify-between gap-4 px-5 py-4">
-        <div className="flex items-center gap-3">
+      <div className="bg-brand-blue text-brand-white flex flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-5">
+        <div className="flex min-w-0 flex-wrap items-center gap-3">
           <span className="rounded-md bg-white/20 px-2 py-0.5 text-xs font-semibold tracking-wide uppercase">
             On the clock
           </span>
@@ -94,13 +94,13 @@ export function OnTheClockPanel({
             placeholder="Pick someone else…"
             searchPlaceholder="Search applicants…"
             emptyText="No applicants left."
-            className="w-72 bg-white"
+            className="w-full bg-white sm:w-72"
             ariaLabel="Pick an applicant not on this team's list"
           />
         )}
       </div>
 
-      <div className="flex flex-col gap-3 p-5">
+      <div className="flex flex-col gap-3 p-4 sm:p-5">
         {error && <p className="text-destructive text-sm">{error}</p>}
         <h3 className={SECTION_HEADER_CLASS}>{team.name}&apos;s list</h3>
         {teamListLoading ? (
@@ -150,7 +150,7 @@ export function OnTheClockPanel({
                     </span>
                   </div>
                   {takenBy ? (
-                    <span className="text-text-muted shrink-0 rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium">
+                    <span className="text-text-muted max-w-[40%] shrink-0 truncate rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium">
                       Drafted · {takenBy}
                     </span>
                   ) : (

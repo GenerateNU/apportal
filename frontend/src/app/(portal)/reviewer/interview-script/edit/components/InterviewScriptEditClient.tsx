@@ -78,7 +78,7 @@ function StringListEditor({
             type="button"
             onClick={() => onChange(items.filter((_, idx) => idx !== i))}
             aria-label="Remove"
-            className="text-text-faint hover:text-red-600"
+            className="text-text-faint -m-1.5 shrink-0 p-1.5 hover:text-red-600"
           >
             <X size={16} />
           </button>
@@ -120,7 +120,7 @@ function QuestionEditor({
           type="button"
           onClick={onRemove}
           aria-label="Remove question"
-          className="text-text-faint mt-1 shrink-0 hover:text-red-600"
+          className="text-text-faint -mx-1.5 -mb-1.5 shrink-0 p-1.5 hover:text-red-600"
         >
           <Trash2 size={16} />
         </button>
@@ -296,7 +296,8 @@ function InterviewScriptEditForm({
 
   return (
     <>
-      <div className="flex items-center justify-end gap-3">
+      {/* Pinned below lg so Save stays reachable at the bottom of a long form. */}
+      <div className="flex items-center justify-end gap-3 max-lg:sticky max-lg:top-0 max-lg:z-10 max-lg:bg-white max-lg:py-2">
         {saved && !update.isPending && (
           <span className="inline-flex items-center gap-1 text-sm text-green-700">
             <Check size={14} />

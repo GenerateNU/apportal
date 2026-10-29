@@ -133,6 +133,9 @@ const SPECIAL_QUESTIONS: { special: SpecialFilter; question: Question }[] = [
 // filter offers checkboxes instead of a text box.
 const CHOICE_TYPES: QuestionType[] = ['checkbox', 'dropdown', 'multiple_choice']
 
+// Matches the panels' w-72.
+const SUBMENU_WIDTH_PX = 288
+
 function isChoiceQuestion(type: QuestionType) {
   return CHOICE_TYPES.includes(type)
 }
@@ -167,6 +170,8 @@ export function FilterChips({
   )
   const [searchTerm, setSearchTerm] = useState('')
   const [activeQuestionId, setActiveQuestionId] = useState<string | null>(null)
+  // Only read once open, so the server render never touches window.
+  const overlaySubmenu = isOpen && window.innerWidth < 640
 
   useEffect(() => {
     if (activeQuestionId) {
@@ -261,7 +266,7 @@ export function FilterChips({
 
         <DropdownMenuContent
           align="start"
-          className="w-72 overflow-visible p-0"
+          className="w-72 max-w-[calc(100vw-2rem)] overflow-visible p-0"
           onKeyDown={preventMenuNavigation}
         >
           <div className="border-b border-gray-200 px-2 py-1.5">
@@ -292,8 +297,12 @@ export function FilterChips({
                     </div>
                   </DropdownMenuSubTrigger>
                   {/* Radix leaves submenus flush against the parent panel, so
-                      this offset is what separates the two surfaces. */}
-                  <DropdownMenuSubContent sideOffset={8} className="w-72 p-0">
+                      this offset is what separates the two surfaces. A phone
+                      can't fit both side by side, so there it overlays the parent. */}
+                  <DropdownMenuSubContent
+                    sideOffset={overlaySubmenu ? -SUBMENU_WIDTH_PX : 8}
+                    className="w-72 max-w-[calc(100vw-2rem)] p-0"
+                  >
                     <FilterValueEditor
                       question={q}
                       value={filterValues[q.id]}
@@ -385,14 +394,14 @@ function FilterChip({
     <>
       <span className="flex items-center gap-1.5 px-2">
         {getFilterIcon(filter.special, filter.question_type, 'h-3.5 w-3.5')}
-        <span className="text-text-default max-w-[11rem] truncate">
+        <span className="text-text-default max-w-[6rem] truncate sm:max-w-[11rem]">
           {filter.question_text}
         </span>
       </span>
       <span className="text-text-muted flex items-center border-l border-gray-200 px-2">
         {middleText}
       </span>
-      <span className="text-text-default flex max-w-[12rem] items-center border-l border-gray-200 px-2">
+      <span className="text-text-default flex max-w-[6rem] items-center border-l border-gray-200 px-2 sm:max-w-[12rem]">
         <span className="truncate">{getDisplayValue(filter)}</span>
       </span>
     </>
@@ -429,7 +438,7 @@ function FilterChip({
           </DropdownMenuTrigger>
           <DropdownMenuContent
             align="start"
-            className="w-72 p-0"
+            className="w-72 max-w-[calc(100vw-2rem)] p-0"
             onKeyDown={preventMenuNavigation}
           >
             <FilterValueEditor

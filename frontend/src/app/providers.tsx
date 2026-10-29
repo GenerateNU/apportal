@@ -10,13 +10,14 @@ import {
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { ToastProvider } from '@/components/ui/toast'
 import { APIError } from '@/lib/api/client'
+import type { User } from '@supabase/supabase-js'
 import { AuthProvider } from '@/lib/auth/auth-context'
 import { createClient } from '@/lib/supabase/client'
 
 // Ship the devtools only in development so they aren't bundled into production.
 const showDevtools = process.env.NODE_ENV !== 'production'
 
-// A stale client-side session (see /page.tsx's root-page handling for the
+// A stale client-side session (see RootFallback.tsx for the
 // full explanation) doesn't just break the root page — any query or mutation
 // anywhere in the portal can 401 the same way, and without this, that failure
 // was completely silent: no redirect, no message, just a page that quietly
@@ -70,11 +71,17 @@ function getQueryClient() {
   return browserQueryClient
 }
 
-export function Providers({ children }: { children: React.ReactNode }) {
+export function Providers({
+  initialUser,
+  children,
+}: {
+  initialUser: User | null
+  children: React.ReactNode
+}) {
   const queryClient = getQueryClient()
 
   return (
-    <AuthProvider>
+    <AuthProvider initialUser={initialUser}>
       <QueryClientProvider client={queryClient}>
         <ToastProvider>{children}</ToastProvider>
         {showDevtools && <ReactQueryDevtools initialIsOpen={false} />}

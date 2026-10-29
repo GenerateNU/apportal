@@ -10,15 +10,14 @@ import {
 } from '@/lib/queries/applications'
 import { fetchChiefReviewsBatch } from '@/lib/queries/chief-reviews'
 import { listCycles } from '@/generated/cycles/cycles'
-import { getCurrentUser } from '@/generated/users/users'
 import { getServerRequestOptions } from '@/lib/api/server-request-options'
-import type { RequestOptions } from '@/lib/api/orval-mutator'
 import type { Cycle } from '@/lib/api/types'
 import { pickDefaultCycleId } from '@/lib/queries/cycles'
 import { queryKeys } from '@/lib/queries/keys'
 import { fetchReviewerProgress } from '@/lib/queries/reviewer-progress'
 import { ROLE_COLUMNS } from '@/lib/roles'
 import { ChiefReviewQueueClient } from './components/ChiefReviewQueueClient'
+import { getServerCurrentUser } from '@/lib/auth/server-user'
 
 // Auth-gated, live data fetched per request from the backend — never prerender
 // this at build time (the backend isn't running then).
@@ -29,9 +28,9 @@ export const dynamic = 'force-dynamic'
 // server. The backend is still the actual boundary — every chief-review read
 // endpoint calls requireChief — this just avoids rendering a page whose every
 // request would 403.
-async function isChief(requestOptions: RequestOptions): Promise<boolean> {
+async function isChief(): Promise<boolean> {
   try {
-    const user = await getCurrentUser(requestOptions)
+    const user = await getServerCurrentUser()
     return (user.roles ?? []).some(
       (role) => role === 'chief' || role === 'admin'
     )
@@ -48,7 +47,7 @@ export default async function ChiefReviewQueuePage() {
   // together rather than paying for two sequential round trips before
   // anything else can start.
   const [chiefOk, cycles] = await Promise.all([
-    isChief(requestOptions),
+    isChief(),
     queryClient.fetchQuery({
       queryKey: queryKeys.cycles.list({}),
       queryFn: async () =>

@@ -110,7 +110,7 @@ export function ApplicationsClient() {
               <h2 className="text-text-faint text-xs font-semibold tracking-wide uppercase">
                 Open cycles
               </h2>
-              <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4">
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(min(280px,100%),1fr))] gap-4">
                 {openTemplates.map((t) => (
                   <ApplicationRow key={`${t.cycleId}-${t.role}`} template={t} />
                 ))}
@@ -176,10 +176,10 @@ function CycleFolder({
           }`}
         />
         <Folder size={16} className="text-text-faint shrink-0" />
-        <span className="text-text-default text-sm font-medium">
+        <span className="text-text-default min-w-0 truncate text-sm font-medium">
           {cycle.name}
         </span>
-        <span className="text-text-subtle flex items-center gap-1.5 text-xs">
+        <span className="text-text-subtle flex shrink-0 items-center gap-1.5 text-xs">
           <span
             className={`h-2 w-2 shrink-0 rounded-full ${cycleStatusDot[cycle.status]}`}
           />
@@ -187,7 +187,7 @@ function CycleFolder({
         </span>
       </button>
       {open && (
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4 border-t border-gray-100 p-4 pt-3">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(min(280px,100%),1fr))] gap-4 border-t border-gray-100 p-4 pt-3">
           {templates.map((t) => (
             <ApplicationRow key={`${t.cycleId}-${t.role}`} template={t} />
           ))}

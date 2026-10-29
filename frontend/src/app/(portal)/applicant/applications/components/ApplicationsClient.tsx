@@ -23,7 +23,7 @@ export function ApplicationsClient() {
 
   if (isLoading) {
     return (
-      <div className="text-text-muted flex items-center gap-2 px-8 py-10 text-sm">
+      <div className="text-text-muted flex items-center gap-2 px-4 py-10 text-sm sm:px-8">
         <Loader2 className="animate-spin" size={16} />
         Loading…
       </div>
@@ -32,7 +32,7 @@ export function ApplicationsClient() {
 
   if (!currentUser) {
     return (
-      <div className="mx-auto w-full max-w-3xl px-8 py-10">
+      <div className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-8">
         <h1 className="text-text-default text-2xl font-semibold">
           My Applications
         </h1>
@@ -208,7 +208,7 @@ function EmptyState({ applications }: { applications: Application[] }) {
         return (
           <div
             key={application.id}
-            className="flex items-center justify-between rounded-xl border border-gray-100 bg-white p-4"
+            className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-gray-100 bg-white p-4"
           >
             <span
               className={`inline-flex rounded-md px-2 py-0.5 text-xs font-medium ${ROLE_CHIP_CLASS[application.role]}`}

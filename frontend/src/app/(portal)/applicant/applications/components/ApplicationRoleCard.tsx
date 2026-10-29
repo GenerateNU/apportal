@@ -52,11 +52,11 @@ export function ApplicationRoleCard({
     <button
       type="button"
       onClick={handleClick}
-      className="group rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm transition-shadow hover:shadow-md"
+      className="group min-w-0 rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm transition-shadow hover:shadow-md"
     >
       <div className="flex items-center justify-between gap-2 text-left">
         <span
-          className={`inline-flex rounded-md px-2 py-0.5 text-xs font-medium ${paletteClass(cycleColorIndex)}`}
+          className={`inline-flex min-w-0 truncate rounded-md px-2 py-0.5 text-xs font-medium ${paletteClass(cycleColorIndex)}`}
         >
           {cycle.name}
         </span>

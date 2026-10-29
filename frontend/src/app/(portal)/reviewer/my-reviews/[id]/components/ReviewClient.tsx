@@ -187,8 +187,8 @@ export function ReviewClient({
   return (
     <div className="flex min-h-full flex-col lg:h-full">
       {/* Top bar */}
-      <div className="flex items-center justify-between gap-3 border-b border-gray-200 bg-white px-4 py-3 sm:px-8">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-gray-200 bg-white px-4 py-3 sm:px-8">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2">
           <Link
             href="/reviewer/my-reviews"
             className="text-text-muted hover:text-text-default inline-flex items-center gap-1 text-sm"
@@ -196,18 +196,18 @@ export function ReviewClient({
             <ArrowLeft size={14} />
             Back to Lead review
           </Link>
-          <div className="flex items-center gap-3 border-l border-gray-200 pl-4">
-            <h1 className="text-text-default text-lg font-semibold">
+          <div className="flex min-w-0 items-center gap-3 border-l border-gray-200 pl-4">
+            <h1 className="text-text-default min-w-0 truncate text-lg font-semibold">
               {applicant?.full_name ?? 'Applicant'}
             </h1>
             <span
-              className={`w-fit rounded-md px-2 py-0.5 text-xs font-medium ${ROLE_CHIP_CLASS[role]}`}
+              className={`w-fit shrink-0 rounded-md px-2 py-0.5 text-xs font-medium ${ROLE_CHIP_CLASS[role]}`}
             >
               {ROLE_LABEL[role]}
             </span>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           {isChief && (
             <Link
               href={`/reviewer/chief-review/${applicationId}`}
@@ -233,7 +233,7 @@ export function ReviewClient({
               }
             >
               <ChevronLeft data-icon="inline-start" size={14} />
-              Previous application
+              Previous<span className="hidden sm:inline"> application</span>
             </Button>
           )}
           {nextApplicationId && (
@@ -244,7 +244,7 @@ export function ReviewClient({
                 router.push(`/reviewer/my-reviews/${nextApplicationId}`)
               }
             >
-              Next application
+              Next<span className="hidden sm:inline"> application</span>
               <ArrowRight data-icon="inline-end" size={14} />
             </Button>
           )}

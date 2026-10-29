@@ -1,7 +1,6 @@
 import { notFound } from 'next/navigation'
-import { getCurrentUser } from '@/generated/users/users'
-import { getServerRequestOptions } from '@/lib/api/server-request-options'
 import { InterviewAssignmentPlanClient } from './components/InterviewAssignmentPlanClient'
+import { getServerCurrentUser } from '@/lib/auth/server-user'
 
 // Auth-gated and driven entirely by chief input (meeting days are typed in,
 // not stored), so there is nothing worth prefetching or prerendering here.
@@ -19,7 +18,7 @@ export default async function InterviewAssignmentPlanPage() {
 
 async function isChief(): Promise<boolean> {
   try {
-    const user = await getCurrentUser(await getServerRequestOptions())
+    const user = await getServerCurrentUser()
     return (user.roles ?? []).some(
       (role) => role === 'chief' || role === 'admin'
     )
