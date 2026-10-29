@@ -12,15 +12,6 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 )
 
-// AnswerInput is one answer in a bulk upsert.
-type AnswerInput struct {
-	QuestionID     string
-	AnswerText     *string
-	AnswerOptions  json.RawMessage
-	AnswerFilePath *string
-	AnswerFileName *string
-}
-
 // isEmpty reports whether the answer has no content. Autosave resends the whole
 // form, so a cleared field must delete its row or the old value comes back.
 func (in AnswerInput) isEmpty() bool {

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"time"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -21,33 +20,6 @@ type InterviewDB struct {
 
 func NewInterviewDB(db *gorm.DB) *InterviewDB {
 	return &InterviewDB{db: db, users: user.NewUserDB(db)}
-}
-
-// InterviewUpsert carries the interviewer's write-up. Nil fields keep their
-// stored value; Submit stamps submitted_at.
-type InterviewUpsert struct {
-	ApplicationID   string
-	InterviewerNUID string
-	ScheduledAt     *time.Time
-	ConductedAt     *time.Time
-	RecordingURL    *string
-	NotesURL        *string
-	Comments        *string
-	Rating          *models.InterviewRating
-	Submit          bool
-}
-
-// InterviewScriptUpdate replaces a whole (cycle, role) script; chiefs edit it
-// as one form.
-type InterviewScriptUpdate struct {
-	IntroSpeech            string
-	RecordingReminder      string
-	Questions              json.RawMessage
-	ClosingNote            string
-	ChallengeIntro         string
-	ChallengeTracks        json.RawMessage
-	PostInterviewChecklist json.RawMessage
-	UpdatedBy              string
 }
 
 // keepIfNull keeps the stored value when the upsert supplies NULL.

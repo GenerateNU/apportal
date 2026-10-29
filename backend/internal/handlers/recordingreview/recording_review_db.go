@@ -19,15 +19,6 @@ func NewRecordingReviewDB(db *gorm.DB) *RecordingReviewDB {
 	return &RecordingReviewDB{db: db, users: user.NewUserDB(db)}
 }
 
-// RecordingReviewUpsert carries an assigned lead's review of an interview recording.
-type RecordingReviewUpsert struct {
-	InterviewID  string
-	ReviewerNUID string
-	Comments     *string
-	Rating       *models.InterviewRating
-	Submit       bool
-}
-
 // UpsertRecordingReview upserts a reviewer's recording review, keyed on
 // interview + reviewer. Omitted fields keep their stored value, so a
 // comment-only save can't clear an earlier rating.

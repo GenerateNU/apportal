@@ -48,3 +48,25 @@ type UpdateQuestionInput struct {
 type DeleteQuestionInput struct {
 	ID string `path:"id" doc:"Question ID"`
 }
+
+type QuestionCreate struct {
+	CycleID      string
+	Role         *models.Role // nil = global (shown to all roles)
+	QuestionText string
+	QuestionType models.QuestionType
+	IsRequired   bool
+	DisplayOrder int
+	Options      json.RawMessage
+	PageTitle    *string
+}
+
+type QuestionUpdate struct {
+	QuestionText *string
+	QuestionType *models.QuestionType
+	IsRequired   *bool
+	DisplayOrder *int
+	Options      json.RawMessage
+	// A nil PageTitle can't mean "clear", so clearing needs its own flag.
+	PageTitle      *string
+	ClearPageTitle bool
+}

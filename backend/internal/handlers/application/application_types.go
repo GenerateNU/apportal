@@ -81,3 +81,62 @@ type UpdateApplicationInput struct {
 		ResumeURL    *string                  `json:"resume_url,omitempty"`
 	}
 }
+
+type ApplicationCreate struct {
+	CycleID      string
+	UserNUID     string
+	Role         models.Role
+	Availability json.RawMessage
+	ResumeURL    *string
+}
+
+type ApplicationUpdate struct {
+	Stage        *models.ApplicationStage
+	Availability json.RawMessage
+	ResumeURL    *string
+	// MarkSubmitted stamps submitted_at; set it only on the draft -> submitted
+	// transition, never on later stage changes or autosaves.
+	MarkSubmitted bool
+}
+
+// ApplicationFilter holds optional list filters; empty fields are ignored.
+type ApplicationFilter struct {
+	CycleID  string
+	UserNUID string
+	Role     *models.Role
+	// Roles matches any of several roles; combined with Role it narrows further.
+	Roles []models.Role
+	Stage *models.ApplicationStage
+	// Stages matches any of several stages; combined with Stage it narrows further.
+	Stages        []models.ApplicationStage
+	AnswerFilters []AnswerFilter
+	// AssignedTo keeps applications this lead is assigned to write-review.
+	AssignedTo string
+	// InterviewerNUID keeps applications this reviewer is assigned to interview.
+	InterviewerNUID string
+	// RecordingReviewerNUID keeps applications whose recording this lead reviews.
+	RecordingReviewerNUID string
+	InterviewRatings      []models.InterviewRating
+	// Returner is a pointer so "first-timers only" differs from "no filter".
+	Returner *bool
+	// IncludeDraft admits drafts; only set it when users list their own
+	// applications, since drafts are invisible everywhere else.
+	IncludeDraft bool
+	// Search matches name, NUID, or email by case-insensitive substring.
+	Search string
+	// Limit caps the page; nil returns every match.
+	Limit *int
+	// Offset is ignored unless Limit is set.
+	Offset int
+}
+
+// ApplicationPage is one page plus, when requested, the totals that size the
+// scroll and label the stage tabs. Counts are zero unless asked for.
+type ApplicationPage struct {
+	Items []models.ApplicationSummary
+	// Total counts every match, ignoring Limit/Offset.
+	Total int
+	// StageCounts ignores the Stage/Stages filters, so each tab shows what it
+	// would hold rather than zero.
+	StageCounts map[models.ApplicationStage]int
+}

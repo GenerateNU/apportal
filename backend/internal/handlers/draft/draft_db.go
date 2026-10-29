@@ -19,11 +19,6 @@ func NewDraftDB(db *gorm.DB) *DraftDB {
 	return &DraftDB{db: db}
 }
 
-type DraftUpdate struct {
-	Status *models.DraftStatus
-	Rounds *int
-}
-
 // ErrDraftSlotTaken is returned when the requested slot already holds a pick —
 // two operators submitting at once, or a stale board.
 var ErrDraftSlotTaken = errors.New("draft slot already filled")

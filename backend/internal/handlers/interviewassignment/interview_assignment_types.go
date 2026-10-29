@@ -50,3 +50,15 @@ type UnassignAllOutput struct {
 		Deleted int `json:"deleted" doc:"Number of assignments removed"`
 	}
 }
+
+// InterviewAssignmentPair is one lead assigned to interview one application.
+type InterviewAssignmentPair struct {
+	ApplicationID string
+	LeadNUID      string
+}
+
+// InterviewReviewAssignmentPair is one lead assigned to review one recording.
+type InterviewReviewAssignmentPair struct {
+	ApplicationID string
+	LeadNUID      string
+}

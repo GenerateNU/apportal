@@ -49,3 +49,23 @@ type UpdateUserInput struct {
 		Returner       *bool             `json:"returner,omitempty" doc:"Marks someone who has worked on a Generate project before"`
 	}
 }
+
+type UserCreate struct {
+	NUID           string
+	Email          string
+	FullName       string
+	Roles          []models.UserRole
+	GraduationYear *int
+	Major          *string
+	GithubUsername *string
+}
+
+type UserUpdate struct {
+	Email          *string
+	FullName       *string
+	Roles          []models.UserRole
+	GraduationYear *int
+	Major          *string
+	GithubUsername *string
+	Returner       *bool
+}

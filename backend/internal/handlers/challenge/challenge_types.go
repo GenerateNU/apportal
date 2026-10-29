@@ -29,3 +29,12 @@ type ListChallengesInput struct {
 	ID   string `path:"id" doc:"Cycle ID"`
 	Role string `query:"role" doc:"Optional role filter"`
 }
+
+type ChallengeCreate struct {
+	CycleID      string
+	Role         models.Role
+	Name         string
+	ChallengeURL *string
+	Instructions *string
+	DueAt        *time.Time
+}

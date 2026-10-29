@@ -64,3 +64,39 @@ type ListDecisionContextInput struct {
 	// `application_ids[]=…`, which binds to nothing server-side.
 	ApplicationIDs string `query:"application_ids" doc:"Comma-separated application IDs"`
 }
+
+// DecisionTemplateUpdate replaces one letter; chiefs edit it as one form.
+type DecisionTemplateUpdate struct {
+	Subject   string
+	Body      string
+	UpdatedBy string
+}
+
+// DecisionFilter narrows the decisions list. CycleID is always set; the rest
+// come from the page's filter row.
+type DecisionFilter struct {
+	CycleID string
+	Role    *models.Role
+	Kind    *models.DecisionKind
+	// InterviewerNUID scopes a lead's queue to applicants they interviewed.
+	InterviewerNUID string
+	Search          string
+	// ApplicationIDs backs the context endpoint's "which may this caller see".
+	ApplicationIDs []string
+}
+
+// DecisionDraftUpdate is a partial write: nil leaves a field alone and "" clears
+// it. Kind is always supplied because the column is NOT NULL.
+type DecisionDraftUpdate struct {
+	Kind         models.DecisionKind
+	Feedback     *string
+	Compliments  *string
+	BodyOverride *string
+	AuthorNUID   string
+	// MarkSent stamps or clears sent_at/sent_by and rejects or un-rejects the
+	// applicant with it. Nil leaves both alone.
+	MarkSent *bool
+	SentBy   string
+	// PreviousStage is filled in by UpsertDecisionDraft, not by callers.
+	PreviousStage *models.ApplicationStage
+}

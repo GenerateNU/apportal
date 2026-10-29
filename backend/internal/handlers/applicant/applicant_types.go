@@ -20,3 +20,12 @@ type UpsertApplicantInput struct {
 type ApplicantNUIDInput struct {
 	NUID string `path:"nuid"`
 }
+
+type ApplicantUpsert struct {
+	NUID           string
+	Email          string
+	FullName       string
+	GithubUsername *string
+	GraduationYear *int
+	Major          *string
+}

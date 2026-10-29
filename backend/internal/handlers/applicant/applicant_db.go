@@ -18,15 +18,6 @@ func NewApplicantDB(db *gorm.DB) *ApplicantDB {
 	return &ApplicantDB{db: db}
 }
 
-type ApplicantUpsert struct {
-	NUID           string
-	Email          string
-	FullName       string
-	GithubUsername *string
-	GraduationYear *int
-	Major          *string
-}
-
 var applicantProfileColumns = []string{"email", "full_name", "github_username", "graduation_year", "major"}
 
 // UpsertApplicant inserts or updates the applicant keyed by NUID. Roles are

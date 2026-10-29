@@ -37,3 +37,16 @@ type UpdateApplicationTemplateInput struct {
 		ReviewClosesAt *time.Time          `json:"review_closes_at,omitempty"`
 	}
 }
+
+// ApplicationTemplateUpdate carries partial-update fields; nil pointers are
+// left unchanged.
+type ApplicationTemplateUpdate struct {
+	Title          *string
+	Description    *string
+	Instructions   *string
+	OpensAt        *time.Time
+	ClosesAt       *time.Time
+	Status         *models.CycleStatus
+	ReviewStatus   *models.CycleStatus
+	ReviewClosesAt *time.Time
+}

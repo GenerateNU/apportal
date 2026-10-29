@@ -2,7 +2,6 @@ package challenge
 
 import (
 	"context"
-	"time"
 
 	"gorm.io/gorm"
 
@@ -16,15 +15,6 @@ type ChallengeDB struct {
 
 func NewChallengeDB(db *gorm.DB) *ChallengeDB {
 	return &ChallengeDB{db: db}
-}
-
-type ChallengeCreate struct {
-	CycleID      string
-	Role         models.Role
-	Name         string
-	ChallengeURL *string
-	Instructions *string
-	DueAt        *time.Time
 }
 
 func (c *ChallengeDB) CreateChallenge(ctx context.Context, in ChallengeCreate) (models.CodeChallenge, error) {

@@ -2,7 +2,6 @@ package question
 
 import (
 	"context"
-	"encoding/json"
 
 	"gorm.io/gorm"
 
@@ -16,28 +15,6 @@ type QuestionDB struct {
 
 func NewQuestionDB(db *gorm.DB) *QuestionDB {
 	return &QuestionDB{db: db}
-}
-
-type QuestionCreate struct {
-	CycleID      string
-	Role         *models.Role // nil = global (shown to all roles)
-	QuestionText string
-	QuestionType models.QuestionType
-	IsRequired   bool
-	DisplayOrder int
-	Options      json.RawMessage
-	PageTitle    *string
-}
-
-type QuestionUpdate struct {
-	QuestionText *string
-	QuestionType *models.QuestionType
-	IsRequired   *bool
-	DisplayOrder *int
-	Options      json.RawMessage
-	// A nil PageTitle can't mean "clear", so clearing needs its own flag.
-	PageTitle      *string
-	ClearPageTitle bool
 }
 
 func (q *QuestionDB) CreateQuestion(ctx context.Context, in QuestionCreate) (models.Question, error) {

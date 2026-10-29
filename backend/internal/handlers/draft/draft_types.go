@@ -70,3 +70,8 @@ type DraftIDInput struct {
 type DraftedApplicationsOutput struct {
 	Body map[string]string
 }
+
+type DraftUpdate struct {
+	Status *models.DraftStatus
+	Rounds *int
+}

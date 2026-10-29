@@ -12,19 +12,6 @@ import (
 // maxAnswerFilters caps the filter list because each one adds a join.
 const maxAnswerFilters = 25
 
-// AnswerFilterInput is one decoded entry of the answer_filters query param.
-// Values is deliberately loose — a single string for free-text questions, an
-// array for choice questions — so the UI can send the shape it already holds.
-type AnswerFilterInput struct {
-	QuestionID string `json:"question_id"`
-	// QuestionIDs is the any-of counterpart of QuestionID, for a question the
-	// form authors once per applicant role: the filter matches an answer to
-	// any of them. Both may be set; they're unioned.
-	QuestionIDs  []string            `json:"question_ids"`
-	QuestionType models.QuestionType `json:"question_type"`
-	Values       json.RawMessage     `json:"values"`
-}
-
 // parseAnswerFilters decodes the query param and maps each question type onto
 // the match the query should run, which is what decides whether the answer is
 // read from answer_options (checkbox) or answer_text (everything else).

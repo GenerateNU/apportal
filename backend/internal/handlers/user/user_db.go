@@ -18,26 +18,6 @@ func NewUserDB(db *gorm.DB) *UserDB {
 	return &UserDB{db: db}
 }
 
-type UserCreate struct {
-	NUID           string
-	Email          string
-	FullName       string
-	Roles          []models.UserRole
-	GraduationYear *int
-	Major          *string
-	GithubUsername *string
-}
-
-type UserUpdate struct {
-	Email          *string
-	FullName       *string
-	Roles          []models.UserRole
-	GraduationYear *int
-	Major          *string
-	GithubUsername *string
-	Returner       *bool
-}
-
 func (u *UserDB) CreateUser(ctx context.Context, in UserCreate) (models.User, error) {
 	roles := in.Roles
 	if roles == nil {

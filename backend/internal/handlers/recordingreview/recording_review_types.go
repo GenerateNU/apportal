@@ -29,3 +29,12 @@ type ListRecordingReviewsBulkInput struct {
 	// `interview_ids[]=…`, which binds to nothing server-side.
 	InterviewIDs string `query:"interview_ids" doc:"Comma-separated interview IDs"`
 }
+
+// RecordingReviewUpsert carries an assigned lead's review of an interview recording.
+type RecordingReviewUpsert struct {
+	InterviewID  string
+	ReviewerNUID string
+	Comments     *string
+	Rating       *models.InterviewRating
+	Submit       bool
+}

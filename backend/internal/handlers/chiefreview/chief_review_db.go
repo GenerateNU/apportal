@@ -20,13 +20,6 @@ func NewChiefReviewDB(db *gorm.DB) *ChiefReviewDB {
 	return &ChiefReviewDB{db: db, users: user.NewUserDB(db)}
 }
 
-// ChiefReviewUpsert carries a chief's vote on an application.
-type ChiefReviewUpsert struct {
-	ApplicationID string
-	ReviewerNUID  string
-	Vote          *models.ChiefVote // non-nil marks the vote as cast (stamps decided_at)
-}
-
 // UpsertChiefReview upserts the chief's vote, keyed on application + reviewer,
 // stamping decided_at whenever a vote is given.
 func (c *ChiefReviewDB) UpsertChiefReview(ctx context.Context, in ChiefReviewUpsert) (models.ChiefReviewDetail, error) {

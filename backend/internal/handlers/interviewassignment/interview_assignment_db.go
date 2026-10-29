@@ -18,18 +18,6 @@ func NewInterviewAssignmentDB(db *gorm.DB) *InterviewAssignmentDB {
 	return &InterviewAssignmentDB{db: db}
 }
 
-// InterviewAssignmentPair is one lead assigned to interview one application.
-type InterviewAssignmentPair struct {
-	ApplicationID string
-	LeadNUID      string
-}
-
-// InterviewReviewAssignmentPair is one lead assigned to review one recording.
-type InterviewReviewAssignmentPair struct {
-	ApplicationID string
-	LeadNUID      string
-}
-
 // UpsertInterviewAssignment sets an application's single interviewer,
 // replacing any existing one.
 func (i *InterviewAssignmentDB) UpsertInterviewAssignment(ctx context.Context, applicationID, interviewerNUID, assignedBy string) (models.InterviewAssignment, error) {

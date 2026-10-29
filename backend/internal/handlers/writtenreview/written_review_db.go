@@ -21,14 +21,6 @@ func NewWrittenReviewDB(db *gorm.DB) *WrittenReviewDB {
 	return &WrittenReviewDB{db: db, users: user.NewUserDB(db)}
 }
 
-// ReviewAnswerInput is a reviewer's answer to one review question.
-type ReviewAnswerInput struct {
-	ReviewQuestionID string
-	AnswerText       *string
-	AnswerOptions    json.RawMessage
-	Score            *int
-}
-
 // isEmpty reports whether the answer was cleared, so its row gets deleted
 // rather than coming back on the next load.
 func (in ReviewAnswerInput) isEmpty() bool {
@@ -46,14 +38,6 @@ func (in ReviewAnswerInput) isEmpty() bool {
 		return len(opts) == 0
 	}
 	return false
-}
-
-// WrittenReviewUpsert carries a reviewer's full written review for an application.
-type WrittenReviewUpsert struct {
-	ApplicationID string
-	ReviewerNUID  string
-	Submit        bool // when true, stamps submitted_at = NOW()
-	Answers       []ReviewAnswerInput
 }
 
 // UpsertWrittenReview upserts the review, keyed on application + reviewer, and

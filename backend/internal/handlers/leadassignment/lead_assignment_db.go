@@ -2,7 +2,6 @@ package leadassignment
 
 import (
 	"context"
-	"time"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -17,24 +16,6 @@ type LeadAssignmentDB struct {
 
 func NewLeadAssignmentDB(db *gorm.DB) *LeadAssignmentDB {
 	return &LeadAssignmentDB{db: db}
-}
-
-// LeadAssignmentPair is one lead assigned to one application, for bulk writes.
-type LeadAssignmentPair struct {
-	ApplicationID string
-	LeadNUID      string
-}
-
-// ReviewerProgressRow is one lead's assignment with its review's submission
-// time, before grouping by lead.
-type ReviewerProgressRow struct {
-	LeadNUID      string
-	ApplicationID string
-	ApplicantNUID string
-	FullName      string
-	Email         string
-	AssignedAt    time.Time
-	SubmittedAt   *time.Time
 }
 
 func (l *LeadAssignmentDB) CreateLeadAssignment(ctx context.Context, applicationID, leadNUID, assignedBy string) (models.LeadAssignment, error) {

@@ -2,7 +2,6 @@ package reviewquestion
 
 import (
 	"context"
-	"encoding/json"
 
 	"gorm.io/gorm"
 
@@ -16,36 +15,6 @@ type ReviewQuestionDB struct {
 
 func NewReviewQuestionDB(db *gorm.DB) *ReviewQuestionDB {
 	return &ReviewQuestionDB{db: db}
-}
-
-type ReviewQuestionCreate struct {
-	CycleID      string
-	Role         *models.Role // nil = global (shown for all roles)
-	QuestionText string
-	QuestionType models.QuestionType
-	IsRequired   bool
-	DisplayOrder int
-	Options      json.RawMessage
-	Description  *string
-}
-
-type ReviewQuestionUpdate struct {
-	QuestionText     *string
-	QuestionType     *models.QuestionType
-	IsRequired       *bool
-	DisplayOrder     *int
-	Options          json.RawMessage
-	Description      *string
-	ClearDescription bool
-}
-
-// ReviewQuestionAverageRow is one lead's average on one review question,
-// before grouping by lead.
-type ReviewQuestionAverageRow struct {
-	LeadNUID         string
-	ReviewQuestionID string
-	AvgScore         float64
-	Count            int
 }
 
 func (r *ReviewQuestionDB) CreateReviewQuestion(ctx context.Context, in ReviewQuestionCreate) (models.ReviewQuestion, error) {

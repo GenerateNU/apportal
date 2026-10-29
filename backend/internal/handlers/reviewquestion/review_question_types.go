@@ -48,3 +48,33 @@ type UpdateReviewQuestionInput struct {
 type DeleteReviewQuestionInput struct {
 	ID string `path:"id" doc:"Review question ID"`
 }
+
+type ReviewQuestionCreate struct {
+	CycleID      string
+	Role         *models.Role // nil = global (shown for all roles)
+	QuestionText string
+	QuestionType models.QuestionType
+	IsRequired   bool
+	DisplayOrder int
+	Options      json.RawMessage
+	Description  *string
+}
+
+type ReviewQuestionUpdate struct {
+	QuestionText     *string
+	QuestionType     *models.QuestionType
+	IsRequired       *bool
+	DisplayOrder     *int
+	Options          json.RawMessage
+	Description      *string
+	ClearDescription bool
+}
+
+// ReviewQuestionAverageRow is one lead's average on one review question,
+// before grouping by lead.
+type ReviewQuestionAverageRow struct {
+	LeadNUID         string
+	ReviewQuestionID string
+	AvgScore         float64
+	Count            int
+}

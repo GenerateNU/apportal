@@ -109,3 +109,38 @@ type SetPreferenceListMeetingDayInput struct {
 		MeetingDay *string `json:"meeting_day,omitempty" doc:"monday, tuesday, wednesday, or thursday; omit/null to clear"`
 	}
 }
+
+// PreferenceListCreate carries a new list's fields. The creator joins as the
+// first member, so "is a member" stays the only access check.
+type PreferenceListCreate struct {
+	CycleID   string
+	Name      string
+	CreatedBy string
+}
+
+// PreferenceListUpdate carries a partial rename/status change. Submitting
+// stamps submitted_at and going back to draft clears it.
+type PreferenceListUpdate struct {
+	Name   *string
+	Status *models.PreferenceListStatus
+}
+
+// PreferenceListEntryUpsert adds an applicant or edits their reasoning. Nil
+// Reasoning keeps the stored value; "" clears it. Role scopes the rank sequence.
+type PreferenceListEntryUpsert struct {
+	PreferenceListID string
+	ApplicationID    string
+	Role             models.Role
+	Reasoning        *string
+	UpdatedBy        string
+}
+
+// PreferenceListPersonalEntryUpsert is PreferenceListEntryUpsert for one
+// owner's personal list within the group.
+type PreferenceListPersonalEntryUpsert struct {
+	PreferenceListID string
+	OwnerNUID        string
+	ApplicationID    string
+	Role             models.Role
+	Reasoning        *string
+}

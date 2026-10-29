@@ -30,3 +30,19 @@ type UpsertWrittenReviewInput struct {
 		Answers []ReviewAnswerSubmission `json:"answers,omitempty"`
 	}
 }
+
+// ReviewAnswerInput is a reviewer's answer to one review question.
+type ReviewAnswerInput struct {
+	ReviewQuestionID string
+	AnswerText       *string
+	AnswerOptions    json.RawMessage
+	Score            *int
+}
+
+// WrittenReviewUpsert carries a reviewer's full written review for an application.
+type WrittenReviewUpsert struct {
+	ApplicationID string
+	ReviewerNUID  string
+	Submit        bool // when true, stamps submitted_at = NOW()
+	Answers       []ReviewAnswerInput
+}

@@ -3,7 +3,6 @@ package applicationtemplate
 import (
 	"context"
 	"errors"
-	"time"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -18,19 +17,6 @@ type ApplicationTemplateDB struct {
 
 func NewApplicationTemplateDB(db *gorm.DB) *ApplicationTemplateDB {
 	return &ApplicationTemplateDB{db: db}
-}
-
-// ApplicationTemplateUpdate carries partial-update fields; nil pointers are
-// left unchanged.
-type ApplicationTemplateUpdate struct {
-	Title          *string
-	Description    *string
-	Instructions   *string
-	OpensAt        *time.Time
-	ClosesAt       *time.Time
-	Status         *models.CycleStatus
-	ReviewStatus   *models.CycleStatus
-	ReviewClosesAt *time.Time
 }
 
 func defaultTemplateTitle(role models.Role) string {

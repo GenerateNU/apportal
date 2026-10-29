@@ -23,3 +23,10 @@ type UpsertChiefReviewInput struct {
 		Vote *models.ChiefVote `json:"vote,omitempty"`
 	}
 }
+
+// ChiefReviewUpsert carries a chief's vote on an application.
+type ChiefReviewUpsert struct {
+	ApplicationID string
+	ReviewerNUID  string
+	Vote          *models.ChiefVote // non-nil marks the vote as cast (stamps decided_at)
+}
