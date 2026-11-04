@@ -6,7 +6,10 @@ import { FILTER_STAGES } from './constants'
 import { isAvailabilityQuestion } from './meetingAvailability'
 import { ApplicantRow } from './ApplicantRow'
 import { FilterChips } from './FilterButton'
-import { useInterviewsByApplicationIdBatches } from '@/lib/queries/interviews'
+import {
+  primaryInterview,
+  useInterviewsByApplicationIdBatches,
+} from '@/lib/queries/interviews'
 
 const TRAILING_COLUMNS = ['Stage', 'Submitted', 'Availability']
 
@@ -101,7 +104,7 @@ export function TableView({
   )
   const interviewQueries = useInterviewsByApplicationIdBatches([applicationIds])
   const interviewsByApplicationId = useMemo(() => {
-    const map: Record<string, Interview | null> = {}
+    const map: Record<string, Interview[]> = {}
     for (const query of interviewQueries) {
       if (query.data) {
         Object.assign(map, query.data)
@@ -226,7 +229,9 @@ export function TableView({
                     answers={answersByApplicationId[a.id] ?? []}
                     answersLoading={!!answersLoadingByApplicationId[a.id]}
                     availabilityDays={availabilityByApplicationId[a.id] ?? []}
-                    interview={interviewsByApplicationId[a.id] ?? null}
+                    interview={
+                      primaryInterview(interviewsByApplicationId[a.id]) ?? null
+                    }
                     selectable={selectable}
                     selected={selectedIds.has(a.id)}
                     onToggleSelect={() => onToggleSelect(a.id)}

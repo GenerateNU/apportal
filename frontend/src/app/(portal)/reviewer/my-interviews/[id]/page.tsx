@@ -8,12 +8,12 @@ import { listAnswers } from '@/generated/answers/answers'
 import { getApplicant } from '@/generated/applicants/applicants'
 import { getApplication } from '@/generated/applications/applications'
 import {
-  getInterviewAssignment,
+  listInterviewAssignments,
   listRecordingReviewerAssignments,
 } from '@/generated/interview-assignments/interview-assignments'
 import {
-  getInterview,
   listInterviewComments,
+  listInterviews,
 } from '@/generated/interviews/interviews'
 import { listCycleQuestions } from '@/generated/questions/questions'
 import { listRecordingReviews } from '@/generated/recording-reviews/recording-reviews'
@@ -47,17 +47,17 @@ export default async function InterviewConductPage({
 
   const role = application.role as Role
 
-  // Fetched directly (not through queryClient.fetchQuery) because "no
-  // interview yet" is a real, common outcome here, and TanStack's fetchQuery
-  // rejects if a queryFn resolves to undefined — fine for prefetchQuery
-  // (which swallows the rejection) but fatal for an awaited fetchQuery. The
-  // client's own useInterview() still fetches this normally on mount.
-  let interview: Interview | undefined
+  let interviews: Interview[] = []
   try {
-    interview = (await getInterview(id, requestOptions)) as Interview
+    interviews = (await queryClient.fetchQuery({
+      queryKey: queryKeys.interviews.detail(id),
+      queryFn: async () =>
+        ((await listInterviews(id, requestOptions)) ?? []) as Interview[],
+    })) as Interview[]
   } catch {
-    interview = undefined
+    interviews = []
   }
+  const reviewedInterview = interviews.find((iv) => !!iv.submitted_at)
 
   await Promise.all([
     queryClient.prefetchQuery({
@@ -75,13 +75,8 @@ export default async function InterviewConductPage({
     }),
     queryClient.prefetchQuery({
       queryKey: queryKeys.interviewAssignments.detail(id),
-      queryFn: async () => {
-        try {
-          return await getInterviewAssignment(id, requestOptions)
-        } catch {
-          return null
-        }
-      },
+      queryFn: async () =>
+        (await listInterviewAssignments(id, requestOptions)) ?? [],
     }),
     queryClient.prefetchQuery({
       queryKey: queryKeys.interviewReviewAssignments.list(id),
@@ -91,11 +86,12 @@ export default async function InterviewConductPage({
       queryKey: queryKeys.interviewComments.list(id),
       queryFn: () => listInterviewComments(id, requestOptions),
     }),
-    ...(interview
+    ...(reviewedInterview
       ? [
           queryClient.prefetchQuery({
-            queryKey: queryKeys.recordingReviews.list(interview.id),
-            queryFn: () => listRecordingReviews(interview.id, requestOptions),
+            queryKey: queryKeys.recordingReviews.list(reviewedInterview.id),
+            queryFn: () =>
+              listRecordingReviews(reviewedInterview.id, requestOptions),
           }),
         ]
       : []),

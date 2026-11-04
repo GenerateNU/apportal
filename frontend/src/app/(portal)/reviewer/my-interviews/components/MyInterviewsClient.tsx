@@ -15,7 +15,10 @@ import type { Role } from '@/lib/api/types'
 import { useApplications } from '@/lib/queries/applications'
 import { DEFAULT_CYCLE_ID, useCycles } from '@/lib/queries/cycles'
 import { useChiefs, useCurrentUser, useLeads } from '@/lib/queries/users'
-import { useInterviewsByApplicationIdBatches } from '@/lib/queries/interviews'
+import {
+  primaryInterview,
+  useInterviewsByApplicationIdBatches,
+} from '@/lib/queries/interviews'
 import { useRecordingReviewsByInterviewIds } from '@/lib/queries/recording-reviews'
 import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 import type { ReviewState } from '../../my-reviews/constants'
@@ -125,7 +128,9 @@ export function MyInterviewsClient() {
   const rows = useMemo(
     () =>
       applications.map((application) => {
-        const interview = interviewByApplicationId?.[application.id]
+        const interview = interviewByApplicationId?.[application.id]?.find(
+          (iv) => iv.interviewer_nuid === interviewerNuid
+        )
         const state: ReviewState = interview?.submitted_at
           ? 'submitted'
           : interview
@@ -133,7 +138,7 @@ export function MyInterviewsClient() {
             : 'none'
         return { application, interview, state }
       }),
-    [applications, interviewByApplicationId]
+    [applications, interviewByApplicationId, interviewerNuid]
   )
 
   const interviewedCount = rows.filter((r) => r.state === 'submitted').length
@@ -165,7 +170,7 @@ export function MyInterviewsClient() {
   const reviewingInterviewIds = useMemo(
     () =>
       reviewingApplications
-        .map((a) => interviewByApplicationId?.[a.id]?.id)
+        .map((a) => primaryInterview(interviewByApplicationId?.[a.id])?.id)
         .filter((id): id is string => !!id),
     [reviewingApplications, interviewByApplicationId]
   )
@@ -178,7 +183,9 @@ export function MyInterviewsClient() {
   const reviewingRows = useMemo(
     () =>
       reviewingApplications.map((application) => {
-        const interview = interviewByApplicationId?.[application.id]
+        const interview = primaryInterview(
+          interviewByApplicationId?.[application.id]
+        )
         const own = interview?.id
           ? recordingReviewsByInterviewId?.[interview.id]?.find(
               (r) => r.reviewer_nuid === interviewerNuid

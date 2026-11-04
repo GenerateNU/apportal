@@ -46,7 +46,10 @@ import {
   useInterviewAssignmentsBulk,
   useRecordingReviewerAssignmentsBulk,
 } from '@/lib/queries/interview-assignments'
-import { useInterviewsByApplicationIdBatches } from '@/lib/queries/interviews'
+import {
+  primaryInterview,
+  useInterviewsByApplicationIdBatches,
+} from '@/lib/queries/interviews'
 import { useRecordingReviewsByInterviewIds } from '@/lib/queries/recording-reviews'
 import {
   useReviewGates,
@@ -272,7 +275,7 @@ export function InterviewRatingsClient() {
   const interviewIds = useMemo(
     () =>
       applications
-        .map((a) => interviewByApplicationId?.[a.id]?.id)
+        .map((a) => primaryInterview(interviewByApplicationId?.[a.id])?.id)
         .filter((id): id is string => !!id),
     [applications, interviewByApplicationId]
   )
@@ -283,7 +286,9 @@ export function InterviewRatingsClient() {
     () =>
       applications
         .map((application) => {
-          const interview = interviewByApplicationId?.[application.id]
+          const interview = primaryInterview(
+            interviewByApplicationId?.[application.id]
+          )
           const reviewerAssignments =
             reviewerAssignmentsByApplicationId?.[application.id] ?? []
           const reviews = interview?.id
@@ -296,8 +301,8 @@ export function InterviewRatingsClient() {
             application,
             interview,
             interviewerNuid:
-              assignmentByApplicationId?.[application.id]?.interviewer_nuid ??
-              null,
+              assignmentByApplicationId?.[application.id]?.[0]
+                ?.interviewer_nuid ?? null,
             reviewerCount: reviewerAssignments.length,
             reviewedCount: reviewerAssignments.filter((a) =>
               reviewedNuids.has(a.lead_nuid)

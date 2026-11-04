@@ -26,15 +26,11 @@ type InterviewUpsert struct {
 
 const interviewColumns = `id, application_id, interviewer_nuid, scheduled_at, conducted_at, recording_url, notes_url, comments, rating, submitted_at, created_at, updated_at`
 
-// UpsertInterview creates or updates the single interview record for an
-// application (one per application). Provided fields overwrite; omitted ones
-// are preserved.
 func (s *Store) UpsertInterview(ctx context.Context, in InterviewUpsert) (models.Interview, error) {
 	const q = `
 		INSERT INTO interviews (application_id, interviewer_nuid, scheduled_at, conducted_at, recording_url, notes_url, comments, rating, submitted_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CASE WHEN $9 THEN NOW() ELSE NULL END)
-		ON CONFLICT (application_id) DO UPDATE SET
-			interviewer_nuid = EXCLUDED.interviewer_nuid,
+		ON CONFLICT (application_id, interviewer_nuid) DO UPDATE SET
 			scheduled_at     = COALESCE(EXCLUDED.scheduled_at, interviews.scheduled_at),
 			conducted_at     = COALESCE(EXCLUDED.conducted_at, interviews.conducted_at),
 			recording_url    = COALESCE(EXCLUDED.recording_url, interviews.recording_url),
@@ -52,27 +48,20 @@ func (s *Store) UpsertInterview(ctx context.Context, in InterviewUpsert) (models
 	return pgx.CollectExactlyOneRow(rows, pgx.RowToStructByPos[models.Interview])
 }
 
-func (s *Store) GetInterview(ctx context.Context, applicationID string) (models.Interview, error) {
-	const q = `SELECT ` + interviewColumns + ` FROM interviews WHERE application_id = $1`
+func (s *Store) ListInterviews(ctx context.Context, applicationID string) ([]models.Interview, error) {
+	const q = `SELECT ` + interviewColumns + ` FROM interviews WHERE application_id = $1 ORDER BY created_at, id`
 	rows, err := s.db.Query(ctx, q, applicationID)
 	if err != nil {
-		return models.Interview{}, err
+		return nil, err
 	}
-	i, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByPos[models.Interview])
-	if errors.Is(err, pgx.ErrNoRows) {
-		return i, ErrNotFound
-	}
-	return i, err
+	return pgx.CollectRows(rows, pgx.RowToStructByPos[models.Interview])
 }
 
-// ListInterviewsForApplications fetches the interviews for many applications in
-// one round trip, for callers rendering a page of applications at once — the
-// per-application GetInterview above turns into a request per row there.
 func (s *Store) ListInterviewsForApplications(ctx context.Context, applicationIDs []string) ([]models.Interview, error) {
 	if len(applicationIDs) == 0 {
 		return nil, nil
 	}
-	const q = `SELECT ` + interviewColumns + ` FROM interviews WHERE application_id = ANY($1::uuid[]) ORDER BY application_id`
+	const q = `SELECT ` + interviewColumns + ` FROM interviews WHERE application_id = ANY($1::uuid[]) ORDER BY application_id, created_at, id`
 	rows, err := s.db.Query(ctx, q, applicationIDs)
 	if err != nil {
 		return nil, err

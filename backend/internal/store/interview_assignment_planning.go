@@ -78,15 +78,6 @@ type InterviewAssignmentPair struct {
 	LeadNUID      string
 }
 
-// CreateInterviewAssignments sets the interviewer for many applications at
-// once, but only for applications that don't already have one. Unlike
-// CreateLeadAssignments' ON CONFLICT DO NOTHING, interview_assignments has a
-// replace-semantics UNIQUE(application_id) with ON CONFLICT DO UPDATE (see
-// UpsertInterviewAssignment) — a plain bulk upsert here would clobber
-// existing interviewers instead of skipping them. The planner never proposes
-// a pair for an application that already has one, so the NOT EXISTS guard is
-// defense against a concurrent commit racing this one, not something the
-// planner itself relies on.
 func (s *Store) CreateInterviewAssignments(ctx context.Context, pairs []InterviewAssignmentPair, assignedBy string) (int, error) {
 	if len(pairs) == 0 {
 		return 0, nil

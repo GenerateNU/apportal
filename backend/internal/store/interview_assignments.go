@@ -2,7 +2,6 @@ package store
 
 import (
 	"context"
-	"errors"
 
 	"github.com/jackc/pgx/v5"
 
@@ -12,35 +11,47 @@ import (
 const interviewAssignmentColumns = `id, application_id, assigned_by, interviewer_nuid, assigned_at`
 const interviewReviewAssignmentColumns = `id, application_id, lead_nuid, assigned_by, assigned_at`
 
-// UpsertInterviewAssignment sets the single interviewer for an application
-// (one per application, so a re-assign replaces the existing one).
-func (s *Store) UpsertInterviewAssignment(ctx context.Context, applicationID, interviewerNUID, assignedBy string) (models.InterviewAssignment, error) {
+func (s *Store) CreateInterviewAssignment(ctx context.Context, applicationID, interviewerNUID, assignedBy string) (models.InterviewAssignment, error) {
 	const q = `
 		INSERT INTO interview_assignments (application_id, assigned_by, interviewer_nuid)
 		VALUES ($1, $2, $3)
-		ON CONFLICT (application_id) DO UPDATE SET
-			assigned_by      = EXCLUDED.assigned_by,
-			interviewer_nuid = EXCLUDED.interviewer_nuid,
-			assigned_at      = NOW()
 		RETURNING ` + interviewAssignmentColumns
 	rows, err := s.db.Query(ctx, q, applicationID, assignedBy, interviewerNUID)
 	if err != nil {
 		return models.InterviewAssignment{}, err
 	}
-	return pgx.CollectExactlyOneRow(rows, pgx.RowToStructByPos[models.InterviewAssignment])
-}
-
-func (s *Store) GetInterviewAssignment(ctx context.Context, applicationID string) (models.InterviewAssignment, error) {
-	const q = `SELECT ` + interviewAssignmentColumns + ` FROM interview_assignments WHERE application_id = $1`
-	rows, err := s.db.Query(ctx, q, applicationID)
-	if err != nil {
-		return models.InterviewAssignment{}, err
-	}
 	a, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByPos[models.InterviewAssignment])
-	if errors.Is(err, pgx.ErrNoRows) {
-		return a, ErrNotFound
+	if uniqueViolation(err) {
+		return a, ErrConflict
 	}
 	return a, err
+}
+
+func (s *Store) ListInterviewAssignments(ctx context.Context, applicationID string) ([]models.InterviewAssignment, error) {
+	const q = `SELECT ` + interviewAssignmentColumns + ` FROM interview_assignments WHERE application_id = $1 ORDER BY assigned_at, id`
+	rows, err := s.db.Query(ctx, q, applicationID)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, pgx.RowToStructByPos[models.InterviewAssignment])
+}
+
+func (s *Store) IsAssignedInterviewer(ctx context.Context, applicationID, nuid string) (bool, error) {
+	const q = `SELECT EXISTS (SELECT 1 FROM interview_assignments WHERE application_id = $1 AND interviewer_nuid = $2)`
+	var assigned bool
+	err := s.db.QueryRow(ctx, q, applicationID, nuid).Scan(&assigned)
+	return assigned, err
+}
+
+func (s *Store) DeleteInterviewAssignment(ctx context.Context, id string) error {
+	tag, err := s.db.Exec(ctx, `DELETE FROM interview_assignments WHERE id = $1`, id)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
 }
 
 // CreateInterviewReviewAssignment assigns a lead to review the recording. Chiefs
@@ -70,15 +81,11 @@ func (s *Store) ListInterviewReviewAssignments(ctx context.Context, applicationI
 	return pgx.CollectRows(rows, pgx.RowToStructByPos[models.InterviewReviewAssignment])
 }
 
-// ListInterviewAssignmentsForApplications fetches interviewer assignments for
-// many applications in one round trip, for callers rendering a page of
-// applications at once — the per-application GetInterviewAssignment above
-// turns into a request per row there.
 func (s *Store) ListInterviewAssignmentsForApplications(ctx context.Context, applicationIDs []string) ([]models.InterviewAssignment, error) {
 	if len(applicationIDs) == 0 {
 		return nil, nil
 	}
-	const q = `SELECT ` + interviewAssignmentColumns + ` FROM interview_assignments WHERE application_id = ANY($1::uuid[])`
+	const q = `SELECT ` + interviewAssignmentColumns + ` FROM interview_assignments WHERE application_id = ANY($1::uuid[]) ORDER BY application_id, assigned_at, id`
 	rows, err := s.db.Query(ctx, q, applicationIDs)
 	if err != nil {
 		return nil, err

@@ -25,16 +25,17 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AddInterviewerInputBody,
   AssignRecordingReviewerInputBody,
   ErrorModel,
   InterviewAssignment,
   InterviewReviewAssignment,
+  ListInterviewAssignments200,
   ListInterviewAssignmentsBulk200,
   ListInterviewAssignmentsBulkParams,
   ListInterviewReviewAssignmentsBulk200,
   ListInterviewReviewAssignmentsBulkParams,
   ListRecordingReviewerAssignments200,
-  SetInterviewAssignmentInputBody,
   UnassignAllInterviewersParams,
   UnassignAllOutputBody,
   UnassignAllRecordingReviewersParams
@@ -75,16 +76,16 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
 /**
- * @summary Get an application's interviewer assignment
+ * @summary List an application's interviewers
  */
-export const getInterviewAssignment = (
+export const listInterviewAssignments = (
     id: string,
  options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
 ) => {
       
       
-      return customInstance<InterviewAssignment>(
-      {url: `/applications/${id}/interview-assignment`, method: 'GET', signal
+      return customInstance<ListInterviewAssignments200>(
+      {url: `/applications/${id}/interview-assignments`, method: 'GET', signal
     },
       options);
     }
@@ -92,69 +93,69 @@ export const getInterviewAssignment = (
 
 
 
-export const getGetInterviewAssignmentQueryKey = (id?: string,) => {
+export const getListInterviewAssignmentsQueryKey = (id?: string,) => {
     return [
-    `/applications/${id}/interview-assignment`
+    `/applications/${id}/interview-assignments`
     ] as const;
     }
 
     
-export const getGetInterviewAssignmentQueryOptions = <TData = Awaited<ReturnType<typeof getInterviewAssignment>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getInterviewAssignment>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export const getListInterviewAssignmentsQueryOptions = <TData = Awaited<ReturnType<typeof listInterviewAssignments>>, TError = ErrorModel | ErrorModel | ErrorModel>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listInterviewAssignments>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetInterviewAssignmentQueryKey(id);
+  const queryKey =  queryOptions?.queryKey ?? getListInterviewAssignmentsQueryKey(id);
 
   
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getInterviewAssignment>>> = ({ signal }) => getInterviewAssignment(id, requestOptions, signal);
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInterviewAssignments>>> = ({ signal }) => listInterviewAssignments(id, requestOptions, signal);
 
       
 
       
 
-   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getInterviewAssignment>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listInterviewAssignments>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
-export type GetInterviewAssignmentQueryResult = NonNullable<Awaited<ReturnType<typeof getInterviewAssignment>>>
-export type GetInterviewAssignmentQueryError = ErrorModel | ErrorModel | ErrorModel | ErrorModel
+export type ListInterviewAssignmentsQueryResult = NonNullable<Awaited<ReturnType<typeof listInterviewAssignments>>>
+export type ListInterviewAssignmentsQueryError = ErrorModel | ErrorModel | ErrorModel
 
 
-export function useGetInterviewAssignment<TData = Awaited<ReturnType<typeof getInterviewAssignment>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
- id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getInterviewAssignment>>, TError, TData>> & Pick<
+export function useListInterviewAssignments<TData = Awaited<ReturnType<typeof listInterviewAssignments>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+ id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listInterviewAssignments>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getInterviewAssignment>>,
+          Awaited<ReturnType<typeof listInterviewAssignments>>,
           TError,
-          Awaited<ReturnType<typeof getInterviewAssignment>>
+          Awaited<ReturnType<typeof listInterviewAssignments>>
         > , 'initialData'
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetInterviewAssignment<TData = Awaited<ReturnType<typeof getInterviewAssignment>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
- id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getInterviewAssignment>>, TError, TData>> & Pick<
+export function useListInterviewAssignments<TData = Awaited<ReturnType<typeof listInterviewAssignments>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listInterviewAssignments>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getInterviewAssignment>>,
+          Awaited<ReturnType<typeof listInterviewAssignments>>,
           TError,
-          Awaited<ReturnType<typeof getInterviewAssignment>>
+          Awaited<ReturnType<typeof listInterviewAssignments>>
         > , 'initialData'
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetInterviewAssignment<TData = Awaited<ReturnType<typeof getInterviewAssignment>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
- id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getInterviewAssignment>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export function useListInterviewAssignments<TData = Awaited<ReturnType<typeof listInterviewAssignments>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listInterviewAssignments>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
- * @summary Get an application's interviewer assignment
+ * @summary List an application's interviewers
  */
 
-export function useGetInterviewAssignment<TData = Awaited<ReturnType<typeof getInterviewAssignment>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
- id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getInterviewAssignment>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export function useListInterviewAssignments<TData = Awaited<ReturnType<typeof listInterviewAssignments>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listInterviewAssignments>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getGetInterviewAssignmentQueryOptions(id,options)
+  const queryOptions = getListInterviewAssignmentsQueryOptions(id,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
@@ -166,30 +167,31 @@ export function useGetInterviewAssignment<TData = Awaited<ReturnType<typeof getI
 
 
 /**
- * Chief only. One interviewer per application.
- * @summary Assign the interviewer for an application
+ * Chief only. An application may have several interviewers.
+ * @summary Add an interviewer to an application
  */
-export const setInterviewAssignment = (
+export const addInterviewer = (
     id: string,
-    setInterviewAssignmentInputBody: NonReadonly<SetInterviewAssignmentInputBody>,
- options?: SecondParameter<typeof customInstance>,) => {
+    addInterviewerInputBody: NonReadonly<AddInterviewerInputBody>,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
       
       
       return customInstance<InterviewAssignment>(
-      {url: `/applications/${id}/interview-assignment`, method: 'PUT',
+      {url: `/applications/${id}/interview-assignments`, method: 'POST',
       headers: {'Content-Type': 'application/json', },
-      data: setInterviewAssignmentInputBody
+      data: addInterviewerInputBody, signal
     },
       options);
     }
   
 
 
-export const getSetInterviewAssignmentMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setInterviewAssignment>>, TError,{id: string;data: NonReadonly<SetInterviewAssignmentInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof setInterviewAssignment>>, TError,{id: string;data: NonReadonly<SetInterviewAssignmentInputBody>}, TContext> => {
+export const getAddInterviewerMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addInterviewer>>, TError,{id: string;data: NonReadonly<AddInterviewerInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof addInterviewer>>, TError,{id: string;data: NonReadonly<AddInterviewerInputBody>}, TContext> => {
 
-const mutationKey = ['setInterviewAssignment'];
+const mutationKey = ['addInterviewer'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
@@ -199,10 +201,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setInterviewAssignment>>, {id: string;data: NonReadonly<SetInterviewAssignmentInputBody>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof addInterviewer>>, {id: string;data: NonReadonly<AddInterviewerInputBody>}> = (props) => {
           const {id,data} = props ?? {};
 
-          return  setInterviewAssignment(id,data,requestOptions)
+          return  addInterviewer(id,data,requestOptions)
         }
 
         
@@ -210,23 +212,23 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
   return  { mutationFn, ...mutationOptions }}
 
-    export type SetInterviewAssignmentMutationResult = NonNullable<Awaited<ReturnType<typeof setInterviewAssignment>>>
-    export type SetInterviewAssignmentMutationBody = NonReadonly<SetInterviewAssignmentInputBody>
-    export type SetInterviewAssignmentMutationError = ErrorModel | ErrorModel | ErrorModel | ErrorModel
+    export type AddInterviewerMutationResult = NonNullable<Awaited<ReturnType<typeof addInterviewer>>>
+    export type AddInterviewerMutationBody = NonReadonly<AddInterviewerInputBody>
+    export type AddInterviewerMutationError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel
 
     /**
- * @summary Assign the interviewer for an application
+ * @summary Add an interviewer to an application
  */
-export const useSetInterviewAssignment = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setInterviewAssignment>>, TError,{id: string;data: NonReadonly<SetInterviewAssignmentInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
+export const useAddInterviewer = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addInterviewer>>, TError,{id: string;data: NonReadonly<AddInterviewerInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof setInterviewAssignment>>,
+        Awaited<ReturnType<typeof addInterviewer>>,
         TError,
-        {id: string;data: NonReadonly<SetInterviewAssignmentInputBody>},
+        {id: string;data: NonReadonly<AddInterviewerInputBody>},
         TContext
       > => {
 
-      const mutationOptions = getSetInterviewAssignmentMutationOptions(options);
+      const mutationOptions = getAddInterviewerMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }
@@ -609,6 +611,68 @@ export function useListInterviewAssignmentsBulk<TData = Awaited<ReturnType<typeo
 
 
 /**
+ * Chief only. The interviewer's write-up, if any, is kept.
+ * @summary Remove an interviewer assignment
+ */
+export const unassignInterviewer = (
+    id: string,
+ options?: SecondParameter<typeof customInstance>,) => {
+      
+      
+      return customInstance<void>(
+      {url: `/interview-assignments/${id}`, method: 'DELETE'
+    },
+      options);
+    }
+  
+
+
+export const getUnassignInterviewerMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unassignInterviewer>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof unassignInterviewer>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['unassignInterviewer'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof unassignInterviewer>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  unassignInterviewer(id,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UnassignInterviewerMutationResult = NonNullable<Awaited<ReturnType<typeof unassignInterviewer>>>
+    
+    export type UnassignInterviewerMutationError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel
+
+    /**
+ * @summary Remove an interviewer assignment
+ */
+export const useUnassignInterviewer = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unassignInterviewer>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof unassignInterviewer>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+
+      const mutationOptions = getUnassignInterviewerMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
  * Reviewer only. One request for a page of applications, instead of one per application.
  * @summary List recording-reviewer assignments for several applications
  */

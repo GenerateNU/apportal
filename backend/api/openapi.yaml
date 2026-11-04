@@ -1,5 +1,20 @@
 components:
   schemas:
+    AddInterviewerInputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/AddInterviewerInputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        interviewer_nuid:
+          type: string
+      required:
+        - interviewer_nuid
+      type: object
     AddPreferenceListMemberInputBody:
       additionalProperties: false
       properties:
@@ -3409,21 +3424,6 @@ components:
       required:
         - preference_list_ids
       type: object
-    SetInterviewAssignmentInputBody:
-      additionalProperties: false
-      properties:
-        $schema:
-          description: A URL to the JSON Schema for this object.
-          examples:
-            - https://example.com/schemas/SetInterviewAssignmentInputBody.json
-          format: uri
-          readOnly: true
-          type: string
-        interviewer_nuid:
-          type: string
-      required:
-        - interviewer_nuid
-      type: object
     SetPreferenceListDeadlineInputBody:
       additionalProperties: false
       properties:
@@ -5375,52 +5375,8 @@ paths:
       tags:
         - Decisions
   /applications/{id}/interview:
-    get:
-      operationId: get-interview
-      parameters:
-        - description: Application ID
-          in: path
-          name: id
-          required: true
-          schema:
-            description: Application ID
-            type: string
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Interview"
-          description: OK
-        "401":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unauthorized
-        "404":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Not Found
-        "422":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unprocessable Entity
-        "500":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Internal Server Error
-      summary: Get an application's interview
-      tags:
-        - Interviews
     put:
-      description: Reviewer only (the interviewer). Provided fields overwrite; omitted ones are preserved.
+      description: Reviewer only (an assigned interviewer, or a chief). Provided fields overwrite; omitted ones are preserved.
       operationId: upsert-interview
       parameters:
         - description: Application ID
@@ -5449,96 +5405,6 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorModel"
           description: Unauthorized
-        "422":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unprocessable Entity
-        "500":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Internal Server Error
-      summary: Create or update the interview write-up
-      tags:
-        - Interviews
-  /applications/{id}/interview-assignment:
-    get:
-      operationId: get-interview-assignment
-      parameters:
-        - description: Application ID
-          in: path
-          name: id
-          required: true
-          schema:
-            description: Application ID
-            type: string
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/InterviewAssignment"
-          description: OK
-        "401":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unauthorized
-        "404":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Not Found
-        "422":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unprocessable Entity
-        "500":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Internal Server Error
-      summary: Get an application's interviewer assignment
-      tags:
-        - Interview assignments
-    put:
-      description: Chief only. One interviewer per application.
-      operationId: set-interview-assignment
-      parameters:
-        - description: Application ID
-          in: path
-          name: id
-          required: true
-          schema:
-            description: Application ID
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/SetInterviewAssignmentInputBody"
-        required: true
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/InterviewAssignment"
-          description: OK
-        "401":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unauthorized
         "403":
           content:
             application/problem+json:
@@ -5557,7 +5423,107 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorModel"
           description: Internal Server Error
-      summary: Assign the interviewer for an application
+      summary: Create or update the caller's interview write-up
+      tags:
+        - Interviews
+  /applications/{id}/interview-assignments:
+    get:
+      operationId: list-interview-assignments
+      parameters:
+        - description: Application ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Application ID
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/InterviewAssignment"
+                type:
+                  - array
+                  - "null"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: List an application's interviewers
+      tags:
+        - Interview assignments
+    post:
+      description: Chief only. An application may have several interviewers.
+      operationId: add-interviewer
+      parameters:
+        - description: Application ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Application ID
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddInterviewerInputBody"
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InterviewAssignment"
+          description: Created
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "409":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Conflict
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Add an interviewer to an application
       tags:
         - Interview assignments
   /applications/{id}/interview-comments:
@@ -5826,6 +5792,50 @@ paths:
       summary: Assign a lead to review the interview recording
       tags:
         - Interview assignments
+  /applications/{id}/interviews:
+    get:
+      description: Reviewer only. One write-up per interviewer.
+      operationId: list-interviews
+      parameters:
+        - description: Application ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Application ID
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/Interview"
+                type:
+                  - array
+                  - "null"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: List an application's interview write-ups
+      tags:
+        - Interviews
   /applications/{id}/lead-assignments:
     get:
       operationId: list-lead-assignments
@@ -9022,6 +9032,52 @@ paths:
                 $ref: "#/components/schemas/ErrorModel"
           description: Internal Server Error
       summary: List interviewer assignments for several applications
+      tags:
+        - Interview assignments
+  /interview-assignments/{id}:
+    delete:
+      description: Chief only. The interviewer's write-up, if any, is kept.
+      operationId: unassign-interviewer
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Remove an interviewer assignment
       tags:
         - Interview assignments
   /interview-review-assignments:

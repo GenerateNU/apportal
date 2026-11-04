@@ -54,3 +54,25 @@ func TestInterviewsBulkParsesIDs(t *testing.T) {
 		t.Fatalf("got %v, want 422", err)
 	}
 }
+
+func TestUpsertInterviewRequiresReviewer(t *testing.T) {
+	h := &interviewHandler{}
+	_, err := h.upsert(context.Background(), &UpsertInterviewInput{ID: "app1"})
+	wantStatus(t, err, http.StatusUnauthorized)
+}
+
+func TestUpsertInterviewRejectsInvalidRating(t *testing.T) {
+	h := &interviewHandler{}
+	in := &UpsertInterviewInput{ID: "app1"}
+	bad := models.InterviewRating("amazing")
+	in.Body.Rating = &bad
+
+	_, err := h.upsert(withActor(leadActor()), in)
+	wantStatus(t, err, http.StatusUnprocessableEntity)
+}
+
+func TestListInterviewsRequiresReviewer(t *testing.T) {
+	h := &interviewHandler{}
+	_, err := h.list(context.Background(), &ApplicationScopedInput{ID: "app1"})
+	wantStatus(t, err, http.StatusUnauthorized)
+}

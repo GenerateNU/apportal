@@ -446,13 +446,19 @@ func (s *Store) AdvanceApplicationsToLeadReview(ctx context.Context, application
 	return int(tag.RowsAffected()), nil
 }
 
-// AdvanceApplicationToInterviewReview moves an application into
-// interview_review once its interviewer submits their write-up. Guarded to
-// the pre-review interview stages so a resubmit is a no-op and a chief who
-// already moved the application further along manually is never overridden.
 func (s *Store) AdvanceApplicationToInterviewReview(ctx context.Context, applicationID string) error {
 	const q = `UPDATE applications SET stage = 'interview_review'
-		WHERE id = $1 AND stage IN ('interview', 'interview_scheduled', 'interview_conducted')`
+		WHERE id = $1 AND stage IN ('interview', 'interview_scheduled', 'interview_conducted')
+		AND NOT EXISTS (
+			SELECT 1 FROM interview_assignments ia
+			WHERE ia.application_id = $1
+			AND NOT EXISTS (
+				SELECT 1 FROM interviews i
+				WHERE i.application_id = ia.application_id
+				AND i.interviewer_nuid = ia.interviewer_nuid
+				AND i.submitted_at IS NOT NULL
+			)
+		)`
 	_, err := s.db.Exec(ctx, q, applicationID)
 	return err
 }

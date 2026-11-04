@@ -19,16 +19,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import type { Application, Role, User } from '@/lib/api/types'
+import type {
+  Application,
+  InterviewAssignment,
+  Role,
+  User,
+} from '@/lib/api/types'
 import { useApplications } from '@/lib/queries/applications'
 import { pickDefaultCycleId, useCycles } from '@/lib/queries/cycles'
 import {
+  useAddInterviewer,
   useAssignRecordingReviewer,
-  useInterviewAssignmentsByApplications,
+  useInterviewAssignmentsBulk,
   useRecordingReviewerAssignmentsByApplications,
-  useSetInterviewAssignment,
   useUnassignAllInterviewers,
   useUnassignAllRecordingReviewers,
+  useUnassignInterviewer,
   useUnassignRecordingReviewer,
 } from '@/lib/queries/interview-assignments'
 import { useChiefs, useLeads } from '@/lib/queries/users'
@@ -82,14 +88,7 @@ export function InterviewAssignmentsClient() {
   }, [interviewers])
 
   const appIds = useMemo(() => applications.map((a) => a.id), [applications])
-  const assignmentQueries = useInterviewAssignmentsByApplications(appIds)
-  const assignmentByApp = useMemo(() => {
-    const map: Record<string, (typeof assignmentQueries)[number]['data']> = {}
-    appIds.forEach((id, i) => {
-      map[id] = assignmentQueries[i]?.data
-    })
-    return map
-  }, [appIds, assignmentQueries])
+  const { data: assignmentsByApp = {} } = useInterviewAssignmentsBulk(appIds)
 
   const reviewerQueries = useRecordingReviewerAssignmentsByApplications(appIds)
   const reviewersByApp = useMemo(() => {
@@ -100,16 +99,13 @@ export function InterviewAssignmentsClient() {
     return map
   }, [appIds, reviewerQueries])
 
-  const setInterviewAssignment = useSetInterviewAssignment()
+  const addInterviewer = useAddInterviewer()
+  const unassignInterviewer = useUnassignInterviewer()
   const assignReviewer = useAssignRecordingReviewer()
   const unassignReviewer = useUnassignRecordingReviewer()
   const unassignAllInterviewers = useUnassignAllInterviewers()
   const unassignAllReviewers = useUnassignAllRecordingReviewers()
 
-  // Multiselect + bulk toolbar, same pattern as the lead-assignment page:
-  // select applicants, then either assign them all one interviewer or add
-  // one reviewer to each (ignoring 409s — already having that reviewer isn't
-  // a failure).
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [bulkInterviewerNuid, setBulkInterviewerNuid] = useState('')
   const [bulkReviewerNuid, setBulkReviewerNuid] = useState('')
@@ -135,13 +131,17 @@ export function InterviewAssignmentsClient() {
     setInterviewerFailures(0)
     const results = await Promise.allSettled(
       [...selected].map((applicationId) =>
-        setInterviewAssignment.mutateAsync({
+        addInterviewer.mutateAsync({
           applicationId,
           interviewerNuid: bulkInterviewerNuid,
         })
       )
     )
-    const failures = results.filter((r) => r.status === 'rejected').length
+    const failures = results.filter(
+      (r) =>
+        r.status === 'rejected' &&
+        !String((r.reason as Error)?.message).includes('409')
+    ).length
     setInterviewerFailures(failures)
     if (failures === 0) setSelected(new Set())
     setAssigningInterviewers(false)
@@ -191,7 +191,7 @@ export function InterviewAssignmentsClient() {
             Interview assignments
           </h1>
           <p className="text-text-muted mt-1 text-sm">
-            Assign one interviewer and recording reviewers to each applicant a
+            Assign interviewers and recording reviewers to each applicant a
             chief has advanced.
           </p>
         </div>
@@ -275,7 +275,7 @@ export function InterviewAssignmentsClient() {
                 Assigning…
               </>
             ) : (
-              `Set interviewer for ${selected.size || ''} selected`
+              `Add interviewer to ${selected.size || ''} selected`
             )}
           </Button>
           <Select value={bulkReviewerNuid} onValueChange={setBulkReviewerNuid}>
@@ -322,7 +322,7 @@ export function InterviewAssignmentsClient() {
           const roleApps = applications.filter((a) => a.role === role)
           if (roleApps.length === 0) return null
           const roleHasInterviewers = roleApps.some(
-            (a) => assignmentByApp[a.id]
+            (a) => (assignmentsByApp[a.id] ?? []).length > 0
           )
           const roleHasReviewers = roleApps.some(
             (a) => (reviewersByApp[a.id] ?? []).length > 0
@@ -374,15 +374,18 @@ export function InterviewAssignmentsClient() {
                     interviewers={interviewers}
                     leads={leads}
                     userName={userName}
-                    assignment={assignmentByApp[application.id]}
+                    assignments={assignmentsByApp[application.id] ?? []}
                     reviewers={reviewersByApp[application.id] ?? []}
                     selected={selected.has(application.id)}
                     onToggleSelected={() => toggleSelected(application.id)}
-                    onSetInterviewer={(interviewerNuid) =>
-                      setInterviewAssignment.mutate({
+                    onAddInterviewer={(interviewerNuid) =>
+                      addInterviewer.mutate({
                         applicationId: application.id,
                         interviewerNuid,
                       })
+                    }
+                    onUnassignInterviewer={(id) =>
+                      unassignInterviewer.mutate({ id })
                     }
                     onAssignReviewer={(leadNuid) =>
                       assignReviewer.mutate({
@@ -457,11 +460,12 @@ function InterviewAssignmentRow({
   interviewers,
   leads,
   userName,
-  assignment,
+  assignments,
   reviewers,
   selected,
   onToggleSelected,
-  onSetInterviewer,
+  onAddInterviewer,
+  onUnassignInterviewer,
   onAssignReviewer,
   onUnassignReviewer,
 }: {
@@ -470,17 +474,22 @@ function InterviewAssignmentRow({
   interviewers: User[]
   leads: User[]
   userName: Record<string, string>
-  assignment: { interviewer_nuid: string } | null | undefined
+  assignments: InterviewAssignment[]
   reviewers: { id: string; lead_nuid: string }[]
   selected: boolean
   onToggleSelected: () => void
-  onSetInterviewer: (interviewerNuid: string) => void
+  onAddInterviewer: (interviewerNuid: string) => void
+  onUnassignInterviewer: (id: string) => void
   onAssignReviewer: (leadNuid: string) => void
   onUnassignReviewer: (id: string) => void
 }) {
   const reviewerNuids = new Set(reviewers.map((r) => r.lead_nuid))
+  const interviewerNuids = new Set(assignments.map((a) => a.interviewer_nuid))
   const availableReviewers = leads.filter(
-    (l) => !reviewerNuids.has(l.nuid) && l.nuid !== assignment?.interviewer_nuid
+    (l) => !reviewerNuids.has(l.nuid) && !interviewerNuids.has(l.nuid)
+  )
+  const availableInterviewers = interviewers.filter(
+    (u) => !interviewerNuids.has(u.nuid)
   )
 
   return (
@@ -503,28 +512,43 @@ function InterviewAssignmentRow({
         </span>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <span className="text-text-faint text-xs whitespace-nowrap">
-          Interviewer
+          Interviewers
         </span>
-        <Select
-          value={assignment?.interviewer_nuid ?? ''}
-          onValueChange={onSetInterviewer}
-        >
-          <SelectTrigger
-            className="w-44"
-            aria-label={`Interviewer for ${name}`}
+        {assignments.map((a) => (
+          <span
+            key={a.id}
+            className="text-text-muted inline-flex items-center gap-1 rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium"
           >
-            <SelectValue placeholder="Unassigned" />
-          </SelectTrigger>
-          <SelectContent>
-            {interviewers.map((u) => (
-              <SelectItem key={u.nuid} value={u.nuid}>
-                {u.full_name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+            {userName[a.interviewer_nuid] ?? a.interviewer_nuid}
+            <button
+              type="button"
+              aria-label="Unassign interviewer"
+              className="hover:text-destructive -m-1 p-1"
+              onClick={() => onUnassignInterviewer(a.id)}
+            >
+              <X size={12} />
+            </button>
+          </span>
+        ))}
+        {availableInterviewers.length > 0 && (
+          <Select value="" onValueChange={onAddInterviewer}>
+            <SelectTrigger
+              className="h-7 w-40 text-xs"
+              aria-label={`Add interviewer for ${name}`}
+            >
+              <SelectValue placeholder="+ Add interviewer" />
+            </SelectTrigger>
+            <SelectContent>
+              {availableInterviewers.map((u) => (
+                <SelectItem key={u.nuid} value={u.nuid}>
+                  {u.full_name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-2 sm:ml-auto">

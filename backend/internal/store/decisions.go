@@ -140,16 +140,19 @@ type decisionRow struct {
 // decisionsFrom builds FROM through WHERE. Both the list and the single-row
 // lookup share it so an authorization check can never read a different
 // interviewer than the list displayed.
-//
-// interviews and interview_assignments are both UNIQUE (application_id), so
-// neither join can multiply a row.
 func decisionsFrom(f DecisionFilter, applicationID string) (string, []any) {
 	query := `
 		FROM applications a
 		JOIN users u ON u.nuid = a.user_nuid
 		LEFT JOIN decision_drafts dd ON dd.application_id = a.id
-		LEFT JOIN interviews iv ON iv.application_id = a.id
-		LEFT JOIN interview_assignments ia ON ia.application_id = a.id
+		LEFT JOIN LATERAL (
+			SELECT interviewer_nuid FROM interviews
+			WHERE application_id = a.id ORDER BY created_at, id LIMIT 1
+		) iv ON TRUE
+		LEFT JOIN LATERAL (
+			SELECT interviewer_nuid FROM interview_assignments
+			WHERE application_id = a.id ORDER BY assigned_at, id LIMIT 1
+		) ia ON TRUE
 		LEFT JOIN users iu ON iu.nuid = COALESCE(iv.interviewer_nuid, ia.interviewer_nuid)
 		LEFT JOIN users au ON au.nuid = dd.author_nuid
 		WHERE 1 = 1`

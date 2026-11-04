@@ -38,11 +38,12 @@ import {
   useUpdateInterviewComment,
 } from '@/lib/queries/interview-comments'
 import {
-  useInterviewAssignment,
+  useInterviewAssignments,
   useRecordingReviewerAssignments,
 } from '@/lib/queries/interview-assignments'
 import {
-  useInterview,
+  primaryInterview,
+  useInterviews,
   useInterviewsByApplicationIdBatches,
   useUpsertInterview,
 } from '@/lib/queries/interviews'
@@ -115,7 +116,8 @@ export function InterviewConductClient({
   const otherWrittenReviews = writtenReviews.filter(
     (r) => r.reviewer_nuid !== currentUser?.nuid
   )
-  const { data: assignment } = useInterviewAssignment(applicationId)
+  const { data: assignments, isSuccess: assignmentsLoaded } =
+    useInterviewAssignments(applicationId)
   const { data: reviewerAssignments = [] } =
     useRecordingReviewerAssignments(applicationId)
   const nameByNuid = useReviewerNames()
@@ -123,13 +125,14 @@ export function InterviewConductClient({
     (nuid: string) => nameByNuid.get(nuid) ?? nuid,
     [nameByNuid]
   )
-  const interviewerName = assignment?.interviewer_nuid
-    ? nameFor(assignment.interviewer_nuid)
-    : null
-  const { data: interview } = useInterview(applicationId)
+  const interviewerName =
+    (assignments ?? []).map((a) => nameFor(a.interviewer_nuid)).join(', ') ||
+    null
+  const { data: interviews } = useInterviews(applicationId)
   const upsertInterview = useUpsertInterview()
+  const reviewedInterview = primaryInterview(interviews)
   const { data: recordingReviews = [] } = useRecordingReviews(
-    interview?.id ?? ''
+    reviewedInterview?.id ?? ''
   )
   const upsertRecordingReview = useUpsertRecordingReview()
 
@@ -137,8 +140,16 @@ export function InterviewConductClient({
     (r) => r === 'chief' || r === 'admin'
   )
   const isAssignedInterviewer =
-    !!currentUser && assignment?.interviewer_nuid === currentUser.nuid
-  const canEditInterview = isChief || isAssignedInterviewer
+    !!currentUser &&
+    !!assignments?.some((a) => a.interviewer_nuid === currentUser.nuid)
+  const canEditInterview =
+    isAssignedInterviewer || (isChief && assignments?.length === 0)
+  const interview = canEditInterview
+    ? interviews?.find((iv) => iv.interviewer_nuid === currentUser?.nuid)
+    : reviewedInterview
+  const otherInterviews = (interviews ?? []).filter(
+    (iv) => iv.id !== interview?.id
+  )
   const isAssignedReviewer =
     !!currentUser &&
     reviewerAssignments.some((a) => a.lead_nuid === currentUser.nuid)
@@ -166,8 +177,10 @@ export function InterviewConductClient({
   const interviewByApplicationId = queueInterviewBatch?.data
   const needsInterviewAt = useMemo(
     () => (i: number) =>
-      !interviewByApplicationId?.[orderedQueue[i].id]?.submitted_at,
-    [interviewByApplicationId, orderedQueue]
+      !interviewByApplicationId?.[orderedQueue[i].id]?.find(
+        (iv) => iv.interviewer_nuid === currentUser?.nuid
+      )?.submitted_at,
+    [interviewByApplicationId, orderedQueue, currentUser?.nuid]
   )
   const nextApplicationId = useMemo(() => {
     const currentIndex = orderedQueue.findIndex((a) => a.id === applicationId)
@@ -199,7 +212,7 @@ export function InterviewConductClient({
   const [seeded, setSeeded] = useState(false)
   const [savedInterview, setSavedInterview] = useState(false)
 
-  if (!seeded && interview) {
+  if (!seeded && currentUser && assignmentsLoaded && interview) {
     setRecordingUrl(interview.recording_url ?? '')
     setNotesUrl(interview.notes_url ?? '')
     setComments(interview.comments ?? '')
@@ -242,10 +255,10 @@ export function InterviewConductClient({
   const reviewSubmitted = !!ownReview?.submitted_at
 
   async function saveReview(submit: boolean) {
-    if (!interview) return
+    if (!reviewedInterview) return
     setSavedReview(false)
     await upsertRecordingReview.mutateAsync({
-      interviewId: interview.id,
+      interviewId: reviewedInterview.id,
       body: { comments: reviewComment || undefined, submit },
     })
     setSavedReview(true)
@@ -676,13 +689,72 @@ export function InterviewConductClient({
             )}
           </div>
 
+          {otherInterviews.length > 0 && (
+            <div className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+              <h2 className="text-text-faint text-xs font-semibold tracking-wide uppercase">
+                Other interviewers
+              </h2>
+              {otherInterviews.map((iv) => (
+                <div
+                  key={iv.id}
+                  className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm"
+                >
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-text-muted text-xs">
+                      {nameFor(iv.interviewer_nuid)}
+                    </span>
+                    {iv.rating && (
+                      <span
+                        className={`rounded-md px-2 py-0.5 text-xs font-medium ${RATING_COLORS[iv.rating].bg} ${RATING_COLORS[iv.rating].text}`}
+                      >
+                        {RATING_LABEL[iv.rating]}
+                      </span>
+                    )}
+                    {!iv.submitted_at && (
+                      <span className="text-text-faint text-xs">
+                        Not submitted
+                      </span>
+                    )}
+                    {iv.recording_url && (
+                      <a
+                        href={iv.recording_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-brand-blue inline-flex items-center gap-1 text-xs hover:underline"
+                      >
+                        Recording
+                        <ExternalLink size={12} />
+                      </a>
+                    )}
+                    {iv.notes_url && (
+                      <a
+                        href={iv.notes_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-brand-blue inline-flex items-center gap-1 text-xs hover:underline"
+                      >
+                        Notes
+                        <ExternalLink size={12} />
+                      </a>
+                    )}
+                  </div>
+                  <p className="text-text-default mt-2 text-sm break-words whitespace-pre-wrap">
+                    {iv.comments || (
+                      <span className="text-text-faint">No comments yet.</span>
+                    )}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* Recording reviews */}
           <div className="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
             <h2 className="text-text-faint text-xs font-semibold tracking-wide uppercase">
               Recording reviews
             </h2>
 
-            {!interviewSubmitted ? (
+            {!reviewedInterview?.submitted_at ? (
               <p className="text-text-faint text-sm">
                 Waiting for the interviewer to submit their write-up before
                 reviews can start.

@@ -8,7 +8,7 @@ import type { ApplicationStage, Role } from '@/lib/api/types'
 import { useAnswers } from '@/lib/queries/answers'
 import { useApplicant } from '@/lib/queries/applicants'
 import { useInterviewComments } from '@/lib/queries/interview-comments'
-import { useInterview } from '@/lib/queries/interviews'
+import { primaryInterview, useInterviews } from '@/lib/queries/interviews'
 import { useQuestions } from '@/lib/queries/questions'
 import { useRecordingReviews } from '@/lib/queries/recording-reviews'
 import { useReviewQuestions } from '@/lib/queries/review-questions'
@@ -73,12 +73,13 @@ export function ApplicantOverview({
   const { data: reviewQuestions = [] } = useReviewQuestions(cycleId, role)
   const { data: writtenReviews = [] } = useWrittenReviews(applicationId)
 
-  const { data: interview } = useInterview(applicationId)
+  const { data: interviews = [] } = useInterviews(applicationId)
+  const reviewedInterview = primaryInterview(interviews)
   // Recording reviews have the same kind of release gate — a row can exist
   // with `comments: null` ("Hidden until released") rather than being
   // omitted outright.
   const { data: recordingReviews = [] } = useRecordingReviews(
-    interview?.id ?? ''
+    reviewedInterview?.id ?? ''
   )
   const { data: comments = [] } = useInterviewComments(applicationId)
 
@@ -105,12 +106,15 @@ export function ApplicantOverview({
                 {stageLabel[stage]}
               </span>
             )}
-            {interview?.rating && (
-              <span
-                className={`w-fit rounded-md px-2 py-0.5 text-xs font-medium ${RATING_COLORS[interview.rating].bg} ${RATING_COLORS[interview.rating].text}`}
-              >
-                {RATING_LABEL[interview.rating]}
-              </span>
+            {interviews.map((iv) =>
+              iv.rating ? (
+                <span
+                  key={iv.id}
+                  className={`w-fit rounded-md px-2 py-0.5 text-xs font-medium ${RATING_COLORS[iv.rating].bg} ${RATING_COLORS[iv.rating].text}`}
+                >
+                  {RATING_LABEL[iv.rating]}
+                </span>
+              ) : null
             )}
             {applicant?.returner && <ReturnerBadge showLabel />}
           </div>
@@ -131,81 +135,92 @@ export function ApplicantOverview({
             Open interview page →
           </Link>
         </div>
-        {!interview ? (
+        {interviews.length === 0 ? (
           <p className="text-text-faint text-sm">Not yet interviewed.</p>
         ) : (
           <div className="flex flex-col gap-4 text-sm">
-            <div className="flex flex-wrap items-center gap-2">
-              {interview.rating ? (
-                <span
-                  className={`rounded-md px-2 py-0.5 text-xs font-medium ${RATING_COLORS[interview.rating].bg} ${RATING_COLORS[interview.rating].text}`}
-                >
-                  {RATING_LABEL[interview.rating]}
-                </span>
-              ) : (
-                <span className="text-text-faint text-xs">Not rated yet</span>
-              )}
-              <span className="text-text-muted">
-                Interviewed by{' '}
-                <span className="text-text-default font-medium">
-                  {nameByNuid.get(interview.interviewer_nuid) ??
-                    interview.interviewer_nuid}
-                </span>
-              </span>
-              <span className="text-text-faint text-xs">
-                {interview.submitted_at
-                  ? `· Submitted ${formatDate(interview.submitted_at)}`
-                  : '· Write-up not submitted'}
-              </span>
-            </div>
+            {interviews.map((interview) => (
+              <div key={interview.id} className="flex flex-col gap-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  {interview.rating ? (
+                    <span
+                      className={`rounded-md px-2 py-0.5 text-xs font-medium ${RATING_COLORS[interview.rating].bg} ${RATING_COLORS[interview.rating].text}`}
+                    >
+                      {RATING_LABEL[interview.rating]}
+                    </span>
+                  ) : (
+                    <span className="text-text-faint text-xs">
+                      Not rated yet
+                    </span>
+                  )}
+                  <span className="text-text-muted">
+                    Interviewed by{' '}
+                    <span className="text-text-default font-medium">
+                      {nameByNuid.get(interview.interviewer_nuid) ??
+                        interview.interviewer_nuid}
+                    </span>
+                  </span>
+                  <span className="text-text-faint text-xs">
+                    {interview.submitted_at
+                      ? `· Submitted ${formatDate(interview.submitted_at)}`
+                      : '· Write-up not submitted'}
+                  </span>
+                </div>
 
-            {/* Spelled out as labelled rows with the URL visible: which share
+                {/* Spelled out as labelled rows with the URL visible: which share
                 it is — Zoom, Drive, a doc — decides whether it's worth opening
                 before the draft call. */}
-            <dl className="grid grid-cols-[5rem_minmax(0,1fr)] items-baseline gap-x-3 gap-y-2">
-              <dt className="text-text-muted text-xs font-medium">Recording</dt>
-              <dd className="min-w-0">
-                {interview.recording_url ? (
-                  <a
-                    href={interview.recording_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-brand-blue inline-flex max-w-full items-center gap-1 hover:underline"
-                  >
-                    <span className="truncate">{interview.recording_url}</span>
-                    <ExternalLink size={12} className="shrink-0" />
-                  </a>
-                ) : (
-                  <span className="text-text-faint">Not provided</span>
-                )}
-              </dd>
-              <dt className="text-text-muted text-xs font-medium">Notes</dt>
-              <dd className="min-w-0">
-                {interview.notes_url ? (
-                  <a
-                    href={interview.notes_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-brand-blue inline-flex max-w-full items-center gap-1 hover:underline"
-                  >
-                    <span className="truncate">{interview.notes_url}</span>
-                    <ExternalLink size={12} className="shrink-0" />
-                  </a>
-                ) : (
-                  <span className="text-text-faint">Not provided</span>
-                )}
-              </dd>
-            </dl>
+                <dl className="grid grid-cols-[5rem_minmax(0,1fr)] items-baseline gap-x-3 gap-y-2">
+                  <dt className="text-text-muted text-xs font-medium">
+                    Recording
+                  </dt>
+                  <dd className="min-w-0">
+                    {interview.recording_url ? (
+                      <a
+                        href={interview.recording_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-brand-blue inline-flex max-w-full items-center gap-1 hover:underline"
+                      >
+                        <span className="truncate">
+                          {interview.recording_url}
+                        </span>
+                        <ExternalLink size={12} className="shrink-0" />
+                      </a>
+                    ) : (
+                      <span className="text-text-faint">Not provided</span>
+                    )}
+                  </dd>
+                  <dt className="text-text-muted text-xs font-medium">Notes</dt>
+                  <dd className="min-w-0">
+                    {interview.notes_url ? (
+                      <a
+                        href={interview.notes_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-brand-blue inline-flex max-w-full items-center gap-1 hover:underline"
+                      >
+                        <span className="truncate">{interview.notes_url}</span>
+                        <ExternalLink size={12} className="shrink-0" />
+                      </a>
+                    ) : (
+                      <span className="text-text-faint">Not provided</span>
+                    )}
+                  </dd>
+                </dl>
 
-            <div>
-              <p className="text-text-muted text-xs font-medium">Write-up</p>
-              <p className="text-text-default mt-1 whitespace-pre-wrap">
-                {interview.comments || (
-                  <span className="text-text-faint">No write-up yet.</span>
-                )}
-              </p>
-            </div>
-
+                <div>
+                  <p className="text-text-muted text-xs font-medium">
+                    Write-up
+                  </p>
+                  <p className="text-text-default mt-1 whitespace-pre-wrap">
+                    {interview.comments || (
+                      <span className="text-text-faint">No write-up yet.</span>
+                    )}
+                  </p>
+                </div>
+              </div>
+            ))}
             <div className="border-t border-gray-100 pt-4">
               <p className="text-text-muted text-xs font-medium">
                 Recording reviews ({recordingReviews.length})

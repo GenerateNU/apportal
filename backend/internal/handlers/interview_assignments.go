@@ -17,23 +17,35 @@ type interviewAssignmentHandler struct {
 
 func (h *interviewAssignmentHandler) register(api huma.API) {
 	huma.Register(api, huma.Operation{
-		OperationID: "set-interview-assignment",
-		Method:      http.MethodPut,
-		Path:        "/applications/{id}/interview-assignment",
-		Summary:     "Assign the interviewer for an application",
-		Description: "Chief only. One interviewer per application.",
-		Tags:        []string{"Interview assignments"},
-		Errors:      []int{http.StatusUnauthorized, http.StatusForbidden},
-	}, h.setInterviewer)
+		OperationID:   "add-interviewer",
+		Method:        http.MethodPost,
+		Path:          "/applications/{id}/interview-assignments",
+		Summary:       "Add an interviewer to an application",
+		Description:   "Chief only. An application may have several interviewers.",
+		Tags:          []string{"Interview assignments"},
+		DefaultStatus: http.StatusCreated,
+		Errors:        []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusConflict, http.StatusUnprocessableEntity},
+	}, h.addInterviewer)
 
 	huma.Register(api, huma.Operation{
-		OperationID: "get-interview-assignment",
+		OperationID: "list-interview-assignments",
 		Method:      http.MethodGet,
-		Path:        "/applications/{id}/interview-assignment",
-		Summary:     "Get an application's interviewer assignment",
+		Path:        "/applications/{id}/interview-assignments",
+		Summary:     "List an application's interviewers",
 		Tags:        []string{"Interview assignments"},
-		Errors:      []int{http.StatusUnauthorized, http.StatusNotFound},
-	}, h.getInterviewer)
+		Errors:      []int{http.StatusUnauthorized},
+	}, h.listInterviewers)
+
+	huma.Register(api, huma.Operation{
+		OperationID:   "unassign-interviewer",
+		Method:        http.MethodDelete,
+		Path:          "/interview-assignments/{id}",
+		Summary:       "Remove an interviewer assignment",
+		Description:   "Chief only. The interviewer's write-up, if any, is kept.",
+		Tags:          []string{"Interview assignments"},
+		DefaultStatus: http.StatusNoContent,
+		Errors:        []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound},
+	}, h.unassignInterviewer)
 
 	huma.Register(api, huma.Operation{
 		OperationID: "list-interview-assignments-bulk",
@@ -113,32 +125,22 @@ type InterviewAssignmentOutput struct {
 	Body models.InterviewAssignment
 }
 
-type SetInterviewAssignmentInput struct {
+type AddInterviewerInput struct {
 	ID   string `path:"id" doc:"Application ID"`
 	Body struct {
 		InterviewerNUID string `json:"interviewer_nuid"`
 	}
 }
 
-func (h *interviewAssignmentHandler) setInterviewer(ctx context.Context, in *SetInterviewAssignmentInput) (*InterviewAssignmentOutput, error) {
+func (h *interviewAssignmentHandler) addInterviewer(ctx context.Context, in *AddInterviewerInput) (*InterviewAssignmentOutput, error) {
 	if err := requireChief(ctx); err != nil {
 		return nil, err
 	}
-	if in.Body.InterviewerNUID == "" {
+	nuid := strings.TrimSpace(in.Body.InterviewerNUID)
+	if nuid == "" {
 		return nil, huma.Error422UnprocessableEntity("interviewer_nuid is required")
 	}
-	a, err := h.store.UpsertInterviewAssignment(ctx, in.ID, in.Body.InterviewerNUID, currentActor(ctx).NUID)
-	if err != nil {
-		return nil, storeErr(err)
-	}
-	return &InterviewAssignmentOutput{Body: a}, nil
-}
-
-func (h *interviewAssignmentHandler) getInterviewer(ctx context.Context, in *ApplicationScopedInput) (*InterviewAssignmentOutput, error) {
-	if err := requireReviewer(ctx); err != nil {
-		return nil, err
-	}
-	a, err := h.store.GetInterviewAssignment(ctx, in.ID)
+	a, err := h.store.CreateInterviewAssignment(ctx, in.ID, nuid, currentActor(ctx).NUID)
 	if err != nil {
 		return nil, storeErr(err)
 	}
@@ -147,6 +149,27 @@ func (h *interviewAssignmentHandler) getInterviewer(ctx context.Context, in *App
 
 type InterviewAssignmentsOutput struct {
 	Body []models.InterviewAssignment
+}
+
+func (h *interviewAssignmentHandler) listInterviewers(ctx context.Context, in *ApplicationScopedInput) (*InterviewAssignmentsOutput, error) {
+	if err := requireReviewer(ctx); err != nil {
+		return nil, err
+	}
+	items, err := h.store.ListInterviewAssignments(ctx, in.ID)
+	if err != nil {
+		return nil, storeErr(err)
+	}
+	return &InterviewAssignmentsOutput{Body: items}, nil
+}
+
+func (h *interviewAssignmentHandler) unassignInterviewer(ctx context.Context, in *IDInput) (*struct{}, error) {
+	if err := requireChief(ctx); err != nil {
+		return nil, err
+	}
+	if err := h.store.DeleteInterviewAssignment(ctx, in.ID); err != nil {
+		return nil, storeErr(err)
+	}
+	return nil, nil
 }
 
 type ListAssignmentsBulkInput struct {

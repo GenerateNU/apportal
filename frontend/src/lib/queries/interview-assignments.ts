@@ -5,17 +5,17 @@ import {
   useQueryClient,
 } from '@tanstack/react-query'
 import {
+  addInterviewer,
   assignRecordingReviewer,
-  getInterviewAssignment,
+  listInterviewAssignments,
   listInterviewAssignmentsBulk,
   listInterviewReviewAssignmentsBulk,
   listRecordingReviewerAssignments,
-  setInterviewAssignment,
   unassignAllInterviewers,
   unassignAllRecordingReviewers,
+  unassignInterviewer,
   unassignRecordingReviewer,
 } from '@/generated/interview-assignments/interview-assignments'
-import { APIError } from '@/lib/api/client'
 import type { RequestOptions } from '@/lib/api/orval-mutator'
 import type { Role } from '@/lib/api/types'
 import type {
@@ -24,48 +24,19 @@ import type {
 } from '@/lib/api/types'
 import { queryKeys } from './keys'
 
-// The backend 404s when an application has no interviewer assigned yet —
-// that's not an error here, just the "unassigned" state. Resolves to null
-// rather than undefined: TanStack rejects a queryFn that resolves to
-// undefined (it can't tell that apart from "still loading"), which would
-// otherwise throw on every unassigned application.
-async function fetchInterviewAssignment(id: string, opts?: RequestOptions) {
-  try {
-    return (await getInterviewAssignment(id, opts)) as InterviewAssignment
-  } catch (err) {
-    if (err instanceof APIError && err.status === 404) return null
-    throw err
-  }
-}
-
-export function useInterviewAssignment(
+export function useInterviewAssignments(
   applicationId: string,
   opts?: RequestOptions
 ) {
   return useQuery({
     queryKey: queryKeys.interviewAssignments.detail(applicationId),
-    queryFn: () => fetchInterviewAssignment(applicationId, opts),
+    queryFn: async () =>
+      ((await listInterviewAssignments(applicationId, opts)) ??
+        []) as InterviewAssignment[],
     enabled: !!applicationId,
   })
 }
 
-// One query per application, sharing cache with useInterviewAssignment — used
-// to show current interviewers across a list of applications.
-export function useInterviewAssignmentsByApplications(
-  applicationIds: string[],
-  opts?: RequestOptions
-) {
-  return useQueries({
-    queries: applicationIds.map((id) => ({
-      queryKey: queryKeys.interviewAssignments.detail(id),
-      queryFn: () => fetchInterviewAssignment(id, opts),
-    })),
-  })
-}
-
-// One request for the whole page of applications, instead of one per row —
-// writes each result back into the per-application cache useInterviewAssignment
-// reads, so opening one afterwards is a cache hit rather than a fresh request.
 export function useInterviewAssignmentsBulk(
   applicationIds: string[],
   opts?: RequestOptions
@@ -79,15 +50,17 @@ export function useInterviewAssignmentsBulk(
         opts
       )) ?? []) as InterviewAssignment[]
 
-      const byApplicationId: Record<string, InterviewAssignment | null> = {}
-      for (const id of applicationIds) byApplicationId[id] = null
+      const byApplicationId: Record<string, InterviewAssignment[]> = {}
+      for (const id of applicationIds) byApplicationId[id] = []
       for (const assignment of assignments) {
-        byApplicationId[assignment.application_id] = assignment
+        const list = byApplicationId[assignment.application_id] ?? []
+        list.push(assignment)
+        byApplicationId[assignment.application_id] = list
       }
-      for (const [id, assignment] of Object.entries(byApplicationId)) {
+      for (const [id, list] of Object.entries(byApplicationId)) {
         queryClient.setQueryData(
           queryKeys.interviewAssignments.detail(id),
-          assignment
+          list
         )
       }
       return byApplicationId
@@ -96,7 +69,7 @@ export function useInterviewAssignmentsBulk(
   })
 }
 
-export function useSetInterviewAssignment() {
+export function useAddInterviewer() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (vars: {
@@ -104,14 +77,27 @@ export function useSetInterviewAssignment() {
       interviewerNuid: string
       opts?: RequestOptions
     }) =>
-      setInterviewAssignment(
+      addInterviewer(
         vars.applicationId,
         { interviewer_nuid: vars.interviewerNuid },
         vars.opts
       ),
-    onSuccess: (_data, vars) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: queryKeys.interviewAssignments.detail(vars.applicationId),
+        queryKey: queryKeys.interviewAssignments.all,
+      })
+    },
+  })
+}
+
+export function useUnassignInterviewer() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (vars: { id: string; opts?: RequestOptions }) =>
+      unassignInterviewer(vars.id, vars.opts),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.interviewAssignments.all,
       })
     },
   })

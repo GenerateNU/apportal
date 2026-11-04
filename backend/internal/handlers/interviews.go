@@ -21,20 +21,21 @@ func (h *interviewHandler) register(api huma.API) {
 		OperationID: "upsert-interview",
 		Method:      http.MethodPut,
 		Path:        "/applications/{id}/interview",
-		Summary:     "Create or update the interview write-up",
-		Description: "Reviewer only (the interviewer). Provided fields overwrite; omitted ones are preserved.",
+		Summary:     "Create or update the caller's interview write-up",
+		Description: "Reviewer only (an assigned interviewer, or a chief). Provided fields overwrite; omitted ones are preserved.",
 		Tags:        []string{"Interviews"},
-		Errors:      []int{http.StatusUnauthorized, http.StatusUnprocessableEntity},
+		Errors:      []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusUnprocessableEntity},
 	}, h.upsert)
 
 	huma.Register(api, huma.Operation{
-		OperationID: "get-interview",
+		OperationID: "list-interviews",
 		Method:      http.MethodGet,
-		Path:        "/applications/{id}/interview",
-		Summary:     "Get an application's interview",
+		Path:        "/applications/{id}/interviews",
+		Summary:     "List an application's interview write-ups",
+		Description: "Reviewer only. One write-up per interviewer.",
 		Tags:        []string{"Interviews"},
-		Errors:      []int{http.StatusUnauthorized, http.StatusNotFound},
-	}, h.get)
+		Errors:      []int{http.StatusUnauthorized},
+	}, h.list)
 
 	huma.Register(api, huma.Operation{
 		OperationID: "list-interviews-bulk",
@@ -108,22 +109,19 @@ func (h *interviewHandler) upsert(ctx context.Context, in *UpsertInterviewInput)
 
 	actor := currentActor(ctx)
 	isChief := actor.HasAnyRole(models.UserRoleChief, models.UserRoleAdmin)
-	assignment, assignErr := h.store.GetInterviewAssignment(ctx, in.ID)
-	if !isChief && (assignErr != nil || assignment.InterviewerNUID != actor.NUID) {
-		return nil, huma.Error403Forbidden("only the assigned interviewer may submit this interview")
-	}
-
-	// Attribute the write-up to whoever is actually assigned, even when a
-	// chief is the one editing it — only fall back to the caller's own NUID
-	// when there's no assignment to attribute it to at all.
-	interviewerNUID := actor.NUID
-	if assignErr == nil && assignment.InterviewerNUID != "" {
-		interviewerNUID = assignment.InterviewerNUID
+	if !isChief {
+		assigned, err := h.store.IsAssignedInterviewer(ctx, in.ID, actor.NUID)
+		if err != nil {
+			return nil, storeErr(err)
+		}
+		if !assigned {
+			return nil, huma.Error403Forbidden("only the assigned interviewer may submit this interview")
+		}
 	}
 
 	iv, err := h.store.UpsertInterview(ctx, store.InterviewUpsert{
 		ApplicationID:   in.ID,
-		InterviewerNUID: interviewerNUID,
+		InterviewerNUID: actor.NUID,
 		ScheduledAt:     in.Body.ScheduledAt,
 		ConductedAt:     in.Body.ConductedAt,
 		RecordingURL:    in.Body.RecordingURL,
@@ -136,9 +134,6 @@ func (h *interviewHandler) upsert(ctx context.Context, in *UpsertInterviewInput)
 		return nil, storeErr(err)
 	}
 
-	// Submitting is the signal that the applicant has moved from "being
-	// interviewed" to "under interview review" — best-effort: the write-up
-	// itself already succeeded, so a failure here shouldn't fail the request.
 	if in.Body.Submit {
 		_ = h.store.AdvanceApplicationToInterviewReview(ctx, in.ID)
 	}
@@ -146,13 +141,13 @@ func (h *interviewHandler) upsert(ctx context.Context, in *UpsertInterviewInput)
 	return &InterviewOutput{Body: iv}, nil
 }
 
-func (h *interviewHandler) get(ctx context.Context, in *ApplicationScopedInput) (*InterviewOutput, error) {
+func (h *interviewHandler) list(ctx context.Context, in *ApplicationScopedInput) (*InterviewsOutput, error) {
 	if err := requireReviewer(ctx); err != nil {
 		return nil, err
 	}
-	iv, err := h.store.GetInterview(ctx, in.ID)
+	items, err := h.store.ListInterviews(ctx, in.ID)
 	if err != nil {
 		return nil, storeErr(err)
 	}
-	return &InterviewOutput{Body: iv}, nil
+	return &InterviewsOutput{Body: items}, nil
 }
