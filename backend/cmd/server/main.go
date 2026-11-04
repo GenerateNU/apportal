@@ -10,7 +10,8 @@ import (
 
 	"github.com/GenerateNU/apportal/backend/internal/config"
 	appdb "github.com/GenerateNU/apportal/backend/internal/db"
-	"github.com/GenerateNU/apportal/backend/internal/handlers"
+	"github.com/GenerateNU/apportal/backend/internal/handlers/applicant"
+	"github.com/GenerateNU/apportal/backend/internal/server"
 	"github.com/GenerateNU/apportal/backend/internal/storage"
 )
 
@@ -29,7 +30,13 @@ func main() {
 		slog.Error("failed to open database", "error", err)
 		os.Exit(1)
 	}
-	defer database.Close()
+	if sqlDB, err := database.DB(); err == nil {
+		defer func() {
+			if err := sqlDB.Close(); err != nil {
+				slog.Error("failed to close database", "error", err)
+			}
+		}()
+	}
 
 	storageClient := storage.NewClient(cfg.SupabaseURL, cfg.SupabaseServiceRoleKey)
 	if err := storageClient.EnsureBucket(context.Background()); err != nil {
@@ -37,7 +44,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	app := handlers.NewRouter(database, cfg.CORSOrigins, cfg.SupabaseURL, cfg.SupabaseAnonKey, storageClient, cfg.ChallengeServerURL, cfg.ChallengeAdminToken)
+	app := server.CreateApp(database, server.Config{
+		CORSOrigins:     cfg.CORSOrigins,
+		SupabaseURL:     cfg.SupabaseURL,
+		SupabaseAnonKey: cfg.SupabaseAnonKey,
+		Storage:         storageClient,
+		Challenge:       applicant.NewChallengeClient(cfg.ChallengeServerURL, cfg.ChallengeAdminToken),
+	})
 
 	serverErrors := make(chan error, 1)
 	go func() {

@@ -31,7 +31,7 @@ What this looks like here:
 
 - **Backend:** a collection route (`GET /answers?application_ids=a,b,c`)
   alongside the single-item one, backed by `WHERE id = ANY($1::uuid[])`.
-  Bound the list (`maxBulkApplications`) so the query string and the fan-out
+  Bound the list (`utils.MaxBulkApplications`) so the query string and the fan-out
   stay sane, and apply the same visibility rules the single-item route does.
 - **Frontend:** one query per *batch*, keyed on the id list. Where rows arrive
   in pages (infinite scroll), batch per page so loading more doesn't refetch

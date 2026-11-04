@@ -9,7 +9,6 @@ import (
 	"github.com/gofiber/fiber/v3"
 
 	"github.com/GenerateNU/apportal/backend/internal/models"
-	"github.com/GenerateNU/apportal/backend/internal/store"
 )
 
 // Actor is the authenticated caller: a real user row, resolved from a
@@ -49,13 +48,13 @@ var actorKey contextKey
 // invalid token, or one with no matching user row, leaves the context empty
 // — requireReviewer/requireChief in the handlers package do the actual
 // rejecting, so applicant-facing (unauthenticated) routes still work.
-func WithActor(verifier *SupabaseVerifier, users *store.Store) fiber.Handler {
+func WithActor(verifier *SupabaseVerifier, userByEmail func(ctx context.Context, email string) (models.User, error)) fiber.Handler {
 	return func(c fiber.Ctx) error {
 		ctx := c.Context()
 
 		if token := bearerToken(c.Get("Authorization")); token != "" {
 			if email, err := verifier.Verify(ctx, token); err == nil {
-				if user, err := users.GetUserByEmail(ctx, email); err == nil {
+				if user, err := userByEmail(ctx, email); err == nil {
 					ctx = ContextWithActor(ctx, Actor{NUID: user.NUID, Roles: user.Roles})
 				}
 			}
@@ -73,7 +72,9 @@ func bearerToken(header string) string {
 	if !strings.HasPrefix(header, prefix) {
 		return ""
 	}
-	return strings.TrimPrefix(header, prefix)
+	// Fiber reuses the request buffer, so a borrowed string would corrupt the
+	// verifier's cache key once the next request overwrites it.
+	return strings.Clone(strings.TrimPrefix(header, prefix))
 }
 
 // ContextWithActor returns ctx carrying the given actor.

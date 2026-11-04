@@ -24,23 +24,27 @@ func (s DraftStatus) Valid() bool {
 // runs down the order, the next back up it, so the last team picks twice in a
 // row at the turn.
 type Draft struct {
-	ID              string      `json:"id"`
-	CycleID         string      `json:"cycle_id"`
-	ApplicationRole Role        `json:"application_role"`
-	Status          DraftStatus `json:"status"`
-	Rounds          int         `json:"rounds"`
-	CreatedBy       string      `json:"created_by"`
-	CreatedAt       time.Time   `json:"created_at"`
-	UpdatedAt       time.Time   `json:"updated_at"`
+	ID              string      `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	CycleID         string      `json:"cycle_id" gorm:"type:uuid;not null;uniqueIndex:drafts_cycle_id_application_role_key,priority:1"`
+	ApplicationRole Role        `json:"application_role" gorm:"type:application_role;not null;uniqueIndex:drafts_cycle_id_application_role_key,priority:2"`
+	Status          DraftStatus `json:"status" gorm:"not null;default:setup;check:drafts_status_check,status IN ('setup','active','complete')"`
+	Rounds          int         `json:"rounds" gorm:"type:integer;not null;default:1;check:drafts_rounds_check,rounds > 0"`
+	CreatedBy       string      `json:"created_by" gorm:"not null"`
+	CreatedAt       time.Time   `json:"created_at" gorm:"not null;default:now()"`
+	UpdatedAt       time.Time   `json:"updated_at" gorm:"not null;default:now()"`
+	Cycle           Cycle       `json:"-" gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
+	Creator         User        `json:"-" gorm:"foreignKey:CreatedBy;references:NUID"`
 }
 
 // DraftTeam is one seat in the order, backed by the preference_lists group
 // whose members are drafting.
 type DraftTeam struct {
-	ID               string `json:"id"`
-	DraftID          string `json:"draft_id"`
-	PreferenceListID string `json:"preference_list_id"`
-	Position         int    `json:"position"`
+	ID               string         `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	DraftID          string         `json:"draft_id" gorm:"type:uuid;not null;uniqueIndex:draft_teams_draft_id_preference_list_id_key,priority:1;index:idx_draft_teams_draft,priority:1"`
+	PreferenceListID string         `json:"preference_list_id" gorm:"type:uuid;not null;uniqueIndex:draft_teams_draft_id_preference_list_id_key,priority:2"`
+	Position         int            `json:"position" gorm:"type:integer;not null;index:idx_draft_teams_draft,priority:2"`
+	Draft            Draft          `json:"-" gorm:"foreignKey:DraftID;references:ID;constraint:OnDelete:CASCADE"`
+	PreferenceList   PreferenceList `json:"-" gorm:"foreignKey:PreferenceListID;references:ID;constraint:OnDelete:CASCADE"`
 }
 
 // DraftTeamDetail adds the group's name and members, so the board can label a
@@ -48,18 +52,22 @@ type DraftTeam struct {
 type DraftTeamDetail struct {
 	DraftTeam
 	Name        string   `json:"name"`
-	MemberNames []string `json:"member_names"`
+	MemberNames []string `json:"member_names" gorm:"serializer:pgarray"`
 }
 
 type DraftPick struct {
-	ID            string    `json:"id"`
-	DraftID       string    `json:"draft_id"`
-	PickNumber    int       `json:"pick_number"`
-	DraftTeamID   string    `json:"draft_team_id"`
-	ApplicationID string    `json:"application_id"`
-	PreviousStage string    `json:"previous_stage"`
-	PickedBy      string    `json:"picked_by"`
-	PickedAt      time.Time `json:"picked_at"`
+	ID            string      `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	DraftID       string      `json:"draft_id" gorm:"type:uuid;not null;uniqueIndex:draft_picks_draft_id_application_id_key,priority:1;uniqueIndex:draft_picks_draft_id_pick_number_key,priority:1;index:idx_draft_picks_draft,priority:1"`
+	PickNumber    int         `json:"pick_number" gorm:"type:integer;not null;check:draft_picks_pick_number_check,pick_number > 0;uniqueIndex:draft_picks_draft_id_pick_number_key,priority:2;index:idx_draft_picks_draft,priority:2"`
+	DraftTeamID   string      `json:"draft_team_id" gorm:"type:uuid;not null"`
+	ApplicationID string      `json:"application_id" gorm:"type:uuid;not null;index:idx_draft_picks_application;uniqueIndex:draft_picks_draft_id_application_id_key,priority:2"`
+	PreviousStage string      `json:"previous_stage" gorm:"type:application_stage;not null"`
+	PickedBy      string      `json:"picked_by" gorm:"not null"`
+	PickedAt      time.Time   `json:"picked_at" gorm:"not null;default:now()"`
+	Draft         Draft       `json:"-" gorm:"foreignKey:DraftID;references:ID;constraint:OnDelete:CASCADE"`
+	DraftTeam     DraftTeam   `json:"-" gorm:"foreignKey:DraftTeamID;references:ID;constraint:OnDelete:CASCADE"`
+	Application   Application `json:"-" gorm:"foreignKey:ApplicationID;references:ID;constraint:OnDelete:CASCADE"`
+	Picker        User        `json:"-" gorm:"foreignKey:PickedBy;references:NUID"`
 }
 
 // DraftPickDetail enriches a pick with the applicant's name and email, joined
