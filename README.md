@@ -171,7 +171,9 @@ The Next.js frontend talks to the Go backend and uses Supabase for auth.
 
 ### Environment Variables
 
-Copy [frontend/.env.example](frontend/.env.example) to `frontend/.env` and set:
+Secrets come from Doppler, project `apportal-frontend`: config `dev` and `prd`.
+The `make` targets below run through `doppler run`, so there is no `frontend/.env`.
+[frontend/.env.example](frontend/.env.example) lists the variable names.
 
 - `NEXT_PUBLIC_API_URL` — backend base URL (defaults to `http://localhost:8080`)
 - `NEXT_PUBLIC_SUPABASE_URL` — your Supabase project URL
@@ -183,16 +185,17 @@ From [frontend/](frontend/):
 
 ```bash
 npm install
-npm run dev    # start the dev server at http://localhost:3000
+make start-dev    # dev server at http://localhost:3000, Doppler `dev`
+make start-prod   # production build + serve, Doppler `prd`
 ```
 
 ### Useful Commands
 
 From [frontend/](frontend/):
 
-- `npm run dev` — start the dev server
-- `npm run build` — production build
-- `npm run start` — serve the production build
+- `make start-dev` — start the dev server with Doppler `dev`
+- `make build-prod` — production build with Doppler `prd`
+- `make start-prod` — build and serve production with Doppler `prd`
 - `npm run lint` — run ESLint
 - `npm run format:check` — check formatting with Prettier
 - `npm test` — run unit tests (Vitest)
