@@ -2,16 +2,22 @@ services:
   backend:
     build:
       context: .
-    env_file:
-      - .env
+    # Values come from the shell, which `make docker-up` fills via `doppler run`.
     environment:
       PORT: ${PORT:-8080}
+      DATABASE_URL_DOCKER:
+      APP_CORS_ORIGINS:
+      SUPABASE_URL:
+      SUPABASE_ANON_KEY:
+      SUPABASE_SERVICE_ROLE_KEY:
+      CHALLENGE_SERVER_URL:
+      CHALLENGE_ADMIN_TOKEN:
     command:
       - sh
       - -ec
       - |
         if [ -z "$$DATABASE_URL_DOCKER" ]; then
-          echo "Set DATABASE_URL_DOCKER to your Supabase Session Pooler URL before running docker compose"
+          echo "Set DATABASE_URL_DOCKER in Doppler and start with make docker-up"
           exit 1
         fi
 

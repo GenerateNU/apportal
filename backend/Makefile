@@ -5,7 +5,15 @@ MAIN_PACKAGE := ./cmd/server
 BIN_DIR := bin
 BIN_PATH := $(BIN_DIR)/$(APP_NAME)
 
-.PHONY: help fmt fmt-check lint test test-cover vet tidy run dev build clean docker-build docker-up docker-down docker-logs prettier prettier-check openapi
+# Configs are passed explicitly (not via `doppler setup`) so *-prod can only touch prd.
+DOPPLER_PROJECT     ?= apportal-backend
+DOPPLER_DEV_CONFIG  ?= dev
+DOPPLER_PROD_CONFIG ?= prd
+
+DOPPLER_DEV  := doppler run --project $(DOPPLER_PROJECT) --config $(DOPPLER_DEV_CONFIG) --
+DOPPLER_PROD := doppler run --project $(DOPPLER_PROJECT) --config $(DOPPLER_PROD_CONFIG) --
+
+.PHONY: help fmt fmt-check lint test test-cover vet tidy run start-dev start-prod air build clean docker-build docker-up docker-down docker-logs prettier prettier-check openapi
 
 help:
 	@printf '%s\n' \
@@ -16,12 +24,13 @@ help:
 		'  make test         Run Go tests' \
 		'  make test-cover    Run tests with coverage output' \
 		'  make tidy         Tidy Go modules' \
-		'  make run          Run the backend locally' \
-		'  make dev          Run with hot reload (rebuilds on file save)' \
+		'  make run          Run the backend locally using Doppler dev secrets' \
+		'  make start-dev    Run with hot reload using Doppler dev secrets' \
+		'  make start-prod   Run using Doppler prd secrets' \
 		'  make build        Build the backend binary' \
 		'  make openapi      Write the OpenAPI spec to api/openapi.yaml' \
 		'  make docker-build Build the backend Docker image' \
-		'  make docker-up    Start the backend with Docker Compose' \
+		'  make docker-up    Start the backend with Docker Compose using Doppler dev secrets' \
 		'  make docker-down  Stop the Docker Compose stack' \
 		'  make prettier     Format markdown/yaml/json with Prettier' \
 		'  make clean        Remove build artifacts'
@@ -58,16 +67,21 @@ tidy:
 	@go mod tidy
 
 run:
-	@if [ -f .env ]; then set -a; . ./.env; set +a; fi; go run $(MAIN_PACKAGE)
+	@$(DOPPLER_DEV) go run $(MAIN_PACKAGE)
 
 AIR := $(shell command -v air 2>/dev/null || echo "$$(go env GOPATH)/bin/air")
 
-dev:
+air:
 	@if [ ! -x "$(AIR)" ]; then \
 		printf '%s\n' 'air not found; installing...'; \
 		go install github.com/air-verse/air@latest; \
 	fi
-	@if [ -f .env ]; then set -a; . ./.env; set +a; fi; "$(AIR)"
+
+start-dev: air
+	@$(DOPPLER_DEV) "$(AIR)"
+
+start-prod:
+	@$(DOPPLER_PROD) go run $(MAIN_PACKAGE)
 
 build:
 	@mkdir -p $(BIN_DIR)
@@ -85,7 +99,7 @@ docker-build:
 	@docker build -t $(APP_NAME) .
 
 docker-up:
-	@docker compose up --build
+	@$(DOPPLER_DEV) docker compose up --build
 
 docker-down:
 	@docker compose down
