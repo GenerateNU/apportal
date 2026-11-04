@@ -17,7 +17,8 @@ pipeline, see [info.md](info.md).
 - A [Supabase](https://supabase.com/) project (Postgres + auth)
 - Optionally [Docker](https://www.docker.com/) to run the backend in a container
 - [DopplerCLI](https://docs.doppler.com/docs/install-cli) for secret managment
-- [Atlas CLI](https://atlasgo.io/integrations/go-sdk) (backend) for migrations, plus `psql` to apply `internal/sql/run-always.sql`
+- [Atlas CLI](https://atlasgo.io/integrations/go-sdk) (backend) for migrations, plus `psql` to apply `internal/sql/run-always.sql`- [DopplerCLI](https://docs.doppler.com/docs/install-cli) for secret managment
+
 Enable the repo's git hooks once per clone:
 
 ```bash
