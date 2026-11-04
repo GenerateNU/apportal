@@ -11,11 +11,10 @@ all application/review data.
 
 ## Getting Started
 
-Copy the env template and fill in your Supabase project values:
-
-```bash
-cp .env.example .env
-```
+Secrets come from [Doppler](https://docs.doppler.com/docs/install-cli),
+project `apportal-frontend` (configs `dev` and `prd`). Run `doppler login` once;
+the `make` targets load secrets through `doppler run`, so there is no `.env`.
+[.env.example](.env.example) lists the variable names:
 
 - `NEXT_PUBLIC_API_URL` — backend base URL (defaults to `http://localhost:8080`)
 - `NEXT_PUBLIC_SUPABASE_URL` — your Supabase project URL
@@ -25,7 +24,7 @@ Then install and run:
 
 ```bash
 npm install
-npm run dev
+make start-dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000). Make sure the backend is
@@ -33,9 +32,9 @@ running (see [../README.md](../README.md)) so data requests resolve.
 
 ## Scripts
 
-- `npm run dev` — start the dev server
-- `npm run build` — production build
-- `npm run start` — serve the production build
+- `make start-dev` — start the dev server with Doppler `dev`
+- `make build-prod` — production build with Doppler `prd`
+- `make start-prod` — build and serve production with Doppler `prd`
 - `npm run lint` — run ESLint
 - `npm run format:check` — check formatting with Prettier
 - `npm test` — run unit tests (Vitest, watch mode with `npm run test:watch`)
