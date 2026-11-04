@@ -31,7 +31,11 @@ func main() {
 		os.Exit(1)
 	}
 	if sqlDB, err := database.DB(); err == nil {
-		defer sqlDB.Close()
+		defer func() {
+			if err := sqlDB.Close(); err != nil {
+				slog.Error("failed to close database", "error", err)
+			}
+		}()
 	}
 
 	storageClient := storage.NewClient(cfg.SupabaseURL, cfg.SupabaseServiceRoleKey)

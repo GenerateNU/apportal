@@ -23,12 +23,7 @@ func (s *writtenReviewService) upsert(ctx context.Context, in *UpsertWrittenRevi
 		if a.ReviewQuestionID == "" {
 			return nil, huma.Error422UnprocessableEntity("each answer requires a review_question_id")
 		}
-		answers = append(answers, ReviewAnswerInput{
-			ReviewQuestionID: a.ReviewQuestionID,
-			AnswerText:       a.AnswerText,
-			AnswerOptions:    a.AnswerOptions,
-			Score:            a.Score,
-		})
+		answers = append(answers, ReviewAnswerInput(a))
 	}
 
 	detail, err := s.writtenReviewDB.UpsertWrittenReview(ctx, WrittenReviewUpsert{
