@@ -9,11 +9,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/GenerateNU/apportal/backend/internal/handlers"
+	"github.com/GenerateNU/apportal/backend/internal/server"
 )
 
 func main() {
-	spec, err := handlers.OpenAPIYAML()
+	spec, err := server.OpenAPIYAML()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "failed to generate OpenAPI spec:", err)
 		os.Exit(1)
