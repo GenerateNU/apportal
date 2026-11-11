@@ -69,7 +69,7 @@ func Route(api huma.API, db *gorm.DB) {
 		Method:      http.MethodGet,
 		Path:        "/interview-reviewers",
 		Summary:     "List recording reviewers for several applications",
-		Description: "Reviewer only. Write-ups are omitted; read them from list-interview-reviewers.",
+		Description: "Reviewer only. Write-ups are omitted except the caller's own; read them from list-interview-reviewers.",
 		Tags:        []string{"Interview assignments"},
 		Errors:      []int{http.StatusUnauthorized, http.StatusUnprocessableEntity},
 	}, s.listReviewersBulk)

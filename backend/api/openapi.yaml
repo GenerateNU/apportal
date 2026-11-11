@@ -8976,7 +8976,7 @@ paths:
         - Draft
   /interview-reviewers:
     get:
-      description: Reviewer only. Write-ups are omitted; read them from list-interview-reviewers.
+      description: Reviewer only. Write-ups are omitted except the caller's own; read them from list-interview-reviewers.
       operationId: list-interview-reviewers-bulk
       parameters:
         - description: Comma-separated application IDs

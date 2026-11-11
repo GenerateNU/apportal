@@ -96,7 +96,7 @@ export function DecisionDraftClient({
       contextLoading={contextLoading}
       reviewQuestions={reviewQuestions}
       canWrite={
-        row.interviewer_nuid === currentUser?.nuid ||
+        row.interviewers.some((iv) => iv.nuid === currentUser?.nuid) ||
         !!currentUser?.roles.some((r) => r === 'chief' || r === 'admin')
       }
       nextHref={

@@ -5,6 +5,10 @@
  * Generate application portal — applications, reviews, and the hiring pipeline.
  * OpenAPI spec version: 0.1.0
  */
-import type { InterviewReviewAssignment } from './interviewReviewAssignment';
 
-export type ListRecordingReviewerAssignments200 = InterviewReviewAssignment[] | null;
+export interface AddInterviewerInputBody {
+  /** A URL to the JSON Schema for this object. */
+  readonly $schema?: string;
+  /** @minLength 1 */
+  interviewer_nuid: string;
+}

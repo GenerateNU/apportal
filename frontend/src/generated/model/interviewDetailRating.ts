@@ -6,11 +6,11 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type RecordingReviewDetailRating = typeof RecordingReviewDetailRating[keyof typeof RecordingReviewDetailRating];
+export type InterviewDetailRating = typeof InterviewDetailRating[keyof typeof InterviewDetailRating];
 
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-export const RecordingReviewDetailRating = {
+export const InterviewDetailRating = {
   do_not_hire: 'do_not_hire',
   neutral: 'neutral',
   good: 'good',

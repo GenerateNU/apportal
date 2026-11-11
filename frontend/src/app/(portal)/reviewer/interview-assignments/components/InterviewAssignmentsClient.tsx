@@ -19,18 +19,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import type { Application, Role, User } from '@/lib/api/types'
+import { APIError } from '@/lib/api/client'
+import type {
+  Application,
+  Interviewer,
+  InterviewReviewer,
+  Role,
+  User,
+} from '@/lib/api/types'
 import { useApplications } from '@/lib/queries/applications'
 import { pickDefaultCycleId, useCycles } from '@/lib/queries/cycles'
 import {
-  useAssignRecordingReviewer,
-  useInterviewAssignmentsByApplications,
-  useRecordingReviewerAssignmentsByApplications,
-  useSetInterviewAssignment,
+  useAddInterviewReviewer,
+  useAddInterviewer,
+  useInterviewReviewersBulk,
+  useRemoveInterviewReviewer,
+  useRemoveInterviewer,
+  useUnassignAllInterviewReviewers,
   useUnassignAllInterviewers,
-  useUnassignAllRecordingReviewers,
-  useUnassignRecordingReviewer,
 } from '@/lib/queries/interview-assignments'
+import { useInterviewsByApplicationIdBatches } from '@/lib/queries/interviews'
 import { useChiefs, useLeads } from '@/lib/queries/users'
 import { ROLE_CHIP_CLASS, ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 
@@ -82,34 +90,27 @@ export function InterviewAssignmentsClient() {
   }, [interviewers])
 
   const appIds = useMemo(() => applications.map((a) => a.id), [applications])
-  const assignmentQueries = useInterviewAssignmentsByApplications(appIds)
-  const assignmentByApp = useMemo(() => {
-    const map: Record<string, (typeof assignmentQueries)[number]['data']> = {}
-    appIds.forEach((id, i) => {
-      map[id] = assignmentQueries[i]?.data
-    })
+  const appIdBatches = useMemo(() => [appIds], [appIds])
+  const interviewQueries = useInterviewsByApplicationIdBatches(appIdBatches)
+  const interviewersByApp = useMemo(() => {
+    const map: Record<string, Interviewer[]> = {}
+    for (const q of interviewQueries) {
+      for (const [id, iv] of Object.entries(q.data ?? {})) {
+        map[id] = iv?.interviewers ?? []
+      }
+    }
     return map
-  }, [appIds, assignmentQueries])
+  }, [interviewQueries])
 
-  const reviewerQueries = useRecordingReviewerAssignmentsByApplications(appIds)
-  const reviewersByApp = useMemo(() => {
-    const map: Record<string, (typeof reviewerQueries)[number]['data']> = {}
-    appIds.forEach((id, i) => {
-      map[id] = reviewerQueries[i]?.data
-    })
-    return map
-  }, [appIds, reviewerQueries])
+  const { data: reviewersByApp = {} } = useInterviewReviewersBulk(appIds)
 
-  const setInterviewAssignment = useSetInterviewAssignment()
-  const assignReviewer = useAssignRecordingReviewer()
-  const unassignReviewer = useUnassignRecordingReviewer()
+  const addInterviewer = useAddInterviewer()
+  const removeInterviewer = useRemoveInterviewer()
+  const addReviewer = useAddInterviewReviewer()
+  const removeReviewer = useRemoveInterviewReviewer()
   const unassignAllInterviewers = useUnassignAllInterviewers()
-  const unassignAllReviewers = useUnassignAllRecordingReviewers()
+  const unassignAllReviewers = useUnassignAllInterviewReviewers()
 
-  // Multiselect + bulk toolbar, same pattern as the lead-assignment page:
-  // select applicants, then either assign them all one interviewer or add
-  // one reviewer to each (ignoring 409s — already having that reviewer isn't
-  // a failure).
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [bulkInterviewerNuid, setBulkInterviewerNuid] = useState('')
   const [bulkReviewerNuid, setBulkReviewerNuid] = useState('')
@@ -135,13 +136,15 @@ export function InterviewAssignmentsClient() {
     setInterviewerFailures(0)
     const results = await Promise.allSettled(
       [...selected].map((applicationId) =>
-        setInterviewAssignment.mutateAsync({
+        addInterviewer.mutateAsync({
           applicationId,
           interviewerNuid: bulkInterviewerNuid,
         })
       )
     )
-    const failures = results.filter((r) => r.status === 'rejected').length
+    const failures = results.filter(
+      (r) => r.status === 'rejected' && !isConflict(r.reason)
+    ).length
     setInterviewerFailures(failures)
     if (failures === 0) setSelected(new Set())
     setAssigningInterviewers(false)
@@ -153,16 +156,14 @@ export function InterviewAssignmentsClient() {
     setReviewerFailures(0)
     const results = await Promise.allSettled(
       [...selected].map((applicationId) =>
-        assignReviewer.mutateAsync({
+        addReviewer.mutateAsync({
           applicationId,
-          leadNuid: bulkReviewerNuid,
+          reviewerNuid: bulkReviewerNuid,
         })
       )
     )
     const failures = results.filter(
-      (r) =>
-        r.status === 'rejected' &&
-        !String((r.reason as Error)?.message).includes('409')
+      (r) => r.status === 'rejected' && !isConflict(r.reason)
     ).length
     setReviewerFailures(failures)
     if (failures === 0) setSelected(new Set())
@@ -191,7 +192,7 @@ export function InterviewAssignmentsClient() {
             Interview assignments
           </h1>
           <p className="text-text-muted mt-1 text-sm">
-            Assign one interviewer and recording reviewers to each applicant a
+            Assign interviewers and recording reviewers to each applicant a
             chief has advanced.
           </p>
         </div>
@@ -275,7 +276,7 @@ export function InterviewAssignmentsClient() {
                 Assigning…
               </>
             ) : (
-              `Set interviewer for ${selected.size || ''} selected`
+              `Add interviewer to ${selected.size || ''} selected`
             )}
           </Button>
           <Select value={bulkReviewerNuid} onValueChange={setBulkReviewerNuid}>
@@ -322,7 +323,7 @@ export function InterviewAssignmentsClient() {
           const roleApps = applications.filter((a) => a.role === role)
           if (roleApps.length === 0) return null
           const roleHasInterviewers = roleApps.some(
-            (a) => assignmentByApp[a.id]
+            (a) => (interviewersByApp[a.id] ?? []).length > 0
           )
           const roleHasReviewers = roleApps.some(
             (a) => (reviewersByApp[a.id] ?? []).length > 0
@@ -374,28 +375,28 @@ export function InterviewAssignmentsClient() {
                     interviewers={interviewers}
                     leads={leads}
                     userName={userName}
-                    assignment={assignmentByApp[application.id]}
+                    assignedInterviewers={
+                      interviewersByApp[application.id] ?? []
+                    }
                     reviewers={reviewersByApp[application.id] ?? []}
                     selected={selected.has(application.id)}
                     onToggleSelected={() => toggleSelected(application.id)}
-                    onSetInterviewer={(interviewerNuid) =>
-                      setInterviewAssignment.mutate({
+                    onAddInterviewer={(interviewerNuid) =>
+                      addInterviewer.mutate({
                         applicationId: application.id,
                         interviewerNuid,
                       })
                     }
-                    onAssignReviewer={(leadNuid) =>
-                      assignReviewer.mutate({
+                    onRemoveInterviewer={(id) =>
+                      removeInterviewer.mutate({ id })
+                    }
+                    onAddReviewer={(reviewerNuid) =>
+                      addReviewer.mutate({
                         applicationId: application.id,
-                        leadNuid,
+                        reviewerNuid,
                       })
                     }
-                    onUnassignReviewer={(id) =>
-                      unassignReviewer.mutate({
-                        id,
-                        applicationId: application.id,
-                      })
-                    }
+                    onRemoveReviewer={(id) => removeReviewer.mutate({ id })}
                   />
                 ))}
               </div>
@@ -425,7 +426,11 @@ export function InterviewAssignmentsClient() {
               assignment for{' '}
               {confirmingUnassignAll &&
                 ROLE_LABEL[confirmingUnassignAll.role].toLowerCase()}{' '}
-              applicants in this cycle. This cannot be undone.
+              applicants in this cycle, except{' '}
+              {confirmingUnassignAll?.kind === 'interviewers'
+                ? 'on interviews already conducted'
+                : 'reviewers who already submitted'}
+              . This cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -451,36 +456,48 @@ export function InterviewAssignmentsClient() {
   )
 }
 
+function isConflict(err: unknown) {
+  return err instanceof APIError && err.status === 409
+}
+
 function InterviewAssignmentRow({
   application,
   name,
   interviewers,
   leads,
   userName,
-  assignment,
+  assignedInterviewers,
   reviewers,
   selected,
   onToggleSelected,
-  onSetInterviewer,
-  onAssignReviewer,
-  onUnassignReviewer,
+  onAddInterviewer,
+  onRemoveInterviewer,
+  onAddReviewer,
+  onRemoveReviewer,
 }: {
   application: Application
   name: string
   interviewers: User[]
   leads: User[]
   userName: Record<string, string>
-  assignment: { interviewer_nuid: string } | null | undefined
-  reviewers: { id: string; lead_nuid: string }[]
+  assignedInterviewers: Interviewer[]
+  reviewers: InterviewReviewer[]
   selected: boolean
   onToggleSelected: () => void
-  onSetInterviewer: (interviewerNuid: string) => void
-  onAssignReviewer: (leadNuid: string) => void
-  onUnassignReviewer: (id: string) => void
+  onAddInterviewer: (interviewerNuid: string) => void
+  onRemoveInterviewer: (id: string) => void
+  onAddReviewer: (reviewerNuid: string) => void
+  onRemoveReviewer: (id: string) => void
 }) {
-  const reviewerNuids = new Set(reviewers.map((r) => r.lead_nuid))
+  const interviewerNuids = new Set(
+    assignedInterviewers.map((x) => x.interviewer_nuid)
+  )
+  const reviewerNuids = new Set(reviewers.map((r) => r.reviewer_nuid))
+  const availableInterviewers = interviewers.filter(
+    (u) => !interviewerNuids.has(u.nuid)
+  )
   const availableReviewers = leads.filter(
-    (l) => !reviewerNuids.has(l.nuid) && l.nuid !== assignment?.interviewer_nuid
+    (l) => !reviewerNuids.has(l.nuid) && !interviewerNuids.has(l.nuid)
   )
 
   return (
@@ -503,68 +520,94 @@ function InterviewAssignmentRow({
         </span>
       </div>
 
-      <div className="flex items-center gap-2">
-        <span className="text-text-faint text-xs whitespace-nowrap">
-          Interviewer
-        </span>
-        <Select
-          value={assignment?.interviewer_nuid ?? ''}
-          onValueChange={onSetInterviewer}
+      <AssigneeChips
+        label="Interviewers"
+        name={name}
+        chips={assignedInterviewers.map((x) => ({
+          id: x.id,
+          label:
+            x.interviewer_name ??
+            userName[x.interviewer_nuid] ??
+            x.interviewer_nuid,
+        }))}
+        options={availableInterviewers}
+        addLabel="+ Add interviewer"
+        onAdd={onAddInterviewer}
+        onRemove={onRemoveInterviewer}
+      />
+
+      <div className="sm:ml-auto">
+        <AssigneeChips
+          label="Recording reviewers"
+          name={name}
+          chips={reviewers.map((r) => ({
+            id: r.id,
+            label:
+              r.reviewer_name ?? userName[r.reviewer_nuid] ?? r.reviewer_nuid,
+          }))}
+          options={availableReviewers}
+          addLabel="+ Add reviewer"
+          onAdd={onAddReviewer}
+          onRemove={onRemoveReviewer}
+        />
+      </div>
+    </div>
+  )
+}
+
+function AssigneeChips({
+  label,
+  name,
+  chips,
+  options,
+  addLabel,
+  onAdd,
+  onRemove,
+}: {
+  label: string
+  name: string
+  chips: { id: string; label: string }[]
+  options: User[]
+  addLabel: string
+  onAdd: (nuid: string) => void
+  onRemove: (id: string) => void
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="text-text-faint text-xs whitespace-nowrap">{label}</span>
+      {chips.map((c) => (
+        <span
+          key={c.id}
+          className="text-text-muted inline-flex items-center gap-1 rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium"
         >
-          <SelectTrigger
-            className="w-44"
-            aria-label={`Interviewer for ${name}`}
+          {c.label}
+          <button
+            type="button"
+            aria-label={`Remove ${c.label}`}
+            className="hover:text-destructive -m-1 p-1"
+            onClick={() => onRemove(c.id)}
           >
-            <SelectValue placeholder="Unassigned" />
+            <X size={12} />
+          </button>
+        </span>
+      ))}
+      {options.length > 0 && (
+        <Select value="" onValueChange={onAdd}>
+          <SelectTrigger
+            className="h-7 w-36 text-xs"
+            aria-label={`${addLabel.replace('+ ', '')} for ${name}`}
+          >
+            <SelectValue placeholder={addLabel} />
           </SelectTrigger>
           <SelectContent>
-            {interviewers.map((u) => (
+            {options.map((u) => (
               <SelectItem key={u.nuid} value={u.nuid}>
                 {u.full_name}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
-        <span className="text-text-faint text-xs whitespace-nowrap">
-          Recording reviewers
-        </span>
-        {reviewers.map((r) => (
-          <span
-            key={r.id}
-            className="text-text-muted inline-flex items-center gap-1 rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium"
-          >
-            {userName[r.lead_nuid] ?? r.lead_nuid}
-            <button
-              type="button"
-              aria-label="Unassign"
-              className="hover:text-destructive -m-1 p-1"
-              onClick={() => onUnassignReviewer(r.id)}
-            >
-              <X size={12} />
-            </button>
-          </span>
-        ))}
-        {availableReviewers.length > 0 && (
-          <Select value="" onValueChange={onAssignReviewer}>
-            <SelectTrigger
-              className="h-7 w-36 text-xs"
-              aria-label={`Add recording reviewer for ${name}`}
-            >
-              <SelectValue placeholder="+ Add reviewer" />
-            </SelectTrigger>
-            <SelectContent>
-              {availableReviewers.map((u) => (
-                <SelectItem key={u.nuid} value={u.nuid}>
-                  {u.full_name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-      </div>
+      )}
     </div>
   )
 }

@@ -6,6 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
+/**
+ * Sets the interview's shared rating
+ */
 export type UpsertRecordingReviewInputBodyRating = typeof UpsertRecordingReviewInputBodyRating[keyof typeof UpsertRecordingReviewInputBodyRating];
 
 

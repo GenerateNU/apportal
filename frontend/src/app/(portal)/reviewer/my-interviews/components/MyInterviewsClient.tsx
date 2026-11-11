@@ -15,8 +15,11 @@ import type { Role } from '@/lib/api/types'
 import { useApplications } from '@/lib/queries/applications'
 import { DEFAULT_CYCLE_ID, useCycles } from '@/lib/queries/cycles'
 import { useChiefs, useCurrentUser, useLeads } from '@/lib/queries/users'
-import { useInterviewsByApplicationIdBatches } from '@/lib/queries/interviews'
-import { useRecordingReviewsByInterviewIds } from '@/lib/queries/recording-reviews'
+import { useInterviewReviewersBulk } from '@/lib/queries/interview-assignments'
+import {
+  interviewSubmitted,
+  useInterviewsByApplicationIdBatches,
+} from '@/lib/queries/interviews'
 import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 import type { ReviewState } from '../../my-reviews/constants'
 import { ReviewRow } from '../../my-reviews/components/ReviewRow'
@@ -126,14 +129,17 @@ export function MyInterviewsClient() {
     () =>
       applications.map((application) => {
         const interview = interviewByApplicationId?.[application.id]
-        const state: ReviewState = interview?.submitted_at
+        const own = interview?.interviewers.find(
+          (iv) => iv.interviewer_nuid === interviewerNuid
+        )
+        const state: ReviewState = own?.writeup_submitted_at
           ? 'submitted'
-          : interview
+          : own?.writeup
             ? 'draft'
             : 'none'
         return { application, interview, state }
       }),
-    [applications, interviewByApplicationId]
+    [applications, interviewByApplicationId, interviewerNuid]
   )
 
   const interviewedCount = rows.filter((r) => r.state === 'submitted').length
@@ -162,15 +168,12 @@ export function MyInterviewsClient() {
 
   // Own review progress for the reviewing queue, in one request for the whole
   // list rather than one per row.
-  const reviewingInterviewIds = useMemo(
-    () =>
-      reviewingApplications
-        .map((a) => interviewByApplicationId?.[a.id]?.id)
-        .filter((id): id is string => !!id),
-    [reviewingApplications, interviewByApplicationId]
+  const reviewingIds = useMemo(
+    () => reviewingApplications.map((a) => a.id),
+    [reviewingApplications]
   )
-  const { data: recordingReviewsByInterviewId } =
-    useRecordingReviewsByInterviewIds(reviewingInterviewIds)
+  const { data: reviewersByApplicationId } =
+    useInterviewReviewersBulk(reviewingIds)
 
   // A reviewing row is gated on the interviewer submitting, then tracks the
   // viewer's *own* write-up — a row they've already reviewed shouldn't keep
@@ -179,16 +182,14 @@ export function MyInterviewsClient() {
     () =>
       reviewingApplications.map((application) => {
         const interview = interviewByApplicationId?.[application.id]
-        const own = interview?.id
-          ? recordingReviewsByInterviewId?.[interview.id]?.find(
-              (r) => r.reviewer_nuid === interviewerNuid
-            )
-          : undefined
-        const state: ReviewingState = !interview?.submitted_at
+        const own = reviewersByApplicationId?.[application.id]?.find(
+          (r) => r.reviewer_nuid === interviewerNuid
+        )
+        const state: ReviewingState = !interviewSubmitted(interview)
           ? 'waiting'
-          : own?.submitted_at
+          : own?.writeup_submitted_at
             ? 'submitted'
-            : own
+            : own?.writeup
               ? 'draft'
               : 'ready'
         return { application, interview, state }
@@ -196,7 +197,7 @@ export function MyInterviewsClient() {
     [
       reviewingApplications,
       interviewByApplicationId,
-      recordingReviewsByInterviewId,
+      reviewersByApplicationId,
       interviewerNuid,
     ]
   )

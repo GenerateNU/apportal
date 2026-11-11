@@ -72,8 +72,11 @@ func (s *interviewAssignmentService) listReviewersBulk(ctx context.Context, in *
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
+	actor := utils.CurrentActor(ctx)
 	for i := range items {
-		items[i].Writeup = nil
+		if items[i].ReviewerNUID != actor.NUID {
+			items[i].Writeup = nil
+		}
 	}
 	return &InterviewReviewersOutput{Body: items}, nil
 }

@@ -26,10 +26,8 @@ import type {
 
 import type {
   ErrorModel,
-  InterviewRecordingReview,
-  ListRecordingReviews200,
-  ListRecordingReviewsBulk200,
-  ListRecordingReviewsBulkParams,
+  ListInterviewReviewers200,
+  UpsertRecordingReview200,
   UpsertRecordingReviewInputBody
 } from '.././model';
 
@@ -68,8 +66,8 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
 /**
- * Reviewer only; upserts the calling reviewer's review of the recording.
- * @summary Submit or update your interview recording review
+ * Assigned recording reviewers only, once an interviewer has submitted. A rating sets the interview's shared rating.
+ * @summary Save your recording review
  */
 export const upsertRecordingReview = (
     id: string,
@@ -77,8 +75,8 @@ export const upsertRecordingReview = (
  options?: SecondParameter<typeof customInstance>,) => {
       
       
-      return customInstance<InterviewRecordingReview>(
-      {url: `/interviews/${id}/recording-review`, method: 'PUT',
+      return customInstance<UpsertRecordingReview200>(
+      {url: `/applications/${id}/interview-review`, method: 'PUT',
       headers: {'Content-Type': 'application/json', },
       data: upsertRecordingReviewInputBody
     },
@@ -87,7 +85,7 @@ export const upsertRecordingReview = (
   
 
 
-export const getUpsertRecordingReviewMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel,
+export const getUpsertRecordingReviewMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upsertRecordingReview>>, TError,{id: string;data: NonReadonly<UpsertRecordingReviewInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
 ): UseMutationOptions<Awaited<ReturnType<typeof upsertRecordingReview>>, TError,{id: string;data: NonReadonly<UpsertRecordingReviewInputBody>}, TContext> => {
 
@@ -114,12 +112,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type UpsertRecordingReviewMutationResult = NonNullable<Awaited<ReturnType<typeof upsertRecordingReview>>>
     export type UpsertRecordingReviewMutationBody = NonReadonly<UpsertRecordingReviewInputBody>
-    export type UpsertRecordingReviewMutationError = ErrorModel | ErrorModel | ErrorModel
+    export type UpsertRecordingReviewMutationError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel
 
     /**
- * @summary Submit or update your interview recording review
+ * @summary Save your recording review
  */
-export const useUpsertRecordingReview = <TError = ErrorModel | ErrorModel | ErrorModel,
+export const useUpsertRecordingReview = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upsertRecordingReview>>, TError,{id: string;data: NonReadonly<UpsertRecordingReviewInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof upsertRecordingReview>>,
@@ -133,17 +131,17 @@ export const useUpsertRecordingReview = <TError = ErrorModel | ErrorModel | Erro
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Leads see only their own review until a chief releases the cycle's recording reviews; chiefs and admins always see every review.
- * @summary List an interview's recording reviews
+ * Leads see only their own write-up until a chief releases the cycle's recording reviews; chiefs and admins see every one.
+ * @summary List an application's recording reviewers and their reviews
  */
-export const listRecordingReviews = (
+export const listInterviewReviewers = (
     id: string,
  options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
 ) => {
       
       
-      return customInstance<ListRecordingReviews200>(
-      {url: `/interviews/${id}/recording-reviews`, method: 'GET', signal
+      return customInstance<ListInterviewReviewers200>(
+      {url: `/applications/${id}/interview-reviewers`, method: 'GET', signal
     },
       options);
     }
@@ -151,162 +149,69 @@ export const listRecordingReviews = (
 
 
 
-export const getListRecordingReviewsQueryKey = (id?: string,) => {
+export const getListInterviewReviewersQueryKey = (id?: string,) => {
     return [
-    `/interviews/${id}/recording-reviews`
+    `/applications/${id}/interview-reviewers`
     ] as const;
     }
 
     
-export const getListRecordingReviewsQueryOptions = <TData = Awaited<ReturnType<typeof listRecordingReviews>>, TError = ErrorModel | ErrorModel | ErrorModel>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listRecordingReviews>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export const getListInterviewReviewersQueryOptions = <TData = Awaited<ReturnType<typeof listInterviewReviewers>>, TError = ErrorModel | ErrorModel | ErrorModel>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listInterviewReviewers>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListRecordingReviewsQueryKey(id);
+  const queryKey =  queryOptions?.queryKey ?? getListInterviewReviewersQueryKey(id);
 
   
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listRecordingReviews>>> = ({ signal }) => listRecordingReviews(id, requestOptions, signal);
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInterviewReviewers>>> = ({ signal }) => listInterviewReviewers(id, requestOptions, signal);
 
       
 
       
 
-   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listRecordingReviews>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listInterviewReviewers>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
-export type ListRecordingReviewsQueryResult = NonNullable<Awaited<ReturnType<typeof listRecordingReviews>>>
-export type ListRecordingReviewsQueryError = ErrorModel | ErrorModel | ErrorModel
+export type ListInterviewReviewersQueryResult = NonNullable<Awaited<ReturnType<typeof listInterviewReviewers>>>
+export type ListInterviewReviewersQueryError = ErrorModel | ErrorModel | ErrorModel
 
 
-export function useListRecordingReviews<TData = Awaited<ReturnType<typeof listRecordingReviews>>, TError = ErrorModel | ErrorModel | ErrorModel>(
- id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listRecordingReviews>>, TError, TData>> & Pick<
+export function useListInterviewReviewers<TData = Awaited<ReturnType<typeof listInterviewReviewers>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+ id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listInterviewReviewers>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof listRecordingReviews>>,
+          Awaited<ReturnType<typeof listInterviewReviewers>>,
           TError,
-          Awaited<ReturnType<typeof listRecordingReviews>>
+          Awaited<ReturnType<typeof listInterviewReviewers>>
         > , 'initialData'
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListRecordingReviews<TData = Awaited<ReturnType<typeof listRecordingReviews>>, TError = ErrorModel | ErrorModel | ErrorModel>(
- id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listRecordingReviews>>, TError, TData>> & Pick<
+export function useListInterviewReviewers<TData = Awaited<ReturnType<typeof listInterviewReviewers>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listInterviewReviewers>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof listRecordingReviews>>,
+          Awaited<ReturnType<typeof listInterviewReviewers>>,
           TError,
-          Awaited<ReturnType<typeof listRecordingReviews>>
+          Awaited<ReturnType<typeof listInterviewReviewers>>
         > , 'initialData'
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListRecordingReviews<TData = Awaited<ReturnType<typeof listRecordingReviews>>, TError = ErrorModel | ErrorModel | ErrorModel>(
- id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listRecordingReviews>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export function useListInterviewReviewers<TData = Awaited<ReturnType<typeof listInterviewReviewers>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listInterviewReviewers>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
- * @summary List an interview's recording reviews
+ * @summary List an application's recording reviewers and their reviews
  */
 
-export function useListRecordingReviews<TData = Awaited<ReturnType<typeof listRecordingReviews>>, TError = ErrorModel | ErrorModel | ErrorModel>(
- id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listRecordingReviews>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export function useListInterviewReviewers<TData = Awaited<ReturnType<typeof listInterviewReviewers>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listInterviewReviewers>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getListRecordingReviewsQueryOptions(id,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  query.queryKey = queryOptions.queryKey ;
-
-  return query;
-}
-
-
-
-/**
- * Reviewer only. One request for a page of applications, instead of one per interview. Comments are always omitted here — this is for computing review-progress counts, not reading review content; use list-recording-reviews for that.
- * @summary List recording reviews for several interviews
- */
-export const listRecordingReviewsBulk = (
-    params?: ListRecordingReviewsBulkParams,
- options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
-) => {
-      
-      
-      return customInstance<ListRecordingReviewsBulk200>(
-      {url: `/recording-reviews`, method: 'GET',
-        params, signal
-    },
-      options);
-    }
-  
-
-
-
-export const getListRecordingReviewsBulkQueryKey = (params?: ListRecordingReviewsBulkParams,) => {
-    return [
-    `/recording-reviews`, ...(params ? [params]: [])
-    ] as const;
-    }
-
-    
-export const getListRecordingReviewsBulkQueryOptions = <TData = Awaited<ReturnType<typeof listRecordingReviewsBulk>>, TError = ErrorModel | ErrorModel | ErrorModel>(params?: ListRecordingReviewsBulkParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listRecordingReviewsBulk>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getListRecordingReviewsBulkQueryKey(params);
-
-  
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listRecordingReviewsBulk>>> = ({ signal }) => listRecordingReviewsBulk(params, requestOptions, signal);
-
-      
-
-      
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listRecordingReviewsBulk>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type ListRecordingReviewsBulkQueryResult = NonNullable<Awaited<ReturnType<typeof listRecordingReviewsBulk>>>
-export type ListRecordingReviewsBulkQueryError = ErrorModel | ErrorModel | ErrorModel
-
-
-export function useListRecordingReviewsBulk<TData = Awaited<ReturnType<typeof listRecordingReviewsBulk>>, TError = ErrorModel | ErrorModel | ErrorModel>(
- params: undefined |  ListRecordingReviewsBulkParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listRecordingReviewsBulk>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof listRecordingReviewsBulk>>,
-          TError,
-          Awaited<ReturnType<typeof listRecordingReviewsBulk>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListRecordingReviewsBulk<TData = Awaited<ReturnType<typeof listRecordingReviewsBulk>>, TError = ErrorModel | ErrorModel | ErrorModel>(
- params?: ListRecordingReviewsBulkParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listRecordingReviewsBulk>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof listRecordingReviewsBulk>>,
-          TError,
-          Awaited<ReturnType<typeof listRecordingReviewsBulk>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListRecordingReviewsBulk<TData = Awaited<ReturnType<typeof listRecordingReviewsBulk>>, TError = ErrorModel | ErrorModel | ErrorModel>(
- params?: ListRecordingReviewsBulkParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listRecordingReviewsBulk>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-/**
- * @summary List recording reviews for several interviews
- */
-
-export function useListRecordingReviewsBulk<TData = Awaited<ReturnType<typeof listRecordingReviewsBulk>>, TError = ErrorModel | ErrorModel | ErrorModel>(
- params?: ListRecordingReviewsBulkParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listRecordingReviewsBulk>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getListRecordingReviewsBulkQueryOptions(params,options)
+  const queryOptions = getListInterviewReviewersQueryOptions(id,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

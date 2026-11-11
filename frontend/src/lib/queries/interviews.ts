@@ -98,3 +98,7 @@ export function useUpsertInterview() {
     },
   })
 }
+
+export function interviewSubmitted(interview: Interview | null | undefined) {
+  return !!interview?.interviewers.some((iv) => !!iv.writeup_submitted_at)
+}

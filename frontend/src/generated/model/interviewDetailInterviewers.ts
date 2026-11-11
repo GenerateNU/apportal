@@ -5,6 +5,6 @@
  * Generate application portal — applications, reviews, and the hiring pipeline.
  * OpenAPI spec version: 0.1.0
  */
-import type { InterviewAssignment } from './interviewAssignment';
+import type { InterviewerDetail } from './interviewerDetail';
 
-export type ListInterviewAssignmentsBulk200 = InterviewAssignment[] | null;
+export type InterviewDetailInterviewers = InterviewerDetail[] | null;

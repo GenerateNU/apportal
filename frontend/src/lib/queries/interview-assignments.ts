@@ -1,177 +1,78 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  useMutation,
-  useQueries,
-  useQuery,
-  useQueryClient,
-} from '@tanstack/react-query'
-import {
-  assignRecordingReviewer,
-  getInterviewAssignment,
-  listInterviewAssignmentsBulk,
-  listInterviewReviewAssignmentsBulk,
-  listRecordingReviewerAssignments,
-  setInterviewAssignment,
+  addInterviewReviewer,
+  addInterviewer,
+  listInterviewReviewersBulk,
+  removeInterviewReviewer,
+  removeInterviewer,
+  unassignAllInterviewReviewers,
   unassignAllInterviewers,
-  unassignAllRecordingReviewers,
-  unassignRecordingReviewer,
 } from '@/generated/interview-assignments/interview-assignments'
-import { APIError } from '@/lib/api/client'
 import type { RequestOptions } from '@/lib/api/orval-mutator'
-import type { Role } from '@/lib/api/types'
-import type {
-  InterviewAssignment,
-  InterviewReviewAssignment,
-} from '@/lib/api/types'
+import type { InterviewReviewer, Role } from '@/lib/api/types'
 import { queryKeys } from './keys'
 
-// The backend 404s when an application has no interviewer assigned yet —
-// that's not an error here, just the "unassigned" state. Resolves to null
-// rather than undefined: TanStack rejects a queryFn that resolves to
-// undefined (it can't tell that apart from "still loading"), which would
-// otherwise throw on every unassigned application.
-async function fetchInterviewAssignment(id: string, opts?: RequestOptions) {
-  try {
-    return (await getInterviewAssignment(id, opts)) as InterviewAssignment
-  } catch (err) {
-    if (err instanceof APIError && err.status === 404) return null
-    throw err
+function useInvalidateInterviewers() {
+  const queryClient = useQueryClient()
+  return () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.interviews.all })
+    queryClient.invalidateQueries({ queryKey: queryKeys.applications.lists() })
   }
 }
 
-export function useInterviewAssignment(
-  applicationId: string,
-  opts?: RequestOptions
-) {
-  return useQuery({
-    queryKey: queryKeys.interviewAssignments.detail(applicationId),
-    queryFn: () => fetchInterviewAssignment(applicationId, opts),
-    enabled: !!applicationId,
-  })
-}
-
-// One query per application, sharing cache with useInterviewAssignment — used
-// to show current interviewers across a list of applications.
-export function useInterviewAssignmentsByApplications(
-  applicationIds: string[],
-  opts?: RequestOptions
-) {
-  return useQueries({
-    queries: applicationIds.map((id) => ({
-      queryKey: queryKeys.interviewAssignments.detail(id),
-      queryFn: () => fetchInterviewAssignment(id, opts),
-    })),
-  })
-}
-
-// One request for the whole page of applications, instead of one per row —
-// writes each result back into the per-application cache useInterviewAssignment
-// reads, so opening one afterwards is a cache hit rather than a fresh request.
-export function useInterviewAssignmentsBulk(
-  applicationIds: string[],
-  opts?: RequestOptions
-) {
+function useInvalidateReviewers() {
   const queryClient = useQueryClient()
-  return useQuery({
-    queryKey: queryKeys.interviewAssignments.bulk(applicationIds),
-    queryFn: async () => {
-      const assignments = ((await listInterviewAssignmentsBulk(
-        { application_ids: applicationIds.join(',') },
-        opts
-      )) ?? []) as InterviewAssignment[]
-
-      const byApplicationId: Record<string, InterviewAssignment | null> = {}
-      for (const id of applicationIds) byApplicationId[id] = null
-      for (const assignment of assignments) {
-        byApplicationId[assignment.application_id] = assignment
-      }
-      for (const [id, assignment] of Object.entries(byApplicationId)) {
-        queryClient.setQueryData(
-          queryKeys.interviewAssignments.detail(id),
-          assignment
-        )
-      }
-      return byApplicationId
-    },
-    enabled: applicationIds.length > 0,
-  })
+  return () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.interviews.all })
+    queryClient.invalidateQueries({
+      queryKey: queryKeys.interviewReviewAssignments.all,
+    })
+    queryClient.invalidateQueries({ queryKey: queryKeys.recordingReviews.all })
+  }
 }
 
-export function useSetInterviewAssignment() {
-  const queryClient = useQueryClient()
+export function useAddInterviewer() {
+  const invalidate = useInvalidateInterviewers()
   return useMutation({
     mutationFn: (vars: {
       applicationId: string
       interviewerNuid: string
       opts?: RequestOptions
     }) =>
-      setInterviewAssignment(
+      addInterviewer(
         vars.applicationId,
         { interviewer_nuid: vars.interviewerNuid },
         vars.opts
       ),
-    onSuccess: (_data, vars) => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.interviewAssignments.detail(vars.applicationId),
-      })
-    },
+    onSuccess: invalidate,
   })
 }
 
-export function useRecordingReviewerAssignments(
-  applicationId: string,
-  opts?: RequestOptions
-) {
-  return useQuery({
-    queryKey: queryKeys.interviewReviewAssignments.list(applicationId),
-    queryFn: async () =>
-      ((await listRecordingReviewerAssignments(applicationId, opts)) ??
-        []) as InterviewReviewAssignment[],
-    enabled: !!applicationId,
+export function useRemoveInterviewer() {
+  const invalidate = useInvalidateInterviewers()
+  return useMutation({
+    mutationFn: (vars: { id: string; opts?: RequestOptions }) =>
+      removeInterviewer(vars.id, vars.opts),
+    onSuccess: invalidate,
   })
 }
 
-// One query per application, sharing cache with useRecordingReviewerAssignments.
-export function useRecordingReviewerAssignmentsByApplications(
+export function useInterviewReviewersBulk(
   applicationIds: string[],
   opts?: RequestOptions
 ) {
-  return useQueries({
-    queries: applicationIds.map((id) => ({
-      queryKey: queryKeys.interviewReviewAssignments.list(id),
-      queryFn: async () =>
-        ((await listRecordingReviewerAssignments(id, opts)) ??
-          []) as InterviewReviewAssignment[],
-    })),
-  })
-}
-
-// One request for the whole page of applications, instead of one per row —
-// mirrors useInterviewAssignmentsBulk above.
-export function useRecordingReviewerAssignmentsBulk(
-  applicationIds: string[],
-  opts?: RequestOptions
-) {
-  const queryClient = useQueryClient()
   return useQuery({
     queryKey: queryKeys.interviewReviewAssignments.bulk(applicationIds),
     queryFn: async () => {
-      const assignments = ((await listInterviewReviewAssignmentsBulk(
+      const reviewers = ((await listInterviewReviewersBulk(
         { application_ids: applicationIds.join(',') },
         opts
-      )) ?? []) as InterviewReviewAssignment[]
+      )) ?? []) as InterviewReviewer[]
 
-      const byApplicationId: Record<string, InterviewReviewAssignment[]> = {}
+      const byApplicationId: Record<string, InterviewReviewer[]> = {}
       for (const id of applicationIds) byApplicationId[id] = []
-      for (const assignment of assignments) {
-        const list = byApplicationId[assignment.application_id] ?? []
-        list.push(assignment)
-        byApplicationId[assignment.application_id] = list
-      }
-      for (const [id, list] of Object.entries(byApplicationId)) {
-        queryClient.setQueryData(
-          queryKeys.interviewReviewAssignments.list(id),
-          list
-        )
+      for (const reviewer of reviewers) {
+        byApplicationId[reviewer.application_id]?.push(reviewer)
       }
       return byApplicationId
     },
@@ -179,80 +80,57 @@ export function useRecordingReviewerAssignmentsBulk(
   })
 }
 
-export function useAssignRecordingReviewer() {
-  const queryClient = useQueryClient()
+export function useAddInterviewReviewer() {
+  const invalidate = useInvalidateReviewers()
   return useMutation({
     mutationFn: (vars: {
       applicationId: string
-      leadNuid: string
+      reviewerNuid: string
       opts?: RequestOptions
     }) =>
-      assignRecordingReviewer(
+      addInterviewReviewer(
         vars.applicationId,
-        { lead_nuid: vars.leadNuid },
+        { reviewer_nuid: vars.reviewerNuid },
         vars.opts
       ),
-    onSuccess: (_data, vars) => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.interviewReviewAssignments.list(vars.applicationId),
-      })
-    },
+    onSuccess: invalidate,
   })
 }
 
-export function useUnassignRecordingReviewer() {
-  const queryClient = useQueryClient()
+export function useRemoveInterviewReviewer() {
+  const invalidate = useInvalidateReviewers()
   return useMutation({
-    mutationFn: (vars: {
-      id: string
-      applicationId: string
-      opts?: RequestOptions
-    }) => unassignRecordingReviewer(vars.id, vars.opts),
-    onSuccess: (_data, vars) => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.interviewReviewAssignments.list(vars.applicationId),
-      })
-    },
+    mutationFn: (vars: { id: string; opts?: RequestOptions }) =>
+      removeInterviewReviewer(vars.id, vars.opts),
+    onSuccess: invalidate,
   })
 }
 
-// Bulk-clears every interviewer assignment for a cycle × role — a chief
-// redoing a botched or outdated run. Every application's interviewer
-// assignment is affected, so invalidate the whole namespace rather than
-// trying to patch individual application caches.
 export function useUnassignAllInterviewers() {
-  const queryClient = useQueryClient()
+  const invalidate = useInvalidateInterviewers()
   return useMutation({
     mutationFn: (vars: {
       cycleId: string
       role: Role
       opts?: RequestOptions
     }) => unassignAllInterviewers(vars.cycleId, { role: vars.role }, vars.opts),
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.interviewAssignments.all,
-      })
-    },
+    onSuccess: invalidate,
   })
 }
 
-export function useUnassignAllRecordingReviewers() {
-  const queryClient = useQueryClient()
+export function useUnassignAllInterviewReviewers() {
+  const invalidate = useInvalidateReviewers()
   return useMutation({
     mutationFn: (vars: {
       cycleId: string
       role: Role
       opts?: RequestOptions
     }) =>
-      unassignAllRecordingReviewers(
+      unassignAllInterviewReviewers(
         vars.cycleId,
         { role: vars.role },
         vars.opts
       ),
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.interviewReviewAssignments.all,
-      })
-    },
+    onSuccess: invalidate,
   })
 }

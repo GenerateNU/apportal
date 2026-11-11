@@ -15,8 +15,8 @@ import type {
   ChiefReviewDetailVote,
   Cycle as GenCycle,
   DecisionContext as GenDecisionContext,
+  DecisionInterviewer,
   DecisionRow as GenDecisionRow,
-  RecordingReviewDetail as GenRecordingReviewDetail,
   DecisionTemplate as GenDecisionTemplate,
   DecisionRowKind,
   DecisionRowStatus,
@@ -29,11 +29,10 @@ import type {
   ChallengeScore as GenChallengeScore,
   CodeChallenge as GenCodeChallenge,
   CodeSubmission as GenCodeSubmission,
-  Interview as GenInterview,
-  InterviewAssignment as GenInterviewAssignment,
+  InterviewDetail as GenInterviewDetail,
+  InterviewerDetail as GenInterviewerDetail,
+  InterviewReviewerDetail as GenInterviewReviewerDetail,
   InterviewCommentDetail as GenInterviewCommentDetail,
-  InterviewRecordingReview as GenInterviewRecordingReview,
-  InterviewReviewAssignment as GenInterviewReviewAssignment,
   InterviewScript as GenInterviewScript,
   PreferenceList as GenPreferenceList,
   PreferenceListCommentDetail as GenPreferenceListCommentDetail,
@@ -56,7 +55,7 @@ import type {
   WrittenReviewDetail as GenWrittenReviewDetail,
   ApplicationRole,
   ApplicationStage,
-  InterviewRating,
+  InterviewDetailRating,
   QuestionQuestionType,
   UserRolesAnyOfItem,
 } from '@/generated/model'
@@ -65,11 +64,11 @@ import type {
 export type {
   ApplicationStage,
   ChallengeMetrics,
-  InterviewRating,
   CycleStatus,
   CycleRoleSummary,
 } from '@/generated/model'
 export type Role = ApplicationRole
+export type InterviewRating = InterviewDetailRating
 export type QuestionType = QuestionQuestionType
 export type UserRole = UserRolesAnyOfItem
 export type ChiefVote = ChiefReviewDetailVote
@@ -179,14 +178,12 @@ export type ChiefReview = Omit<GenChiefReviewDetail, '$schema'>
 
 export type ChiefReviewComment = Omit<GenChiefReviewCommentDetail, '$schema'>
 
-// The interviewer's write-up for one application (one per application).
-export type Interview = Omit<GenInterview, '$schema'>
+export type Interviewer = Omit<GenInterviewerDetail, '$schema'>
 
-export type InterviewRecordingReview = Omit<
-  GenInterviewRecordingReview,
-  '$schema' | 'rating'
-> & {
-  rating?: InterviewRating
+export type InterviewReviewer = Omit<GenInterviewReviewerDetail, '$schema'>
+
+export type Interview = Omit<GenInterviewDetail, '$schema' | 'interviewers'> & {
+  interviewers: Interviewer[]
 }
 
 export type InterviewComment = Omit<GenInterviewCommentDetail, '$schema'>
@@ -220,13 +217,6 @@ export type InterviewScript = Omit<
   challenge_tracks: InterviewScriptChallengeTracks
   post_interview_checklist: string[]
 }
-
-export type InterviewAssignment = Omit<GenInterviewAssignment, '$schema'>
-
-export type InterviewReviewAssignment = Omit<
-  GenInterviewReviewAssignment,
-  '$schema'
->
 
 // items is nullable in the generated type (an empty Go slice can encode as
 // `null`); callers always want an array.
@@ -376,24 +366,22 @@ export type DecisionTemplate = Omit<
 
 export type DecisionRow = Omit<
   GenDecisionRow,
-  '$schema' | 'application_role' | 'stage'
+  '$schema' | 'application_role' | 'stage' | 'interviewers'
 > & {
   application_role: Role
   stage: ApplicationStage
+  interviewers: DecisionInterviewer[]
 }
 
-// A recording review with its reviewer's name. Peers' comments are absent
-// (not empty) until a chief releases the cycle's recording reviews.
-export type RecordingReviewDetail = Omit<GenRecordingReviewDetail, 'rating'> & {
-  rating?: InterviewRating
-}
+export type { DecisionInterviewer }
 
 // The review history behind one applicant's decision. Orval leaves the two
 // collections nullable; callers always want arrays.
 export type DecisionContext = Omit<
   GenDecisionContext,
-  '$schema' | 'recording_reviews' | 'written_reviews'
+  '$schema' | 'interview' | 'recording_reviews' | 'written_reviews'
 > & {
-  recording_reviews: RecordingReviewDetail[]
+  interview?: Interview
+  recording_reviews: InterviewReviewer[]
   written_reviews: WrittenReviewDetail[]
 }

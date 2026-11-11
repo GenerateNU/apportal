@@ -10,12 +10,12 @@ import type { UpsertInterviewInputBodyRating } from './upsertInterviewInputBodyR
 export interface UpsertInterviewInputBody {
   /** A URL to the JSON Schema for this object. */
   readonly $schema?: string;
-  comments?: string;
   conducted_at?: string;
   notes_url?: string;
   rating?: UpsertInterviewInputBodyRating;
   recording_url?: string;
   scheduled_at?: string;
-  /** When true, marks the interview as submitted */
+  /** When true, submits your write-up */
   submit?: boolean;
+  writeup?: string;
 }

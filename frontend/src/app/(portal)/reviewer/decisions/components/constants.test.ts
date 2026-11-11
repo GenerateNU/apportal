@@ -12,6 +12,7 @@ const base: DecisionRow = {
   stage: 'interview_review',
   kind: 'rejection_post_interview',
   status: 'pending',
+  interviewers: [],
 }
 
 describe('feedbackState', () => {
