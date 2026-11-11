@@ -27,19 +27,6 @@ func (s *Store) CreateInterviewAssignment(ctx context.Context, applicationID, in
 	return a, err
 }
 
-func (s *Store) AddInterviewerToApplications(ctx context.Context, applicationIDs []string, interviewerNUID, assignedBy string) ([]models.InterviewAssignment, error) {
-	const q = `
-		INSERT INTO interview_assignments (application_id, assigned_by, interviewer_nuid)
-		SELECT DISTINCT app_id, $2, $3 FROM unnest($1::uuid[]) AS t(app_id)
-		ON CONFLICT (application_id, interviewer_nuid) DO NOTHING
-		RETURNING ` + interviewAssignmentColumns
-	rows, err := s.db.Query(ctx, q, applicationIDs, assignedBy, interviewerNUID)
-	if err != nil {
-		return nil, err
-	}
-	return pgx.CollectRows(rows, pgx.RowToStructByPos[models.InterviewAssignment])
-}
-
 func (s *Store) ListInterviewAssignments(ctx context.Context, applicationID string) ([]models.InterviewAssignment, error) {
 	const q = `SELECT ` + interviewAssignmentColumns + ` FROM interview_assignments WHERE application_id = $1 ORDER BY assigned_at, id`
 	rows, err := s.db.Query(ctx, q, applicationID)

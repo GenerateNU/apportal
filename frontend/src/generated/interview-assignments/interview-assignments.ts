@@ -25,8 +25,6 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
-  AddInterviewerBulk201,
-  AddInterviewerBulkInputBody,
   AddInterviewerInputBody,
   AssignRecordingReviewerInputBody,
   ErrorModel,
@@ -613,71 +611,6 @@ export function useListInterviewAssignmentsBulk<TData = Awaited<ReturnType<typeo
 
 
 /**
- * Chief only. Applications that already have this interviewer are skipped; returns only the assignments created.
- * @summary Add one interviewer to several applications
- */
-export const addInterviewerBulk = (
-    addInterviewerBulkInputBody: NonReadonly<AddInterviewerBulkInputBody>,
- options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
-) => {
-      
-      
-      return customInstance<AddInterviewerBulk201>(
-      {url: `/interview-assignments`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: addInterviewerBulkInputBody, signal
-    },
-      options);
-    }
-  
-
-
-export const getAddInterviewerBulkMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addInterviewerBulk>>, TError,{data: NonReadonly<AddInterviewerBulkInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof addInterviewerBulk>>, TError,{data: NonReadonly<AddInterviewerBulkInputBody>}, TContext> => {
-
-const mutationKey = ['addInterviewerBulk'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-      
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof addInterviewerBulk>>, {data: NonReadonly<AddInterviewerBulkInputBody>}> = (props) => {
-          const {data} = props ?? {};
-
-          return  addInterviewerBulk(data,requestOptions)
-        }
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type AddInterviewerBulkMutationResult = NonNullable<Awaited<ReturnType<typeof addInterviewerBulk>>>
-    export type AddInterviewerBulkMutationBody = NonReadonly<AddInterviewerBulkInputBody>
-    export type AddInterviewerBulkMutationError = ErrorModel | ErrorModel | ErrorModel | ErrorModel
-
-    /**
- * @summary Add one interviewer to several applications
- */
-export const useAddInterviewerBulk = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addInterviewerBulk>>, TError,{data: NonReadonly<AddInterviewerBulkInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof addInterviewerBulk>>,
-        TError,
-        {data: NonReadonly<AddInterviewerBulkInputBody>},
-        TContext
-      > => {
-
-      const mutationOptions = getAddInterviewerBulkMutationOptions(options);
-
-      return useMutation(mutationOptions, queryClient);
-    }
-    /**
  * Chief only. The interviewer's write-up, if any, is kept.
  * @summary Remove an interviewer assignment
  */

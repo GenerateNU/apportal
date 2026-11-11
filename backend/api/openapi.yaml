@@ -1,28 +1,5 @@
 components:
   schemas:
-    AddInterviewerBulkInputBody:
-      additionalProperties: false
-      properties:
-        $schema:
-          description: A URL to the JSON Schema for this object.
-          examples:
-            - https://example.com/schemas/AddInterviewerBulkInputBody.json
-          format: uri
-          readOnly: true
-          type: string
-        application_ids:
-          items:
-            type: string
-          minItems: 1
-          type:
-            - array
-            - "null"
-        interviewer_nuid:
-          type: string
-      required:
-        - application_ids
-        - interviewer_nuid
-      type: object
     AddInterviewerInputBody:
       additionalProperties: false
       properties:
@@ -9077,53 +9054,6 @@ paths:
                 $ref: "#/components/schemas/ErrorModel"
           description: Internal Server Error
       summary: List interviewer assignments for several applications
-      tags:
-        - Interview assignments
-    post:
-      description: Chief only. Applications that already have this interviewer are skipped; returns only the assignments created.
-      operationId: add-interviewer-bulk
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/AddInterviewerBulkInputBody"
-        required: true
-      responses:
-        "201":
-          content:
-            application/json:
-              schema:
-                items:
-                  $ref: "#/components/schemas/InterviewAssignment"
-                type:
-                  - array
-                  - "null"
-          description: Created
-        "401":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unauthorized
-        "403":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Forbidden
-        "422":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unprocessable Entity
-        "500":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Internal Server Error
-      summary: Add one interviewer to several applications
       tags:
         - Interview assignments
   /interview-assignments/{id}:

@@ -50,27 +50,3 @@ func TestUnassignInterviewerIsChiefOnly(t *testing.T) {
 	_, err = h.unassignInterviewer(withActor(leadActor()), &IDInput{ID: "ia1"})
 	wantStatus(t, err, http.StatusForbidden)
 }
-
-func TestAddInterviewerBulkIsChiefOnly(t *testing.T) {
-	h := &interviewAssignmentHandler{}
-	in := &AddInterviewerBulkInput{}
-	in.Body.ApplicationIDs = []string{"app1"}
-	in.Body.InterviewerNUID = "l1"
-
-	_, err := h.addInterviewerBulk(withActor(leadActor()), in)
-	wantStatus(t, err, http.StatusForbidden)
-}
-
-func TestAddInterviewerBulkValidatesInput(t *testing.T) {
-	h := &interviewAssignmentHandler{}
-
-	in := &AddInterviewerBulkInput{}
-	in.Body.ApplicationIDs = []string{"app1"}
-	_, err := h.addInterviewerBulk(withActor(chiefActor()), in)
-	wantStatus(t, err, http.StatusUnprocessableEntity)
-
-	in.Body.InterviewerNUID = "l1"
-	in.Body.ApplicationIDs = make([]string, maxBulkApplications+1)
-	_, err = h.addInterviewerBulk(withActor(chiefActor()), in)
-	wantStatus(t, err, http.StatusUnprocessableEntity)
-}

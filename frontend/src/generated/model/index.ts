@@ -6,9 +6,6 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export * from './addInterviewerBulk201';
-export * from './addInterviewerBulkInputBody';
-export * from './addInterviewerBulkInputBodyApplicationIds';
 export * from './addInterviewerInputBody';
 export * from './addPreferenceListMemberInputBody';
 export * from './applicant';

@@ -6,7 +6,6 @@ import {
 } from '@tanstack/react-query'
 import {
   addInterviewer,
-  addInterviewerBulk,
   assignRecordingReviewer,
   listInterviewAssignments,
   listInterviewAssignmentsBulk,
@@ -84,44 +83,6 @@ export function useAddInterviewer() {
         vars.opts
       ),
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.interviewAssignments.all,
-      })
-    },
-  })
-}
-
-const MAX_BULK_APPLICATIONS = 200
-
-export function useAddInterviewerBulk() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: async (vars: {
-      applicationIds: string[]
-      interviewerNuid: string
-      opts?: RequestOptions
-    }) => {
-      const chunks: string[][] = []
-      for (
-        let i = 0;
-        i < vars.applicationIds.length;
-        i += MAX_BULK_APPLICATIONS
-      ) {
-        chunks.push(vars.applicationIds.slice(i, i + MAX_BULK_APPLICATIONS))
-      }
-      return Promise.all(
-        chunks.map((applicationIds) =>
-          addInterviewerBulk(
-            {
-              application_ids: applicationIds,
-              interviewer_nuid: vars.interviewerNuid,
-            },
-            vars.opts
-          )
-        )
-      )
-    },
-    onSettled: () => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.interviewAssignments.all,
       })
