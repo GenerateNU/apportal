@@ -14,6 +14,7 @@ import {
 import { listCycleQuestions } from '@/generated/questions/questions'
 import { listInterviewReviewers } from '@/generated/recording-reviews/recording-reviews'
 import type { Application, Interview, Role } from '@/lib/api/types'
+import { APIError } from '@/lib/api/client'
 import { getServerRequestOptions } from '@/lib/api/server-request-options'
 import { queryKeys } from '@/lib/queries/keys'
 import { InterviewConductClient } from './components/InterviewConductClient'
@@ -51,11 +52,13 @@ export default async function InterviewConductPage({
   let interview: Interview | undefined
   try {
     interview = (await getInterview(id, requestOptions)) as Interview
-  } catch {
+    queryClient.setQueryData(queryKeys.interviews.detail(id), interview)
+  } catch (err) {
     interview = undefined
+    if (err instanceof APIError && err.status === 404) {
+      queryClient.setQueryData(queryKeys.interviews.detail(id), null)
+    }
   }
-
-  queryClient.setQueryData(queryKeys.interviews.detail(id), interview ?? null)
 
   await Promise.all([
     queryClient.prefetchQuery({

@@ -1,4 +1,5 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueries, useQueryClient } from '@tanstack/react-query'
+import { useMemo } from 'react'
 import {
   addInterviewReviewer,
   addInterviewer,
@@ -10,6 +11,7 @@ import {
 } from '@/generated/interview-assignments/interview-assignments'
 import type { RequestOptions } from '@/lib/api/orval-mutator'
 import type { InterviewReviewer, Role } from '@/lib/api/types'
+import { chunkIds } from './interviews'
 import { queryKeys } from './keys'
 
 function useInvalidateInterviewers() {
@@ -17,6 +19,7 @@ function useInvalidateInterviewers() {
   return () => {
     queryClient.invalidateQueries({ queryKey: queryKeys.interviews.all })
     queryClient.invalidateQueries({ queryKey: queryKeys.applications.lists() })
+    queryClient.invalidateQueries({ queryKey: queryKeys.decisions.all })
   }
 }
 
@@ -28,6 +31,7 @@ function useInvalidateReviewers() {
       queryKey: queryKeys.interviewReviewAssignments.all,
     })
     queryClient.invalidateQueries({ queryKey: queryKeys.recordingReviews.all })
+    queryClient.invalidateQueries({ queryKey: queryKeys.decisions.all })
   }
 }
 
@@ -61,23 +65,32 @@ export function useInterviewReviewersBulk(
   applicationIds: string[],
   opts?: RequestOptions
 ) {
-  return useQuery({
-    queryKey: queryKeys.interviewReviewAssignments.bulk(applicationIds),
-    queryFn: async () => {
-      const reviewers = ((await listInterviewReviewersBulk(
-        { application_ids: applicationIds.join(',') },
-        opts
-      )) ?? []) as InterviewReviewer[]
-
-      const byApplicationId: Record<string, InterviewReviewer[]> = {}
-      for (const id of applicationIds) byApplicationId[id] = []
-      for (const reviewer of reviewers) {
-        byApplicationId[reviewer.application_id]?.push(reviewer)
-      }
-      return byApplicationId
-    },
-    enabled: applicationIds.length > 0,
+  const batches = useMemo(() => chunkIds(applicationIds), [applicationIds])
+  const queries = useQueries({
+    queries: batches.map((ids) => ({
+      queryKey: queryKeys.interviewReviewAssignments.bulk(ids),
+      queryFn: async () => {
+        const reviewers = ((await listInterviewReviewersBulk(
+          { application_ids: ids.join(',') },
+          opts
+        )) ?? []) as InterviewReviewer[]
+        const byApplicationId: Record<string, InterviewReviewer[]> = {}
+        for (const id of ids) byApplicationId[id] = []
+        for (const reviewer of reviewers) {
+          byApplicationId[reviewer.application_id]?.push(reviewer)
+        }
+        return byApplicationId
+      },
+    })),
   })
+  const data = useMemo(() => {
+    if (queries.some((q) => !q.data)) return undefined
+    return Object.assign({}, ...queries.map((q) => q.data)) as Record<
+      string,
+      InterviewReviewer[]
+    >
+  }, [queries])
+  return { data, isLoading: queries.some((q) => q.isLoading) }
 }
 
 export function useAddInterviewReviewer() {

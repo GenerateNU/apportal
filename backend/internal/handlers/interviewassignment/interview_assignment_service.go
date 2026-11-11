@@ -2,6 +2,7 @@ package interviewassignment
 
 import (
 	"context"
+	"errors"
 
 	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
@@ -28,8 +29,8 @@ func (s *interviewAssignmentService) removeInterviewer(ctx context.Context, in *
 		return nil, err
 	}
 	if err := s.interviewAssignmentDB.RemoveInterviewer(ctx, in.ID); err != nil {
-		if err == utils.ErrConflict {
-			return nil, huma.Error409Conflict("the interview has already been conducted")
+		if errors.Is(err, utils.ErrConflict) {
+			return nil, huma.Error409Conflict("the interviewer has already submitted notes or the interview was conducted")
 		}
 		return nil, utils.StoreErr(err)
 	}
@@ -52,7 +53,7 @@ func (s *interviewAssignmentService) removeReviewer(ctx context.Context, in *uti
 		return nil, err
 	}
 	if err := s.interviewAssignmentDB.RemoveReviewer(ctx, in.ID); err != nil {
-		if err == utils.ErrConflict {
+		if errors.Is(err, utils.ErrConflict) {
 			return nil, huma.Error409Conflict("the reviewer has already submitted their review")
 		}
 		return nil, utils.StoreErr(err)

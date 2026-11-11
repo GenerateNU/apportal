@@ -40,7 +40,7 @@ import {
 import {
   interviewSubmitted,
   useInterview,
-  useInterviewsByApplicationIdBatches,
+  useInterviewsByApplicationIds,
   useUpsertInterview,
 } from '@/lib/queries/interviews'
 import { useQuestions } from '@/lib/queries/questions'
@@ -138,7 +138,7 @@ export function InterviewConductClient({
   const canReview =
     !!currentUser &&
     recordingReviews.some((r) => r.reviewer_nuid === currentUser.nuid)
-  const anyInterviewerSubmitted = interviewSubmitted(interview)
+  const allInterviewersSubmitted = interviewSubmitted(interview)
 
   // The rest of my interview queue, so a "next" button can jump to the next
   // assigned applicant who still needs to be interviewed — same ordering
@@ -156,10 +156,8 @@ export function InterviewConductClient({
     [assignedApplications]
   )
   const queueIds = useMemo(() => orderedQueue.map((a) => a.id), [orderedQueue])
-  const [queueInterviewBatch] = useInterviewsByApplicationIdBatches(
-    queueIds.length > 0 ? [queueIds] : []
-  )
-  const interviewByApplicationId = queueInterviewBatch?.data
+  const { data: interviewByApplicationId } =
+    useInterviewsByApplicationIds(queueIds)
   const needsInterviewAt = useMemo(
     () => (i: number) =>
       !interviewByApplicationId?.[orderedQueue[i].id]?.interviewers.some(
@@ -248,7 +246,10 @@ export function InterviewConductClient({
       applicationId,
       body: {
         writeup: reviewComment || undefined,
-        rating: reviewRating || undefined,
+        rating:
+          reviewRating && reviewRating !== interview?.rating
+            ? reviewRating
+            : undefined,
         submit,
       },
     })
@@ -338,7 +339,7 @@ export function InterviewConductClient({
             <ArrowDown data-icon="inline-start" size={14} />
             Write-up
           </Button>
-          {anyInterviewerSubmitted && (
+          {allInterviewersSubmitted && (
             <span
               className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium ${REVIEW_STATE_BADGE.submitted}`}
             >
@@ -701,9 +702,9 @@ export function InterviewConductClient({
               Recording reviews
             </h2>
 
-            {!anyInterviewerSubmitted ? (
+            {!allInterviewersSubmitted ? (
               <p className="text-text-faint text-sm">
-                Waiting for an interviewer to submit their write-up before
+                Waiting for every interviewer to submit their write-up before
                 reviews can start.
               </p>
             ) : (

@@ -45,7 +45,7 @@ import { pickDefaultCycleId, useCycles } from '@/lib/queries/cycles'
 import { useInterviewReviewersBulk } from '@/lib/queries/interview-assignments'
 import {
   interviewSubmitted,
-  useInterviewsByApplicationIdBatches,
+  useInterviewsByApplicationIds,
 } from '@/lib/queries/interviews'
 import {
   useReviewGates,
@@ -257,10 +257,8 @@ export function InterviewRatingsClient() {
   )
 
   // Everything below is fetched once for the whole roster, not once per row.
-  const [interviewBatch] = useInterviewsByApplicationIdBatches(
-    applicationIds.length > 0 ? [applicationIds] : []
-  )
-  const interviewByApplicationId = interviewBatch?.data
+  const { data: interviewByApplicationId } =
+    useInterviewsByApplicationIds(applicationIds)
 
   const { data: reviewersByApplicationId } = useInterviewReviewersBulk(
     isChief ? applicationIds : []

@@ -66,7 +66,7 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
 /**
- * Assigned recording reviewers only, once an interviewer has submitted. A rating sets the interview's shared rating.
+ * Assigned recording reviewers only, once every interviewer has submitted. A rating sets the interview's shared rating.
  * @summary Save your recording review
  */
 export const upsertRecordingReview = (

@@ -21,7 +21,7 @@ func Route(api huma.API, db *gorm.DB) {
 		Method:      http.MethodPut,
 		Path:        "/applications/{id}/interview-review",
 		Summary:     "Save your recording review",
-		Description: "Assigned recording reviewers only, once an interviewer has submitted. A rating sets the interview's shared rating.",
+		Description: "Assigned recording reviewers only, once every interviewer has submitted. A rating sets the interview's shared rating.",
 		Tags:        []string{"Recording reviews"},
 		Errors:      []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusConflict, http.StatusUnprocessableEntity},
 	}, s.upsert)

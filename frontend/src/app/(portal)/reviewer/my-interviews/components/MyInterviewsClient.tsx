@@ -18,7 +18,7 @@ import { useChiefs, useCurrentUser, useLeads } from '@/lib/queries/users'
 import { useInterviewReviewersBulk } from '@/lib/queries/interview-assignments'
 import {
   interviewSubmitted,
-  useInterviewsByApplicationIdBatches,
+  useInterviewsByApplicationIds,
 } from '@/lib/queries/interviews'
 import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 import type { ReviewState } from '../../my-reviews/constants'
@@ -120,10 +120,8 @@ export function MyInterviewsClient() {
     for (const a of reviewingApplications) ids.add(a.id)
     return [...ids]
   }, [applications, reviewingApplications])
-  const [interviewBatch] = useInterviewsByApplicationIdBatches(
-    applicationIds.length > 0 ? [applicationIds] : []
-  )
-  const interviewByApplicationId = interviewBatch?.data
+  const { data: interviewByApplicationId } =
+    useInterviewsByApplicationIds(applicationIds)
 
   const rows = useMemo(
     () =>

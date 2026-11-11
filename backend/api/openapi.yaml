@@ -5601,7 +5601,7 @@ paths:
         - Interviews
   /applications/{id}/interview-review:
     put:
-      description: Assigned recording reviewers only, once an interviewer has submitted. A rating sets the interview's shared rating.
+      description: Assigned recording reviewers only, once every interviewer has submitted. A rating sets the interview's shared rating.
       operationId: upsert-recording-review
       parameters:
         - description: Application ID
@@ -7615,7 +7615,7 @@ paths:
         - Interview script
   /cycles/{id}/interviewers:
     delete:
-      description: Chief only. Skips interviews that have already been conducted.
+      description: Chief only. Skips interviewers who have submitted notes and interviews that have been conducted.
       operationId: unassign-all-interviewers
       parameters:
         - description: Cycle ID
@@ -9072,7 +9072,7 @@ paths:
         - Interview assignments
   /interviewers/{id}:
     delete:
-      description: Chief only. Not allowed once the interview has been conducted.
+      description: Chief only. Not allowed once the interviewer has submitted notes or the interview has been conducted.
       operationId: remove-interviewer
       parameters:
         - in: path

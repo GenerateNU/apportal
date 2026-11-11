@@ -268,7 +268,7 @@ export const useUnassignAllInterviewReviewers = <TError = ErrorModel | ErrorMode
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Chief only. Skips interviews that have already been conducted.
+ * Chief only. Skips interviewers who have submitted notes and interviews that have been conducted.
  * @summary Remove every interviewer for a cycle's role
  */
 export const unassignAllInterviewers = (
@@ -487,7 +487,7 @@ export const useRemoveInterviewReviewer = <TError = ErrorModel | ErrorModel | Er
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Chief only. Not allowed once the interview has been conducted.
+ * Chief only. Not allowed once the interviewer has submitted notes or the interview has been conducted.
  * @summary Remove an interviewer
  */
 export const removeInterviewer = (

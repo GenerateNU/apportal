@@ -95,6 +95,19 @@ func (d *InterviewAssignmentDB) IsInterviewer(ctx context.Context, applicationID
 	return n > 0, err
 }
 
+func (d *InterviewAssignmentDB) AllInterviewersSubmitted(ctx context.Context, applicationID string) (bool, error) {
+	var counts struct {
+		Total     int64
+		Submitted int64
+	}
+	err := d.db.WithContext(ctx).Table("interviewers x").
+		Select("COUNT(*) AS total, COUNT(x.writeup_submitted_at) AS submitted").
+		Joins("JOIN interviews i ON i.id = x.interview_id").
+		Where("i.application_id = ?", applicationID).
+		Scan(&counts).Error
+	return counts.Total > 0 && counts.Submitted == counts.Total, err
+}
+
 func (d *InterviewAssignmentDB) AddInterviewer(ctx context.Context, applicationID, nuid, assignedBy string) (models.InterviewerDetail, error) {
 	var id string
 	err := d.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
@@ -120,7 +133,7 @@ func (d *InterviewAssignmentDB) AddInterviewer(ctx context.Context, applicationI
 
 func (d *InterviewAssignmentDB) RemoveInterviewer(ctx context.Context, id string) error {
 	db := d.db.WithContext(ctx)
-	res := db.Where("id = ? AND interview_id IN (?)", id,
+	res := db.Where("id = ? AND writeup_submitted_at IS NULL AND interview_id IN (?)", id,
 		db.Table("interviews").Select("id").Where("conducted_at IS NULL")).
 		Delete(&models.Interviewer{})
 	if res.Error != nil {
@@ -137,7 +150,7 @@ func (d *InterviewAssignmentDB) RemoveInterviewer(ctx context.Context, id string
 
 func (d *InterviewAssignmentDB) DeleteInterviewersForCycle(ctx context.Context, cycleID string, role models.Role) (int, error) {
 	db := d.db.WithContext(ctx)
-	res := db.Where("interview_id IN (?)", cycleInterviews(db, cycleID, role).Where("i.conducted_at IS NULL")).
+	res := db.Where("writeup_submitted_at IS NULL AND interview_id IN (?)", cycleInterviews(db, cycleID, role).Where("i.conducted_at IS NULL")).
 		Delete(&models.Interviewer{})
 	return int(res.RowsAffected), res.Error
 }

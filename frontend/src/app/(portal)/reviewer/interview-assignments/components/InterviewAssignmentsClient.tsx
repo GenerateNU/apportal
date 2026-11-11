@@ -38,7 +38,7 @@ import {
   useUnassignAllInterviewReviewers,
   useUnassignAllInterviewers,
 } from '@/lib/queries/interview-assignments'
-import { useInterviewsByApplicationIdBatches } from '@/lib/queries/interviews'
+import { useInterviewsByApplicationIds } from '@/lib/queries/interviews'
 import { useChiefs, useLeads } from '@/lib/queries/users'
 import { ROLE_CHIP_CLASS, ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 
@@ -90,17 +90,14 @@ export function InterviewAssignmentsClient() {
   }, [interviewers])
 
   const appIds = useMemo(() => applications.map((a) => a.id), [applications])
-  const appIdBatches = useMemo(() => [appIds], [appIds])
-  const interviewQueries = useInterviewsByApplicationIdBatches(appIdBatches)
+  const { data: interviewsByApp } = useInterviewsByApplicationIds(appIds)
   const interviewersByApp = useMemo(() => {
     const map: Record<string, Interviewer[]> = {}
-    for (const q of interviewQueries) {
-      for (const [id, iv] of Object.entries(q.data ?? {})) {
-        map[id] = iv?.interviewers ?? []
-      }
+    for (const [id, iv] of Object.entries(interviewsByApp ?? {})) {
+      map[id] = iv?.interviewers ?? []
     }
     return map
-  }, [interviewQueries])
+  }, [interviewsByApp])
 
   const { data: reviewersByApp = {} } = useInterviewReviewersBulk(appIds)
 
@@ -494,7 +491,7 @@ function InterviewAssignmentRow({
   )
   const reviewerNuids = new Set(reviewers.map((r) => r.reviewer_nuid))
   const availableInterviewers = interviewers.filter(
-    (u) => !interviewerNuids.has(u.nuid)
+    (u) => !interviewerNuids.has(u.nuid) && !reviewerNuids.has(u.nuid)
   )
   const availableReviewers = leads.filter(
     (l) => !reviewerNuids.has(l.nuid) && !interviewerNuids.has(l.nuid)

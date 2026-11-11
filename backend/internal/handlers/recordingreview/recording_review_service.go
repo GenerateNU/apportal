@@ -33,12 +33,12 @@ func (s *recordingReviewService) upsert(ctx context.Context, in *UpsertRecording
 		return nil, huma.Error403Forbidden("only an assigned recording reviewer may submit this review")
 	}
 
-	submitted, err := s.recordingReviewDB.InterviewSubmitted(ctx, in.ID)
+	submitted, err := s.interviewAssignmentDB.AllInterviewersSubmitted(ctx, in.ID)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
 	if !submitted {
-		return nil, huma.Error409Conflict("no interviewer has submitted this interview yet")
+		return nil, huma.Error409Conflict("not every interviewer has submitted their notes yet")
 	}
 
 	err = s.recordingReviewDB.SaveRecordingReview(ctx, RecordingReviewUpsert{

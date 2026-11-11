@@ -63,7 +63,9 @@ func (s *interviewService) upsert(ctx context.Context, in *UpsertInterviewInput)
 	}
 
 	if in.Body.Submit {
-		_ = s.applicationDB.AdvanceApplicationToInterviewReview(ctx, in.ID)
+		if done, err := s.interviewAssignmentDB.AllInterviewersSubmitted(ctx, in.ID); err == nil && done {
+			_ = s.applicationDB.AdvanceApplicationToInterviewReview(ctx, in.ID)
+		}
 	}
 
 	iv, err := s.interviewDB.GetInterviewDetail(ctx, in.ID)

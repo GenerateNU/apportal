@@ -4,6 +4,7 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query'
+import { useMemo } from 'react'
 import {
   getInterview,
   listInterviewsBulk,
@@ -100,5 +101,34 @@ export function useUpsertInterview() {
 }
 
 export function interviewSubmitted(interview: Interview | null | undefined) {
-  return !!interview?.interviewers.some((iv) => !!iv.writeup_submitted_at)
+  return (
+    !!interview?.interviewers.length &&
+    interview.interviewers.every((iv) => !!iv.writeup_submitted_at)
+  )
+}
+
+export const MAX_BULK_APPLICATIONS = 200
+
+export function chunkIds(ids: string[]): string[][] {
+  const out: string[][] = []
+  for (let i = 0; i < ids.length; i += MAX_BULK_APPLICATIONS) {
+    out.push(ids.slice(i, i + MAX_BULK_APPLICATIONS))
+  }
+  return out
+}
+
+export function useInterviewsByApplicationIds(
+  applicationIds: string[],
+  opts?: RequestOptions
+) {
+  const batches = useMemo(() => chunkIds(applicationIds), [applicationIds])
+  const queries = useInterviewsByApplicationIdBatches(batches, opts)
+  const data = useMemo(() => {
+    if (queries.some((q) => !q.data)) return undefined
+    return Object.assign({}, ...queries.map((q) => q.data)) as Record<
+      string,
+      Interview | null
+    >
+  }, [queries])
+  return { data, isLoading: queries.some((q) => q.isLoading) }
 }

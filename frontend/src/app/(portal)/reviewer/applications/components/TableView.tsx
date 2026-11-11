@@ -6,7 +6,10 @@ import { FILTER_STAGES } from './constants'
 import { isAvailabilityQuestion } from './meetingAvailability'
 import { ApplicantRow } from './ApplicantRow'
 import { FilterChips } from './FilterButton'
-import { useInterviewsByApplicationIdBatches } from '@/lib/queries/interviews'
+import {
+  chunkIds,
+  useInterviewsByApplicationIdBatches,
+} from '@/lib/queries/interviews'
 
 const TRAILING_COLUMNS = ['Stage', 'Submitted', 'Availability']
 
@@ -99,7 +102,12 @@ export function TableView({
     () => applicants.map((a) => a.id),
     [applicants]
   )
-  const interviewQueries = useInterviewsByApplicationIdBatches([applicationIds])
+  const applicationIdBatches = useMemo(
+    () => chunkIds(applicationIds),
+    [applicationIds]
+  )
+  const interviewQueries =
+    useInterviewsByApplicationIdBatches(applicationIdBatches)
   const interviewsByApplicationId = useMemo(() => {
     const map: Record<string, Interview | null> = {}
     for (const query of interviewQueries) {

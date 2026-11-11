@@ -17,15 +17,6 @@ func NewRecordingReviewDB(db *gorm.DB) *RecordingReviewDB {
 	return &RecordingReviewDB{db: db}
 }
 
-func (r *RecordingReviewDB) InterviewSubmitted(ctx context.Context, applicationID string) (bool, error) {
-	var n int64
-	err := r.db.WithContext(ctx).Table("interviewers x").
-		Joins("JOIN interviews i ON i.id = x.interview_id").
-		Where("i.application_id = ? AND x.writeup_submitted_at IS NOT NULL", applicationID).
-		Count(&n).Error
-	return n > 0, err
-}
-
 func (r *RecordingReviewDB) SaveRecordingReview(ctx context.Context, in RecordingReviewUpsert) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		interviewID := tx.Model(&models.Interview{}).Select("id").Where("application_id = ?", in.ApplicationID)

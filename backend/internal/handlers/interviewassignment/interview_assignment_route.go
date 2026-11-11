@@ -26,7 +26,7 @@ func Route(api huma.API, db *gorm.DB) {
 		Method:        http.MethodDelete,
 		Path:          "/interviewers/{id}",
 		Summary:       "Remove an interviewer",
-		Description:   "Chief only. Not allowed once the interview has been conducted.",
+		Description:   "Chief only. Not allowed once the interviewer has submitted notes or the interview has been conducted.",
 		Tags:          []string{"Interview assignments"},
 		DefaultStatus: http.StatusNoContent,
 		Errors:        []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound, http.StatusConflict},
@@ -37,7 +37,7 @@ func Route(api huma.API, db *gorm.DB) {
 		Method:      http.MethodDelete,
 		Path:        "/cycles/{id}/interviewers",
 		Summary:     "Remove every interviewer for a cycle's role",
-		Description: "Chief only. Skips interviews that have already been conducted.",
+		Description: "Chief only. Skips interviewers who have submitted notes and interviews that have been conducted.",
 		Tags:        []string{"Interview assignments"},
 		Errors:      []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusUnprocessableEntity},
 	}, s.unassignAllInterviewers)
