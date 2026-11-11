@@ -110,9 +110,7 @@ type InterviewerPair struct {
 type InterviewerInput struct {
 	Applicants []Applicant
 	Leads      []Lead
-	// Existing maps an application already assigned an interviewer to that
-	// interviewer's NUID.
-	Existing map[string]string
+	Existing   map[string][]string
 	// WroteReview maps an application to the set of lead NUIDs who wrote that
 	// applicant's lead review — soft-avoided as interviewer (a tie-break, not
 	// an exclusion).
@@ -155,11 +153,13 @@ func PlanInterviewers(in InterviewerInput) (InterviewerPlan, error) {
 	}
 
 	var unknownExisting []string
-	for _, nuid := range in.Existing {
-		if li, ok := byNUID[nuid]; ok {
-			leads[li].load++
-		} else {
-			unknownExisting = append(unknownExisting, nuid)
+	for _, nuids := range in.Existing {
+		for _, nuid := range nuids {
+			if li, ok := byNUID[nuid]; ok {
+				leads[li].load++
+			} else {
+				unknownExisting = append(unknownExisting, nuid)
+			}
 		}
 	}
 
@@ -297,13 +297,9 @@ type ReviewerPair struct {
 
 // ReviewerInput is everything the reviewer planner needs.
 type ReviewerInput struct {
-	Applicants []Applicant
-	Leads      []Lead
-	// Interviewer maps an application to its assigned interviewer's NUID, so
-	// the planner can look up that lead's day for the soft same-day
-	// avoidance. An application missing here (or whose interviewer isn't in
-	// Leads) simply never triggers that avoidance.
-	Interviewer map[string]string
+	Applicants  []Applicant
+	Leads       []Lead
+	Interviewer map[string][]string
 	// Conflicts maps an application to the set of lead NUIDs declared to have
 	// a conflict of interest with that applicant — a hard exclusion from
 	// reviewing that applicant's interview, same list used for the
@@ -378,10 +374,15 @@ func PlanReviewers(in ReviewerInput) (ReviewerPlan, error) {
 	}
 	apps := shuffled(appIDs, in.Seed)
 
-	interviewerDay := make(map[string]string, len(in.Interviewer))
-	for appID, nuid := range in.Interviewer {
-		if li, ok := byNUID[nuid]; ok {
-			interviewerDay[appID] = leads[li].day
+	interviewerDays := make(map[string]map[string]bool, len(in.Interviewer))
+	for appID, nuids := range in.Interviewer {
+		for _, nuid := range nuids {
+			if li, ok := byNUID[nuid]; ok {
+				if interviewerDays[appID] == nil {
+					interviewerDays[appID] = make(map[string]bool)
+				}
+				interviewerDays[appID][leads[li].day] = true
+			}
 		}
 		// A lead never reviews the interview they themselves conducted —
 		// unlike the same-day-as-interviewer rule below, this is a hard
@@ -390,7 +391,9 @@ func PlanReviewers(in ReviewerInput) (ReviewerPlan, error) {
 		if onApp[appID] == nil {
 			onApp[appID] = make(map[string]bool)
 		}
-		onApp[appID][nuid] = true
+		for _, nuid := range nuids {
+			onApp[appID][nuid] = true
+		}
 	}
 
 	// Declared conflicts of interest are a hard exclusion too — merged into
@@ -414,7 +417,7 @@ func PlanReviewers(in ReviewerInput) (ReviewerPlan, error) {
 				continue
 			}
 			app := byApp[appID]
-			li, dayMatched := bestReviewer(leads, onApp[appID], app.AvailableDays, interviewerDay[appID])
+			li, dayMatched := bestReviewer(leads, onApp[appID], app.AvailableDays, interviewerDays[appID])
 			if li < 0 {
 				continue
 			}
@@ -465,7 +468,7 @@ func PlanReviewers(in ReviewerInput) (ReviewerPlan, error) {
 // interview, excluding leads already on that application, preferring a day
 // match and, among day-matched candidates, someone who does not share the
 // assigned interviewer's day. Returns -1 if no lead has spare capacity.
-func bestReviewer(leads []leadState, already map[string]bool, availableDays map[string]bool, interviewerDay string) (int, bool) {
+func bestReviewer(leads []leadState, already map[string]bool, availableDays map[string]bool, interviewerDays map[string]bool) (int, bool) {
 	best, bestDayMatch := -1, false
 	var bestRatio float64
 	var bestSameDay bool
@@ -473,7 +476,7 @@ func bestReviewer(leads []leadState, already map[string]bool, availableDays map[
 	consider := func(li int, dayMatch bool) {
 		l := leads[li]
 		ratio := loadRatio(l)
-		sameDay := interviewerDay != "" && l.day == interviewerDay
+		sameDay := interviewerDays[l.day]
 		if best < 0 ||
 			ratio < bestRatio ||
 			(ratio == bestRatio && !sameDay && bestSameDay) ||

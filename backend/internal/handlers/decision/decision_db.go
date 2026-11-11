@@ -55,24 +55,24 @@ func (decisionDraft) TableName() string { return "decision_drafts" }
 
 // decisionRow is the list query's shape; Status is computed in Go.
 type decisionRow struct {
-	ApplicationID   string
-	CycleID         string
-	ApplicationRole models.Role
-	ApplicantNUID   string
-	FullName        string
-	Email           string
-	Stage           models.ApplicationStage
-	Kind            models.DecisionKind
-	InterviewerNUID *string
-	InterviewerName *string
-	Feedback        *string
-	Compliments     *string
-	BodyOverride    *string
-	AuthorNUID      *string
-	AuthorName      *string
-	SentAt          *time.Time
-	SentBy          *string
-	UpdatedAt       *time.Time
+	ApplicationID    string
+	CycleID          string
+	ApplicationRole  models.Role
+	ApplicantNUID    string
+	FullName         string
+	Email            string
+	Stage            models.ApplicationStage
+	Kind             models.DecisionKind
+	InterviewerNUIDs []string `gorm:"serializer:pgarray"`
+	InterviewerNames []string `gorm:"serializer:pgarray"`
+	Feedback         *string
+	Compliments      *string
+	BodyOverride     *string
+	AuthorNUID       *string
+	AuthorName       *string
+	SentAt           *time.Time
+	SentBy           *string
+	UpdatedAt        *time.Time
 }
 
 // GetOrCreateDecisionTemplates returns both of a (cycle, role)'s letters,
@@ -102,31 +102,32 @@ func (d *DecisionDB) UpdateDecisionTemplate(ctx context.Context, cycleID string,
 		"cycle_id = ? AND application_role = ? AND kind = ?", cycleID, role, kind)
 }
 
-// decisionKindExpr is the draft's pinned kind, else derived from whether the
-// applicant has an interview or an interviewer.
 const decisionKindExpr = `COALESCE(dd.kind, CASE
-		WHEN iv.interviewer_nuid IS NOT NULL OR ia.interviewer_nuid IS NOT NULL
+		WHEN ivs.nuids IS NOT NULL
 		THEN 'rejection_post_interview'::decision_kind
 		ELSE 'rejection_generic'::decision_kind
 	END)`
 
 const decisionRowColumns = `a.id AS application_id, a.cycle_id, a.application_role, a.user_nuid AS applicant_nuid,
 	u.full_name, u.email, a.stage, ` + decisionKindExpr + ` AS kind,
-	COALESCE(iv.interviewer_nuid, ia.interviewer_nuid) AS interviewer_nuid, iu.full_name AS interviewer_name,
+	ivs.nuids AS interviewer_nuids, ivs.names AS interviewer_names,
 	dd.feedback, dd.compliments, dd.body_override, dd.author_nuid, au.full_name AS author_name,
 	dd.sent_at, dd.sent_by, dd.updated_at`
 
-// decisionsFrom is shared by the list and the single-row lookup, so an
-// authorization check can never read a different interviewer than the list
-// showed. interviews and interview_assignments are UNIQUE (application_id), so
-// neither join multiplies rows.
+const decisionInterviewersJoin = `LEFT JOIN LATERAL (
+		SELECT array_agg(x.interviewer_nuid ORDER BY x.assigned_at, x.id) AS nuids,
+		       array_agg(xu.full_name ORDER BY x.assigned_at, x.id) AS names
+		FROM interviews i
+		JOIN interviewers x ON x.interview_id = i.id
+		JOIN users xu ON xu.nuid = x.interviewer_nuid
+		WHERE i.application_id = a.id
+	) ivs ON true`
+
 func decisionsFrom(db *gorm.DB, f DecisionFilter, applicationID string) *gorm.DB {
 	q := db.Table("applications a").Select(decisionRowColumns).
 		Joins("JOIN users u ON u.nuid = a.user_nuid").
 		Joins("LEFT JOIN decision_drafts dd ON dd.application_id = a.id").
-		Joins("LEFT JOIN interviews iv ON iv.application_id = a.id").
-		Joins("LEFT JOIN interview_assignments ia ON ia.application_id = a.id").
-		Joins("LEFT JOIN users iu ON iu.nuid = COALESCE(iv.interviewer_nuid, ia.interviewer_nuid)").
+		Joins(decisionInterviewersJoin).
 		Joins("LEFT JOIN users au ON au.nuid = dd.author_nuid").
 		// Acceptances are handwritten, withdrawals get nothing, and drafts were
 		// never submitted, so none of them belong on this page.
@@ -148,7 +149,7 @@ func decisionsFrom(db *gorm.DB, f DecisionFilter, applicationID string) *gorm.DB
 		q = q.Where(decisionKindExpr+" = ?", *f.Kind)
 	}
 	if f.InterviewerNUID != "" {
-		q = q.Where("COALESCE(iv.interviewer_nuid, ia.interviewer_nuid) = ?", f.InterviewerNUID)
+		q = q.Where("? = ANY(ivs.nuids)", f.InterviewerNUID)
 	}
 	if f.Search != "" {
 		q = q.Where(`u.full_name ILIKE @p ESCAPE '\' OR a.user_nuid ILIKE @p ESCAPE '\' OR u.email ILIKE @p ESCAPE '\'`,
@@ -292,8 +293,7 @@ func toDecisionRow(r decisionRow) models.DecisionRow {
 		Stage:           r.Stage,
 		Kind:            r.Kind,
 		Status:          DecisionStatusFor(r.Kind, r.Feedback, r.Compliments, r.BodyOverride, r.SentAt),
-		InterviewerNUID: r.InterviewerNUID,
-		InterviewerName: r.InterviewerName,
+		Interviewers:    interviewersOf(r),
 		Feedback:        r.Feedback,
 		Compliments:     r.Compliments,
 		BodyOverride:    r.BodyOverride,
@@ -303,6 +303,17 @@ func toDecisionRow(r decisionRow) models.DecisionRow {
 		SentBy:          r.SentBy,
 		UpdatedAt:       r.UpdatedAt,
 	}
+}
+
+func interviewersOf(r decisionRow) []models.DecisionInterviewer {
+	out := make([]models.DecisionInterviewer, len(r.InterviewerNUIDs))
+	for i, nuid := range r.InterviewerNUIDs {
+		out[i] = models.DecisionInterviewer{NUID: nuid}
+		if i < len(r.InterviewerNames) {
+			out[i].Name = r.InterviewerNames[i]
+		}
+	}
+	return out
 }
 
 // DecisionStatusFor derives a row's status. A generic rejection is ready the

@@ -2,44 +2,36 @@ package interviewassignment
 
 import "github.com/GenerateNU/apportal/backend/internal/models"
 
-type InterviewAssignmentOutput struct {
-	Body models.InterviewAssignment
+type InterviewerOutput struct {
+	Body models.InterviewerDetail
 }
 
-type SetInterviewAssignmentInput struct {
+type InterviewReviewerOutput struct {
+	Body models.InterviewReviewerDetail
+}
+
+type InterviewReviewersOutput struct {
+	Body []models.InterviewReviewerDetail
+}
+
+type AddInterviewerInput struct {
 	ID   string `path:"id" doc:"Application ID"`
 	Body struct {
-		InterviewerNUID string `json:"interviewer_nuid"`
+		InterviewerNUID string `json:"interviewer_nuid" minLength:"1"`
 	}
 }
 
-type InterviewAssignmentsOutput struct {
-	Body []models.InterviewAssignment
+type AddReviewerInput struct {
+	ID   string `path:"id" doc:"Application ID"`
+	Body struct {
+		ReviewerNUID string `json:"reviewer_nuid" minLength:"1"`
+	}
 }
 
-type ListAssignmentsBulkInput struct {
-	// Comma-separated rather than a repeated/array param because huma splits
-	// this form itself, while the browser client serializes arrays as
-	// `application_ids[]=…`, which binds to nothing server-side.
+type ListBulkInput struct {
 	ApplicationIDs string `query:"application_ids" doc:"Comma-separated application IDs"`
 }
 
-type InterviewReviewAssignmentOutput struct {
-	Body models.InterviewReviewAssignment
-}
-
-type InterviewReviewAssignmentsOutput struct {
-	Body []models.InterviewReviewAssignment
-}
-
-type AssignRecordingReviewerInput struct {
-	ID   string `path:"id" doc:"Application ID"`
-	Body struct {
-		LeadNUID string `json:"lead_nuid"`
-	}
-}
-
-// UnassignAllInput identifies a cycle-and-role-scoped bulk-delete.
 type UnassignAllInput struct {
 	ID   string      `path:"id" doc:"Cycle ID"`
 	Role models.Role `query:"role" doc:"Applicant role"`
@@ -51,14 +43,7 @@ type UnassignAllOutput struct {
 	}
 }
 
-// InterviewAssignmentPair is one lead assigned to interview one application.
-type InterviewAssignmentPair struct {
-	ApplicationID string
-	LeadNUID      string
-}
-
-// InterviewReviewAssignmentPair is one lead assigned to review one recording.
-type InterviewReviewAssignmentPair struct {
+type AssignmentPair struct {
 	ApplicationID string
 	LeadNUID      string
 }

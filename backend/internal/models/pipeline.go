@@ -214,6 +214,23 @@ type InterviewReviewer struct {
 	Assigner           User       `json:"-" gorm:"foreignKey:AssignedBy;references:NUID"`
 }
 
+type InterviewerDetail struct {
+	Interviewer
+	ApplicationID   string `json:"application_id"`
+	InterviewerName string `json:"interviewer_name,omitempty"`
+}
+
+type InterviewReviewerDetail struct {
+	InterviewReviewer
+	ApplicationID string `json:"application_id"`
+	ReviewerName  string `json:"reviewer_name,omitempty"`
+}
+
+type InterviewDetail struct {
+	Interview
+	Interviewers []InterviewerDetail `json:"interviewers" gorm:"-"`
+}
+
 // InterviewComment is an open comment on an application's interview, visible
 // to and postable by any reviewer — unlike ChiefReviewComment, not restricted
 // to chiefs, since interview calibration is meant to be a shared discussion.

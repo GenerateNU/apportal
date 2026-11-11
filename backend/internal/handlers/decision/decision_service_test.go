@@ -161,25 +161,21 @@ func TestOwnWrittenReviewsWithholdsPeers(t *testing.T) {
 	}
 }
 
-func TestRedactPeerCommentsKeepsRatings(t *testing.T) {
-	comment := "solid answers"
-	rating := models.RatingGood
-	reviews := []models.RecordingReviewDetail{
-		{InterviewRecordingReview: models.InterviewRecordingReview{ReviewerNUID: "l1", Comments: &comment, Rating: &rating}},
-		{InterviewRecordingReview: models.InterviewRecordingReview{ReviewerNUID: "l2", Comments: &comment, Rating: &rating}},
+func TestRedactPeerComments(t *testing.T) {
+	writeup := "solid answers"
+	reviews := []models.InterviewReviewerDetail{
+		{InterviewReviewer: models.InterviewReviewer{ReviewerNUID: "l1", Writeup: &writeup}},
+		{InterviewReviewer: models.InterviewReviewer{ReviewerNUID: "l2", Writeup: &writeup}},
 	}
 
 	got, redacted := redactPeerComments(reviews, "l1")
 	if !redacted {
 		t.Error("got redacted=false, want true")
 	}
-	if got[0].Comments == nil {
-		t.Error("the caller's own comment was redacted")
+	if got[0].Writeup == nil {
+		t.Error("the caller's own write-up was redacted")
 	}
-	if got[1].Comments != nil {
-		t.Error("a peer's comment survived redaction")
-	}
-	if got[1].Rating == nil {
-		t.Error("a peer's rating was redacted; only comments are blind")
+	if got[1].Writeup != nil {
+		t.Error("a peer's write-up survived redaction")
 	}
 }

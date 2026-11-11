@@ -285,7 +285,7 @@ func TestAssignedToAndInterviewerFilterSeparately(t *testing.T) {
 	query, args := listSQL(t, ApplicationFilter{AssignedTo: "l1", InterviewerNUID: "l2"})
 	assertContains(t, query,
 		`EXISTS (SELECT 1 FROM lead_assignments la WHERE la.application_id = a.id AND la.lead_nuid = $1)`,
-		`EXISTS (SELECT 1 FROM interview_assignments ia WHERE ia.application_id = a.id AND ia.interviewer_nuid = $2)`,
+		`EXISTS (SELECT 1 FROM interviewers x JOIN interviews i ON i.id = x.interview_id WHERE i.application_id = a.id AND x.interviewer_nuid = $2)`,
 	)
 	if want := []any{"l1", "l2", models.StageDraft}; !reflect.DeepEqual(args, want) {
 		t.Fatalf("args = %#v, want %#v", args, want)

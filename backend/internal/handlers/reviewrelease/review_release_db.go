@@ -33,12 +33,13 @@ func (reviewRelease) TableName() string { return "review_releases" }
 // review kind within a cycle × role.
 func assignedSubmitted(db *gorm.DB, cycleID string, role models.Role, kind models.ReviewKind) (assigned, submitted *gorm.DB) {
 	if kind == models.ReviewKindRecording {
-		assigned = db.Table("interview_review_assignments ira").
-			Joins("JOIN applications a ON a.id = ira.application_id")
-		submitted = db.Table("interview_recording_reviews rr").
-			Joins("JOIN interviews i ON i.id = rr.interview_id").
+		assigned = db.Table("interview_reviewers r").
+			Joins("JOIN interviews i ON i.id = r.interview_id").
+			Joins("JOIN applications a ON a.id = i.application_id")
+		submitted = db.Table("interview_reviewers r").
+			Joins("JOIN interviews i ON i.id = r.interview_id").
 			Joins("JOIN applications a ON a.id = i.application_id").
-			Where("rr.submitted_at IS NOT NULL")
+			Where("r.writeup_submitted_at IS NOT NULL")
 	} else {
 		assigned = db.Table("lead_assignments la").
 			Joins("JOIN applications a ON a.id = la.application_id")
@@ -111,14 +112,11 @@ func (r *ReviewReleaseDB) WrittenReviewsReleased(ctx context.Context, applicatio
 	return n > 0, err
 }
 
-// RecordingReviewsReleased reports whether the interview's cycle × role has
-// had its recording reviews released.
-func (r *ReviewReleaseDB) RecordingReviewsReleased(ctx context.Context, interviewID string) (bool, error) {
+func (r *ReviewReleaseDB) RecordingReviewsReleased(ctx context.Context, applicationID string) (bool, error) {
 	var n int64
 	err := r.db.WithContext(ctx).Table("review_releases r").
 		Joins("JOIN applications a ON a.cycle_id = r.cycle_id AND a.application_role = r.application_role").
-		Joins("JOIN interviews i ON i.application_id = a.id").
-		Where("i.id = ? AND r.review_kind = ?", interviewID, models.ReviewKindRecording).
+		Where("a.id = ? AND r.review_kind = ?", applicationID, models.ReviewKindRecording).
 		Count(&n).Error
 	return n > 0, err
 }

@@ -2,9 +2,10 @@ package decision
 
 import (
 	"context"
+	"slices"
 
 	"github.com/GenerateNU/apportal/backend/internal/handlers/interview"
-	"github.com/GenerateNU/apportal/backend/internal/handlers/recordingreview"
+	"github.com/GenerateNU/apportal/backend/internal/handlers/interviewassignment"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/reviewrelease"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/writtenreview"
 	"github.com/GenerateNU/apportal/backend/internal/models"
@@ -17,11 +18,11 @@ import (
 // reviewer so a lead can find their own queue; template edits are chief-only,
 // and a lead may only write the feedback for applicants they interviewed.
 type decisionService struct {
-	decisionDB        *DecisionDB
-	interviewDB       *interview.InterviewDB
-	recordingReviewDB *recordingreview.RecordingReviewDB
-	reviewReleaseDB   *reviewrelease.ReviewReleaseDB
-	writtenReviewDB   *writtenreview.WrittenReviewDB
+	decisionDB            *DecisionDB
+	interviewDB           *interview.InterviewDB
+	interviewAssignmentDB *interviewassignment.InterviewAssignmentDB
+	reviewReleaseDB       *reviewrelease.ReviewReleaseDB
+	writtenReviewDB       *writtenreview.WrittenReviewDB
 }
 
 func parseDecisionKind(raw string) (models.DecisionKind, error) {
@@ -136,7 +137,7 @@ func (s *decisionService) upsert(ctx context.Context, in *UpsertDecisionInput) (
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
-	if !isChief && (row.InterviewerNUID == nil || *row.InterviewerNUID != actor.NUID) {
+	if !isChief && !slices.ContainsFunc(row.Interviewers, func(iv models.DecisionInterviewer) bool { return iv.NUID == actor.NUID }) {
 		return nil, huma.Error403Forbidden("only this applicant's interviewer or a chief can write their decision")
 	}
 
@@ -193,21 +194,24 @@ func (s *decisionService) context(ctx context.Context, in *ListDecisionContextIn
 		allowed[i] = r.ApplicationID
 	}
 
-	interviews, err := s.interviewDB.ListInterviewsForApplications(ctx, allowed)
+	interviews, err := s.interviewDB.ListInterviewDetails(ctx, allowed)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
-	interviewByApplication := make(map[string]models.Interview, len(interviews))
-	interviewIDs := make([]string, 0, len(interviews))
+	interviewByApplication := make(map[string]models.InterviewDetail, len(interviews))
 	for _, iv := range interviews {
 		interviewByApplication[iv.ApplicationID] = iv
-		interviewIDs = append(interviewIDs, iv.ID)
 	}
 
-	recordingReviews, err := s.recordingReviewDB.ListRecordingReviewDetailsForInterviews(ctx, interviewIDs)
+	reviewers, err := s.interviewAssignmentDB.ListReviewers(ctx, allowed)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
+	recordingReviews := map[string][]models.InterviewReviewerDetail{}
+	for _, r := range reviewers {
+		recordingReviews[r.ApplicationID] = append(recordingReviews[r.ApplicationID], r)
+	}
+
 	// Fetched unscoped and narrowed below, because release is per cycle × role
 	// and one batch can span both roles — a single SQL-level onlyReviewer (what
 	// the one-application route uses) can't express that.
@@ -235,7 +239,7 @@ func (s *decisionService) context(ctx context.Context, in *ListDecisionContextIn
 		}
 		if iv, ok := interviewByApplication[applicationID]; ok {
 			entry.Interview = &iv
-			entry.RecordingReviews = recordingReviews[iv.ID]
+			entry.RecordingReviews = recordingReviews[applicationID]
 		}
 
 		if !isChief && !writtenReleased[applicationID] {
@@ -249,7 +253,7 @@ func (s *decisionService) context(ctx context.Context, in *ListDecisionContextIn
 			entry.WrittenReviews = []models.WrittenReviewDetail{}
 		}
 		if entry.RecordingReviews == nil {
-			entry.RecordingReviews = []models.RecordingReviewDetail{}
+			entry.RecordingReviews = []models.InterviewReviewerDetail{}
 		}
 		out = append(out, entry)
 	}
@@ -269,13 +273,11 @@ func ownWrittenReviews(reviews []models.WrittenReviewDetail, nuid string) ([]mod
 	return kept, len(kept) < len(reviews)
 }
 
-// redactPeerComments blanks other reviewers' written comments while leaving
-// their ratings visible — the same split the one-interview route makes.
-func redactPeerComments(reviews []models.RecordingReviewDetail, nuid string) ([]models.RecordingReviewDetail, bool) {
+func redactPeerComments(reviews []models.InterviewReviewerDetail, nuid string) ([]models.InterviewReviewerDetail, bool) {
 	redacted := false
 	for i := range reviews {
-		if reviews[i].ReviewerNUID != nuid && reviews[i].Comments != nil {
-			reviews[i].Comments = nil
+		if reviews[i].ReviewerNUID != nuid && reviews[i].Writeup != nil {
+			reviews[i].Writeup = nil
 			redacted = true
 		}
 	}

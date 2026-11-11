@@ -160,12 +160,14 @@ func applicationsFrom(db *gorm.DB, f ApplicationFilter, scope applicationFilterS
 			Where("la.application_id = a.id AND la.lead_nuid = ?", f.AssignedTo))
 	}
 	if f.InterviewerNUID != "" {
-		q = q.Where("EXISTS (?)", db.Table("interview_assignments ia").Select("1").
-			Where("ia.application_id = a.id AND ia.interviewer_nuid = ?", f.InterviewerNUID))
+		q = q.Where("EXISTS (?)", db.Table("interviewers x").Select("1").
+			Joins("JOIN interviews i ON i.id = x.interview_id").
+			Where("i.application_id = a.id AND x.interviewer_nuid = ?", f.InterviewerNUID))
 	}
 	if f.RecordingReviewerNUID != "" {
-		q = q.Where("EXISTS (?)", db.Table("interview_review_assignments irr").Select("1").
-			Where("irr.application_id = a.id AND irr.lead_nuid = ?", f.RecordingReviewerNUID))
+		q = q.Where("EXISTS (?)", db.Table("interview_reviewers r").Select("1").
+			Joins("JOIN interviews i ON i.id = r.interview_id").
+			Where("i.application_id = a.id AND r.reviewer_nuid = ?", f.RecordingReviewerNUID))
 	}
 	if len(f.InterviewRatings) > 0 {
 		q = q.Where("EXISTS (?)", db.Table("interviews i").Select("1").
