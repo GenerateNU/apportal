@@ -142,18 +142,9 @@ export function InterviewConductClient({
   const isAssignedInterviewer =
     !!currentUser &&
     !!assignments?.some((a) => a.interviewer_nuid === currentUser.nuid)
-  const canEditInterview = isAssignedInterviewer || isChief
-  const [onBehalfOf, setOnBehalfOf] = useState('')
-  const onBehalfNuids = isAssignedInterviewer
-    ? []
-    : (assignments ?? []).map((a) => a.interviewer_nuid)
-  const editingNuid = isAssignedInterviewer
-    ? currentUser?.nuid
-    : onBehalfNuids.includes(onBehalfOf)
-      ? onBehalfOf
-      : (onBehalfNuids[0] ?? currentUser?.nuid)
+  const canEditInterview = isAssignedInterviewer
   const interview = canEditInterview
-    ? interviews?.find((iv) => iv.interviewer_nuid === editingNuid)
+    ? interviews?.find((iv) => iv.interviewer_nuid === currentUser?.nuid)
     : reviewedInterview
   const otherInterviews = (interviews ?? []).filter(
     (iv) => iv.id !== interview?.id
@@ -217,21 +208,15 @@ export function InterviewConductClient({
   const [notesUrl, setNotesUrl] = useState('')
   const [comments, setComments] = useState('')
   const [rating, setRating] = useState<InterviewRating | ''>('')
-  const [seededFor, setSeededFor] = useState<string | null>(null)
+  const [seeded, setSeeded] = useState(false)
   const [savedInterview, setSavedInterview] = useState(false)
 
-  const seedKey = interview?.id ?? `new:${editingNuid}`
-  if (
-    seededFor !== seedKey &&
-    currentUser &&
-    assignmentsLoaded &&
-    (interview || seededFor !== null)
-  ) {
-    setRecordingUrl(interview?.recording_url ?? '')
-    setNotesUrl(interview?.notes_url ?? '')
-    setComments(interview?.comments ?? '')
-    setRating(interview?.rating ?? '')
-    setSeededFor(seedKey)
+  if (!seeded && currentUser && assignmentsLoaded && interview) {
+    setRecordingUrl(interview.recording_url ?? '')
+    setNotesUrl(interview.notes_url ?? '')
+    setComments(interview.comments ?? '')
+    setRating(interview.rating ?? '')
+    setSeeded(true)
   }
 
   const interviewSubmitted = canEditInterview && !!interview?.submitted_at
@@ -247,9 +232,6 @@ export function InterviewConductClient({
         comments: comments || undefined,
         rating: rating || undefined,
         submit,
-        ...(editingNuid !== currentUser?.nuid && {
-          interviewer_nuid: editingNuid,
-        }),
       },
     })
     setSavedInterview(true)
@@ -512,43 +494,8 @@ export function InterviewConductClient({
             {interviewSubmitted && (
               <div className="border-border bg-muted/40 text-text-muted flex items-center gap-2 rounded-lg border px-4 py-3 text-sm">
                 <Lock size={14} />
-                {editingNuid === currentUser?.nuid
-                  ? 'You’ve submitted this interview.'
-                  : 'This write-up has been submitted.'}{' '}
-                You can still make changes below.
-              </div>
-            )}
-
-            {onBehalfNuids.length > 0 && (
-              <div className="flex flex-wrap items-center gap-2 text-sm">
-                <span className="text-text-muted">Editing on behalf of</span>
-                {onBehalfNuids.length === 1 ? (
-                  <span className="text-text-default font-medium">
-                    {nameFor(onBehalfNuids[0])}
-                  </span>
-                ) : (
-                  <Select
-                    value={editingNuid ?? ''}
-                    onValueChange={(nuid) => {
-                      setOnBehalfOf(nuid)
-                      setSavedInterview(false)
-                    }}
-                  >
-                    <SelectTrigger
-                      className="h-8 w-48"
-                      aria-label="Interviewer whose write-up to edit"
-                    >
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {onBehalfNuids.map((nuid) => (
-                        <SelectItem key={nuid} value={nuid}>
-                          {nameFor(nuid)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
+                You&apos;ve submitted this interview. You can still make changes
+                below.
               </div>
             )}
 

@@ -71,15 +71,6 @@ func TestUpsertInterviewRejectsInvalidRating(t *testing.T) {
 	wantStatus(t, err, http.StatusUnprocessableEntity)
 }
 
-func TestUpsertInterviewOnBehalfIsChiefOnly(t *testing.T) {
-	h := &interviewHandler{}
-	in := &UpsertInterviewInput{ID: "app1"}
-	in.Body.InterviewerNUID = "l2"
-
-	_, err := h.upsert(withActor(leadActor()), in)
-	wantStatus(t, err, http.StatusForbidden)
-}
-
 func TestListInterviewsRequiresReviewer(t *testing.T) {
 	h := &interviewHandler{}
 	_, err := h.list(context.Background(), &ApplicationScopedInput{ID: "app1"})

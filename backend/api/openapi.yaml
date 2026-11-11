@@ -4014,9 +4014,6 @@ components:
         conducted_at:
           format: date-time
           type: string
-        interviewer_nuid:
-          description: Chief only. Which assigned interviewer's write-up to edit; may be omitted when exactly one is assigned.
-          type: string
         notes_url:
           type: string
         rating:
@@ -5398,7 +5395,7 @@ paths:
         - Decisions
   /applications/{id}/interview:
     put:
-      description: Assigned interviewers, or a chief (on behalf of an assigned interviewer, or as themself when none is). Provided fields overwrite; omitted ones are preserved.
+      description: Assigned interviewers only; a chief must be assigned too. Provided fields overwrite; omitted ones are preserved.
       operationId: upsert-interview
       parameters:
         - description: Application ID

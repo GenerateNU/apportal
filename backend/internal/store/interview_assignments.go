@@ -36,6 +36,13 @@ func (s *Store) ListInterviewAssignments(ctx context.Context, applicationID stri
 	return pgx.CollectRows(rows, pgx.RowToStructByPos[models.InterviewAssignment])
 }
 
+func (s *Store) IsAssignedInterviewer(ctx context.Context, applicationID, nuid string) (bool, error) {
+	const q = `SELECT EXISTS (SELECT 1 FROM interview_assignments WHERE application_id = $1 AND interviewer_nuid = $2)`
+	var assigned bool
+	err := s.db.QueryRow(ctx, q, applicationID, nuid).Scan(&assigned)
+	return assigned, err
+}
+
 func (s *Store) DeleteInterviewAssignment(ctx context.Context, id string) error {
 	tag, err := s.db.Exec(ctx, `DELETE FROM interview_assignments WHERE id = $1`, id)
 	if err != nil {
