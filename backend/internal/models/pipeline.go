@@ -172,62 +172,46 @@ type ChiefReviewCommentDetail struct {
 	AuthorName string `json:"author_name,omitempty"`
 }
 
-// InterviewAssignment: the single interviewer assigned to an application.
-type InterviewAssignment struct {
-	ID              string      `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
-	ApplicationID   string      `json:"application_id" gorm:"type:uuid;not null;index:idx_interview_assignments_app;uniqueIndex:interview_assignments_application_id_key"`
-	AssignedBy      string      `json:"assigned_by" gorm:"not null"`
-	InterviewerNUID string      `json:"interviewer_nuid" gorm:"not null;index:idx_interview_assignments_interviewer"`
-	AssignedAt      time.Time   `json:"assigned_at" gorm:"not null;default:now()"`
-	Application     Application `json:"-" gorm:"foreignKey:ApplicationID;references:ID;constraint:OnDelete:CASCADE"`
-	Assigner        User        `json:"-" gorm:"foreignKey:AssignedBy;references:NUID"`
-	Interviewer     User        `json:"-" gorm:"foreignKey:InterviewerNUID;references:NUID"`
-}
-
-// InterviewReviewAssignment: a lead assigned to review the interview recording.
-type InterviewReviewAssignment struct {
-	ID            string      `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
-	ApplicationID string      `json:"application_id" gorm:"type:uuid;not null;index:idx_interview_rev_assign_app;uniqueIndex:interview_review_assignments_application_id_tl_nuid_key,priority:1"`
-	LeadNUID      string      `json:"lead_nuid" gorm:"not null;uniqueIndex:interview_review_assignments_application_id_tl_nuid_key,priority:2"`
-	AssignedBy    string      `json:"assigned_by" gorm:"not null"`
-	AssignedAt    time.Time   `json:"assigned_at" gorm:"not null;default:now()"`
-	Application   Application `json:"-" gorm:"foreignKey:ApplicationID;references:ID;constraint:OnDelete:CASCADE"`
-	Lead          User        `json:"-" gorm:"foreignKey:LeadNUID;references:NUID"`
-	Assigner      User        `json:"-" gorm:"foreignKey:AssignedBy;references:NUID"`
-}
-
 // Interview: filled out by the interviewer after conducting the interview.
 type Interview struct {
-	ID              string     `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
-	ApplicationID   string     `json:"application_id" gorm:"type:uuid;not null;index:idx_interviews_app;uniqueIndex:interviews_application_id_key"`
-	InterviewerNUID string     `json:"interviewer_nuid" gorm:"not null"`
-	ScheduledAt     *time.Time `json:"scheduled_at,omitempty"`
-	ConductedAt     *time.Time `json:"conducted_at,omitempty"`
-	RecordingURL    *string    `json:"recording_url,omitempty"`
+	ID            string     `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	ApplicationID string     `json:"application_id" gorm:"type:uuid;not null;index:idx_interviews_app;uniqueIndex:interviews_application_id_key"`
+	ScheduledAt   *time.Time `json:"scheduled_at,omitempty"`
+	ConductedAt   *time.Time `json:"conducted_at,omitempty"`
+	RecordingURL  *string    `json:"recording_url,omitempty"`
 	// NotesURL links to the interviewer's notes doc (e.g. a Granola summary),
 	// alongside RecordingURL.
 	NotesURL    *string          `json:"notes_url,omitempty" gorm:"comment:link to the interviewer's notes doc (e.g. Granola)"`
-	Comments    *string          `json:"comments,omitempty"`
 	Rating      *InterviewRating `json:"rating,omitempty" gorm:"type:interview_rating"`
-	SubmittedAt *time.Time       `json:"submitted_at,omitempty"`
 	CreatedAt   time.Time        `json:"created_at" gorm:"not null;default:now()"`
 	UpdatedAt   time.Time        `json:"updated_at" gorm:"not null;default:now()"`
 	Application Application      `json:"-" gorm:"foreignKey:ApplicationID;references:ID;constraint:OnDelete:CASCADE"`
-	Interviewer User             `json:"-" gorm:"foreignKey:InterviewerNUID;references:NUID"`
 }
 
-// InterviewRecordingReview: an assigned lead's review of an interview recording.
-type InterviewRecordingReview struct {
-	ID           string           `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
-	InterviewID  string           `json:"interview_id" gorm:"type:uuid;not null;index:idx_recording_reviews_inter;uniqueIndex:interview_recording_reviews_interview_id_reviewer_nuid_key,priority:1"`
-	ReviewerNUID string           `json:"reviewer_nuid" gorm:"not null;uniqueIndex:interview_recording_reviews_interview_id_reviewer_nuid_key,priority:2"`
-	Comments     *string          `json:"comments,omitempty"`
-	Rating       *InterviewRating `json:"rating,omitempty" gorm:"type:interview_rating"`
-	SubmittedAt  *time.Time       `json:"submitted_at,omitempty"`
-	CreatedAt    time.Time        `json:"created_at" gorm:"not null;default:now()"`
-	UpdatedAt    time.Time        `json:"updated_at" gorm:"not null;default:now()"`
-	Interview    Interview        `json:"-" gorm:"foreignKey:InterviewID;references:ID;constraint:OnDelete:CASCADE"`
-	Reviewer     User             `json:"-" gorm:"foreignKey:ReviewerNUID;references:NUID"`
+type Interviewer struct {
+	ID                 string     `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	InterviewID        string     `json:"interview_id" gorm:"type:uuid;not null;uniqueIndex:interviewers_interview_id_interviewer_nuid_key,priority:1"`
+	InterviewerNUID    string     `json:"interviewer_nuid" gorm:"not null;index:idx_interviewers_interviewer;uniqueIndex:interviewers_interview_id_interviewer_nuid_key,priority:2"`
+	AssignedBy         string     `json:"assigned_by" gorm:"not null"`
+	AssignedAt         time.Time  `json:"assigned_at" gorm:"not null;default:now()"`
+	Writeup            *string    `json:"writeup,omitempty"`
+	WriteupSubmittedAt *time.Time `json:"writeup_submitted_at,omitempty"`
+	Interview          Interview  `json:"-" gorm:"foreignKey:InterviewID;references:ID;constraint:OnDelete:CASCADE"`
+	User               User       `json:"-" gorm:"foreignKey:InterviewerNUID;references:NUID"`
+	Assigner           User       `json:"-" gorm:"foreignKey:AssignedBy;references:NUID"`
+}
+
+type InterviewReviewer struct {
+	ID                 string     `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	InterviewID        string     `json:"interview_id" gorm:"type:uuid;not null;uniqueIndex:interview_reviewers_interview_id_reviewer_nuid_key,priority:1"`
+	ReviewerNUID       string     `json:"reviewer_nuid" gorm:"not null;index:idx_interview_reviewers_reviewer;uniqueIndex:interview_reviewers_interview_id_reviewer_nuid_key,priority:2"`
+	AssignedBy         string     `json:"assigned_by" gorm:"not null"`
+	AssignedAt         time.Time  `json:"assigned_at" gorm:"not null;default:now()"`
+	Writeup            *string    `json:"writeup,omitempty"`
+	WriteupSubmittedAt *time.Time `json:"writeup_submitted_at,omitempty"`
+	Interview          Interview  `json:"-" gorm:"foreignKey:InterviewID;references:ID;constraint:OnDelete:CASCADE"`
+	Reviewer           User       `json:"-" gorm:"foreignKey:ReviewerNUID;references:NUID"`
+	Assigner           User       `json:"-" gorm:"foreignKey:AssignedBy;references:NUID"`
 }
 
 // InterviewComment is an open comment on an application's interview, visible

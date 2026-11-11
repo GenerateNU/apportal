@@ -39,7 +39,7 @@ func keepIfNull(table string, columns ...string) []clause.Assignment {
 func (i *InterviewDB) UpsertInterview(ctx context.Context, in InterviewUpsert) (models.Interview, error) {
 	interview := models.Interview{
 		ApplicationID:   in.ApplicationID,
-		InterviewerNUID: in.InterviewerNUID,
+		InterviewerNUID: &in.InterviewerNUID,
 		ScheduledAt:     in.ScheduledAt,
 		ConductedAt:     in.ConductedAt,
 		RecordingURL:    in.RecordingURL,

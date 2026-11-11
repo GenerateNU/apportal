@@ -84,7 +84,7 @@ type DecisionRow struct {
 // resolved display name (not a table column), the same way
 // WrittenReviewDetail does.
 type RecordingReviewDetail struct {
-	InterviewRecordingReview
+	InterviewReviewer
 	ReviewerName string `json:"reviewer_name,omitempty"`
 }
 
