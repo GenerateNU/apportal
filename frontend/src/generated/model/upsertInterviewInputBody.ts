@@ -12,6 +12,8 @@ export interface UpsertInterviewInputBody {
   readonly $schema?: string;
   comments?: string;
   conducted_at?: string;
+  /** Chief only. Which assigned interviewer's write-up to edit; may be omitted when exactly one is assigned. */
+  interviewer_nuid?: string;
   notes_url?: string;
   rating?: UpsertInterviewInputBodyRating;
   recording_url?: string;

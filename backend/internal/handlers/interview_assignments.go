@@ -28,6 +28,17 @@ func (h *interviewAssignmentHandler) register(api huma.API) {
 	}, h.addInterviewer)
 
 	huma.Register(api, huma.Operation{
+		OperationID:   "add-interviewer-bulk",
+		Method:        http.MethodPost,
+		Path:          "/interview-assignments",
+		Summary:       "Add one interviewer to several applications",
+		Description:   "Chief only. Applications that already have this interviewer are skipped; returns only the assignments created.",
+		Tags:          []string{"Interview assignments"},
+		DefaultStatus: http.StatusCreated,
+		Errors:        []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusUnprocessableEntity},
+	}, h.addInterviewerBulk)
+
+	huma.Register(api, huma.Operation{
 		OperationID: "list-interview-assignments",
 		Method:      http.MethodGet,
 		Path:        "/applications/{id}/interview-assignments",
@@ -149,6 +160,34 @@ func (h *interviewAssignmentHandler) addInterviewer(ctx context.Context, in *Add
 
 type InterviewAssignmentsOutput struct {
 	Body []models.InterviewAssignment
+}
+
+type AddInterviewerBulkInput struct {
+	Body struct {
+		ApplicationIDs  []string `json:"application_ids" minItems:"1"`
+		InterviewerNUID string   `json:"interviewer_nuid"`
+	}
+}
+
+func (h *interviewAssignmentHandler) addInterviewerBulk(ctx context.Context, in *AddInterviewerBulkInput) (*InterviewAssignmentsOutput, error) {
+	if err := requireChief(ctx); err != nil {
+		return nil, err
+	}
+	nuid := strings.TrimSpace(in.Body.InterviewerNUID)
+	if nuid == "" {
+		return nil, huma.Error422UnprocessableEntity("interviewer_nuid is required")
+	}
+	if len(in.Body.ApplicationIDs) > maxBulkApplications {
+		return nil, huma.Error422UnprocessableEntity("too many application_ids")
+	}
+	items, err := h.store.AddInterviewerToApplications(ctx, in.Body.ApplicationIDs, nuid, currentActor(ctx).NUID)
+	if err != nil {
+		return nil, storeErr(err)
+	}
+	if items == nil {
+		items = []models.InterviewAssignment{}
+	}
+	return &InterviewAssignmentsOutput{Body: items}, nil
 }
 
 func (h *interviewAssignmentHandler) listInterviewers(ctx context.Context, in *ApplicationScopedInput) (*InterviewAssignmentsOutput, error) {

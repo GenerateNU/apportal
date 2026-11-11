@@ -1,5 +1,28 @@
 components:
   schemas:
+    AddInterviewerBulkInputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/AddInterviewerBulkInputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        application_ids:
+          items:
+            type: string
+          minItems: 1
+          type:
+            - array
+            - "null"
+        interviewer_nuid:
+          type: string
+      required:
+        - application_ids
+        - interviewer_nuid
+      type: object
     AddInterviewerInputBody:
       additionalProperties: false
       properties:
@@ -1231,8 +1254,12 @@ components:
       properties:
         application_id:
           type: string
-        interview:
-          $ref: "#/components/schemas/Interview"
+        interviews:
+          items:
+            $ref: "#/components/schemas/Interview"
+          type:
+            - array
+            - "null"
         recording_reviews:
           items:
             $ref: "#/components/schemas/RecordingReviewDetail"
@@ -1251,10 +1278,22 @@ components:
           type: boolean
       required:
         - application_id
+        - interviews
         - recording_reviews
         - written_reviews
         - written_reviews_blind
         - recording_reviews_blind
+      type: object
+    DecisionInterviewer:
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+        nuid:
+          type: string
+      required:
+        - nuid
+        - name
       type: object
     DecisionRow:
       additionalProperties: false
@@ -1291,10 +1330,12 @@ components:
           type: string
         full_name:
           type: string
-        interviewer_name:
-          type: string
-        interviewer_nuid:
-          type: string
+        interviewers:
+          items:
+            $ref: "#/components/schemas/DecisionInterviewer"
+          type:
+            - array
+            - "null"
         kind:
           enum:
             - rejection_post_interview
@@ -1339,6 +1380,7 @@ components:
         - stage
         - kind
         - status
+        - interviewers
       type: object
     DecisionTemplate:
       additionalProperties: false
@@ -3995,6 +4037,9 @@ components:
         conducted_at:
           format: date-time
           type: string
+        interviewer_nuid:
+          description: Chief only. Which assigned interviewer's write-up to edit; may be omitted when exactly one is assigned.
+          type: string
         notes_url:
           type: string
         rating:
@@ -5376,7 +5421,7 @@ paths:
         - Decisions
   /applications/{id}/interview:
     put:
-      description: Reviewer only (an assigned interviewer, or a chief). Provided fields overwrite; omitted ones are preserved.
+      description: Assigned interviewers, or a chief (on behalf of an assigned interviewer, or as themself when none is). Provided fields overwrite; omitted ones are preserved.
       operationId: upsert-interview
       parameters:
         - description: Application ID
@@ -9032,6 +9077,53 @@ paths:
                 $ref: "#/components/schemas/ErrorModel"
           description: Internal Server Error
       summary: List interviewer assignments for several applications
+      tags:
+        - Interview assignments
+    post:
+      description: Chief only. Applications that already have this interviewer are skipped; returns only the assignments created.
+      operationId: add-interviewer-bulk
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddInterviewerBulkInputBody"
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/InterviewAssignment"
+                type:
+                  - array
+                  - "null"
+          description: Created
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Add one interviewer to several applications
       tags:
         - Interview assignments
   /interview-assignments/{id}:

@@ -23,6 +23,7 @@ const row: DecisionRow = {
   stage: 'rejected',
   kind: 'rejection_post_interview',
   status: 'ready',
+  interviewers: [],
   feedback: 'the technical depth was thinner than the pool.',
   compliments: 'your work on the scheduler.',
 }

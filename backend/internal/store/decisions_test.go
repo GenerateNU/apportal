@@ -39,7 +39,7 @@ func TestDecisionsFromPlaceholderNumbering(t *testing.T) {
 				`AND a.cycle_id = $1`,
 				`AND a.application_role = $2`,
 				`= $3::decision_kind`,
-				`AND COALESCE(iv.interviewer_nuid, ia.interviewer_nuid) = $4`,
+				`AND $4 = ANY(ivs.nuids)`,
 				`AND (u.full_name ILIKE $5 ESCAPE '\'`,
 			},
 			wantArgs: []any{"c1", role, kind, "l1", "%dao%"},

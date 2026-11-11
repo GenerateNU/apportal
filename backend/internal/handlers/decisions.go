@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -235,7 +236,7 @@ func (h *decisionHandler) upsert(ctx context.Context, in *UpsertDecisionInput) (
 	if err != nil {
 		return nil, storeErr(err)
 	}
-	if !isChief && (row.InterviewerNUID == nil || *row.InterviewerNUID != actor.NUID) {
+	if !isChief && !slices.ContainsFunc(row.Interviewers, func(iv models.DecisionInterviewer) bool { return iv.NUID == actor.NUID }) {
 		return nil, huma.Error403Forbidden("only this applicant's interviewer or a chief can write their decision")
 	}
 
@@ -307,10 +308,10 @@ func (h *decisionHandler) context(ctx context.Context, in *ListDecisionContextIn
 	if err != nil {
 		return nil, storeErr(err)
 	}
-	interviewByApplication := make(map[string]models.Interview, len(interviews))
+	interviewsByApplication := make(map[string][]models.Interview, len(interviews))
 	interviewIDs := make([]string, 0, len(interviews))
 	for _, iv := range interviews {
-		interviewByApplication[iv.ApplicationID] = iv
+		interviewsByApplication[iv.ApplicationID] = append(interviewsByApplication[iv.ApplicationID], iv)
 		interviewIDs = append(interviewIDs, iv.ID)
 	}
 
@@ -341,11 +342,11 @@ func (h *decisionHandler) context(ctx context.Context, in *ListDecisionContextIn
 	for _, applicationID := range allowed {
 		entry := models.DecisionContext{
 			ApplicationID:  applicationID,
+			Interviews:     interviewsByApplication[applicationID],
 			WrittenReviews: writtenReviews[applicationID],
 		}
-		if iv, ok := interviewByApplication[applicationID]; ok {
-			entry.Interview = &iv
-			entry.RecordingReviews = recordingReviews[iv.ID]
+		for _, iv := range entry.Interviews {
+			entry.RecordingReviews = append(entry.RecordingReviews, recordingReviews[iv.ID]...)
 		}
 
 		if !isChief && !writtenReleased[applicationID] {
@@ -355,6 +356,9 @@ func (h *decisionHandler) context(ctx context.Context, in *ListDecisionContextIn
 			entry.RecordingReviews, entry.RecordingReviewsBlind = redactPeerComments(entry.RecordingReviews, actor.NUID)
 		}
 
+		if entry.Interviews == nil {
+			entry.Interviews = []models.Interview{}
+		}
 		if entry.WrittenReviews == nil {
 			entry.WrittenReviews = []models.WrittenReviewDetail{}
 		}

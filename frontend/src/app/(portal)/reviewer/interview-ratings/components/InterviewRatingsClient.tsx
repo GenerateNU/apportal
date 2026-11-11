@@ -285,29 +285,47 @@ export function InterviewRatingsClient() {
   const rows: Row[] = useMemo(
     () =>
       applications
-        .map((application) => {
-          const interview = primaryInterview(
-            interviewByApplicationId?.[application.id]
-          )
+        .flatMap((application): Row[] => {
+          const interviews = interviewByApplicationId?.[application.id] ?? []
+          const reviewed = primaryInterview(interviews)
           const reviewerAssignments =
             reviewerAssignmentsByApplicationId?.[application.id] ?? []
-          const reviews = interview?.id
-            ? (recordingReviewsByInterviewId?.[interview.id] ?? [])
+          const reviews = reviewed?.id
+            ? (recordingReviewsByInterviewId?.[reviewed.id] ?? [])
             : []
           const reviewedNuids = new Set(
             reviews.filter((r) => r.submitted_at).map((r) => r.reviewer_nuid)
           )
-          return {
-            application,
-            interview,
-            interviewerNuid:
-              assignmentByApplicationId?.[application.id]?.[0]
-                ?.interviewer_nuid ?? null,
-            reviewerCount: reviewerAssignments.length,
-            reviewedCount: reviewerAssignments.filter((a) =>
-              reviewedNuids.has(a.lead_nuid)
-            ).length,
+          const reviewerCount = reviewerAssignments.length
+          const reviewedCount = reviewerAssignments.filter((a) =>
+            reviewedNuids.has(a.lead_nuid)
+          ).length
+          const interviewerNuids = [
+            ...new Set([
+              ...(assignmentByApplicationId?.[application.id] ?? []).map(
+                (a) => a.interviewer_nuid
+              ),
+              ...interviews.map((iv) => iv.interviewer_nuid),
+            ]),
+          ]
+          if (interviewerNuids.length === 0) {
+            return [
+              {
+                application,
+                interview: undefined,
+                interviewerNuid: null,
+                reviewerCount,
+                reviewedCount,
+              },
+            ]
           }
+          return interviewerNuids.map((nuid) => ({
+            application,
+            interview: interviews.find((iv) => iv.interviewer_nuid === nuid),
+            interviewerNuid: nuid,
+            reviewerCount,
+            reviewedCount,
+          }))
         })
         .filter(
           ({ application, interview }) =>
@@ -781,7 +799,7 @@ function RatingColumn({
             reviewedCount,
           }) => (
             <RatingCard
-              key={application.id}
+              key={`${application.id}:${interviewerNuid ?? ''}`}
               application={application}
               interview={interview}
               interviewerName={

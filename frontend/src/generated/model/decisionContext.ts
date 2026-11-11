@@ -5,13 +5,13 @@
  * Generate application portal — applications, reviews, and the hiring pipeline.
  * OpenAPI spec version: 0.1.0
  */
-import type { Interview } from './interview';
+import type { DecisionContextInterviews } from './decisionContextInterviews';
 import type { DecisionContextRecordingReviews } from './decisionContextRecordingReviews';
 import type { DecisionContextWrittenReviews } from './decisionContextWrittenReviews';
 
 export interface DecisionContext {
   application_id: string;
-  interview?: Interview;
+  interviews: DecisionContextInterviews;
   recording_reviews: DecisionContextRecordingReviews;
   recording_reviews_blind: boolean;
   written_reviews: DecisionContextWrittenReviews;

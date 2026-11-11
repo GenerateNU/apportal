@@ -60,7 +60,8 @@ export function DecisionListRow({
             {row.kind === 'rejection_post_interview' && (
               <>
                 <span className="md:hidden"> · </span>
-                {row.interviewer_name ?? 'No interviewer'}
+                {row.interviewers.map((iv) => iv.name).join(', ') ||
+                  'No interviewer'}
               </>
             )}
           </p>
@@ -77,7 +78,8 @@ export function DecisionListRow({
         {/* Who owes the paragraph — the column a chief scans to chase people. */}
         <span className="text-text-muted hidden w-36 shrink-0 truncate text-xs lg:block">
           {row.kind === 'rejection_post_interview'
-            ? (row.interviewer_name ?? 'No interviewer')
+            ? row.interviewers.map((iv) => iv.name).join(', ') ||
+              'No interviewer'
             : '—'}
         </span>
         <span

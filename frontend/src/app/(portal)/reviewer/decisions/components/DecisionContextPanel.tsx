@@ -3,6 +3,7 @@
 import { ExternalLink } from 'lucide-react'
 import type {
   DecisionContext,
+  DecisionInterviewer,
   InterviewRating,
   ReviewQuestion,
   WrittenReviewDetail,
@@ -14,10 +15,12 @@ import { RATING_COLORS, RATING_LABEL } from '@/lib/interview-ratings'
 // this page composes the message, it doesn't re-run the review.
 export function DecisionContextPanel({
   context,
+  interviewers,
   reviewQuestions,
   isLoading,
 }: {
   context?: DecisionContext
+  interviewers?: DecisionInterviewer[]
   reviewQuestions: ReviewQuestion[]
   isLoading: boolean
 }) {
@@ -26,9 +29,11 @@ export function DecisionContextPanel({
   }
   if (!context) return null
 
-  const { interview, recording_reviews, written_reviews } = context
+  const { interviews, recording_reviews, written_reviews } = context
   const nothing =
-    !interview && recording_reviews.length === 0 && written_reviews.length === 0
+    interviews.length === 0 &&
+    recording_reviews.length === 0 &&
+    written_reviews.length === 0
 
   return (
     <div className="flex flex-col gap-4">
@@ -42,25 +47,39 @@ export function DecisionContextPanel({
         </p>
       )}
 
-      {interview && (
-        <Section title="Interview write-up">
-          <div className="rounded-lg border border-gray-200 bg-white p-3">
-            <div className="mb-1.5 flex flex-wrap items-center gap-2">
-              <RatingChip rating={interview.rating} />
-              {!interview.submitted_at && (
-                <span className="text-text-faint text-xs">
-                  Draft — not submitted
+      {interviews.length > 0 && (
+        <Section
+          title={
+            interviews.length > 1 ? 'Interview write-ups' : 'Interview write-up'
+          }
+        >
+          {interviews.map((interview) => (
+            <div
+              key={interview.id}
+              className="rounded-lg border border-gray-200 bg-white p-3"
+            >
+              <div className="mb-1.5 flex flex-wrap items-center gap-2">
+                <span className="text-text-default text-sm font-medium">
+                  {interviewers?.find(
+                    (iv) => iv.nuid === interview.interviewer_nuid
+                  )?.name ?? interview.interviewer_nuid}
                 </span>
-              )}
-              {interview.recording_url && (
-                <LinkOut href={interview.recording_url} label="Recording" />
-              )}
-              {interview.notes_url && (
-                <LinkOut href={interview.notes_url} label="Notes" />
-              )}
+                <RatingChip rating={interview.rating} />
+                {!interview.submitted_at && (
+                  <span className="text-text-faint text-xs">
+                    Draft — not submitted
+                  </span>
+                )}
+                {interview.recording_url && (
+                  <LinkOut href={interview.recording_url} label="Recording" />
+                )}
+                {interview.notes_url && (
+                  <LinkOut href={interview.notes_url} label="Notes" />
+                )}
+              </div>
+              <Body text={interview.comments} empty="No comments written." />
             </div>
-            <Body text={interview.comments} empty="No comments written." />
-          </div>
+          ))}
         </Section>
       )}
 

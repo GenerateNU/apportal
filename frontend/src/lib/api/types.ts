@@ -15,6 +15,7 @@ import type {
   ChiefReviewDetailVote,
   Cycle as GenCycle,
   DecisionContext as GenDecisionContext,
+  DecisionInterviewer,
   DecisionRow as GenDecisionRow,
   RecordingReviewDetail as GenRecordingReviewDetail,
   DecisionTemplate as GenDecisionTemplate,
@@ -374,12 +375,15 @@ export type DecisionTemplate = Omit<
   kind: DecisionKind
 }
 
+export type { DecisionInterviewer }
+
 export type DecisionRow = Omit<
   GenDecisionRow,
-  '$schema' | 'application_role' | 'stage'
+  '$schema' | 'application_role' | 'stage' | 'interviewers'
 > & {
   application_role: Role
   stage: ApplicationStage
+  interviewers: DecisionInterviewer[]
 }
 
 // A recording review with its reviewer's name. Peers' comments are absent
@@ -388,12 +392,11 @@ export type RecordingReviewDetail = Omit<GenRecordingReviewDetail, 'rating'> & {
   rating?: InterviewRating
 }
 
-// The review history behind one applicant's decision. Orval leaves the two
-// collections nullable; callers always want arrays.
 export type DecisionContext = Omit<
   GenDecisionContext,
-  '$schema' | 'recording_reviews' | 'written_reviews'
+  '$schema' | 'interviews' | 'recording_reviews' | 'written_reviews'
 > & {
+  interviews: Interview[]
   recording_reviews: RecordingReviewDetail[]
   written_reviews: WrittenReviewDetail[]
 }

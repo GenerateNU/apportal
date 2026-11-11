@@ -55,27 +55,29 @@ type DecisionTemplate struct {
 // far. Everything a row renders arrives here, so the page never fetches per
 // applicant.
 type DecisionRow struct {
-	ApplicationID   string           `json:"application_id"`
-	CycleID         string           `json:"cycle_id"`
-	ApplicationRole Role             `json:"application_role"`
-	ApplicantNUID   string           `json:"applicant_nuid"`
-	FullName        string           `json:"full_name"`
-	Email           string           `json:"email"`
-	Stage           ApplicationStage `json:"stage"`
-	Kind            DecisionKind     `json:"kind"`
-	Status          DecisionStatus   `json:"status"`
-	// InterviewerNUID owes the feedback paragraph. Nil for a generic rejection,
-	// and for a post-interview one whose assignment has since been deleted.
-	InterviewerNUID *string    `json:"interviewer_nuid,omitempty"`
-	InterviewerName *string    `json:"interviewer_name,omitempty"`
-	Feedback        *string    `json:"feedback,omitempty"`
-	Compliments     *string    `json:"compliments,omitempty"`
-	BodyOverride    *string    `json:"body_override,omitempty"`
-	AuthorNUID      *string    `json:"author_nuid,omitempty"`
-	AuthorName      *string    `json:"author_name,omitempty"`
-	SentAt          *time.Time `json:"sent_at,omitempty"`
-	SentBy          *string    `json:"sent_by,omitempty"`
-	UpdatedAt       *time.Time `json:"updated_at,omitempty"`
+	ApplicationID   string                `json:"application_id"`
+	CycleID         string                `json:"cycle_id"`
+	ApplicationRole Role                  `json:"application_role"`
+	ApplicantNUID   string                `json:"applicant_nuid"`
+	FullName        string                `json:"full_name"`
+	Email           string                `json:"email"`
+	Stage           ApplicationStage      `json:"stage"`
+	Kind            DecisionKind          `json:"kind"`
+	Status          DecisionStatus        `json:"status"`
+	Interviewers    []DecisionInterviewer `json:"interviewers"`
+	Feedback        *string               `json:"feedback,omitempty"`
+	Compliments     *string               `json:"compliments,omitempty"`
+	BodyOverride    *string               `json:"body_override,omitempty"`
+	AuthorNUID      *string               `json:"author_nuid,omitempty"`
+	AuthorName      *string               `json:"author_name,omitempty"`
+	SentAt          *time.Time            `json:"sent_at,omitempty"`
+	SentBy          *string               `json:"sent_by,omitempty"`
+	UpdatedAt       *time.Time            `json:"updated_at,omitempty"`
+}
+
+type DecisionInterviewer struct {
+	NUID string `json:"nuid"`
+	Name string `json:"name"`
 }
 
 // RecordingReviewDetail bundles a recording review with its reviewer's
@@ -94,10 +96,8 @@ type RecordingReviewDetail struct {
 // empty panel that reads as "nobody reviewed them": blind review is still in
 // force until a chief releases the cycle × role.
 type DecisionContext struct {
-	ApplicationID string `json:"application_id"`
-	// Interview is the interviewer's own write-up: rating, comments, and the
-	// recording/notes links. Nil when the applicant never interviewed.
-	Interview             *Interview              `json:"interview,omitempty"`
+	ApplicationID         string                  `json:"application_id"`
+	Interviews            []Interview             `json:"interviews"`
 	RecordingReviews      []RecordingReviewDetail `json:"recording_reviews"`
 	WrittenReviews        []WrittenReviewDetail   `json:"written_reviews"`
 	WrittenReviewsBlind   bool                    `json:"written_reviews_blind"`

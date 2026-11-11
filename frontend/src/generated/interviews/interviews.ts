@@ -72,7 +72,7 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
 /**
- * Reviewer only (an assigned interviewer, or a chief). Provided fields overwrite; omitted ones are preserved.
+ * Assigned interviewers, or a chief (on behalf of an assigned interviewer, or as themself when none is). Provided fields overwrite; omitted ones are preserved.
  * @summary Create or update the caller's interview write-up
  */
 export const upsertInterview = (

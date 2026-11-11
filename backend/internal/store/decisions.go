@@ -117,24 +117,24 @@ type DecisionFilter struct {
 // decisionRow mirrors the list query's columns positionally. Separate from
 // models.DecisionRow because Status is computed in Go rather than selected.
 type decisionRow struct {
-	ApplicationID   string
-	CycleID         string
-	ApplicationRole models.Role
-	ApplicantNUID   string
-	FullName        string
-	Email           string
-	Stage           models.ApplicationStage
-	Kind            models.DecisionKind
-	InterviewerNUID *string
-	InterviewerName *string
-	Feedback        *string
-	Compliments     *string
-	BodyOverride    *string
-	AuthorNUID      *string
-	AuthorName      *string
-	SentAt          *time.Time
-	SentBy          *string
-	UpdatedAt       *time.Time
+	ApplicationID    string
+	CycleID          string
+	ApplicationRole  models.Role
+	ApplicantNUID    string
+	FullName         string
+	Email            string
+	Stage            models.ApplicationStage
+	Kind             models.DecisionKind
+	InterviewerNUIDs []string
+	InterviewerNames []string
+	Feedback         *string
+	Compliments      *string
+	BodyOverride     *string
+	AuthorNUID       *string
+	AuthorName       *string
+	SentAt           *time.Time
+	SentBy           *string
+	UpdatedAt        *time.Time
 }
 
 // decisionsFrom builds FROM through WHERE. Both the list and the single-row
@@ -146,14 +146,17 @@ func decisionsFrom(f DecisionFilter, applicationID string) (string, []any) {
 		JOIN users u ON u.nuid = a.user_nuid
 		LEFT JOIN decision_drafts dd ON dd.application_id = a.id
 		LEFT JOIN LATERAL (
-			SELECT interviewer_nuid FROM interviews
-			WHERE application_id = a.id ORDER BY created_at, id LIMIT 1
-		) iv ON TRUE
-		LEFT JOIN LATERAL (
-			SELECT interviewer_nuid FROM interview_assignments
-			WHERE application_id = a.id ORDER BY assigned_at, id LIMIT 1
-		) ia ON TRUE
-		LEFT JOIN users iu ON iu.nuid = COALESCE(iv.interviewer_nuid, ia.interviewer_nuid)
+			SELECT array_agg(x.nuid ORDER BY x.first_at, x.nuid) AS nuids,
+			       array_agg(COALESCE(xu.full_name, x.nuid) ORDER BY x.first_at, x.nuid) AS names
+			FROM (
+				SELECT interviewer_nuid AS nuid, MIN(at) AS first_at FROM (
+					SELECT interviewer_nuid, assigned_at AS at FROM interview_assignments WHERE application_id = a.id
+					UNION ALL
+					SELECT interviewer_nuid, created_at FROM interviews WHERE application_id = a.id
+				) s GROUP BY interviewer_nuid
+			) x
+			LEFT JOIN users xu ON xu.nuid = x.nuid
+		) ivs ON TRUE
 		LEFT JOIN users au ON au.nuid = dd.author_nuid
 		WHERE 1 = 1`
 	args := []any{}
@@ -184,7 +187,7 @@ func decisionsFrom(f DecisionFilter, applicationID string) (string, []any) {
 	}
 	if f.InterviewerNUID != "" {
 		args = append(args, f.InterviewerNUID)
-		query += ` AND COALESCE(iv.interviewer_nuid, ia.interviewer_nuid) = $` + strconv.Itoa(len(args))
+		query += ` AND $` + strconv.Itoa(len(args)) + ` = ANY(ivs.nuids)`
 	}
 	if f.Search != "" {
 		args = append(args, "%"+escapeLike(f.Search)+"%")
@@ -200,14 +203,14 @@ func decisionsFrom(f DecisionFilter, applicationID string) (string, []any) {
 // derived from whether the applicant has an interview or an interviewer
 // assigned.
 const decisionKindExpr = `COALESCE(dd.kind, CASE
-		WHEN iv.interviewer_nuid IS NOT NULL OR ia.interviewer_nuid IS NOT NULL
+		WHEN ivs.nuids IS NOT NULL
 		THEN 'rejection_post_interview'::decision_kind
 		ELSE 'rejection_generic'::decision_kind
 	END)`
 
 const decisionRowColumns = `a.id, a.cycle_id, a.application_role, a.user_nuid, u.full_name, u.email, a.stage,
 	` + decisionKindExpr + `,
-	COALESCE(iv.interviewer_nuid, ia.interviewer_nuid), iu.full_name,
+	ivs.nuids, ivs.names,
 	dd.feedback, dd.compliments, dd.body_override, dd.author_nuid, au.full_name,
 	dd.sent_at, dd.sent_by, dd.updated_at`
 
@@ -379,8 +382,7 @@ func toDecisionRow(r decisionRow) models.DecisionRow {
 		Stage:           r.Stage,
 		Kind:            r.Kind,
 		Status:          DecisionStatusFor(r.Kind, r.Feedback, r.Compliments, r.BodyOverride, r.SentAt),
-		InterviewerNUID: r.InterviewerNUID,
-		InterviewerName: r.InterviewerName,
+		Interviewers:    interviewersOf(r.InterviewerNUIDs, r.InterviewerNames),
 		Feedback:        r.Feedback,
 		Compliments:     r.Compliments,
 		BodyOverride:    r.BodyOverride,
@@ -390,6 +392,14 @@ func toDecisionRow(r decisionRow) models.DecisionRow {
 		SentBy:          r.SentBy,
 		UpdatedAt:       r.UpdatedAt,
 	}
+}
+
+func interviewersOf(nuids, names []string) []models.DecisionInterviewer {
+	out := make([]models.DecisionInterviewer, len(nuids))
+	for i, nuid := range nuids {
+		out[i] = models.DecisionInterviewer{NUID: nuid, Name: names[i]}
+	}
+	return out
 }
 
 // DecisionStatusFor derives a row's status. A generic rejection is ready the

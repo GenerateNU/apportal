@@ -25,10 +25,12 @@ import type {
   Role,
   User,
 } from '@/lib/api/types'
+import { APIError } from '@/lib/api/client'
 import { useApplications } from '@/lib/queries/applications'
 import { pickDefaultCycleId, useCycles } from '@/lib/queries/cycles'
 import {
   useAddInterviewer,
+  useAddInterviewerBulk,
   useAssignRecordingReviewer,
   useInterviewAssignmentsBulk,
   useRecordingReviewerAssignmentsByApplications,
@@ -100,6 +102,7 @@ export function InterviewAssignmentsClient() {
   }, [appIds, reviewerQueries])
 
   const addInterviewer = useAddInterviewer()
+  const addInterviewerBulk = useAddInterviewerBulk()
   const unassignInterviewer = useUnassignInterviewer()
   const assignReviewer = useAssignRecordingReviewer()
   const unassignReviewer = useUnassignRecordingReviewer()
@@ -109,9 +112,7 @@ export function InterviewAssignmentsClient() {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [bulkInterviewerNuid, setBulkInterviewerNuid] = useState('')
   const [bulkReviewerNuid, setBulkReviewerNuid] = useState('')
-  const [assigningInterviewers, setAssigningInterviewers] = useState(false)
   const [assigningReviewers, setAssigningReviewers] = useState(false)
-  const [interviewerFailures, setInterviewerFailures] = useState(0)
   const [reviewerFailures, setReviewerFailures] = useState(0)
   const [confirmingUnassignAll, setConfirmingUnassignAll] =
     useState<ConfirmingUnassignAll | null>(null)
@@ -125,26 +126,12 @@ export function InterviewAssignmentsClient() {
     })
   }
 
-  async function assignInterviewerToSelected() {
+  function assignInterviewerToSelected() {
     if (!bulkInterviewerNuid || selected.size === 0) return
-    setAssigningInterviewers(true)
-    setInterviewerFailures(0)
-    const results = await Promise.allSettled(
-      [...selected].map((applicationId) =>
-        addInterviewer.mutateAsync({
-          applicationId,
-          interviewerNuid: bulkInterviewerNuid,
-        })
-      )
+    addInterviewerBulk.mutate(
+      { applicationIds: [...selected], interviewerNuid: bulkInterviewerNuid },
+      { onSuccess: () => setSelected(new Set()) }
     )
-    const failures = results.filter(
-      (r) =>
-        r.status === 'rejected' &&
-        !String((r.reason as Error)?.message).includes('409')
-    ).length
-    setInterviewerFailures(failures)
-    if (failures === 0) setSelected(new Set())
-    setAssigningInterviewers(false)
   }
 
   async function assignReviewerToSelected() {
@@ -162,7 +149,7 @@ export function InterviewAssignmentsClient() {
     const failures = results.filter(
       (r) =>
         r.status === 'rejected' &&
-        !String((r.reason as Error)?.message).includes('409')
+        !(r.reason instanceof APIError && r.reason.status === 409)
     ).length
     setReviewerFailures(failures)
     if (failures === 0) setSelected(new Set())
@@ -232,10 +219,9 @@ export function InterviewAssignmentsClient() {
         <span className="text-text-faint text-sm">
           {selected.size} selected
         </span>
-        {interviewerFailures > 0 && (
+        {addInterviewerBulk.isError && (
           <span className="text-destructive text-sm">
-            {interviewerFailures} interviewer assignment
-            {interviewerFailures === 1 ? '' : 's'} failed
+            Couldn&apos;t add the interviewer
           </span>
         )}
         {reviewerFailures > 0 && (
@@ -266,10 +252,10 @@ export function InterviewAssignmentsClient() {
             disabled={
               !bulkInterviewerNuid ||
               selected.size === 0 ||
-              assigningInterviewers
+              addInterviewerBulk.isPending
             }
           >
-            {assigningInterviewers ? (
+            {addInterviewerBulk.isPending ? (
               <>
                 <Loader2 className="animate-spin" size={14} />
                 Assigning…

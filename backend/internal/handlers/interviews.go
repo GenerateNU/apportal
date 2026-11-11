@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
@@ -22,7 +23,7 @@ func (h *interviewHandler) register(api huma.API) {
 		Method:      http.MethodPut,
 		Path:        "/applications/{id}/interview",
 		Summary:     "Create or update the caller's interview write-up",
-		Description: "Reviewer only (an assigned interviewer, or a chief). Provided fields overwrite; omitted ones are preserved.",
+		Description: "Assigned interviewers, or a chief (on behalf of an assigned interviewer, or as themself when none is). Provided fields overwrite; omitted ones are preserved.",
 		Tags:        []string{"Interviews"},
 		Errors:      []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusUnprocessableEntity},
 	}, h.upsert)
@@ -89,13 +90,14 @@ func (h *interviewHandler) listBulk(ctx context.Context, in *ListInterviewsBulkI
 type UpsertInterviewInput struct {
 	ID   string `path:"id" doc:"Application ID"`
 	Body struct {
-		ScheduledAt  *time.Time              `json:"scheduled_at,omitempty"`
-		ConductedAt  *time.Time              `json:"conducted_at,omitempty"`
-		RecordingURL *string                 `json:"recording_url,omitempty"`
-		NotesURL     *string                 `json:"notes_url,omitempty"`
-		Comments     *string                 `json:"comments,omitempty"`
-		Rating       *models.InterviewRating `json:"rating,omitempty"`
-		Submit       bool                    `json:"submit,omitempty" doc:"When true, marks the interview as submitted"`
+		ScheduledAt     *time.Time              `json:"scheduled_at,omitempty"`
+		ConductedAt     *time.Time              `json:"conducted_at,omitempty"`
+		RecordingURL    *string                 `json:"recording_url,omitempty"`
+		NotesURL        *string                 `json:"notes_url,omitempty"`
+		Comments        *string                 `json:"comments,omitempty"`
+		Rating          *models.InterviewRating `json:"rating,omitempty"`
+		Submit          bool                    `json:"submit,omitempty" doc:"When true, marks the interview as submitted"`
+		InterviewerNUID string                  `json:"interviewer_nuid,omitempty" doc:"Chief only. Which assigned interviewer's write-up to edit; may be omitted when exactly one is assigned."`
 	}
 }
 
@@ -107,21 +109,14 @@ func (h *interviewHandler) upsert(ctx context.Context, in *UpsertInterviewInput)
 		return nil, huma.Error422UnprocessableEntity("invalid rating")
 	}
 
-	actor := currentActor(ctx)
-	isChief := actor.HasAnyRole(models.UserRoleChief, models.UserRoleAdmin)
-	if !isChief {
-		assigned, err := h.store.IsAssignedInterviewer(ctx, in.ID, actor.NUID)
-		if err != nil {
-			return nil, storeErr(err)
-		}
-		if !assigned {
-			return nil, huma.Error403Forbidden("only the assigned interviewer may submit this interview")
-		}
+	interviewerNUID, err := h.writeUpOwner(ctx, in.ID, strings.TrimSpace(in.Body.InterviewerNUID))
+	if err != nil {
+		return nil, err
 	}
 
 	iv, err := h.store.UpsertInterview(ctx, store.InterviewUpsert{
 		ApplicationID:   in.ID,
-		InterviewerNUID: actor.NUID,
+		InterviewerNUID: interviewerNUID,
 		ScheduledAt:     in.Body.ScheduledAt,
 		ConductedAt:     in.Body.ConductedAt,
 		RecordingURL:    in.Body.RecordingURL,
@@ -139,6 +134,40 @@ func (h *interviewHandler) upsert(ctx context.Context, in *UpsertInterviewInput)
 	}
 
 	return &InterviewOutput{Body: iv}, nil
+}
+
+func (h *interviewHandler) writeUpOwner(ctx context.Context, applicationID, requested string) (string, error) {
+	actor := currentActor(ctx)
+	isChief := actor.HasAnyRole(models.UserRoleChief, models.UserRoleAdmin)
+	if requested != "" && !isChief {
+		return "", huma.Error403Forbidden("chief role required to edit another interviewer's write-up")
+	}
+
+	assignments, err := h.store.ListInterviewAssignments(ctx, applicationID)
+	if err != nil {
+		return "", storeErr(err)
+	}
+	assigned := func(nuid string) bool {
+		return slices.ContainsFunc(assignments, func(a models.InterviewAssignment) bool { return a.InterviewerNUID == nuid })
+	}
+
+	switch {
+	case requested != "":
+		if !assigned(requested) {
+			return "", huma.Error422UnprocessableEntity("interviewer_nuid is not assigned to this application")
+		}
+		return requested, nil
+	case assigned(actor.NUID):
+		return actor.NUID, nil
+	case !isChief:
+		return "", huma.Error403Forbidden("only an assigned interviewer may submit this interview")
+	case len(assignments) == 0:
+		return actor.NUID, nil
+	case len(assignments) == 1:
+		return assignments[0].InterviewerNUID, nil
+	default:
+		return "", huma.Error422UnprocessableEntity("interviewer_nuid is required when several interviewers are assigned")
+	}
 }
 
 func (h *interviewHandler) list(ctx context.Context, in *ApplicationScopedInput) (*InterviewsOutput, error) {

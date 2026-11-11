@@ -13,7 +13,7 @@ export function ApplicantRow({
   answers,
   answersLoading,
   availabilityDays,
-  interview,
+  interviews,
   selectable,
   selected,
   onToggleSelect,
@@ -28,7 +28,7 @@ export function ApplicantRow({
   // asserting "No response".
   answersLoading: boolean
   availabilityDays: string[]
-  interview: Interview | null
+  interviews: Interview[]
   selectable: boolean
   selected: boolean
   onToggleSelect: () => void
@@ -80,12 +80,17 @@ export function ApplicantRow({
       )}
       <td className="min-w-36 border-r border-gray-100 px-3 py-2 whitespace-nowrap">
         <div className="flex items-center gap-1.5">
-          {interview?.rating ? (
-            <span
-              className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${RATING_COLORS[interview.rating].bg} ${RATING_COLORS[interview.rating].text}`}
-            >
-              {RATING_LABEL[interview.rating]}
-            </span>
+          {interviews.some((iv) => iv.rating) ? (
+            interviews.map((iv) =>
+              iv.rating ? (
+                <span
+                  key={iv.id}
+                  className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${RATING_COLORS[iv.rating].bg} ${RATING_COLORS[iv.rating].text}`}
+                >
+                  {RATING_LABEL[iv.rating]}
+                </span>
+              ) : null
+            )
           ) : (
             <span className="text-text-faint text-sm">—</span>
           )}

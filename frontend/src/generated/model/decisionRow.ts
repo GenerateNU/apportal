@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { DecisionRowApplicationRole } from './decisionRowApplicationRole';
+import type { DecisionRowInterviewers } from './decisionRowInterviewers';
 import type { DecisionRowKind } from './decisionRowKind';
 import type { DecisionRowStage } from './decisionRowStage';
 import type { DecisionRowStatus } from './decisionRowStatus';
@@ -24,8 +25,7 @@ export interface DecisionRow {
   email: string;
   feedback?: string;
   full_name: string;
-  interviewer_name?: string;
-  interviewer_nuid?: string;
+  interviewers: DecisionRowInterviewers;
   kind: DecisionRowKind;
   sent_at?: string;
   sent_by?: string;
