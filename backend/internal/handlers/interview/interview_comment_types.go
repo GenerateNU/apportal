@@ -3,11 +3,11 @@ package interview
 import "github.com/GenerateNU/apportal/backend/internal/models"
 
 type InterviewCommentOutput struct {
-	Body models.InterviewCommentDetail
+	Body models.ApplicationCommentDetail
 }
 
 type InterviewCommentsOutput struct {
-	Body []models.InterviewCommentDetail
+	Body []models.ApplicationCommentDetail
 }
 
 type CreateInterviewCommentInput struct {

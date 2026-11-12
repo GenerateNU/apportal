@@ -231,12 +231,9 @@ type InterviewDetail struct {
 	Interviewers []InterviewerDetail `json:"interviewers" gorm:"-"`
 }
 
-// InterviewComment is an open comment on an application's interview, visible
-// to and postable by any reviewer — unlike ChiefReviewComment, not restricted
-// to chiefs, since interview calibration is meant to be a shared discussion.
-type InterviewComment struct {
+type ApplicationComment struct {
 	ID            string      `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
-	ApplicationID string      `json:"application_id" gorm:"type:uuid;not null;index:idx_interview_comments_app"`
+	ApplicationID string      `json:"application_id" gorm:"type:uuid;not null;index:idx_application_comments_app"`
 	AuthorNUID    string      `json:"author_nuid" gorm:"not null"`
 	Body          string      `json:"body" gorm:"not null"`
 	CreatedAt     time.Time   `json:"created_at" gorm:"not null;default:now()"`
@@ -245,11 +242,31 @@ type InterviewComment struct {
 	Author        User        `json:"-" gorm:"foreignKey:AuthorNUID;references:NUID"`
 }
 
-// InterviewCommentDetail bundles a comment with the author's resolved display
+// ApplicationCommentDetail bundles a comment with the author's resolved display
 // name (not a table column).
-type InterviewCommentDetail struct {
-	InterviewComment
+type ApplicationCommentDetail struct {
+	ApplicationComment
 	AuthorName string `json:"author_name,omitempty"`
+}
+
+type InterviewGroup struct {
+	ID          string     `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	CycleID     string     `json:"cycle_id" gorm:"type:uuid;not null;uniqueIndex:interview_groups_cycle_id_name_key,priority:1"`
+	Name        string     `json:"name" gorm:"not null;uniqueIndex:interview_groups_cycle_id_name_key,priority:2"`
+	MeetingSlot *time.Time `json:"meeting_slot,omitempty"`
+	CreatedBy   string     `json:"created_by" gorm:"not null"`
+	CreatedAt   time.Time  `json:"created_at" gorm:"not null;default:now()"`
+	UpdatedAt   time.Time  `json:"updated_at" gorm:"not null;default:now()"`
+	Cycle       Cycle      `json:"-" gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
+	Creator     User       `json:"-" gorm:"foreignKey:CreatedBy;references:NUID"`
+}
+
+type InterviewGroupMember struct {
+	GroupID    string         `json:"group_id" gorm:"primaryKey;type:uuid"`
+	MemberNUID string         `json:"member_nuid" gorm:"primaryKey;index:idx_interview_group_members_member"`
+	AddedAt    time.Time      `json:"added_at" gorm:"not null;default:now()"`
+	Group      InterviewGroup `json:"-" gorm:"foreignKey:GroupID;references:ID;constraint:OnDelete:CASCADE"`
+	Member     User           `json:"-" gorm:"foreignKey:MemberNUID;references:NUID"`
 }
 
 // LeadSelection: a lead marking an application as wanted for their team.

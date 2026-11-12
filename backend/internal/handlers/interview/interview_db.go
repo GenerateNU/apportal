@@ -93,33 +93,33 @@ func (i *InterviewDB) GetInterviewDetail(ctx context.Context, applicationID stri
 }
 
 // CreateInterviewComment adds a comment; any reviewer may leave any number.
-func (i *InterviewDB) CreateInterviewComment(ctx context.Context, applicationID, authorNUID, body string) (models.InterviewCommentDetail, error) {
-	comment := models.InterviewComment{ApplicationID: applicationID, AuthorNUID: authorNUID, Body: body}
+func (i *InterviewDB) CreateInterviewComment(ctx context.Context, applicationID, authorNUID, body string) (models.ApplicationCommentDetail, error) {
+	comment := models.ApplicationComment{ApplicationID: applicationID, AuthorNUID: authorNUID, Body: body}
 	if err := utils.Insert(i.db.WithContext(ctx), &comment, "application_id", "author_nuid", "body"); err != nil {
-		return models.InterviewCommentDetail{}, err
+		return models.ApplicationCommentDetail{}, err
 	}
 	return i.commentDetail(ctx, comment)
 }
 
 // UpdateInterviewComment edits the author's own comment. ErrNotFound covers
 // both "doesn't exist" and "isn't yours".
-func (i *InterviewDB) UpdateInterviewComment(ctx context.Context, commentID, authorNUID, body string) (models.InterviewCommentDetail, error) {
-	comment, err := utils.UpdateReturning[models.InterviewComment](i.db.WithContext(ctx),
+func (i *InterviewDB) UpdateInterviewComment(ctx context.Context, commentID, authorNUID, body string) (models.ApplicationCommentDetail, error) {
+	comment, err := utils.UpdateReturning[models.ApplicationComment](i.db.WithContext(ctx),
 		map[string]any{"body": body, "updated_at": gorm.Expr("NOW()")}, "id = ? AND author_nuid = ?", commentID, authorNUID)
 	if err != nil {
-		return models.InterviewCommentDetail{}, err
+		return models.ApplicationCommentDetail{}, err
 	}
 	return i.commentDetail(ctx, comment)
 }
 
-func (i *InterviewDB) commentDetail(ctx context.Context, comment models.InterviewComment) (models.InterviewCommentDetail, error) {
+func (i *InterviewDB) commentDetail(ctx context.Context, comment models.ApplicationComment) (models.ApplicationCommentDetail, error) {
 	names, err := i.users.NamesByNUIDs(ctx, []string{comment.AuthorNUID})
-	return models.InterviewCommentDetail{InterviewComment: comment, AuthorName: names[comment.AuthorNUID]}, err
+	return models.ApplicationCommentDetail{ApplicationComment: comment, AuthorName: names[comment.AuthorNUID]}, err
 }
 
 // ListInterviewComments returns an application's comments, oldest first.
-func (i *InterviewDB) ListInterviewComments(ctx context.Context, applicationID string) ([]models.InterviewCommentDetail, error) {
-	var comments []models.InterviewComment
+func (i *InterviewDB) ListInterviewComments(ctx context.Context, applicationID string) ([]models.ApplicationCommentDetail, error) {
+	var comments []models.ApplicationComment
 	err := i.db.WithContext(ctx).Where("application_id = ?", applicationID).Order("created_at").Find(&comments).Error
 	if err != nil {
 		return nil, err
@@ -132,9 +132,9 @@ func (i *InterviewDB) ListInterviewComments(ctx context.Context, applicationID s
 	if err != nil {
 		return nil, err
 	}
-	details := make([]models.InterviewCommentDetail, len(comments))
+	details := make([]models.ApplicationCommentDetail, len(comments))
 	for n, c := range comments {
-		details[n] = models.InterviewCommentDetail{InterviewComment: c, AuthorName: names[c.AuthorNUID]}
+		details[n] = models.ApplicationCommentDetail{ApplicationComment: c, AuthorName: names[c.AuthorNUID]}
 	}
 	return details, nil
 }
