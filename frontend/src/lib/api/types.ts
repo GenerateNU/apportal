@@ -32,7 +32,7 @@ import type {
   InterviewDetail as GenInterviewDetail,
   InterviewerDetail as GenInterviewerDetail,
   InterviewReviewerDetail as GenInterviewReviewerDetail,
-  InterviewCommentDetail as GenInterviewCommentDetail,
+  ApplicationCommentDetail as GenInterviewCommentDetail,
   InterviewScript as GenInterviewScript,
   PreferenceList as GenPreferenceList,
   PreferenceListCommentDetail as GenPreferenceListCommentDetail,

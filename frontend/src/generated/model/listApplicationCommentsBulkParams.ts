@@ -6,9 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface UpdateInterviewCommentInputBody {
-  /** A URL to the JSON Schema for this object. */
-  readonly $schema?: string;
-  /** @minLength 1 */
-  body: string;
-}
+export type ListApplicationCommentsBulkParams = {
+/**
+ * Comma-separated application IDs
+ */
+application_ids?: string;
+};
