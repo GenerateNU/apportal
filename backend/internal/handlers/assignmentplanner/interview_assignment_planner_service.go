@@ -7,6 +7,7 @@ import (
 
 	"github.com/GenerateNU/apportal/backend/internal/handlers/application"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/interviewassignment"
+	"github.com/GenerateNU/apportal/backend/internal/handlers/interviewgroup"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/leadassignment"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/user"
 	"github.com/GenerateNU/apportal/backend/internal/interviewassign"
@@ -32,6 +33,7 @@ import (
 type interviewAssignmentPlannerService struct {
 	applicationDB         *application.ApplicationDB
 	interviewAssignmentDB *interviewassignment.InterviewAssignmentDB
+	interviewGroupDB      *interviewgroup.InterviewGroupDB
 	leadAssignmentDB      *leadassignment.LeadAssignmentDB
 	userDB                *user.UserDB
 }
@@ -88,6 +90,9 @@ func (s *interviewAssignmentPlannerService) interviewerCapacity(ctx context.Cont
 	if !in.Body.Role.Valid() {
 		return nil, huma.Error422UnprocessableEntity("role is invalid")
 	}
+	if len(in.Body.Leads) > 0 && len(in.Body.Groups) > 0 {
+		return nil, huma.Error422UnprocessableEntity("send leads or groups, not both")
+	}
 
 	pool, err := s.interviewPool(ctx, in.ID, in.Body.Role)
 	if err != nil {
@@ -97,7 +102,7 @@ func (s *interviewAssignmentPlannerService) interviewerCapacity(ctx context.Cont
 
 	out, err := interviewassign.SuggestCapacity(interviewassign.CapacityInput{
 		Applicants: len(pool),
-		Leads:      len(in.Body.Leads),
+		Leads:      len(in.Body.Leads) + len(in.Body.Groups),
 		Coverage:   1,
 	})
 	if err != nil {
@@ -110,8 +115,11 @@ func (s *interviewAssignmentPlannerService) buildInterviewerPlan(ctx context.Con
 	if !in.Body.Role.Valid() {
 		return interviewerRun{}, huma.Error422UnprocessableEntity("role is invalid")
 	}
-	if len(in.Body.Leads) == 0 {
-		return interviewerRun{}, huma.Error422UnprocessableEntity("at least one lead is required")
+	if len(in.Body.Leads) > 0 && len(in.Body.Groups) > 0 {
+		return interviewerRun{}, huma.Error422UnprocessableEntity("send leads or groups, not both")
+	}
+	if len(in.Body.Leads) == 0 && len(in.Body.Groups) == 0 {
+		return interviewerRun{}, huma.Error422UnprocessableEntity("at least one lead or group is required")
 	}
 
 	pool, err := s.interviewPool(ctx, in.ID, in.Body.Role)
@@ -148,7 +156,7 @@ func (s *interviewAssignmentPlannerService) buildInterviewerPlan(ctx context.Con
 		return interviewerRun{}, utils.StoreErr(err)
 	}
 
-	plan, err := interviewassign.PlanInterviewers(interviewassign.InterviewerInput{
+	planIn := interviewassign.InterviewerInput{
 		Applicants:   applicants,
 		Leads:        toInterviewassignLeads(in.Body.Leads),
 		Existing:     existing,
@@ -157,12 +165,109 @@ func (s *interviewAssignmentPlannerService) buildInterviewerPlan(ctx context.Con
 		Cap:          in.Body.Cap,
 		CapOverrides: in.Body.CapOverrides,
 		Seed:         interviewassign.SeedFrom(in.ID, string(in.Body.Role), "interviewer"),
-	})
+	}
+	var groups map[string]models.InterviewGroupDetail
+	if len(in.Body.Groups) > 0 {
+		if groups, err = s.loadPlanGroups(ctx, in.ID, in.Body.Groups); err != nil {
+			return interviewerRun{}, err
+		}
+		planIn = asGroupInput(planIn, in.Body.Groups, groups)
+		planIn.Seed = interviewassign.SeedFrom(in.ID, string(in.Body.Role), "interviewer-groups")
+	}
+
+	plan, err := interviewassign.PlanInterviewers(planIn)
 	if err != nil {
 		return interviewerRun{}, huma.Error422UnprocessableEntity(err.Error())
 	}
 
-	return interviewerRun{plan: plan, prior: existing, byID: byID, appIDs: appIDs}, nil
+	return interviewerRun{plan: plan, prior: planIn.Existing, byID: byID, appIDs: appIDs, groups: groups}, nil
+}
+
+func (s *interviewAssignmentPlannerService) loadPlanGroups(ctx context.Context, cycleID string, in []PlanGroupDay) (map[string]models.InterviewGroupDetail, error) {
+	ids := make([]string, len(in))
+	for i, g := range in {
+		ids[i] = g.GroupID
+	}
+	found, err := s.interviewGroupDB.GetMany(ctx, ids)
+	if err != nil {
+		return nil, utils.StoreErr(err)
+	}
+	out := make(map[string]models.InterviewGroupDetail, len(found))
+	for _, g := range found {
+		if g.CycleID != cycleID {
+			return nil, huma.Error422UnprocessableEntity("group " + g.ID + " belongs to a different cycle")
+		}
+		if len(g.Members) == 0 {
+			return nil, huma.Error422UnprocessableEntity("group " + g.Name + " has no members")
+		}
+		out[g.ID] = g
+	}
+	for _, id := range ids {
+		if _, ok := out[id]; !ok {
+			return nil, huma.Error422UnprocessableEntity("group " + id + " does not exist")
+		}
+	}
+	return out, nil
+}
+
+func asGroupInput(in interviewassign.InterviewerInput, days []PlanGroupDay, groups map[string]models.InterviewGroupDetail) interviewassign.InterviewerInput {
+	units := make([]interviewassign.Lead, len(days))
+	groupsOf := map[string][]string{}
+	for i, d := range days {
+		units[i] = interviewassign.Lead{NUID: d.GroupID, Day: d.Day}
+		for _, m := range groups[d.GroupID].Members {
+			groupsOf[m.MemberNUID] = append(groupsOf[m.MemberNUID], d.GroupID)
+		}
+	}
+	toGroups := func(nuids map[string]bool) map[string]bool {
+		out := map[string]bool{}
+		for nuid := range nuids {
+			for _, g := range groupsOf[nuid] {
+				out[g] = true
+			}
+		}
+		return out
+	}
+	remap := func(byApp map[string]map[string]bool) map[string]map[string]bool {
+		out := make(map[string]map[string]bool, len(byApp))
+		for app, nuids := range byApp {
+			out[app] = toGroups(nuids)
+		}
+		return out
+	}
+
+	existing := make(map[string][]string, len(in.Existing))
+	for app, nuids := range in.Existing {
+		set := make(map[string]bool, len(nuids))
+		for _, n := range nuids {
+			set[n] = true
+		}
+		existing[app] = []string{}
+		for g := range toGroups(set) {
+			existing[app] = append(existing[app], g)
+		}
+	}
+
+	in.Leads = units
+	in.Existing = existing
+	in.WroteReview = remap(in.WroteReview)
+	in.Conflicts = remap(in.Conflicts)
+	return in
+}
+
+func (run interviewerRun) newPairs() []interviewassignment.AssignmentPair {
+	pairs := make([]interviewassignment.AssignmentPair, 0, len(run.plan.New))
+	for _, p := range run.plan.New {
+		g, isGroup := run.groups[p.LeadNUID]
+		if !isGroup {
+			pairs = append(pairs, interviewassignment.AssignmentPair{ApplicationID: p.ApplicationID, LeadNUID: p.LeadNUID})
+			continue
+		}
+		for _, m := range g.Members {
+			pairs = append(pairs, interviewassignment.AssignmentPair{ApplicationID: p.ApplicationID, LeadNUID: m.MemberNUID})
+		}
+	}
+	return pairs
 }
 
 func (s *interviewAssignmentPlannerService) interviewerPreview(ctx context.Context, in *InterviewerPreviewInput) (*PreviewInterviewerPlanOutput, error) {
@@ -189,11 +294,7 @@ func (s *interviewAssignmentPlannerService) interviewerCommit(ctx context.Contex
 		return nil, err
 	}
 
-	pairs := make([]interviewassignment.AssignmentPair, len(run.plan.New))
-	for i, p := range run.plan.New {
-		pairs[i] = interviewassignment.AssignmentPair{ApplicationID: p.ApplicationID, LeadNUID: p.LeadNUID}
-	}
-	created, err := s.interviewAssignmentDB.CreateInterviewers(ctx, pairs, utils.CurrentActor(ctx).NUID)
+	created, err := s.interviewAssignmentDB.CreateInterviewers(ctx, run.newPairs(), utils.CurrentActor(ctx).NUID)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
@@ -244,9 +345,24 @@ func (s *interviewAssignmentPlannerService) decorateInterviewerPlan(ctx context.
 	}
 
 	interviewers := make([]PlannedInterviewer, 0, len(run.plan.Loads))
+	groups := make([]PlannedGroup, 0, len(run.groups))
 	for _, l := range run.plan.Loads {
 		q := queues[l.LeadNUID]
 		sortPlannedApplications(q)
+		if g, isGroup := run.groups[l.LeadNUID]; isGroup {
+			groups = append(groups, PlannedGroup{
+				GroupID:      g.ID,
+				Name:         g.Name,
+				Day:          l.Day,
+				Cap:          l.Cap,
+				Existing:     l.Existing,
+				Added:        l.Added,
+				Total:        l.Total,
+				Members:      g.Members,
+				Applications: q,
+			})
+			continue
+		}
 		interviewers = append(interviewers, PlannedInterviewer{
 			LeadNUID:     l.LeadNUID,
 			FullName:     names[l.LeadNUID],
@@ -274,6 +390,7 @@ func (s *interviewAssignmentPlannerService) decorateInterviewerPlan(ctx context.
 	return InterviewerPlanPreview{
 		PoolSize:     len(run.appIDs),
 		Interviewers: interviewers,
+		Groups:       groups,
 		Unassigned:   toPlannedApplications(run.plan.Unassigned),
 		NoDayMatch:   toPlannedApplications(run.plan.NoDayMatch),
 		Warnings:     run.plan.Warnings,

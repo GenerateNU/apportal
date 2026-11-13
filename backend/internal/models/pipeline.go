@@ -231,9 +231,12 @@ type InterviewDetail struct {
 	Interviewers []InterviewerDetail `json:"interviewers" gorm:"-"`
 }
 
-type ApplicationComment struct {
+// InterviewComment is an open comment on an application's interview, visible
+// to and postable by any reviewer — unlike ChiefReviewComment, not restricted
+// to chiefs, since interview calibration is meant to be a shared discussion.
+type InterviewComment struct {
 	ID            string      `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
-	ApplicationID string      `json:"application_id" gorm:"type:uuid;not null;index:idx_application_comments_app"`
+	ApplicationID string      `json:"application_id" gorm:"type:uuid;not null;index:idx_interview_comments_app"`
 	AuthorNUID    string      `json:"author_nuid" gorm:"not null"`
 	Body          string      `json:"body" gorm:"not null"`
 	CreatedAt     time.Time   `json:"created_at" gorm:"not null;default:now()"`
@@ -242,10 +245,10 @@ type ApplicationComment struct {
 	Author        User        `json:"-" gorm:"foreignKey:AuthorNUID;references:NUID"`
 }
 
-// ApplicationCommentDetail bundles a comment with the author's resolved display
+// InterviewCommentDetail bundles a comment with the author's resolved display
 // name (not a table column).
-type ApplicationCommentDetail struct {
-	ApplicationComment
+type InterviewCommentDetail struct {
+	InterviewComment
 	AuthorName string `json:"author_name,omitempty"`
 }
 
@@ -267,6 +270,17 @@ type InterviewGroupMember struct {
 	AddedAt    time.Time      `json:"added_at" gorm:"not null;default:now()"`
 	Group      InterviewGroup `json:"-" gorm:"foreignKey:GroupID;references:ID;constraint:OnDelete:CASCADE"`
 	Member     User           `json:"-" gorm:"foreignKey:MemberNUID;references:NUID"`
+}
+
+type InterviewGroupDetail struct {
+	InterviewGroup
+	Members []InterviewGroupMemberDetail `json:"members" gorm:"-"`
+}
+
+type InterviewGroupMemberDetail struct {
+	GroupID    string `json:"-"`
+	MemberNUID string `json:"member_nuid"`
+	FullName   string `json:"full_name"`
 }
 
 // LeadSelection: a lead marking an application as wanted for their team.

@@ -128,7 +128,7 @@ type PreferenceListPersonalEntryDetail struct {
 }
 
 // PreferenceListComment is an open comment within a group's shared list —
-// mirrors ApplicationComment's shape (any member may post, edit only their
+// mirrors InterviewComment's shape (any member may post, edit only their
 // own). ApplicationID nil means a comment on the group as a whole; set means
 // a comment on that one applicant/entry. Scoped to the shared list only, not
 // personal lists.

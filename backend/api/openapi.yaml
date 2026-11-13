@@ -287,6 +287,29 @@ components:
         - total
         - stage_counts
       type: object
+    AssignGroupOutputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/AssignGroupOutputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        added:
+          format: int64
+          type: integer
+        interviewers:
+          items:
+            $ref: "#/components/schemas/InterviewerDetail"
+          type:
+            - array
+            - "null"
+      required:
+        - added
+        - interviewers
+      type: object
     AssignmentPlanPreview:
       additionalProperties: false
       properties:
@@ -1704,6 +1727,32 @@ components:
           format: uri
           type: string
       type: object
+    GroupBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/GroupBody.json
+          format: uri
+          readOnly: true
+          type: string
+        meeting_slot:
+          format: date-time
+          type: string
+        member_nuids:
+          items:
+            type: string
+          type:
+            - array
+            - "null"
+        name:
+          minLength: 1
+          type: string
+      required:
+        - name
+        - member_nuids
+      type: object
     InterviewCapacity:
       additionalProperties: false
       properties:
@@ -1834,6 +1883,59 @@ components:
         - application_id
         - created_at
         - updated_at
+      type: object
+    InterviewGroupDetail:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/InterviewGroupDetail.json
+          format: uri
+          readOnly: true
+          type: string
+        created_at:
+          format: date-time
+          type: string
+        created_by:
+          type: string
+        cycle_id:
+          type: string
+        id:
+          type: string
+        meeting_slot:
+          format: date-time
+          type: string
+        members:
+          items:
+            $ref: "#/components/schemas/InterviewGroupMemberDetail"
+          type:
+            - array
+            - "null"
+        name:
+          type: string
+        updated_at:
+          format: date-time
+          type: string
+      required:
+        - members
+        - id
+        - cycle_id
+        - name
+        - created_by
+        - created_at
+        - updated_at
+      type: object
+    InterviewGroupMemberDetail:
+      additionalProperties: false
+      properties:
+        full_name:
+          type: string
+        member_nuid:
+          type: string
+      required:
+        - member_nuid
+        - full_name
       type: object
     InterviewPoolOutputBody:
       additionalProperties: false
@@ -2026,6 +2128,12 @@ components:
           type:
             - array
             - "null"
+        groups:
+          items:
+            $ref: "#/components/schemas/PlanGroupDay"
+          type:
+            - array
+            - "null"
         leads:
           items:
             $ref: "#/components/schemas/PlanLeadDay"
@@ -2039,7 +2147,6 @@ components:
           type: string
       required:
         - role
-        - leads
       type: object
     InterviewerDetail:
       additionalProperties: false
@@ -2089,6 +2196,12 @@ components:
           format: uri
           readOnly: true
           type: string
+        groups:
+          items:
+            $ref: "#/components/schemas/PlannedGroup"
+          type:
+            - array
+            - "null"
         interviewers:
           items:
             $ref: "#/components/schemas/PlannedInterviewer"
@@ -2122,6 +2235,7 @@ components:
       required:
         - pool_size
         - interviewers
+        - groups
         - unassigned
         - no_day_match
         - warnings
@@ -2159,6 +2273,12 @@ components:
           type:
             - array
             - "null"
+        groups:
+          items:
+            $ref: "#/components/schemas/PlanGroupDay"
+          type:
+            - array
+            - "null"
         leads:
           items:
             $ref: "#/components/schemas/PlanLeadDay"
@@ -2172,7 +2292,6 @@ components:
           type: string
       required:
         - role
-        - leads
         - cap
       type: object
     Item:
@@ -2307,6 +2426,18 @@ components:
         - lead_nuid
         - application_id
       type: object
+    PlanGroupDay:
+      additionalProperties: false
+      properties:
+        day:
+          minLength: 1
+          type: string
+        group_id:
+          type: string
+      required:
+        - group_id
+        - day
+      type: object
     PlanLeadDay:
       additionalProperties: false
       properties:
@@ -2357,6 +2488,50 @@ components:
         - full_name
         - email
         - already_assigned
+      type: object
+    PlannedGroup:
+      additionalProperties: false
+      properties:
+        added:
+          format: int64
+          type: integer
+        applications:
+          items:
+            $ref: "#/components/schemas/PlannedApplication"
+          type:
+            - array
+            - "null"
+        cap:
+          format: int64
+          type: integer
+        day:
+          type: string
+        existing:
+          format: int64
+          type: integer
+        group_id:
+          type: string
+        members:
+          items:
+            $ref: "#/components/schemas/InterviewGroupMemberDetail"
+          type:
+            - array
+            - "null"
+        name:
+          type: string
+        total:
+          format: int64
+          type: integer
+      required:
+        - group_id
+        - name
+        - day
+        - cap
+        - existing
+        - added
+        - total
+        - members
+        - applications
       type: object
     PlannedInterviewer:
       additionalProperties: false
@@ -5599,6 +5774,65 @@ paths:
       summary: Edit an interview comment
       tags:
         - Interviews
+  /applications/{id}/interview-groups/{groupId}:
+    post:
+      description: "Chief only. Members already interviewing the application are skipped. The group is a preset: interviewers can be added or removed individually afterwards."
+      operationId: assign-interview-group
+      parameters:
+        - description: Application ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Application ID
+            type: string
+        - description: Interview group ID
+          in: path
+          name: groupId
+          required: true
+          schema:
+            description: Interview group ID
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssignGroupOutputBody"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Add every member of a group as an interviewer
+      tags:
+        - Interview groups
   /applications/{id}/interview-review:
     put:
       description: Assigned recording reviewers only, once every interviewer has submitted. A rating sets the interview's shared rating.
@@ -7446,6 +7680,113 @@ paths:
       summary: Preview interview-review assignments for a meeting-day roster
       tags:
         - Interview assignment planning
+  /cycles/{id}/interview-groups:
+    get:
+      description: Chief only. Members are included.
+      operationId: list-interview-groups
+      parameters:
+        - description: Cycle ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Cycle ID
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/InterviewGroupDetail"
+                type:
+                  - array
+                  - "null"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: List a cycle's interview groups
+      tags:
+        - Interview groups
+    post:
+      description: Chief only. Names are unique within a cycle.
+      operationId: create-interview-group
+      parameters:
+        - description: Cycle ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Cycle ID
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GroupBody"
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InterviewGroupDetail"
+          description: Created
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "409":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Conflict
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Create an interview group
+      tags:
+        - Interview groups
   /cycles/{id}/interview-reviewers:
     delete:
       description: Chief only. Skips reviewers who have already submitted.
@@ -8974,6 +9315,115 @@ paths:
       summary: Set the draft order
       tags:
         - Draft
+  /interview-groups/{id}:
+    delete:
+      description: Chief only. Interviewers already assigned from this group are left alone.
+      operationId: delete-interview-group
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Delete an interview group
+      tags:
+        - Interview groups
+    put:
+      description: Chief only. Interviewers already assigned from this group are left alone.
+      operationId: update-interview-group
+      parameters:
+        - description: Interview group ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Interview group ID
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GroupBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InterviewGroupDetail"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "409":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Conflict
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Replace an interview group's name, meeting slot, and members
+      tags:
+        - Interview groups
   /interview-reviewers:
     get:
       description: Reviewer only. Write-ups are omitted except the caller's own; read them from list-interview-reviewers.

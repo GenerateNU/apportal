@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { InterviewerCapacityInputBodyExcludedApplicationIds } from './interviewerCapacityInputBodyExcludedApplicationIds';
+import type { InterviewerCapacityInputBodyGroups } from './interviewerCapacityInputBodyGroups';
 import type { InterviewerCapacityInputBodyLeads } from './interviewerCapacityInputBodyLeads';
 import type { InterviewerCapacityInputBodyRole } from './interviewerCapacityInputBodyRole';
 
@@ -13,6 +14,7 @@ export interface InterviewerCapacityInputBody {
   /** A URL to the JSON Schema for this object. */
   readonly $schema?: string;
   excluded_application_ids?: InterviewerCapacityInputBodyExcludedApplicationIds;
-  leads: InterviewerCapacityInputBodyLeads;
+  groups?: InterviewerCapacityInputBodyGroups;
+  leads?: InterviewerCapacityInputBodyLeads;
   role: InterviewerCapacityInputBodyRole;
 }

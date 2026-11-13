@@ -8,6 +8,7 @@
 import type { InterviewerPreviewInputBodyCapOverrides } from './interviewerPreviewInputBodyCapOverrides';
 import type { InterviewerPreviewInputBodyConflicts } from './interviewerPreviewInputBodyConflicts';
 import type { InterviewerPreviewInputBodyExcludedApplicationIds } from './interviewerPreviewInputBodyExcludedApplicationIds';
+import type { InterviewerPreviewInputBodyGroups } from './interviewerPreviewInputBodyGroups';
 import type { InterviewerPreviewInputBodyLeads } from './interviewerPreviewInputBodyLeads';
 import type { InterviewerPreviewInputBodyRole } from './interviewerPreviewInputBodyRole';
 
@@ -20,6 +21,7 @@ export interface InterviewerPreviewInputBody {
   /** Leads ineligible to interview a specific applicant */
   conflicts?: InterviewerPreviewInputBodyConflicts;
   excluded_application_ids?: InterviewerPreviewInputBodyExcludedApplicationIds;
-  leads: InterviewerPreviewInputBodyLeads;
+  groups?: InterviewerPreviewInputBodyGroups;
+  leads?: InterviewerPreviewInputBodyLeads;
   role: InterviewerPreviewInputBodyRole;
 }
