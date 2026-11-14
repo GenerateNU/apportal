@@ -3,9 +3,13 @@ import { PageContainer } from '@/components/PageContainer'
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { ArrowRight, Search } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { PageHeader } from '@/components/ui/page-header'
+import { SearchInput } from '@/components/ui/search-input'
+import { SectionLabel } from '@/components/ui/section-label'
+import { SegmentedTabs } from '@/components/ui/segmented-tabs'
+import { TABLE_FRAME } from '@/components/ui/table-styles'
 import { ProgressBar } from '@/components/ProgressBar'
 import {
   Select,
@@ -132,85 +136,64 @@ export function ReviewQueueClient() {
 
   return (
     <PageContainer>
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <h1 className="text-text-default text-2xl font-semibold">
-            Lead review
-          </h1>
-          <p className="text-text-muted mt-1 text-sm">
-            {scope === 'mine'
-              ? 'Applications assigned to you to write-review.'
-              : 'All submitted applications.'}
-          </p>
-        </div>
+      <PageHeader
+        title="Lead review"
+        subtitle={
+          scope === 'mine'
+            ? 'Applications assigned to you to write-review.'
+            : 'All submitted applications.'
+        }
+        actions={
+          <div className="flex flex-wrap items-center gap-3">
+            <Select
+              value={activeRole}
+              onValueChange={(val) => setActiveRole(val)}
+            >
+              <SelectTrigger className="w-48" aria-label="Filter by role">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All roles</SelectItem>
+                {roleIds.map((r) => (
+                  <SelectItem key={r} value={r}>
+                    {roleLabel(r)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <Select
-            value={activeRole}
-            onValueChange={(val) => setActiveRole(val)}
-          >
-            <SelectTrigger className="w-48" aria-label="Filter by role">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All roles</SelectItem>
-              {roleIds.map((r) => (
-                <SelectItem key={r} value={r}>
-                  {roleLabel(r)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            <Select value={cycleId} onValueChange={setCycleId}>
+              <SelectTrigger className="w-40" aria-label="Filter by cycle">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All cycles</SelectItem>
+                {cycles.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-          <Select value={cycleId} onValueChange={setCycleId}>
-            <SelectTrigger className="w-40" aria-label="Filter by cycle">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All cycles</SelectItem>
-              {cycles.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <div className="relative w-full sm:w-60">
-            <Search className="text-text-subtle absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Search name or NUID..."
+            <SearchInput
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="focus:border-brand-blue text-text-default placeholder:text-text-subtle w-full rounded-md border border-gray-200 py-1.5 pr-3 pl-9 text-sm focus:outline-none"
+              onChange={setSearch}
+              placeholder="Search name or NUID..."
+              className="sm:w-60"
+            />
+
+            <SegmentedTabs<Scope>
+              tabs={[
+                { id: 'mine', label: 'Assigned to me' },
+                { id: 'all', label: 'All' },
+              ]}
+              value={scope}
+              onChange={setScope}
             />
           </div>
-
-          <div className="flex shrink-0 gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1">
-            {(
-              [
-                { value: 'mine', label: 'Assigned to me' },
-                { value: 'all', label: 'All' },
-              ] as const
-            ).map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => setScope(option.value)}
-                className={cn(
-                  'rounded-md px-2.5 py-1 text-sm font-medium transition-colors',
-                  scope === option.value
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-500 hover:text-gray-700'
-                )}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
+        }
+      />
 
       {applications.length > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -246,10 +229,10 @@ export function ReviewQueueClient() {
       ) : (
         sections.map(({ role, applications: roleApplications }) => (
           <div key={role} className="flex flex-col gap-2">
-            <h2 className="text-text-faint text-xs font-semibold tracking-wide uppercase">
+            <SectionLabel>
               {roleLabel(role)} ({roleApplications.length})
-            </h2>
-            <div className="divide-y divide-gray-100 overflow-hidden rounded-lg border border-gray-200 bg-white">
+            </SectionLabel>
+            <div className={TABLE_FRAME}>
               {roleApplications.map((application) => (
                 <ReviewRow
                   key={application.id}

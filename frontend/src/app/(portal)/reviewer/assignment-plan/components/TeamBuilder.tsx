@@ -1,7 +1,10 @@
 'use client'
 
 import { Plus, Trash2, X } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { EmptyState } from '@/components/ui/empty-state'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -73,9 +76,10 @@ export function TeamBuilder({
       </div>
 
       {teams.length === 0 ? (
-        <p className="text-text-faint rounded-xl border border-dashed border-gray-200 bg-white px-4 py-6 text-center text-sm">
-          No teams yet. Add one to start planning.
-        </p>
+        <EmptyState
+          size="sm"
+          title="No teams yet. Add one to start planning."
+        />
       ) : (
         <div className="grid gap-3 md:grid-cols-2">
           {teams.map((team) => {
@@ -86,9 +90,10 @@ export function TeamBuilder({
               (l) => !team.leadNuids.includes(l.nuid)
             )
             return (
-              <div
+              <Card
                 key={team.id}
-                className="flex flex-col gap-3 rounded-xl border border-gray-100 bg-white p-4"
+                variant="flat"
+                className="flex flex-col gap-3"
               >
                 <div className="flex items-center gap-2">
                   <Input
@@ -100,7 +105,7 @@ export function TeamBuilder({
                   <button
                     type="button"
                     aria-label={`Remove ${team.name}`}
-                    className="text-text-faint hover:text-destructive flex-shrink-0 rounded-md p-1.5 transition-colors hover:bg-gray-100"
+                    className="text-text-faint hover:text-destructive flex-shrink-0 p-1.5 transition-colors hover:bg-gray-100"
                     onClick={() =>
                       onChange(teams.filter((t) => t.id !== team.id))
                     }
@@ -116,10 +121,7 @@ export function TeamBuilder({
                     </span>
                   ) : (
                     team.leadNuids.map((nuid) => (
-                      <span
-                        key={nuid}
-                        className="text-text-muted inline-flex items-center gap-1 rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium"
-                      >
+                      <Badge key={nuid} className="text-text-muted">
                         {nameOf(nuid)}
                         <button
                           type="button"
@@ -135,7 +137,7 @@ export function TeamBuilder({
                         >
                           <X size={12} />
                         </button>
-                      </span>
+                      </Badge>
                     ))
                   )}
                 </div>
@@ -164,7 +166,7 @@ export function TeamBuilder({
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
+              </Card>
             )
           })}
         </div>

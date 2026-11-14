@@ -1,5 +1,7 @@
 'use client'
 
+import { Card } from '@/components/ui/card'
+import { EmptyState } from '@/components/ui/empty-state'
 import { DaySelect } from './DaySelect'
 
 export type DraftLeadDay = { leadNuid: string; day: string }
@@ -43,15 +45,15 @@ export function MeetingDayPicker({
       </div>
 
       {leads.length === 0 ? (
-        <p className="text-text-faint rounded-xl border border-dashed border-gray-200 bg-white px-4 py-6 text-center text-sm">
-          No leads found.
-        </p>
+        <EmptyState size="sm" title="No leads found." />
       ) : (
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {leads.map((lead) => (
-            <div
+            <Card
               key={lead.nuid}
-              className="flex items-center justify-between gap-2 rounded-xl border border-gray-100 bg-white p-3"
+              variant="flat"
+              padding="sm"
+              className="flex items-center justify-between gap-2"
             >
               <span className="text-text-default truncate text-sm font-medium">
                 {lead.full_name}
@@ -61,7 +63,7 @@ export function MeetingDayPicker({
                 onChange={(day) => setDay(lead.nuid, day)}
                 label={`Meeting day for ${lead.full_name}`}
               />
-            </div>
+            </Card>
           ))}
         </div>
       )}

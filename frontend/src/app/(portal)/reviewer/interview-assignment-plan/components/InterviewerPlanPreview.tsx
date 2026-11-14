@@ -1,6 +1,9 @@
 'use client'
 
 import { AlertTriangle, Check } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Card, Toolbar } from '@/components/ui/card'
+import { StatTile } from '@/components/ui/stat-tile'
 import type {
   InterviewerPlanPreview as InterviewerPlanPreviewType,
   PlannedApplication,
@@ -61,16 +64,16 @@ export function InterviewerPlanPreview({
 
   return (
     <section className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-gray-100 bg-white p-4">
-        <Stat label="Applicants" value={plan.pool_size} />
-        <Stat label="Interviewers to assign" value={plan.total_added} />
+      <Toolbar>
+        <StatTile label="Applicants" value={plan.pool_size} />
+        <StatTile label="Interviewers to assign" value={plan.total_added} />
         {noDayMatch.length > 0 && (
-          <Stat label="Assigned off-day" value={noDayMatch.length} />
+          <StatTile label="Assigned off-day" value={noDayMatch.length} />
         )}
-      </div>
+      </Toolbar>
 
       {warnings.length > 0 && (
-        <div className="flex flex-col gap-2 rounded-xl border border-amber-200 bg-amber-50 p-4">
+        <div className="flex flex-col gap-2 border border-amber-200 bg-amber-50 p-4">
           {warnings.map((warning) => (
             <p
               key={warning}
@@ -84,7 +87,7 @@ export function InterviewerPlanPreview({
       )}
 
       {unassigned.length > 0 && (
-        <div className="rounded-xl border border-gray-100 bg-white p-4">
+        <Card variant="flat">
           <h3 className="text-text-default text-sm font-semibold">
             Unassigned ({unassigned.length})
           </h3>
@@ -94,15 +97,15 @@ export function InterviewerPlanPreview({
           </p>
           <div className="flex flex-wrap gap-1.5">
             {unassigned.map((app) => (
-              <span
+              <Badge
                 key={app.application_id}
-                className="text-text-muted inline-flex rounded-md bg-gray-100 px-2 py-0.5 text-xs"
+                className="text-text-muted font-normal"
               >
                 {app.full_name}
-              </span>
+              </Badge>
             ))}
           </div>
-        </div>
+        </Card>
       )}
 
       {[...byDay.entries()].map(([day, dayQueues]) => (
@@ -125,7 +128,7 @@ function InterviewerQueue({ queue }: { queue: Queue }) {
   const atCap = queue.total >= queue.cap
   const applications = queue.applications
   return (
-    <div className="flex flex-col gap-2 rounded-xl border border-gray-100 bg-white p-4">
+    <Card variant="flat" className="flex flex-col gap-2">
       <div className="flex flex-wrap items-baseline justify-between gap-x-2">
         <span className="text-text-default text-sm font-medium">
           {queue.title}
@@ -165,15 +168,6 @@ function InterviewerQueue({ queue }: { queue: Queue }) {
           ))}
         </ol>
       )}
-    </div>
-  )
-}
-
-function Stat({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div className="flex flex-col">
-      <span className="text-text-faint text-xs">{label}</span>
-      <span className="text-text-default text-sm font-semibold">{value}</span>
-    </div>
+    </Card>
   )
 }

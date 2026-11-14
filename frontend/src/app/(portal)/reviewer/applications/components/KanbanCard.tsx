@@ -4,6 +4,8 @@ import { ReturnerBadge } from '@/components/ReturnerBadge'
 import { useRoleLookup } from '@/lib/queries/roles'
 import type { ApplicantApplication } from './types'
 import { StageSelect } from './StageSelect'
+import { Badge } from '@/components/ui/badge'
+import { Card } from '@/components/ui/card'
 
 export function KanbanCard({
   applicant,
@@ -16,24 +18,19 @@ export function KanbanCard({
 }) {
   const { roleLabel, roleChipClass } = useRoleLookup()
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-3 shadow-sm transition-shadow hover:shadow-md">
+    <Card padding="sm">
       <p className="text-text-default truncate text-sm font-medium">
         {applicant.fullName}
       </p>
       <div className="mt-2.5 flex flex-wrap items-center gap-1">
-        <span
-          className={`rounded px-1.5 py-0.5 text-xs ${roleChipClass(applicant.role)}`}
-        >
+        <Badge size="sm" className={roleChipClass(applicant.role)}>
           {roleLabel(applicant.role)}
-        </span>
+        </Badge>
         {applicant.returner && <ReturnerBadge />}
         {availabilityDays.map((d) => (
-          <span
-            key={d}
-            className="text-text-secondary rounded bg-gray-100 px-1.5 py-0.5 text-xs font-medium"
-          >
+          <Badge key={d} size="sm" className="text-text-secondary">
             {d}
-          </span>
+          </Badge>
         ))}
       </div>
       <div className="mt-2.5">
@@ -43,6 +40,6 @@ export function KanbanCard({
           editable={editable}
         />
       </div>
-    </div>
+    </Card>
   )
 }

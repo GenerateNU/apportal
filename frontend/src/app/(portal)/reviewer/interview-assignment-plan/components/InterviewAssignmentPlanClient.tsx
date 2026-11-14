@@ -3,8 +3,11 @@
 import { useCallback, useMemo, useState } from 'react'
 import { PageContainer } from '@/components/PageContainer'
 import { usePersistedFilters } from '@/hooks/usePersistedFilters'
+import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { PageHeader } from '@/components/ui/page-header'
+import { SegmentedTabs } from '@/components/ui/segmented-tabs'
 import {
   Select,
   SelectContent,
@@ -158,47 +161,47 @@ export function InterviewAssignmentPlanClient() {
 
   return (
     <PageContainer>
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-text-default text-2xl font-semibold">
-            Plan interview assignments
-          </h1>
-          <p className="text-text-muted mt-1 text-sm">
+      <PageHeader
+        title="Plan interview assignments"
+        subtitle={
+          <>
             Set each lead&apos;s or group&apos;s meeting day, then plan
             interviewers and interview reviewers matched to applicant
             availability. Anyone on Any day can take any applicant, and skipped
             leads or groups get none.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <Select value={role} onValueChange={(val) => setRole(val)}>
-            <SelectTrigger className="w-56" aria-label="Applicant role">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {roleIds.map((r) => (
-                <SelectItem key={r} value={r}>
-                  {roleLabel(r)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={cycleId} onValueChange={setCycleId}>
-            <SelectTrigger className="w-40" aria-label="Cycle">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {cycles.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+          </>
+        }
+        actions={
+          <>
+            <Select value={role} onValueChange={(val) => setRole(val)}>
+              <SelectTrigger className="w-56" aria-label="Applicant role">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {roleIds.map((r) => (
+                  <SelectItem key={r} value={r}>
+                    {roleLabel(r)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={cycleId} onValueChange={setCycleId}>
+              <SelectTrigger className="w-40" aria-label="Cycle">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {cycles.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </>
+        }
+      />
 
-      <section className="flex flex-wrap items-end gap-4 rounded-xl border border-gray-100 bg-white p-4">
+      <Card variant="flat" className="flex flex-wrap items-end gap-4">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="interviewers-per-applicant" className="text-xs">
             Interviewers per applicant
@@ -222,7 +225,7 @@ export function InterviewAssignmentPlanClient() {
               ? `Each applicant gets one lead. You have ${savedGroups.length} saved group${savedGroups.length === 1 ? '' : 's'}; set 2 or more to plan by group.`
               : 'Each applicant gets one lead. Set 2 or more to interview in groups.'}
         </p>
-      </section>
+      </Card>
 
       {useGroups ? (
         <GroupBuilder
@@ -248,20 +251,15 @@ export function InterviewAssignmentPlanClient() {
         onChange={setConflicts}
       />
 
-      <div className="flex gap-1 rounded-lg bg-gray-100 p-1">
-        <StageTab
-          active={stage === 'interviewer'}
-          onClick={() => setStage('interviewer')}
-        >
-          1. Interviewers
-        </StageTab>
-        <StageTab
-          active={stage === 'reviewer'}
-          onClick={() => setStage('reviewer')}
-        >
-          2. Interview reviewers
-        </StageTab>
-      </div>
+      <SegmentedTabs<Stage>
+        tabs={[
+          { id: 'interviewer', label: '1. Interviewers' },
+          { id: 'reviewer', label: '2. Interview reviewers' },
+        ]}
+        value={stage}
+        onChange={setStage}
+        className="self-start"
+      />
 
       <CurrentAssignments
         key={stage}
@@ -289,29 +287,5 @@ export function InterviewAssignmentPlanClient() {
         />
       )}
     </PageContainer>
-  )
-}
-
-function StageTab({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean
-  onClick: () => void
-  children: React.ReactNode
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-        active
-          ? 'text-text-default bg-white shadow-sm'
-          : 'text-text-muted hover:text-text-default'
-      }`}
-    >
-      {children}
-    </button>
   )
 }

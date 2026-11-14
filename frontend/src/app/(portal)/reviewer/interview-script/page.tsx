@@ -5,6 +5,7 @@ import {
   QueryClient,
 } from '@tanstack/react-query'
 import { PageContainer } from '@/components/PageContainer'
+import { PageHeader } from '@/components/ui/page-header'
 import { getServerRequestOptions } from '@/lib/api/server-request-options'
 import { prefetchInterviewScript } from '@/lib/queries/server-prefetch'
 import { InterviewScriptPageClient } from './components/InterviewScriptPageClient'
@@ -47,15 +48,10 @@ export default async function InterviewScriptPage({
 
   return (
     <PageContainer>
-      <div>
-        <h1 className="text-text-default text-2xl font-semibold">
-          Interview script
-        </h1>
-        <p className="text-text-muted mt-1 text-sm">
-          The intro speech, question bank, and challenge follow-ups to use while
-          conducting an interview — one script per cycle and role.
-        </p>
-      </div>
+      <PageHeader
+        title="Interview script"
+        subtitle="The intro speech, question bank, and challenge follow-ups to use while conducting an interview — one script per cycle and role."
+      />
       <HydrationBoundary state={dehydrate(queryClient)}>
         <InterviewScriptPageClient isChief={reviewer.isChief} />
       </HydrationBoundary>

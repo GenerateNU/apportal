@@ -5,6 +5,7 @@ import { Loader2, Paperclip, X } from 'lucide-react'
 import { FileAnswerLink } from '@/components/FileAnswerLink'
 import { MarkdownContent } from '@/components/MarkdownContent'
 import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -15,6 +16,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import type { QuestionType } from '@/lib/api/types'
+import { normalizeUrl } from '../lib/url'
+import { cn } from '@/lib/utils'
 import {
   useRequestUploadUrl,
   uploadFileToSignedUrl,
@@ -39,12 +42,14 @@ function UrlOrFileAnswer({
   value,
   onChange,
   disabled,
+  invalid,
 }: {
   applicationId?: string
   questionId: string
   value: AnswerValue
   onChange: (next: AnswerValue) => void
   disabled: boolean
+  invalid: boolean
 }) {
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -104,9 +109,15 @@ function UrlOrFileAnswer({
     <div className="flex flex-col gap-2">
       <Input
         type="url"
+        inputMode="url"
         className="h-11 text-base md:text-base"
         value={value.text ?? ''}
         onChange={(e) => onChange({ text: e.target.value })}
+        onBlur={() => {
+          const normalized = normalizeUrl(value.text ?? '')
+          if (normalized !== (value.text ?? '')) onChange({ text: normalized })
+        }}
+        aria-invalid={invalid}
         placeholder="https://…"
         disabled={disabled}
       />
@@ -159,7 +170,10 @@ export type FieldQuestion = {
 }
 
 const TEXTAREA_CLASS =
-  'border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 min-h-32 w-full rounded-lg border bg-transparent px-3.5 py-2.5 text-base transition-all outline-none focus-visible:ring-3 hover:border-gray-300 resize-none'
+  'aria-invalid:border-destructive placeholder:text-text-subtle focus-visible:border-ink focus-visible:ring-ink/10 min-h-36 w-full resize-y border border-gray-300 bg-white px-3.5 py-3 text-base leading-relaxed transition-colors outline-none focus-visible:ring-3 disabled:bg-gray-50'
+
+const OPTION_CLASS =
+  'has-[:checked]:border-ink flex cursor-pointer items-center gap-3 border border-gray-200 bg-white px-4 py-3 text-base transition-colors hover:bg-gray-50 has-[:checked]:bg-gray-50 has-[:disabled]:cursor-default'
 
 export function QuestionField({
   question,
@@ -168,6 +182,8 @@ export function QuestionField({
   onChange,
   disabled = false,
   applicationId,
+  error,
+  onBlur,
 }: {
   question: FieldQuestion
   index: number
@@ -178,145 +194,174 @@ export function QuestionField({
   // when this component renders review-question answers, which never use
   // the `url` type.
   applicationId?: string
+  error?: string
+  onBlur?: () => void
 }) {
   const options = question.options ?? []
 
   return (
-    <div
+    <Card
+      onBlur={onBlur}
       id={`question-${question.id}`}
-      className="flex scroll-mt-6 flex-col gap-3 rounded-lg border border-gray-200 bg-white p-4 shadow-sm sm:p-5"
+      padding="lg"
+      className={cn(
+        'focus-within:border-ink flex scroll-mt-24 flex-col gap-4 transition-colors'
+      )}
     >
-      <Label className="text-base">
-        {index + 1}. {question.question_text}
-        {question.is_required && <span className="text-destructive"> *</span>}
-      </Label>
-
-      {question.description && (
-        <MarkdownContent className="text-text-muted -mt-2 gap-2 text-sm">
-          {question.description}
-        </MarkdownContent>
-      )}
-
-      {question.question_type === 'short_answer' && (
-        <Input
-          className="h-11 text-base md:text-base"
-          value={value.text ?? ''}
-          onChange={(e) => onChange({ text: e.target.value })}
-          placeholder="Your answer"
-          disabled={disabled}
-        />
-      )}
-
-      {question.question_type === 'long_answer' && (
-        <textarea
-          className={TEXTAREA_CLASS}
-          value={value.text ?? ''}
-          onChange={(e) => onChange({ text: e.target.value })}
-          placeholder="Your answer"
-          disabled={disabled}
-        />
-      )}
-
-      {question.question_type === 'url' && (
-        <UrlOrFileAnswer
-          applicationId={applicationId}
-          questionId={question.id}
-          value={value}
-          onChange={onChange}
-          disabled={disabled}
-        />
-      )}
-
-      {question.question_type === 'multiple_choice' && (
-        <div className="flex flex-col gap-2">
-          {options.map((option) => (
-            <label
-              key={option}
-              className="text-text-default hover:text-text-default flex cursor-pointer items-center gap-3 py-1 text-base transition-colors"
-            >
-              <input
-                type="radio"
-                name={question.id}
-                checked={value.text === option}
-                onChange={() => onChange({ text: option })}
-                disabled={disabled}
-                className="accent-brand-blue h-4 w-4 shrink-0 cursor-pointer"
-              />
-              {option}
-            </label>
-          ))}
-        </div>
-      )}
-
-      {question.question_type === 'score' && (
-        <div className="flex flex-col gap-1">
-          <Input
-            type="number"
-            min={1}
-            max={10}
-            step={1}
-            className="h-11 w-24 text-base md:text-base"
-            value={value.text ?? ''}
-            onChange={(e) => onChange({ text: e.target.value })}
-            placeholder="1-10"
-            disabled={disabled}
-          />
-          {value.text && !Number.isInteger(Number(value.text)) && (
-            <p className="text-destructive text-xs">
-              Rating must be a whole number.
-            </p>
+      <div className="flex items-start gap-4">
+        <span className="font-display text-text-subtle pt-0.5 text-sm font-bold">
+          {String(index + 1).padStart(2, '0')}
+        </span>
+        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+          <div className="flex items-start justify-between gap-3">
+            <Label className="text-ink text-base leading-snug font-semibold">
+              {question.question_text}
+            </Label>
+            {question.is_required && (
+              <span className="font-display text-destructive shrink-0 pt-1 text-[10px] tracking-wider uppercase">
+                Required
+              </span>
+            )}
+          </div>
+          {question.description && (
+            <MarkdownContent className="text-text-muted gap-2 text-sm">
+              {question.description}
+            </MarkdownContent>
           )}
         </div>
-      )}
+      </div>
 
-      {question.question_type === 'dropdown' && (
-        <Select
-          value={value.text ?? ''}
-          onValueChange={(val) => onChange({ text: val })}
-          disabled={disabled}
-        >
-          <SelectTrigger aria-label={question.question_text}>
-            <SelectValue placeholder="Select an option" />
-          </SelectTrigger>
-          <SelectContent>
+      <div className="flex flex-col gap-2 sm:pl-9">
+        {question.question_type === 'short_answer' && (
+          <Input
+            className="h-11 text-base md:text-base"
+            value={value.text ?? ''}
+            onChange={(e) => onChange({ text: e.target.value })}
+            aria-invalid={!!error}
+            placeholder="Your answer"
+            disabled={disabled}
+          />
+        )}
+
+        {question.question_type === 'long_answer' && (
+          <div className="flex flex-col gap-1">
+            <textarea
+              className={TEXTAREA_CLASS}
+              value={value.text ?? ''}
+              onChange={(e) => onChange({ text: e.target.value })}
+              aria-invalid={!!error}
+              placeholder="Your answer"
+              disabled={disabled}
+            />
+            {!disabled && (
+              <span className="text-text-subtle self-end text-xs">
+                {(value.text ?? '').length} characters
+              </span>
+            )}
+          </div>
+        )}
+
+        {question.question_type === 'url' && (
+          <UrlOrFileAnswer
+            applicationId={applicationId}
+            questionId={question.id}
+            value={value}
+            onChange={onChange}
+            disabled={disabled}
+            invalid={!!error}
+          />
+        )}
+
+        {question.question_type === 'multiple_choice' && (
+          <div className="flex flex-col gap-2">
             {options.map((option) => (
-              <SelectItem key={option} value={option}>
-                {option}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      )}
-
-      {question.question_type === 'checkbox' && (
-        <div className="flex flex-col gap-2">
-          {options.map((option) => {
-            const selected = value.options ?? []
-            const checked = selected.includes(option)
-            return (
-              <label
-                key={option}
-                className="text-text-default hover:text-text-default flex cursor-pointer items-center gap-3 py-1 text-base transition-colors"
-              >
+              <label key={option} className={OPTION_CLASS}>
                 <input
-                  type="checkbox"
-                  checked={checked}
-                  onChange={() =>
-                    onChange({
-                      options: checked
-                        ? selected.filter((o) => o !== option)
-                        : [...selected, option],
-                    })
-                  }
+                  type="radio"
+                  name={question.id}
+                  checked={value.text === option}
+                  onChange={() => onChange({ text: option })}
                   disabled={disabled}
-                  className="accent-brand-blue h-4 w-4 shrink-0 cursor-pointer"
+                  className="accent-ink h-4 w-4 shrink-0 cursor-pointer"
                 />
                 {option}
               </label>
-            )
-          })}
-        </div>
-      )}
-    </div>
+            ))}
+          </div>
+        )}
+
+        {question.question_type === 'score' && (
+          <div className="flex flex-col gap-1">
+            <Input
+              type="number"
+              min={1}
+              max={10}
+              step={1}
+              className="h-11 w-24 text-base md:text-base"
+              value={value.text ?? ''}
+              onChange={(e) => onChange({ text: e.target.value })}
+              aria-invalid={!!error}
+              placeholder="1-10"
+              disabled={disabled}
+            />
+            {value.text && !Number.isInteger(Number(value.text)) && (
+              <p className="text-destructive text-xs">
+                Rating must be a whole number.
+              </p>
+            )}
+          </div>
+        )}
+
+        {question.question_type === 'dropdown' && (
+          <Select
+            value={value.text ?? ''}
+            onValueChange={(val) => onChange({ text: val })}
+            disabled={disabled}
+          >
+            <SelectTrigger
+              aria-label={question.question_text}
+              aria-invalid={!!error}
+            >
+              <SelectValue placeholder="Select an option" />
+            </SelectTrigger>
+            <SelectContent>
+              {options.map((option) => (
+                <SelectItem key={option} value={option}>
+                  {option}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+
+        {question.question_type === 'checkbox' && (
+          <div className="flex flex-col gap-2">
+            {options.map((option) => {
+              const selected = value.options ?? []
+              const checked = selected.includes(option)
+              return (
+                <label key={option} className={OPTION_CLASS}>
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() =>
+                      onChange({
+                        options: checked
+                          ? selected.filter((o) => o !== option)
+                          : [...selected, option],
+                      })
+                    }
+                    disabled={disabled}
+                    className="accent-ink h-4 w-4 shrink-0 cursor-pointer"
+                  />
+                  {option}
+                </label>
+              )
+            })}
+          </div>
+        )}
+        {error && <p className="text-destructive text-xs">{error}</p>}
+      </div>
+    </Card>
   )
 }

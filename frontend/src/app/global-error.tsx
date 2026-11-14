@@ -27,7 +27,7 @@ export default function GlobalError({
           )}
           <button
             onClick={() => unstable_retry()}
-            className="inline-flex h-8 items-center justify-center rounded-lg bg-[#1477f8] px-3 text-sm font-medium text-white transition-colors hover:bg-[#1477f8]/80"
+            className="inline-flex h-8 items-center justify-center bg-[#111111] px-3 text-sm font-medium text-white transition-colors hover:bg-[#111111]/85"
           >
             Try again
           </button>

@@ -136,7 +136,7 @@ function TemplateForm({
           value={body}
           onChange={(e) => setBody(e.target.value)}
           rows={16}
-          className="focus:border-brand-blue text-text-default w-full resize-y rounded-lg border border-gray-200 bg-white px-3 py-2 font-mono text-xs outline-none"
+          className="focus:border-ink text-text-default w-full resize-y rounded-lg border border-gray-200 bg-white px-3 py-2 font-mono text-xs outline-none"
         />
       </label>
 

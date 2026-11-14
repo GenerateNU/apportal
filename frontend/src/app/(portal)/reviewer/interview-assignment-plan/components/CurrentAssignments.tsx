@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from 'react'
 import { ChevronDown, ChevronRight, Users } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Card } from '@/components/ui/card'
 import type { InterviewGroupDetail } from '@/generated/model'
 import { splitByGroup } from '@/lib/interview-groups'
 import { useInterviewReviewersBulk } from '@/lib/queries/interview-assignments'
@@ -111,7 +113,7 @@ export function CurrentAssignments({
   const assignedCount = applicants.length - unassigned.length
 
   return (
-    <section className="rounded-xl border border-gray-100 bg-white p-4">
+    <Card variant="flat">
       <button
         type="button"
         className="text-text-default flex w-full items-center gap-2 text-sm font-semibold"
@@ -134,7 +136,7 @@ export function CurrentAssignments({
               {queues.map((q) => (
                 <div
                   key={q.key}
-                  className="flex flex-col gap-1.5 rounded-lg border border-gray-100 p-3"
+                  className="flex flex-col gap-1.5 border border-gray-100 p-3"
                 >
                   <div className="flex items-baseline justify-between gap-2">
                     <span className="text-text-default flex items-center gap-1.5 text-sm font-medium">
@@ -167,18 +169,18 @@ export function CurrentAssignments({
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {unassigned.map((a) => (
-                  <span
+                  <Badge
                     key={a.application_id}
-                    className="text-text-muted inline-flex rounded-md bg-gray-100 px-2 py-0.5 text-xs"
+                    className="text-text-muted font-normal"
                   >
                     {a.full_name}
-                  </span>
+                  </Badge>
                 ))}
               </div>
             </div>
           )}
         </div>
       )}
-    </section>
+    </Card>
   )
 }

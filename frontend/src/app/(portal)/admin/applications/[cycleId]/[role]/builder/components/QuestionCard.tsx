@@ -5,6 +5,7 @@ import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { GripVertical, Plus, Trash2, X } from 'lucide-react'
 import type { QuestionType } from '@/lib/api/types'
+import { Card } from '@/components/ui/card'
 import { QUESTION_TYPE_META } from './constants'
 
 // Structural shape QuestionCard actually needs — satisfied by both the
@@ -199,11 +200,12 @@ export function QuestionCard({
   }
 
   return (
-    <div
+    <Card
       id={`question-${question.id}`}
       ref={setNodeRef}
       style={style}
-      className="rounded-xl border border-gray-200 bg-white px-4 py-4 shadow-sm transition-shadow hover:shadow-md sm:px-6 sm:py-5"
+      padding="none"
+      className="px-4 py-4 sm:px-6 sm:py-5"
     >
       <div className="flex items-start gap-3">
         <button
@@ -244,7 +246,7 @@ export function QuestionCard({
                   type="checkbox"
                   checked={hasPageBreak}
                   onChange={togglePageBreak}
-                  className="accent-brand-blue h-3.5 w-3.5"
+                  className="accent-ink h-3.5 w-3.5"
                 />
                 Start a new page here
               </label>
@@ -330,7 +332,7 @@ export function QuestionCard({
               type="checkbox"
               checked={question.is_required}
               onChange={toggleRequired}
-              className="accent-brand-blue h-4 w-4"
+              className="accent-ink h-4 w-4"
             />
             Required
           </label>
@@ -349,6 +351,6 @@ export function QuestionCard({
           </button>
         </div>
       </div>
-    </div>
+    </Card>
   )
 }

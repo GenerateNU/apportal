@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { Menu } from 'lucide-react'
@@ -36,19 +36,32 @@ export function PortalShell({
     initialSidebarCollapsed
   )
   function toggleSidebarCollapsed() {
-    const next = !sidebarCollapsed
-    setSidebarCollapsed(next)
-    document.cookie = `${SIDEBAR_COLLAPSED_COOKIE}=${next}; path=/; max-age=31536000; samesite=lax`
+    setSidebarCollapsed((prev) => {
+      const next = !prev
+      document.cookie = `${SIDEBAR_COLLAPSED_COOKIE}=${next}; path=/; max-age=31536000; samesite=lax`
+      return next
+    })
   }
 
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault()
+        toggleSidebarCollapsed()
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
+
   return (
-    <div className="flex h-dvh flex-col overflow-hidden lg:flex-row lg:bg-gray-50 lg:pt-4 lg:pl-4">
-      <header className="flex h-14 shrink-0 items-center gap-3 border-b border-gray-100 px-4 lg:hidden">
+    <div className="flex h-dvh flex-col overflow-hidden lg:flex-row">
+      <header className="flex h-14 shrink-0 items-center gap-3 border-b border-gray-200 px-4 lg:hidden">
         <button
           type="button"
           onClick={() => setNavOpen(true)}
           aria-label="Open menu"
-          className="text-text-subtle hover:text-text-default -ml-2 rounded-md p-2 hover:bg-gray-100"
+          className="text-ink/60 hover:text-ink -ml-2 p-2 hover:bg-gray-100"
         >
           <Menu size={20} />
         </button>
@@ -59,7 +72,9 @@ export function PortalShell({
           height={22}
           className="object-contain"
         />
-        <span className="text-brand-blue text-lg font-semibold">Generate</span>
+        <span className="font-display text-ink text-base font-bold tracking-tight uppercase">
+          Generate
+        </span>
       </header>
 
       <div className="hidden lg:block">
@@ -80,7 +95,7 @@ export function PortalShell({
         />
       </MobileNavSheet>
 
-      <main className="flex flex-1 flex-col overflow-hidden border border-gray-200 bg-white lg:rounded-tl-[25]">
+      <main className="flex flex-1 flex-col overflow-hidden border-gray-200 bg-white lg:border-l">
         {/* overscroll-none: without it, scrolling past the end of a long page
           chains to the viewport and rubber-bands the whole shell. */}
         <div className="flex flex-1 flex-col overflow-y-auto overscroll-none">

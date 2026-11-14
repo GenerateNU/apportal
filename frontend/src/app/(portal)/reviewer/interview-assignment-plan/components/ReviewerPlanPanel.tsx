@@ -11,6 +11,7 @@ import {
   UserPlus,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Card, Toolbar } from '@/components/ui/card'
 import {
   Dialog,
   DialogContent,
@@ -20,7 +21,9 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { EmptyState } from '@/components/ui/empty-state'
 import { Label } from '@/components/ui/label'
+import { StatStrip, StatTile } from '@/components/ui/stat-tile'
 import { apiErrorDetail } from '@/lib/api/client'
 import {
   useCommitInterviewReviewerPlan,
@@ -138,48 +141,39 @@ export function ReviewerPlanPanel({
 
   if (pool && pool.applicants.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-gray-200 bg-white p-10 text-center">
-        <p className="text-text-default text-sm font-medium">
-          No applicants ready for review assignment yet
-        </p>
-        <p className="text-text-muted mt-1 text-sm">
-          Assign interviewers first — this stage only plans applicants who
-          already have one.
-        </p>
-      </div>
+      <EmptyState
+        title="No applicants ready for review assignment yet"
+        description="Assign interviewers first — this stage only plans applicants who already have one."
+      />
     )
   }
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center gap-6 rounded-xl border border-gray-100 bg-white p-4">
-        <div className="flex flex-col">
-          <span className="text-text-faint text-xs">
-            Awaiting interview reviewers
-          </span>
-          <span className="text-text-default text-sm font-semibold">
-            {poolAppliedSize ?? '—'} {roleLabel(role)} applicant
-            {poolAppliedSize === 1 ? '' : 's'}
-          </span>
-          {excludedIds.size > 0 && (
-            <span className="text-text-faint text-xs">
-              {excludedIds.size} excluded
-            </span>
-          )}
-        </div>
-        <div className="flex flex-col">
-          <span className="text-text-faint text-xs">Leads</span>
-          <span className="text-text-default text-sm font-semibold">
-            {meetingDays.length}
-          </span>
-          <span className="text-text-faint text-xs">
-            {meetingDays.filter((d) => d.day).length} with a day set
-          </span>
-        </div>
-      </div>
+      <Card variant="flat">
+        <StatStrip className="items-center">
+          <StatTile
+            label="Awaiting interview reviewers"
+            value={
+              <>
+                {poolAppliedSize ?? '—'} {roleLabel(role)} applicant
+                {poolAppliedSize === 1 ? '' : 's'}
+              </>
+            }
+            hint={
+              excludedIds.size > 0 ? `${excludedIds.size} excluded` : undefined
+            }
+          />
+          <StatTile
+            label="Leads"
+            value={meetingDays.length}
+            hint={`${meetingDays.filter((d) => d.day).length} with a day set`}
+          />
+        </StatStrip>
+      </Card>
 
       {pool && pool.applicants.length > 0 && (
-        <section className="rounded-xl border border-gray-100 bg-white p-4">
+        <Card variant="flat">
           <button
             type="button"
             className="text-text-default flex w-full items-center gap-2 text-sm font-semibold"
@@ -202,7 +196,7 @@ export function ReviewerPlanPanel({
                 return (
                   <label
                     key={applicant.application_id}
-                    className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-gray-50"
+                    className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50"
                   >
                     <input
                       type="checkbox"
@@ -223,10 +217,10 @@ export function ReviewerPlanPanel({
               })}
             </div>
           )}
-        </section>
+        </Card>
       )}
 
-      <section className="flex flex-col gap-3 rounded-xl border border-gray-100 bg-white p-4">
+      <Card variant="flat" className="flex flex-col gap-3">
         <h2 className="text-text-default text-sm font-semibold">Sizing</h2>
         <div className="flex flex-wrap items-end gap-4">
           <div className="flex flex-col gap-1.5">
@@ -290,12 +284,15 @@ export function ReviewerPlanPanel({
         )}
 
         {capacity && (
-          <div className="flex flex-col gap-2 rounded-lg bg-gray-50 p-3">
-            <div className="flex flex-wrap gap-5">
-              <Figure label="Minimum cap" value={capacity.min_cap} />
-              <Figure label="Suggested cap" value={capacity.suggested_cap} />
-              <Figure label="Reviews needed" value={capacity.required_slots} />
-            </div>
+          <div className="flex flex-col gap-2 bg-gray-50 p-3">
+            <StatStrip className="gap-5">
+              <StatTile label="Minimum cap" value={capacity.min_cap} />
+              <StatTile label="Suggested cap" value={capacity.suggested_cap} />
+              <StatTile
+                label="Reviews needed"
+                value={capacity.required_slots}
+              />
+            </StatStrip>
             {(capacity.notes ?? []).map((note) => (
               <p key={note} className="text-text-muted text-xs">
                 {note}
@@ -303,7 +300,7 @@ export function ReviewerPlanPanel({
             ))}
           </div>
         )}
-      </section>
+      </Card>
 
       {preview.isError && (
         <p className="text-destructive text-sm">
@@ -312,17 +309,17 @@ export function ReviewerPlanPanel({
       )}
 
       {stalePreview && (
-        <p className="text-text-muted rounded-xl border border-dashed border-gray-200 bg-white px-4 py-3 text-sm">
-          The setup changed since the last preview. Generate a new preview
-          before assigning.
-        </p>
+        <EmptyState
+          size="inline"
+          title="The setup changed since the last preview. Generate a new preview before assigning."
+        />
       )}
 
       {shownPlan && (
         <>
           <ReviewerPlanPreview plan={shownPlan} />
 
-          <div className="flex flex-wrap items-center gap-3 rounded-xl border border-gray-100 bg-white p-4">
+          <Toolbar>
             <div className="flex flex-col">
               <span className="text-text-default text-sm font-medium">
                 Ready to assign
@@ -353,7 +350,7 @@ export function ReviewerPlanPanel({
                 Assign reviewers
               </Button>
             </div>
-          </div>
+          </Toolbar>
 
           {commit.isError && (
             <p className="text-destructive text-sm">
@@ -393,13 +390,4 @@ export function ReviewerPlanPanel({
 
 function errorMessage(error: unknown): string {
   return apiErrorDetail(error)
-}
-
-function Figure({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div className="flex flex-col">
-      <span className="text-text-faint text-xs">{label}</span>
-      <span className="text-text-default text-sm font-semibold">{value}</span>
-    </div>
-  )
 }

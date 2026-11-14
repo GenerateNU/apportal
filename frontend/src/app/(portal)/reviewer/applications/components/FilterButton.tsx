@@ -578,7 +578,7 @@ function FilterValueEditor({
           <button
             onClick={onCommit}
             disabled={!hasValue(value)}
-            className="bg-brand-blue hover:bg-brand-blue/90 text-brand-white w-full rounded px-3 py-1.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+            className="bg-ink hover:bg-ink/90 text-brand-white w-full rounded px-3 py-1.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50"
           >
             {commitLabel}
           </button>

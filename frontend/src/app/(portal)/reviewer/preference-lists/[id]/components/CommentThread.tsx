@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Loader2, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
 import type { PreferenceListComment } from '@/lib/api/types'
 
 export function CommentThread({
@@ -52,10 +53,7 @@ export function CommentThread({
         const edited = c.updated_at !== c.created_at
         const isOwn = c.author_nuid === currentUserNuid
         return (
-          <div
-            key={c.id}
-            className="rounded-xl border border-gray-100 bg-white p-4"
-          >
+          <Card key={c.id} variant="flat">
             {editing ? (
               <div className="flex flex-col gap-2">
                 <textarea
@@ -64,7 +62,7 @@ export function CommentThread({
                   rows={3}
                   autoFocus
                   aria-label="Edit comment"
-                  className="focus:border-brand-blue text-text-default placeholder:text-text-subtle w-full rounded-md border border-gray-200 p-3 text-sm focus:outline-none"
+                  className="focus:border-ink text-text-default placeholder:text-text-subtle w-full border border-gray-200 p-3 text-sm focus:outline-none"
                 />
                 <div className="flex items-center gap-2">
                   <Button
@@ -107,17 +105,17 @@ export function CommentThread({
                 )}
               </div>
             )}
-          </div>
+          </Card>
         )
       })}
 
-      <div className="rounded-xl border border-gray-100 bg-white p-4">
+      <Card variant="flat">
         <textarea
           value={newComment}
           onChange={(e) => setNewComment(e.target.value)}
           placeholder={placeholder}
           rows={3}
-          className="focus:border-brand-blue text-text-default placeholder:text-text-subtle w-full rounded-md border border-gray-200 p-3 text-sm focus:outline-none"
+          className="focus:border-ink text-text-default placeholder:text-text-subtle w-full border border-gray-200 p-3 text-sm focus:outline-none"
         />
         <div className="mt-3">
           <Button
@@ -134,7 +132,7 @@ export function CommentThread({
             )}
           </Button>
         </div>
-      </div>
+      </Card>
     </div>
   )
 }

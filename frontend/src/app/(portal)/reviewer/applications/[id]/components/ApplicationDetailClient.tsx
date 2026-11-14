@@ -1,6 +1,5 @@
 'use client'
-import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
+import { BackLink } from '@/components/ui/back-link'
 import { PageContainer } from '@/components/PageContainer'
 import type { ApplicationStage } from '@/lib/api/types'
 import { ApplicantOverview } from '../../components/ApplicantOverview'
@@ -21,13 +20,7 @@ export function ApplicationDetailClient({
   return (
     <PageContainer className="min-h-0 flex-1 overflow-y-auto">
       <div className="mx-auto flex max-w-2xl flex-col gap-6">
-        <Link
-          href="/reviewer/applications"
-          className="text-text-muted hover:text-text-default inline-flex w-fit items-center gap-1 text-sm"
-        >
-          <ArrowLeft size={14} />
-          Back to Applications
-        </Link>
+        <BackLink href="/reviewer/applications">Back to Applications</BackLink>
 
         <ApplicantOverview
           applicationId={applicationId}

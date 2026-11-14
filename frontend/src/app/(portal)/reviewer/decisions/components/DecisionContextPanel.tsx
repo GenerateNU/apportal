@@ -8,6 +8,10 @@ import type {
   WrittenReviewDetail,
 } from '@/lib/api/types'
 import { RATING_COLORS, RATING_LABEL } from '@/lib/interview-ratings'
+import { Badge } from '@/components/ui/badge'
+import { Card } from '@/components/ui/card'
+import { LoadingText } from '@/components/ui/loading-text'
+import { SectionLabel } from '@/components/ui/section-label'
 
 // Everything already said about this applicant, so the interviewer writing the
 // feedback paragraph works from the record rather than from memory. Read-only:
@@ -22,7 +26,7 @@ export function DecisionContextPanel({
   isLoading: boolean
 }) {
   if (isLoading) {
-    return <p className="text-text-faint text-sm">Loading review history…</p>
+    return <LoadingText label="Loading review history…" />
   }
   if (!context) return null
 
@@ -32,9 +36,7 @@ export function DecisionContextPanel({
 
   return (
     <div className="flex flex-col gap-4">
-      <h4 className="text-text-faint text-xs font-semibold tracking-wide uppercase">
-        Review history
-      </h4>
+      <SectionLabel as="h3">Review history</SectionLabel>
 
       {nothing && !context.written_reviews_blind && (
         <p className="text-text-faint text-sm">
@@ -53,7 +55,7 @@ export function DecisionContextPanel({
               <LinkOut href={interview.notes_url} label="Notes" />
             )}
           </div>
-          <div className="rounded-lg border border-gray-200 bg-white p-3">
+          <Card variant="flat" padding="sm">
             <div className="mb-1.5 flex items-center gap-2">
               <span className="text-text-default text-sm font-medium">
                 {interview.interviewers
@@ -67,17 +69,14 @@ export function DecisionContextPanel({
               )}
             </div>
             <Body text={interview.writeup} empty="No write-up yet." />
-          </div>
+          </Card>
         </Section>
       )}
 
       {(recording_reviews.length > 0 || context.recording_reviews_blind) && (
         <Section title="Recording reviews">
           {recording_reviews.map((r) => (
-            <div
-              key={r.id}
-              className="rounded-lg border border-gray-200 bg-white p-3"
-            >
+            <Card key={r.id} variant="flat" padding="sm">
               <div className="mb-1.5 flex items-center gap-2">
                 <span className="text-text-default text-sm font-medium">
                   {r.reviewer_name || r.reviewer_nuid}
@@ -94,7 +93,7 @@ export function DecisionContextPanel({
                     : 'No comments written.'
                 }
               />
-            </div>
+            </Card>
           ))}
         </Section>
       )}
@@ -137,16 +136,14 @@ function WrittenReview({
     : null
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-3">
+    <Card variant="flat" padding="sm">
       <div className="mb-2 flex items-center justify-between gap-2">
         <span className="text-text-default text-sm font-medium">
           {review.reviewer_name || review.reviewer_nuid}
         </span>
         <div className="flex items-center gap-2">
           {avg != null && (
-            <span className="text-text-default rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium">
-              avg {avg.toFixed(1)}/10
-            </span>
+            <Badge className="text-text-default">avg {avg.toFixed(1)}/10</Badge>
           )}
           {!review.submitted_at && (
             <span className="text-text-faint text-xs">Draft</span>
@@ -178,7 +175,7 @@ function WrittenReview({
           )
         })}
       </div>
-    </div>
+    </Card>
   )
 }
 
@@ -207,13 +204,7 @@ function RatingChip({ rating }: { rating?: InterviewRating }) {
     return <span className="text-text-faint text-xs">No rating</span>
   }
   const { bg, text } = RATING_COLORS[rating]
-  return (
-    <span
-      className={`rounded-md px-2 py-0.5 text-xs font-medium ${bg} ${text}`}
-    >
-      {RATING_LABEL[rating]}
-    </span>
-  )
+  return <Badge className={`${bg} ${text}`}>{RATING_LABEL[rating]}</Badge>
 }
 
 function LinkOut({ href, label }: { href: string; label: string }) {
@@ -222,7 +213,7 @@ function LinkOut({ href, label }: { href: string; label: string }) {
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="text-brand-blue inline-flex items-center gap-1 text-xs underline underline-offset-2"
+      className="text-ink inline-flex items-center gap-1 text-xs underline underline-offset-2"
     >
       {label}
       <ExternalLink size={11} />

@@ -2,7 +2,9 @@
 
 import { useState } from 'react'
 import { Loader2, Plus, Trash2, Users, X } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
 import {
   Dialog,
   DialogContent,
@@ -11,6 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { EmptyState } from '@/components/ui/empty-state'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -166,9 +169,10 @@ export function GroupBuilder({
       )}
 
       {groups.length === 0 ? (
-        <p className="text-text-faint rounded-xl border border-dashed border-gray-200 bg-white px-4 py-6 text-center text-sm">
-          No groups yet. Auto-form them from the leads, or add one by hand.
-        </p>
+        <EmptyState
+          size="sm"
+          title="No groups yet. Auto-form them from the leads, or add one by hand."
+        />
       ) : (
         <div className="grid gap-3 md:grid-cols-2">
           {groups.map((group) => (
@@ -282,7 +286,7 @@ function GroupCard({
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-gray-100 bg-white p-4">
+    <Card variant="flat" className="flex flex-col gap-3">
       <div className="flex items-center gap-2">
         <Input
           value={name}
@@ -316,10 +320,7 @@ function GroupCard({
           <span className="text-text-faint text-xs">No members yet.</span>
         )}
         {members.map((m) => (
-          <span
-            key={m.member_nuid}
-            className="text-text-default inline-flex items-center gap-1 rounded-md bg-gray-100 px-2 py-0.5 text-xs"
-          >
+          <Badge key={m.member_nuid} className="text-text-default font-normal">
             {m.full_name}
             <button
               type="button"
@@ -331,7 +332,7 @@ function GroupCard({
             >
               <X size={12} />
             </button>
-          </span>
+          </Badge>
         ))}
       </div>
 
@@ -411,6 +412,6 @@ function GroupCard({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </Card>
   )
 }

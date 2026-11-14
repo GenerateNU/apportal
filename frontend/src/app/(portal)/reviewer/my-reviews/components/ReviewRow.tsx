@@ -1,6 +1,9 @@
 import Link from 'next/link'
 import { ArrowRight, CheckCircle2, Clock } from 'lucide-react'
 import { Tooltip } from '@/components/Tooltip'
+import { Badge } from '@/components/ui/badge'
+import { TABLE_ROW } from '@/components/ui/table-styles'
+import { cn } from '@/lib/utils'
 import type { ApplicationStage } from '@/lib/api/types'
 import {
   stageBadge,
@@ -37,6 +40,7 @@ export function ReviewRow({
   state,
   stateLabel = REVIEW_STATE_LABEL[state],
   stateTooltip,
+  className: extraClassName,
 }: {
   href?: string
   name: string
@@ -47,6 +51,7 @@ export function ReviewRow({
   state: ReviewState
   stateLabel?: string
   stateTooltip?: string
+  className?: string
 }) {
   const body = (
     <>
@@ -63,11 +68,7 @@ export function ReviewRow({
 
       {stage && (
         <span className="hidden lg:block">
-          <span
-            className={`inline-block rounded-md px-2 py-0.5 text-xs font-medium ${stageBadge[stage]}`}
-          >
-            {stageLabel[stage]}
-          </span>
+          <Badge className={stageBadge[stage]}>{stageLabel[stage]}</Badge>
         </span>
       )}
 
@@ -84,17 +85,15 @@ export function ReviewRow({
 
       <span className="flex">
         <Tooltip label={stateTooltip ?? stateLabel}>
-          <span
-            className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium ${REVIEW_STATE_BADGE[state]}`}
-          >
+          <Badge className={REVIEW_STATE_BADGE[state]}>
             {state === 'submitted' && <CheckCircle2 className="h-3 w-3" />}
             {stateLabel}
-          </span>
+          </Badge>
         </Tooltip>
       </span>
 
       {/* Same hover affordance as the applicant's apply card. */}
-      <span className="text-text-faint group-hover:text-brand-blue flex items-center transition-colors">
+      <span className="text-text-faint group-hover:text-ink flex items-center transition-colors">
         {href && (
           <ArrowRight
             size={16}
@@ -105,10 +104,15 @@ export function ReviewRow({
     </>
   )
 
-  const className = `group grid ${stage ? GRID_WITH_STAGE : GRID} items-center gap-3 px-4 py-2.5 transition-colors`
+  const className = cn(
+    'group grid items-center gap-3',
+    stage ? GRID_WITH_STAGE : GRID,
+    TABLE_ROW,
+    extraClassName
+  )
 
   return href ? (
-    <Link href={href} className={`${className} hover:bg-gray-50`}>
+    <Link href={href} className={className}>
       {body}
     </Link>
   ) : (

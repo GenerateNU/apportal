@@ -16,7 +16,10 @@ import {
   LayoutList,
 } from 'lucide-react'
 import { PageContainer } from '@/components/PageContainer'
+import { Badge, StatusDot } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { PageHeader } from '@/components/ui/page-header'
+import { SegmentedTabs } from '@/components/ui/segmented-tabs'
 import { TagFilter } from '@/components/ui/tag-filter'
 import { usePersistedFilters } from '@/hooks/usePersistedFilters'
 import { useCycleTags } from '@/lib/queries/tags'
@@ -445,152 +448,149 @@ export function InterviewRatingsClient() {
 
   return (
     <PageContainer>
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <h1 className="text-text-default text-2xl font-semibold">
-            Interview ratings
-          </h1>
-          <p className="text-text-muted mt-1 text-sm">
+      <PageHeader
+        title="Interview ratings"
+        subtitle={
+          <>
             Every interviewed applicant, grouped by their interviewer&apos;s
             rating. Applicants whose interview isn&apos;t complete yet sit in
             their own bucket.
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3">
-          {isChief && recordingGates.length > 0 && (
-            <div className="flex items-center gap-2">
-              <span className="text-text-muted text-xs">
-                {submittedReviews}/{assignedReviews} reviews in
-              </span>
-              <Button
-                size="sm"
-                variant={allReleased ? 'outline' : 'default'}
-                onClick={() => setConfirmingRelease(!allReleased)}
-                disabled={setRelease.isPending}
-              >
-                {allReleased ? <Lock size={14} /> : <Unlock size={14} />}
-                {allReleased ? 'Hide reviews' : 'Release reviews'}
-              </Button>
-            </div>
-          )}
-
-          <div className="relative w-full sm:w-64">
-            <Input
-              type="text"
-              placeholder="Search by name, NUID, or email..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-9 pr-8 pl-3 text-sm"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                aria-label="Clear search"
-                className="absolute top-1/2 right-1 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600"
-              >
-                ✕
-              </button>
+          </>
+        }
+        actions={
+          <>
+            {isChief && recordingGates.length > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="text-text-muted text-xs">
+                  {submittedReviews}/{assignedReviews} reviews in
+                </span>
+                <Button
+                  size="sm"
+                  variant={allReleased ? 'outline' : 'default'}
+                  onClick={() => setConfirmingRelease(!allReleased)}
+                  disabled={setRelease.isPending}
+                >
+                  {allReleased ? <Lock size={14} /> : <Unlock size={14} />}
+                  {allReleased ? 'Hide reviews' : 'Release reviews'}
+                </Button>
+              </div>
             )}
-          </div>
 
-          {cycleTags.length > 0 && (
-            <TagFilter
-              tags={cycleTags}
-              value={activeTagIds}
-              onChange={setTagFilter}
-            />
-          )}
-
-          {isChief && (
-            <div className="flex rounded-md border border-gray-200 bg-white">
-              <button
-                onClick={() => setGroupByInterviewer(false)}
-                className={`flex items-center gap-1.5 rounded-l-md px-3 py-1.5 text-sm transition-colors ${
-                  !groupByInterviewer
-                    ? 'text-text-default bg-gray-100 font-medium'
-                    : 'text-text-subtle hover:text-text-secondary'
-                }`}
-                aria-label="List view"
-              >
-                <LayoutList className="h-4 w-4" />
-                By rating
-              </button>
-              <button
-                onClick={() => setGroupByInterviewer(true)}
-                className={`flex items-center gap-1.5 rounded-r-md px-3 py-1.5 text-sm transition-colors ${
-                  groupByInterviewer
-                    ? 'text-text-default bg-gray-100 font-medium'
-                    : 'text-text-subtle hover:text-text-secondary'
-                }`}
-                aria-label="Grouped by interviewer view"
-              >
-                <Users className="h-4 w-4" />
-                By interviewer
-              </button>
+            <div className="relative w-full sm:w-64">
+              <Input
+                type="text"
+                placeholder="Search by name, NUID, or email..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-9 pr-8 pl-3 text-sm"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  aria-label="Clear search"
+                  className="absolute top-1/2 right-1 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600"
+                >
+                  ✕
+                </button>
+              )}
             </div>
-          )}
 
-          {isChief && (
+            {cycleTags.length > 0 && (
+              <TagFilter
+                tags={cycleTags}
+                value={activeTagIds}
+                onChange={setTagFilter}
+              />
+            )}
+
+            {isChief && (
+              <SegmentedTabs
+                tabs={[
+                  {
+                    id: 'rating',
+                    label: (
+                      <>
+                        <LayoutList className="h-4 w-4" />
+                        By rating
+                      </>
+                    ),
+                  },
+                  {
+                    id: 'interviewer',
+                    label: (
+                      <>
+                        <Users className="h-4 w-4" />
+                        By interviewer
+                      </>
+                    ),
+                  },
+                ]}
+                value={groupByInterviewer ? 'interviewer' : 'rating'}
+                onChange={(id) => setGroupByInterviewer(id === 'interviewer')}
+              />
+            )}
+
+            {isChief && (
+              <Select
+                value={interviewerFilter}
+                onValueChange={setInterviewerFilter}
+              >
+                <SelectTrigger
+                  className="min-w-40 flex-1 sm:w-48 sm:flex-none"
+                  aria-label="Filter by interviewer"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All interviewers</SelectItem>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                  {availableInterviewers.map((i) => (
+                    <SelectItem key={i.nuid} value={i.nuid}>
+                      {i.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+
             <Select
-              value={interviewerFilter}
-              onValueChange={setInterviewerFilter}
+              value={activeRole}
+              onValueChange={(val) => setActiveRole(val)}
             >
               <SelectTrigger
                 className="min-w-40 flex-1 sm:w-48 sm:flex-none"
-                aria-label="Filter by interviewer"
+                aria-label="Filter by role"
               >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All interviewers</SelectItem>
-                <SelectItem value="unassigned">Unassigned</SelectItem>
-                {availableInterviewers.map((i) => (
-                  <SelectItem key={i.nuid} value={i.nuid}>
-                    {i.name}
+                <SelectItem value="all">All roles</SelectItem>
+                {roleIds.map((r) => (
+                  <SelectItem key={r} value={r}>
+                    {roleLabel(r)}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-          )}
 
-          <Select
-            value={activeRole}
-            onValueChange={(val) => setActiveRole(val)}
-          >
-            <SelectTrigger
-              className="min-w-40 flex-1 sm:w-48 sm:flex-none"
-              aria-label="Filter by role"
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All roles</SelectItem>
-              {roleIds.map((r) => (
-                <SelectItem key={r} value={r}>
-                  {roleLabel(r)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={cycleId} onValueChange={setCycleId}>
-            <SelectTrigger
-              className="min-w-40 flex-1 sm:w-40 sm:flex-none"
-              aria-label="Filter by cycle"
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {cycles.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+            <Select value={cycleId} onValueChange={setCycleId}>
+              <SelectTrigger
+                className="min-w-40 flex-1 sm:w-40 sm:flex-none"
+                aria-label="Filter by cycle"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {cycles.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </>
+        }
+      />
 
       {rows.length === 0 ? (
         <p className="text-text-faint px-1 text-sm">
@@ -601,7 +601,7 @@ export function InterviewRatingsClient() {
           No applicants match these filters.
         </p>
       ) : showSwimlanes ? (
-        <div className="max-h-[70vh] overflow-auto rounded-lg border border-gray-200 pb-4">
+        <div className="max-h-[70vh] overflow-auto border border-gray-200 pb-4">
           <div
             className={`sticky top-0 z-10 grid divide-x divide-gray-200 bg-white pt-2 pb-2 ${SWIMLANE_GRID_COLS_CLASS[visibleColumnDefs.length]}`}
           >
@@ -612,11 +612,11 @@ export function InterviewRatingsClient() {
                     {c.title}
                   </span>
                 ) : (
-                  <span
-                    className={`inline-flex items-center rounded-md px-2 py-0.5 text-sm font-semibold ${RATING_COLORS[c.key as InterviewRating].bg} ${RATING_COLORS[c.key as InterviewRating].text}`}
+                  <Badge
+                    className={`text-sm font-semibold ${RATING_COLORS[c.key as InterviewRating].bg} ${RATING_COLORS[c.key as InterviewRating].text}`}
                   >
                     {c.title}
-                  </span>
+                  </Badge>
                 )}
                 <span className="text-text-subtle text-sm">
                   {ratingTotals[c.key]}
@@ -638,7 +638,7 @@ export function InterviewRatingsClient() {
                   <button
                     type="button"
                     onClick={() => toggleLane(lane.key)}
-                    className="text-text-default hover:text-brand-blue sticky top-[2.2rem] left-0 z-[6] col-span-full flex w-fit items-center gap-1.5 bg-inherit px-4 py-2 text-sm font-medium"
+                    className="text-text-default hover:text-ink sticky top-[2.2rem] left-0 z-[6] col-span-full flex w-fit items-center gap-1.5 bg-inherit px-4 py-2 text-sm font-medium"
                   >
                     {collapsed ? (
                       <ChevronRight size={14} />
@@ -685,7 +685,7 @@ export function InterviewRatingsClient() {
           })}
         </div>
       ) : (
-        <div className="flex divide-x divide-gray-200 overflow-x-auto rounded-lg border border-gray-200 pb-4">
+        <div className="flex divide-x divide-gray-200 overflow-x-auto border border-gray-200 pb-4">
           {ratingColumns.map((column) => (
             <RatingColumn
               key={column.key}
@@ -771,11 +771,11 @@ function RatingColumn({
             {title}
           </span>
         ) : (
-          <span
-            className={`inline-flex items-center rounded-md px-2 py-0.5 text-sm font-semibold ${RATING_COLORS[ratingKey as InterviewRating].bg} ${RATING_COLORS[ratingKey as InterviewRating].text}`}
+          <Badge
+            className={`text-sm font-semibold ${RATING_COLORS[ratingKey as InterviewRating].bg} ${RATING_COLORS[ratingKey as InterviewRating].text}`}
           >
             {title}
-          </span>
+          </Badge>
         )}
         <span className="text-text-subtle text-sm">{rows.length}</span>
       </div>
@@ -842,7 +842,7 @@ function RatingCard({
   return (
     <Link
       href={`/reviewer/my-interviews/${application.id}?from=interview-ratings`}
-      className="group flex flex-col gap-2 rounded-lg border border-gray-200 bg-white p-3 shadow-sm transition-shadow hover:shadow-md"
+      className="group flex flex-col gap-2 border border-gray-200 bg-white p-3 transition-colors hover:bg-gray-50"
     >
       <div className="flex items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-1.5">
@@ -850,46 +850,38 @@ function RatingCard({
             {application.full_name || application.user_nuid}
           </p>
           {showRole && (
-            <span
-              className={`shrink-0 rounded-md px-1.5 py-0.5 text-xs font-medium ${roleChipClass(application.role_id)}`}
-            >
+            <Badge size="sm" className={roleChipClass(application.role_id)}>
               {roleLabel(application.role_id)}
-            </span>
+            </Badge>
           )}
         </div>
         <ArrowRight
           size={14}
-          className="text-text-faint group-hover:text-brand-blue shrink-0 transition-transform group-hover:translate-x-1"
+          className="text-text-faint group-hover:text-ink shrink-0 transition-transform group-hover:translate-x-1"
         />
       </div>
 
       <div className="flex flex-wrap items-center gap-1.5">
         {showInterviewStateBadge && (
           <>
-            <span
-              className={`h-2 w-2 shrink-0 rounded-full border-2 ${REVIEW_STATE_DOT[state]}`}
-            />
-            <span
-              className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium ${REVIEW_STATE_BADGE[state]}`}
-            >
+            <StatusDot className={`border-2 ${REVIEW_STATE_DOT[state]}`} />
+            <Badge size="sm" className={REVIEW_STATE_BADGE[state]}>
               {state === 'submitted' && <CheckCircle2 className="h-3 w-3" />}
               {INTERVIEW_STATE_LABEL[state]}
-            </span>
+            </Badge>
           </>
         )}
         {application.stage && (
-          <span
-            className={`rounded-md px-1.5 py-0.5 text-xs font-medium ${stageBadge[application.stage]}`}
-          >
+          <Badge size="sm" className={stageBadge[application.stage]}>
             {stageLabel[application.stage]}
-          </span>
+          </Badge>
         )}
         {interview?.rating && (
-          <span
-            className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${RATING_COLORS[interview.rating].bg} ${RATING_COLORS[interview.rating].text}`}
+          <Badge
+            className={`${RATING_COLORS[interview.rating].bg} ${RATING_COLORS[interview.rating].text}`}
           >
             {RATING_LABEL[interview.rating]}
-          </span>
+          </Badge>
         )}
         {/* The card is a link, so stop clicks here from navigating. */}
         <span

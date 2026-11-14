@@ -2,6 +2,7 @@
 
 import { Plus } from 'lucide-react'
 import { ReturnerBadge } from '@/components/ReturnerBadge'
+import { Badge } from '@/components/ui/badge'
 import type { PreferenceEntry } from './EntryRow'
 
 // A second list shown beside the one being edited. Read-only by design —
@@ -53,7 +54,7 @@ export function ReferencePane({
             return (
               <li
                 key={entry.id}
-                className={`flex items-start gap-2 rounded-lg border border-gray-200 p-3 ${
+                className={`flex items-start gap-2 border border-gray-200 p-3 ${
                   already ? 'bg-gray-50' : 'bg-white'
                 }`}
               >
@@ -75,16 +76,14 @@ export function ReferencePane({
                     </button>
                     {entry.returner && <ReturnerBadge />}
                     {draftedBy && (
-                      <span className="text-text-muted rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium">
+                      <Badge size="sm" className="text-text-muted">
                         Drafted · {draftedBy}
-                      </span>
+                      </Badge>
                     )}
                     {badge && (
-                      <span
-                        className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${badge.className}`}
-                      >
+                      <Badge size="sm" className={badge.className}>
                         {badge.label}
-                      </span>
+                      </Badge>
                     )}
                   </div>
                   {entry.reasoning && (
@@ -103,7 +102,7 @@ export function ReferencePane({
                       type="button"
                       onClick={() => onAdd(entry.application_id)}
                       aria-label={`Add ${entry.full_name} to the list you're editing`}
-                      className="text-brand-blue hover:text-brand-blue/80 inline-flex shrink-0 items-center gap-0.5 text-xs pointer-coarse:-my-2 pointer-coarse:py-2"
+                      className="text-ink hover:text-ink/80 inline-flex shrink-0 items-center gap-0.5 text-xs pointer-coarse:-my-2 pointer-coarse:py-2"
                     >
                       <Plus size={12} />
                       Add

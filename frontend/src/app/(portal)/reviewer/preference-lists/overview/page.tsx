@@ -5,6 +5,7 @@ import {
   QueryClient,
 } from '@tanstack/react-query'
 import { PageContainer } from '@/components/PageContainer'
+import { PageHeader } from '@/components/ui/page-header'
 import { listPreferenceListDetails } from '@/generated/preference-lists/preference-lists'
 import { getServerRequestOptions } from '@/lib/api/server-request-options'
 import type { PreferenceListDetail } from '@/lib/api/types'
@@ -63,14 +64,14 @@ export default async function PreferenceListsOverviewPage({
 
   return (
     <PageContainer>
-      <div>
-        <h1 className="text-text-default text-2xl font-semibold">
-          Compare preference list groups
-        </h1>
-        <p className="text-text-muted mt-1 text-sm">
-          Every group&apos;s ranked list for a cycle and role, side by side.
-        </p>
-      </div>
+      <PageHeader
+        title="Compare preference list groups"
+        subtitle={
+          <>
+            Every group&apos;s ranked list for a cycle and role, side by side.
+          </>
+        }
+      />
       <HydrationBoundary state={dehydrate(queryClient)}>
         <PreferenceListsOverviewClient />
       </HydrationBoundary>

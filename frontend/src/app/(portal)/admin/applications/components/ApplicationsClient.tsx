@@ -1,5 +1,9 @@
 'use client'
 import { PageContainer } from '@/components/PageContainer'
+import { TABLE_FRAME } from '@/components/ui/table-styles'
+import { StatusDot } from '@/components/ui/badge'
+import { PageHeader } from '@/components/ui/page-header'
+import { SectionLabel } from '@/components/ui/section-label'
 
 import { useMemo, useState } from 'react'
 import { ChevronRight, Folder } from 'lucide-react'
@@ -102,7 +106,7 @@ export function ApplicationsClient() {
 
   return (
     <PageContainer>
-      <h1 className="text-text-default text-2xl font-semibold">Applications</h1>
+      <PageHeader title="Applications" />
 
       {cycles.length === 0 ? (
         <p className="text-text-faint px-1 text-sm">
@@ -116,9 +120,7 @@ export function ApplicationsClient() {
         <>
           {openCycles.length > 0 && (
             <div className="flex flex-col gap-2">
-              <h2 className="text-text-faint text-xs font-semibold tracking-wide uppercase">
-                Open cycles
-              </h2>
+              <SectionLabel>Open cycles</SectionLabel>
               <div className="grid grid-cols-[repeat(auto-fill,minmax(min(280px,100%),1fr))] gap-4">
                 {openTemplates.map((t) => (
                   <ApplicationRow key={`${t.cycleId}-${t.role}`} template={t} />
@@ -129,9 +131,7 @@ export function ApplicationsClient() {
 
           {draftCycles.length > 0 && (
             <div className="flex flex-col gap-2">
-              <h2 className="text-text-faint text-xs font-semibold tracking-wide uppercase">
-                Draft cycles
-              </h2>
+              <SectionLabel>Draft cycles</SectionLabel>
               {draftCycles.map((cycle) => (
                 <CycleFolder
                   key={cycle.id}
@@ -146,9 +146,7 @@ export function ApplicationsClient() {
 
       {pastCycles.length > 0 && (
         <div className="flex flex-col gap-2">
-          <h2 className="text-text-faint text-xs font-semibold tracking-wide uppercase">
-            Past cycles
-          </h2>
+          <SectionLabel>Past cycles</SectionLabel>
           {pastCycles.map((cycle) => (
             <CycleFolder
               key={cycle.id}
@@ -172,7 +170,7 @@ function CycleFolder({
   const [open, setOpen] = useState(false)
 
   return (
-    <div className="rounded-xl border border-gray-100 bg-white">
+    <div className={TABLE_FRAME}>
       <button
         type="button"
         className="flex w-full items-center gap-2 p-4 text-left"
@@ -189,9 +187,7 @@ function CycleFolder({
           {cycle.name}
         </span>
         <span className="text-text-subtle flex shrink-0 items-center gap-1.5 text-xs">
-          <span
-            className={`h-2 w-2 shrink-0 rounded-full ${cycleStatusDot[cycle.status]}`}
-          />
+          <StatusDot className={cycleStatusDot[cycle.status]} />
           {cycleStatusLabel[cycle.status]}
         </span>
       </button>

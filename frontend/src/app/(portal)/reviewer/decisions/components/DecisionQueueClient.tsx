@@ -6,6 +6,10 @@ import { ArrowRight } from 'lucide-react'
 import { PageContainer } from '@/components/PageContainer'
 import { ProgressBar } from '@/components/ProgressBar'
 import { Button } from '@/components/ui/button'
+import { TABLE_FRAME } from '@/components/ui/table-styles'
+import { LoadingText } from '@/components/ui/loading-text'
+import { PageHeader } from '@/components/ui/page-header'
+import { SectionLabel } from '@/components/ui/section-label'
 import {
   Select,
   SelectContent,
@@ -61,29 +65,24 @@ export function DecisionQueueClient() {
 
   return (
     <PageContainer>
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <h1 className="text-text-default text-2xl font-semibold">
-            Decision feedback
-          </h1>
-          <p className="text-text-muted mt-1 text-sm">
-            Applicants you interviewed who are being rejected. Your two
-            paragraphs go into the letter a chief sends them.
-          </p>
-        </div>
-        <Select value={cycleId} onValueChange={setCycleId}>
-          <SelectTrigger className="w-40" aria-label="Filter by cycle">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {cycles.map((c) => (
-              <SelectItem key={c.id} value={c.id}>
-                {c.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <PageHeader
+        title="Decision feedback"
+        subtitle="Applicants you interviewed who are being rejected. Your two paragraphs go into the letter a chief sends them."
+        actions={
+          <Select value={cycleId} onValueChange={setCycleId}>
+            <SelectTrigger className="w-40" aria-label="Filter by cycle">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {cycles.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        }
+      />
 
       {rows.length > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -105,7 +104,7 @@ export function DecisionQueueClient() {
       )}
 
       {isLoading ? (
-        <p className="text-text-faint px-1 text-sm">Loading…</p>
+        <LoadingText className="px-1" />
       ) : sections.length === 0 ? (
         <p className="text-text-faint px-1 text-sm">
           Nothing here yet — applicants you interviewed show up once a chief
@@ -114,10 +113,10 @@ export function DecisionQueueClient() {
       ) : (
         sections.map(({ role, rows: roleRows }) => (
           <div key={role} className="flex flex-col gap-2">
-            <h2 className="text-text-faint text-xs font-semibold tracking-wide uppercase">
+            <SectionLabel>
               {roleLabel(role)} ({roleRows.length})
-            </h2>
-            <div className="divide-y divide-gray-100 overflow-hidden rounded-lg border border-gray-200 bg-white">
+            </SectionLabel>
+            <div className={TABLE_FRAME}>
               {roleRows.map((row) => (
                 <QueueRow key={row.application_id} row={row} />
               ))}

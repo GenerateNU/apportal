@@ -180,7 +180,7 @@ function SeatRow({
         transition,
         opacity: isDragging ? 0.5 : 1,
       }}
-      className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2.5"
+      className="flex items-center gap-2 border border-gray-200 bg-white px-3 py-2.5"
     >
       <span className="text-text-subtle w-4 text-right text-sm font-semibold tabular-nums">
         {index + 1}

@@ -12,6 +12,7 @@ import {
   X,
 } from 'lucide-react'
 import { ReturnerBadge } from '@/components/ReturnerBadge'
+import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
 import type { PreferenceListComment } from '@/lib/api/types'
 import { CommentThread } from './CommentThread'
@@ -100,7 +101,7 @@ export function EntryRow({
         transition,
         opacity: isDragging ? 0.5 : 1,
       }}
-      className="flex flex-col gap-2 rounded-lg border border-gray-200 bg-white p-3"
+      className="flex flex-col gap-2 border border-gray-200 bg-white p-3"
     >
       <div className="flex items-start gap-3">
         <div className="flex shrink-0 items-center gap-1 pt-0.5">
@@ -159,16 +160,14 @@ export function EntryRow({
             )}
             {entry.returner && <ReturnerBadge />}
             {draftedBy && (
-              <span className="text-text-muted rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium">
+              <Badge size="sm" className="text-text-muted">
                 Drafted · {draftedBy}
-              </span>
+              </Badge>
             )}
             {availabilityBadge && (
-              <span
-                className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${availabilityBadge.className}`}
-              >
+              <Badge size="sm" className={availabilityBadge.className}>
                 {availabilityBadge.label}
-              </span>
+              </Badge>
             )}
             {commentCount > 0 && (
               <span className="text-text-faint inline-flex items-center gap-0.5 text-[10px]">
@@ -231,7 +230,7 @@ export function EntryRow({
             disabled={locked}
             placeholder="Why this rank?"
             rows={2}
-            className="border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 w-full rounded-md border bg-transparent px-2.5 py-1.5 text-sm outline-none focus-visible:ring-3 disabled:cursor-not-allowed disabled:opacity-60"
+            className="border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 w-full border bg-transparent px-2.5 py-1.5 text-sm outline-none focus-visible:ring-3 disabled:cursor-not-allowed disabled:opacity-60"
           />
           {comments && (
             <div className="border-t border-gray-100 pt-2">

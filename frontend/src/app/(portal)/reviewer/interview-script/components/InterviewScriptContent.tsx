@@ -2,16 +2,10 @@
 
 import { useState } from 'react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
+import { LoadingText } from '@/components/ui/loading-text'
+import { SectionLabel } from '@/components/ui/section-label'
 import type { InterviewScriptQuestion } from '@/lib/api/types'
 import { useInterviewScript } from '@/lib/queries/interview-script'
-
-function SectionHeading({ children }: { children: React.ReactNode }) {
-  return (
-    <h3 className="text-text-faint text-xs font-semibold tracking-wide uppercase">
-      {children}
-    </h3>
-  )
-}
 
 function QuestionItem({
   question,
@@ -24,7 +18,7 @@ function QuestionItem({
   const hasFollowUps = !!question.followUps?.length
 
   return (
-    <li className="rounded-lg border border-gray-100 bg-white p-3">
+    <li className="border border-gray-100 bg-white p-3">
       <p className="text-text-default text-sm">
         <span className="text-text-faint">{index + 1}.</span> {question.prompt}
       </p>
@@ -65,13 +59,13 @@ export function InterviewScriptContent({
   const { data: script, isLoading } = useInterviewScript(cycleId, role)
 
   if (isLoading || !script) {
-    return <p className="text-text-faint text-sm">Loading script…</p>
+    return <LoadingText label="Loading script…" />
   }
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <SectionHeading>Intro speech</SectionHeading>
+        <SectionLabel as="h3">Intro speech</SectionLabel>
         <p className="text-text-faint text-xs italic">
           Read this to every applicant for posterity.
         </p>
@@ -82,12 +76,12 @@ export function InterviewScriptContent({
         </div>
       </div>
 
-      <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800">
+      <div className="border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800">
         {script.recording_reminder}
       </div>
 
       <div className="flex flex-col gap-2">
-        <SectionHeading>Questions</SectionHeading>
+        <SectionLabel as="h3">Questions</SectionLabel>
         <ul className="flex flex-col gap-2">
           {script.questions.map((q, i) => (
             <QuestionItem key={q.prompt} question={q} index={i} />
@@ -97,7 +91,7 @@ export function InterviewScriptContent({
       </div>
 
       <div className="flex flex-col gap-2">
-        <SectionHeading>Challenge</SectionHeading>
+        <SectionLabel as="h3">Challenge</SectionLabel>
         <p className="text-text-muted text-sm">{script.challenge_intro}</p>
         {(
           [
@@ -121,7 +115,7 @@ export function InterviewScriptContent({
       </div>
 
       <div className="flex flex-col gap-2">
-        <SectionHeading>Post interview</SectionHeading>
+        <SectionLabel as="h3">Post interview</SectionLabel>
         <ol className="flex list-decimal flex-col gap-1 pl-4">
           {script.post_interview_checklist.map((item) => (
             <li key={item} className="text-text-default text-sm">

@@ -1,8 +1,8 @@
 'use client'
 
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { SectionLabel } from '@/components/ui/section-label'
 import type { CodeChallenge, Question } from '@/lib/api/types'
+import { ChallengeField } from './ChallengeField'
 import { QuestionField, type AnswerValue } from './QuestionField'
 
 // The shared body of an application — written responses, resume, availability,
@@ -43,7 +43,7 @@ export function ApplicationFields({
 }) {
   return (
     <div className="flex flex-col gap-8">
-      <Section title="Written responses">
+      <Section title={challenge ? 'Written responses' : undefined}>
         {questions.length === 0 ? (
           <p className="text-text-faint text-sm">
             No written questions for this application.
@@ -66,25 +66,13 @@ export function ApplicationFields({
       </Section>
 
       {challenge && (
-        <Section title="Code challenge">
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-text-default" htmlFor="challenge">
-              {challenge.name}
-            </Label>
-            {challenge.instructions && (
-              <p className="text-text-muted text-sm">
-                {challenge.instructions}
-              </p>
-            )}
-            <Input
-              id="challenge"
-              type="url"
-              value={submissionUrl}
-              onChange={(e) => onSubmissionChange(e.target.value)}
-              placeholder="https://github.com/you/your-submission"
-              disabled={disabled}
-            />
-          </div>
+        <Section title="Challenge">
+          <ChallengeField
+            challenge={challenge}
+            value={submissionUrl}
+            onChange={onSubmissionChange}
+            disabled={disabled}
+          />
         </Section>
       )}
     </div>
@@ -95,12 +83,12 @@ function Section({
   title,
   children,
 }: {
-  title: string
+  title?: string
   children: React.ReactNode
 }) {
   return (
-    <section className="rounded-xl border border-gray-100 bg-white p-4 sm:p-6">
-      <h2 className="text-text-default mb-4 text-sm font-semibold">{title}</h2>
+    <section className="flex flex-col gap-4">
+      {title && <SectionLabel>{title}</SectionLabel>}
       {children}
     </section>
   )

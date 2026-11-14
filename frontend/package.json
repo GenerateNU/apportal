@@ -19,6 +19,7 @@
     "@radix-ui/react-popover": "^1.1.21",
     "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.110.1",
+    "@tanstack/react-form": "^1.33.5",
     "@tanstack/react-query": "^5.101.2",
     "axios": "^1.18.1",
     "class-variance-authority": "^0.7.1",

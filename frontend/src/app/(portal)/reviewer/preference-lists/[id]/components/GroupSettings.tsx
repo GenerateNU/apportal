@@ -1,6 +1,7 @@
 'use client'
 
 import { ChevronDown, ChevronRight, X } from 'lucide-react'
+import { Card } from '@/components/ui/card'
 import { DateTimePicker } from '@/components/ui/datetime-picker'
 import {
   Select,
@@ -10,6 +11,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { SearchableSelect } from '@/components/ui/searchable-select'
+import { SectionLabel } from '@/components/ui/section-label'
 import {
   AVAILABILITY_DAY_OPTIONS,
   MEETING_DAY_LABEL,
@@ -63,7 +65,7 @@ export function GroupSettings({
     .join(', ')
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+    <Card padding="none">
       <button
         type="button"
         onClick={onToggle}
@@ -71,9 +73,7 @@ export function GroupSettings({
         className="flex w-full items-center gap-2 px-4 py-3 text-left sm:px-5"
       >
         {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-        <span className="text-text-faint text-xs font-semibold tracking-wide uppercase">
-          Group settings
-        </span>
+        <SectionLabel as="span">Group settings</SectionLabel>
         {!open && (
           <span className="text-text-subtle min-w-0 truncate text-xs">
             {meetingDay
@@ -161,7 +161,7 @@ export function GroupSettings({
               {members.map((m) => (
                 <span
                   key={m.id}
-                  className="bg-muted inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm"
+                  className="bg-muted inline-flex items-center gap-1.5 px-3 py-1 text-sm"
                 >
                   {nameByNuid.get(m.lead_nuid) ?? m.lead_nuid}
                   {!groupLocked && (
@@ -199,6 +199,6 @@ export function GroupSettings({
           </div>
         </div>
       )}
-    </div>
+    </Card>
   )
 }

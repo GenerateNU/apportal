@@ -15,7 +15,7 @@ export function HelpContact({ className }: { className?: string }) {
           {i > 0 && ' and '}
           <a
             href={`mailto:${person.email}`}
-            className="text-text-default hover:text-brand-blue underline underline-offset-2 transition-colors"
+            className="text-text-default hover:text-ink underline underline-offset-2 transition-colors"
           >
             {person.name} ({person.email})
           </a>

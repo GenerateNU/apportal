@@ -2,9 +2,12 @@
 
 import { useMemo } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, ArrowRight, ChevronLeft } from 'lucide-react'
+import { ArrowLeft, ArrowRight } from 'lucide-react'
 import { PageContainer } from '@/components/PageContainer'
-import { Avatar } from '@/components/ui/avatar'
+import { BackLink } from '@/components/ui/back-link'
+import { Badge } from '@/components/ui/badge'
+import { LoadingText } from '@/components/ui/loading-text'
+import { PageHeader } from '@/components/ui/page-header'
 import { Button } from '@/components/ui/button'
 import type {
   DecisionContext,
@@ -69,7 +72,7 @@ export function DecisionDraftClient({
   if (isLoading) {
     return (
       <PageContainer>
-        <p className="text-text-faint text-sm">Loading…</p>
+        <LoadingText />
       </PageContainer>
     )
   }
@@ -77,7 +80,7 @@ export function DecisionDraftClient({
   if (!row) {
     return (
       <PageContainer>
-        <BackLink />
+        <BackToQueue />
         <p className="text-text-faint text-sm">
           This applicant isn’t in your decision queue — either they aren’t
           awaiting a message, or you didn’t interview them.
@@ -148,22 +151,17 @@ function DraftBody({
 
   return (
     <PageContainer>
-      <BackLink />
-
-      <div className="flex flex-wrap items-center gap-3">
-        <Avatar name={row.full_name} size="sm" />
-        <div className="min-w-0">
-          <h1 className="text-text-default text-xl font-semibold">
-            {row.full_name}
-          </h1>
-          <p className="text-text-faint text-xs break-all">{row.email}</p>
-        </div>
-        <span
-          className={`rounded-md px-2 py-0.5 text-xs font-medium ${roleChipClass(row.role_id)}`}
-        >
-          {roleLabel(row.role_id)}
-        </span>
-      </div>
+      <PageHeader
+        size="md"
+        back={<BackToQueue />}
+        title={row.full_name}
+        subtitle={<span className="break-all">{row.email}</span>}
+        actions={
+          <Badge className={roleChipClass(row.role_id)}>
+            {roleLabel(row.role_id)}
+          </Badge>
+        }
+      />
 
       <div className="grid gap-8 lg:grid-cols-2">
         <div className="flex flex-col gap-5">
@@ -221,14 +219,6 @@ function DraftBody({
   )
 }
 
-function BackLink() {
-  return (
-    <Link
-      href="/reviewer/decisions"
-      className="text-text-subtle hover:text-text-default -mb-2 inline-flex w-fit items-center gap-1 text-sm transition-colors"
-    >
-      <ChevronLeft size={16} />
-      Decision feedback
-    </Link>
-  )
+function BackToQueue() {
+  return <BackLink href="/reviewer/decisions">Decision feedback</BackLink>
 }

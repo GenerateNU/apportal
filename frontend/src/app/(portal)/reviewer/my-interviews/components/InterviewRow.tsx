@@ -4,8 +4,11 @@ import { useEffect, useState, type MouseEvent } from 'react'
 import Link from 'next/link'
 import { Check, CheckCircle2, Clock, Mail } from 'lucide-react'
 import { Tooltip } from '@/components/Tooltip'
+import { Badge } from '@/components/ui/badge'
+import { TABLE_ROW } from '@/components/ui/table-styles'
 import { useToast } from '@/components/ui/toast'
 import type { ApplicationStage } from '@/lib/api/types'
+import { cn } from '@/lib/utils'
 import {
   stageBadge,
   stageLabel,
@@ -76,7 +79,7 @@ export function InterviewRow({
   return (
     <Link
       href={`/reviewer/my-interviews/${applicationId}`}
-      className={`group grid ${GRID} items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-gray-50`}
+      className={cn('group grid items-center gap-3 text-left', GRID, TABLE_ROW)}
     >
       <span
         className={`h-4 w-4 rounded-full border-2 ${REVIEW_STATE_DOT[state]}`}
@@ -91,11 +94,7 @@ export function InterviewRow({
 
       {stage && (
         <span className="hidden lg:block">
-          <span
-            className={`inline-block rounded-md px-2 py-0.5 text-xs font-medium ${stageBadge[stage]}`}
-          >
-            {stageLabel[stage]}
-          </span>
+          <Badge className={stageBadge[stage]}>{stageLabel[stage]}</Badge>
         </span>
       )}
 
@@ -111,12 +110,10 @@ export function InterviewRow({
       </span>
 
       <span className="flex">
-        <span
-          className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium ${REVIEW_STATE_BADGE[state]}`}
-        >
+        <Badge className={REVIEW_STATE_BADGE[state]}>
           {state === 'submitted' && <CheckCircle2 className="h-3 w-3" />}
           {INTERVIEW_STATE_LABEL[state]}
-        </span>
+        </Badge>
       </span>
 
       <span className="flex justify-end">
@@ -125,12 +122,12 @@ export function InterviewRow({
             type="button"
             onClick={copyEmail}
             title={`Copy ${email}`}
-            className="rounded p-2 hover:bg-gray-100 sm:p-1"
+            className="p-2 hover:bg-gray-100 sm:p-1"
           >
             {copied ? (
               <Check className="h-4 w-4 text-green-600" />
             ) : (
-              <Mail className="text-text-faint group-hover:text-brand-blue h-4 w-4 transition-colors" />
+              <Mail className="text-text-faint group-hover:text-ink h-4 w-4 transition-colors" />
             )}
           </button>
         )}

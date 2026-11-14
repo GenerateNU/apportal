@@ -5,6 +5,7 @@ import {
   QueryClient,
 } from '@tanstack/react-query'
 import { PageContainer } from '@/components/PageContainer'
+import { PageHeader } from '@/components/ui/page-header'
 import { getServerRequestOptions } from '@/lib/api/server-request-options'
 import { getServerCurrentUser } from '@/lib/auth/server-user'
 import { pickDefaultCycleId } from '@/lib/queries/cycles'
@@ -55,16 +56,10 @@ export default async function PreferenceListsPage({
 
   return (
     <PageContainer>
-      <div>
-        <h1 className="text-text-default text-2xl font-semibold">
-          Preference lists
-        </h1>
-        <p className="text-text-muted mt-1 text-sm">
-          Collaborative, ranked lists of applicants leads want for a cycle and
-          role. Create one and invite whichever other leads you want to work on
-          it with.
-        </p>
-      </div>
+      <PageHeader
+        title="Preference lists"
+        subtitle="Collaborative, ranked lists of applicants leads want for a cycle and role. Create one and invite whichever other leads you want to work on it with."
+      />
       <HydrationBoundary state={dehydrate(queryClient)}>
         <PreferenceListsPageClient isChief={reviewer.isChief} />
       </HydrationBoundary>

@@ -4,7 +4,9 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { ArrowRight, LayoutGrid, Plus, X } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
 import {
   Dialog,
   DialogContent,
@@ -73,7 +75,7 @@ export function PreferenceListsPageClient({ isChief }: { isChief: boolean }) {
           {cycleId && (
             <Link
               href={`/reviewer/preference-lists/overview?cycle=${cycleId}`}
-              className="text-brand-blue inline-flex items-center gap-1.5 text-sm hover:underline"
+              className="text-ink inline-flex items-center gap-1.5 text-sm hover:underline"
             >
               <LayoutGrid size={14} />
               Compare all groups
@@ -109,7 +111,7 @@ export function PreferenceListsPageClient({ isChief }: { isChief: boolean }) {
             <Link
               key={list.id}
               href={`/reviewer/preference-lists/${list.id}`}
-              className="group flex flex-col gap-2 rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
+              className="group flex flex-col gap-2 border border-gray-200 bg-white p-4 transition-colors hover:bg-gray-50"
             >
               <div className="flex items-start justify-between gap-2">
                 <p className="text-text-default truncate text-sm font-medium">
@@ -117,22 +119,23 @@ export function PreferenceListsPageClient({ isChief }: { isChief: boolean }) {
                 </p>
                 <ArrowRight
                   size={14}
-                  className="text-text-faint group-hover:text-brand-blue mt-0.5 shrink-0 transition-transform group-hover:translate-x-1"
+                  className="text-text-faint group-hover:text-ink mt-0.5 shrink-0 transition-transform group-hover:translate-x-1"
                 />
               </div>
               <div className="flex flex-wrap items-center gap-1.5">
-                <span
-                  className={`rounded-md px-1.5 py-0.5 text-xs font-medium ${PREFERENCE_LIST_STATUS_BADGE[list.status]}`}
+                <Badge
+                  size="sm"
+                  className={PREFERENCE_LIST_STATUS_BADGE[list.status]}
                 >
                   {PREFERENCE_LIST_STATUS_LABEL[list.status]}
-                </span>
+                </Badge>
                 <span className="text-text-subtle text-xs">
                   {list.entry_count} entr{list.entry_count === 1 ? 'y' : 'ies'}
                 </span>
                 {list.meeting_day && (
-                  <span className="bg-brand-blue/10 text-brand-blue rounded-md px-1.5 py-0.5 text-xs font-medium">
+                  <Badge size="sm" className="bg-ink/10 text-ink">
                     Meets {MEETING_DAY_LABEL[list.meeting_day]}
-                  </span>
+                  </Badge>
                 )}
               </div>
               <p className="text-text-subtle truncate text-xs">
@@ -160,7 +163,11 @@ function DeadlineEditor({ cycleId, role }: { cycleId: string; role: string }) {
   const setDeadline = useSetPreferenceListDeadline()
 
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm">
+    <Card
+      variant="flat"
+      padding="none"
+      className="flex flex-wrap items-center gap-2 px-4 py-3 text-sm"
+    >
       <span className="text-text-muted font-medium">
         Submission deadline for {roleLabel(role)}:
       </span>
@@ -192,7 +199,7 @@ function DeadlineEditor({ cycleId, role }: { cycleId: string; role: string }) {
           Couldn&apos;t save the deadline — try again.
         </span>
       )}
-    </div>
+    </Card>
   )
 }
 

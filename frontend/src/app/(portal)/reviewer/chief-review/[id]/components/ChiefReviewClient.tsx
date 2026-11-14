@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
-  ArrowLeft,
   Check,
   ChevronLeft,
   ChevronRight,
@@ -13,7 +12,11 @@ import {
   Loader2,
   Pencil,
 } from 'lucide-react'
+import { BackLink } from '@/components/ui/back-link'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { SectionLabel } from '@/components/ui/section-label'
 import { CandidateTags } from '@/components/CandidateTags'
 import type { ChiefReviewComment, ChiefVote } from '@/lib/api/types'
 import { useAnswers } from '@/lib/queries/answers'
@@ -209,13 +212,7 @@ export function ChiefReviewClient({
       {/* Top bar */}
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-gray-100 bg-white px-4 py-3 sm:px-8">
         <div className="flex min-w-0 items-center gap-4">
-          <Link
-            href="/reviewer/chief-review"
-            className="text-text-muted hover:text-text-default inline-flex items-center gap-1 text-sm"
-          >
-            <ArrowLeft size={14} />
-            Queue
-          </Link>
+          <BackLink href="/reviewer/chief-review">Queue</BackLink>
           <div className="min-w-0 border-l border-gray-100 pl-4">
             <h1 className="text-text-default truncate text-base font-semibold">
               {applicant?.full_name ?? 'Applicant'}
@@ -236,10 +233,10 @@ export function ChiefReviewClient({
             View lead review
           </Link>
           {submitted && (
-            <span className="bg-status-open/15 text-status-open inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium">
+            <Badge className="bg-status-open/15 text-status-open">
               <Check size={12} />
               Review submitted
-            </span>
+            </Badge>
           )}
           <div className="flex items-center gap-2 border-l border-gray-100 pl-3">
             {queueIndex !== -1 && (
@@ -286,9 +283,7 @@ export function ChiefReviewClient({
           ref={applicationPanelRef}
           className="border-b border-gray-100 px-4 py-4 sm:px-8 sm:py-6 lg:overflow-y-auto lg:border-r lg:border-b-0"
         >
-          <h2 className="text-text-subtle mb-4 text-xs font-medium tracking-wider uppercase">
-            Application
-          </h2>
+          <SectionLabel className="mb-4">Application</SectionLabel>
           <div className="space-y-4">
             {questions.map((q) => (
               <ResponseField
@@ -307,9 +302,7 @@ export function ChiefReviewClient({
         >
           {/* Lead written reviews */}
           <section>
-            <h2 className="text-text-subtle mb-4 text-xs font-medium tracking-wider uppercase">
-              Lead written reviews
-            </h2>
+            <SectionLabel className="mb-4">Lead written reviews</SectionLabel>
             {writtenReviews.length === 0 ? (
               <p className="text-text-faint text-sm">
                 No leads have submitted a written review yet.
@@ -324,19 +317,16 @@ export function ChiefReviewClient({
                     ? scores.reduce((a, b) => a + b, 0) / scores.length
                     : null
                   return (
-                    <div
-                      key={r.id}
-                      className="rounded-xl border border-gray-100 bg-white p-4"
-                    >
+                    <Card key={r.id} variant="flat">
                       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                         <span className="text-text-default text-sm font-medium">
                           Reviewer {r.reviewer_name || r.reviewer_nuid}
                         </span>
                         <div className="flex items-center gap-2">
                           {avg != null && (
-                            <span className="text-text-default rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium">
+                            <Badge className="text-text-default">
                               avg {avg.toFixed(1)}/10
-                            </span>
+                            </Badge>
                           )}
                           {!r.submitted_at && (
                             <span className="text-text-faint text-xs">
@@ -370,7 +360,7 @@ export function ChiefReviewClient({
                           )
                         })}
                       </div>
-                    </div>
+                    </Card>
                   )
                 })}
               </div>
@@ -379,10 +369,8 @@ export function ChiefReviewClient({
 
           {/* This chief's vote */}
           <section>
-            <h2 className="text-text-subtle mb-4 text-xs font-medium tracking-wider uppercase">
-              Your vote
-            </h2>
-            <div className="rounded-xl border border-gray-100 bg-white p-4">
+            <SectionLabel className="mb-4">Your vote</SectionLabel>
+            <Card variant="flat">
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-5">
                 {CHIEF_VOTE_ORDER.map((v) => {
                   const selected = vote === v
@@ -392,7 +380,7 @@ export function ChiefReviewClient({
                       type="button"
                       aria-pressed={selected}
                       onClick={() => toggleVote(v)}
-                      className={`flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-center text-sm font-medium transition-colors ${
+                      className={`flex items-center justify-center gap-1.5 border px-3 py-2 text-center text-sm font-medium transition-colors ${
                         selected
                           ? `border-current ${CHIEF_VOTE_BADGE_CLASS[v]}`
                           : 'text-text-muted border-gray-200 hover:bg-gray-50'
@@ -429,23 +417,18 @@ export function ChiefReviewClient({
                   )
                 )}
               </div>
-            </div>
+            </Card>
           </section>
 
           {/* Your comments */}
           <section>
-            <h2 className="text-text-subtle mb-4 text-xs font-medium tracking-wider uppercase">
-              Your comments
-            </h2>
+            <SectionLabel className="mb-4">Your comments</SectionLabel>
             <div className="flex flex-col gap-3">
               {ownComments.map((c) => {
                 const editing = editingCommentId === c.id
                 const edited = c.updated_at !== c.created_at
                 return (
-                  <div
-                    key={c.id}
-                    className="rounded-xl border border-gray-100 bg-white p-4"
-                  >
+                  <Card key={c.id} variant="flat">
                     {editing ? (
                       <div className="flex flex-col gap-2">
                         <textarea
@@ -453,7 +436,7 @@ export function ChiefReviewClient({
                           onChange={(e) => setEditingBody(e.target.value)}
                           rows={3}
                           autoFocus
-                          className="focus:border-brand-blue text-text-default placeholder:text-text-subtle w-full rounded-md border border-gray-200 p-3 text-sm focus:outline-none"
+                          className="focus:border-ink text-text-default placeholder:text-text-subtle w-full border border-gray-200 p-3 text-sm focus:outline-none"
                         />
                         <div className="flex items-center gap-2">
                           <Button
@@ -493,17 +476,17 @@ export function ChiefReviewClient({
                         </button>
                       </div>
                     )}
-                  </div>
+                  </Card>
                 )
               })}
 
-              <div className="rounded-xl border border-gray-100 bg-white p-4">
+              <Card variant="flat">
                 <textarea
                   value={newComment}
                   onChange={(e) => setNewComment(e.target.value)}
                   placeholder="Add a comment on this applicant…"
                   rows={3}
-                  className="focus:border-brand-blue text-text-default placeholder:text-text-subtle w-full rounded-md border border-gray-200 p-3 text-sm focus:outline-none"
+                  className="focus:border-ink text-text-default placeholder:text-text-subtle w-full border border-gray-200 p-3 text-sm focus:outline-none"
                 />
                 <div className="mt-3">
                   <Button
@@ -520,7 +503,7 @@ export function ChiefReviewClient({
                     )}
                   </Button>
                 </div>
-              </div>
+              </Card>
             </div>
           </section>
 
@@ -528,13 +511,13 @@ export function ChiefReviewClient({
           {otherAuthors.length > 0 && (
             <section>
               <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-                <h2 className="text-text-subtle text-xs font-medium tracking-wider uppercase">
+                <SectionLabel>
                   Other chiefs&apos; votes &amp; comments
-                </h2>
+                </SectionLabel>
                 <button
                   type="button"
                   onClick={() => setRevealOthers((prev) => !prev)}
-                  className="text-text-muted hover:text-text-default inline-flex items-center gap-1.5 rounded-md border border-gray-200 px-2.5 py-1 text-xs font-medium"
+                  className="text-text-muted hover:text-text-default inline-flex items-center gap-1.5 border border-gray-200 px-2.5 py-1 text-xs font-medium"
                 >
                   {revealOthers ? (
                     <>
@@ -562,20 +545,17 @@ export function ChiefReviewClient({
                           new Date(b.created_at).getTime()
                       )
                     return (
-                      <div
-                        key={nuid}
-                        className="rounded-xl border border-gray-100 bg-white p-4"
-                      >
+                      <Card key={nuid} variant="flat">
                         <div className="mb-2 flex items-center justify-between">
                           <span className="text-text-default text-sm font-medium">
                             {name}
                           </span>
                           {review?.vote && (
-                            <span
-                              className={`rounded-md px-2 py-0.5 text-xs font-medium ${CHIEF_VOTE_BADGE_CLASS[review.vote]}`}
+                            <Badge
+                              className={CHIEF_VOTE_BADGE_CLASS[review.vote]}
                             >
                               {CHIEF_VOTE_LABEL[review.vote]}
-                            </span>
+                            </Badge>
                           )}
                         </div>
                         <div className="flex flex-col gap-2">
@@ -588,7 +568,7 @@ export function ChiefReviewClient({
                             </p>
                           ))}
                         </div>
-                      </div>
+                      </Card>
                     )
                   })}
                 </div>
@@ -599,9 +579,7 @@ export function ChiefReviewClient({
           {/* Final decision */}
           {isChief && (
             <section>
-              <h2 className="text-text-subtle mb-4 text-xs font-medium tracking-wider uppercase">
-                Final decision
-              </h2>
+              <SectionLabel className="mb-4">Final decision</SectionLabel>
               <p className="text-text-muted mb-3 text-sm">
                 After discussing the votes above, advance this applicant to an
                 interview or reject them. This changes the application&apos;s
