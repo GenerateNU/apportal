@@ -33,7 +33,7 @@ CREATE TYPE user_role AS ENUM ('applicant', 'member', 'lead', 'chief', 'admin');
 
 func main() {
 	tables, err := gormschema.New("postgres", gormschema.WithConfig(&gorm.Config{NamingStrategy: db.NamingStrategy})).Load(
-		&models.User{}, &models.Cycle{}, &models.ApplicationTemplate{}, &models.CycleStage{},
+		&models.User{}, &models.Branch{}, &models.Cycle{}, &models.ApplicationTemplate{}, &models.CycleStage{},
 		&models.Question{}, &models.CodeChallenge{}, &models.Application{}, &models.WrittenAnswer{},
 		&models.CodeSubmission{}, &models.InterviewScript{}, &models.LeadAssignment{},
 		&models.WrittenReview{}, &models.ReviewQuestion{}, &models.WrittenReviewAnswer{},

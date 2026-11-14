@@ -23,14 +23,17 @@ import type { Cycle } from '@/lib/api/types'
 import { useCreateCycle, useUpdateCycle } from '@/lib/queries/cycles'
 import { APPLICATION_TYPES, type ApplicationType } from '../lib/cycle-meta'
 
+// Pass `cycle` to edit, or `branchId` to create a cycle in that branch.
 export function CycleDialog({
   open,
   onOpenChange,
   cycle,
+  branchId,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   cycle?: Cycle
+  branchId?: string
 }) {
   const isEdit = !!cycle
   const createCycle = useCreateCycle()
@@ -55,8 +58,11 @@ export function CycleDialog({
 
     if (isEdit) {
       updateCycle.mutate({ id: cycle.id, body }, { onSuccess })
-    } else {
-      createCycle.mutate({ body }, { onSuccess })
+    } else if (branchId) {
+      createCycle.mutate(
+        { body: { ...body, branch_id: branchId } },
+        { onSuccess }
+      )
     }
   }
 

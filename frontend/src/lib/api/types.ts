@@ -10,6 +10,7 @@ import type {
   Application as GenApplication,
   ApplicationSummary as GenApplicationSummary,
   ApplicationTemplate as GenApplicationTemplate,
+  Branch as GenBranch,
   ChiefReviewCommentDetail as GenChiefReviewCommentDetail,
   ChiefReviewDetail as GenChiefReviewDetail,
   ChiefReviewDetailVote,
@@ -95,6 +96,8 @@ export interface AnswerFilterParam {
 export type User = Omit<GenUser, '$schema' | 'roles'> & {
   roles: UserRole[]
 }
+
+export type Branch = Omit<GenBranch, '$schema'>
 
 export type Cycle = Omit<GenCycle, '$schema'>
 

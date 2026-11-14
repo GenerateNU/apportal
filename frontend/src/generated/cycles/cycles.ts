@@ -69,7 +69,7 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
 /**
- * Optional ?status= filters to one status (draft, open, closed, archived).
+ * Optional ?status= filters to one status (draft, open, closed, archived); ?branch_id= to one branch.
  * @summary List cycles
  */
 export const listCycles = (
