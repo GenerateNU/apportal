@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { GripVertical, Plus, Trash2, X } from 'lucide-react'
-import type { QuestionType, Role } from '@/lib/api/types'
+import type { QuestionType } from '@/lib/api/types'
 import { QUESTION_TYPE_META } from './constants'
 
 // Structural shape QuestionCard actually needs — satisfied by both the
@@ -19,7 +19,7 @@ export type QuestionCardQuestion = {
   question_type: QuestionType
   is_required: boolean
   options: string[] | null
-  role: Role | null
+  role_id: string | null
   page_title?: string
   description?: string | null
 }
@@ -42,7 +42,7 @@ export function QuestionCard({
   onDelete,
 }: {
   question: QuestionCardQuestion
-  // Global questions (role === null) are shared across every role's form at
+  // Global questions (role_id === null) are shared across every role's form at
   // potentially different relative positions, so a page boundary on one
   // wouldn't mean the same thing for another — only role-specific questions
   // can start a page. Review questions don't have pages at all, so their
@@ -106,7 +106,7 @@ export function QuestionCard({
     setPageTitleDraft(question.page_title ?? '')
   }
   const hasPageBreak = question.page_title != null
-  const canHavePageBreak = allowPageBreak && question.role !== null
+  const canHavePageBreak = allowPageBreak && question.role_id !== null
 
   const meta = QUESTION_TYPE_META[question.question_type]
   const Icon = meta.icon
@@ -311,7 +311,7 @@ export function QuestionCard({
             <Icon className="h-5 w-5" />
             {meta.label}
           </span>
-          {question.role === null && (
+          {question.role_id === null && (
             <span className="bg-chip-8-bg text-chip-8-text rounded-md px-2 py-1 text-sm font-medium">
               All roles
             </span>

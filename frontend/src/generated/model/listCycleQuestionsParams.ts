@@ -10,5 +10,5 @@ export type ListCycleQuestionsParams = {
 /**
  * Optional role filter
  */
-role?: string;
+role_id?: string;
 };

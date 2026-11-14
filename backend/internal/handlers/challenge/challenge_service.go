@@ -3,26 +3,26 @@ package challenge
 import (
 	"context"
 
-	"github.com/GenerateNU/apportal/backend/internal/models"
+	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
-	"github.com/danielgtaylor/huma/v2"
 )
 
 type challengeService struct {
 	challengeDB *ChallengeDB
+	roleDB      *role.RoleDB
 }
 
 func (s *challengeService) create(ctx context.Context, in *CreateChallengeInput) (*ChallengeOutput, error) {
 	if err := utils.RequireChief(ctx); err != nil {
 		return nil, err
 	}
-	if !in.Body.Role.Valid() {
-		return nil, huma.Error422UnprocessableEntity("valid role is required")
+	if err := role.RequireCycleRole(ctx, s.roleDB, in.ID, in.Body.RoleID); err != nil {
+		return nil, err
 	}
 
 	challenge, err := s.challengeDB.CreateChallenge(ctx, ChallengeCreate{
 		CycleID:      in.ID,
-		Role:         in.Body.Role,
+		RoleID:       in.Body.RoleID,
 		Name:         in.Body.Name,
 		ChallengeURL: in.Body.ChallengeURL,
 		Instructions: in.Body.Instructions,
@@ -35,16 +35,15 @@ func (s *challengeService) create(ctx context.Context, in *CreateChallengeInput)
 }
 
 func (s *challengeService) list(ctx context.Context, in *ListChallengesInput) (*ChallengesOutput, error) {
-	var role *models.Role
-	if in.Role != "" {
-		parsed := models.Role(in.Role)
-		if !parsed.Valid() {
-			return nil, huma.Error422UnprocessableEntity("invalid role")
+	var roleID *string
+	if in.RoleID != "" {
+		if err := role.ParseRoleID(in.RoleID); err != nil {
+			return nil, err
 		}
-		role = &parsed
+		roleID = &in.RoleID
 	}
 
-	challenges, err := s.challengeDB.ListChallenges(ctx, in.ID, role)
+	challenges, err := s.challengeDB.ListChallenges(ctx, in.ID, roleID)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}

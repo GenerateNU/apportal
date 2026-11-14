@@ -57,7 +57,7 @@ func (decisionDraft) TableName() string { return "decision_drafts" }
 type decisionRow struct {
 	ApplicationID    string
 	CycleID          string
-	ApplicationRole  models.Role
+	RoleID           string
 	ApplicantNUID    string
 	FullName         string
 	Email            string
@@ -78,28 +78,28 @@ type decisionRow struct {
 // GetOrCreateDecisionTemplates returns both of a (cycle, role)'s letters,
 // seeding missing ones. Both go in one insert, so a concurrent first access
 // can't leave a caller with half a set.
-func (d *DecisionDB) GetOrCreateDecisionTemplates(ctx context.Context, cycleID string, role models.Role) ([]models.DecisionTemplate, error) {
+func (d *DecisionDB) GetOrCreateDecisionTemplates(ctx context.Context, cycleID string, role string) ([]models.DecisionTemplate, error) {
 	db := d.db.WithContext(ctx)
 	seeds := []models.DecisionTemplate{
-		{CycleID: cycleID, ApplicationRole: role, Kind: models.DecisionRejectionPostInterview, Subject: defaultDecisionSubject, Body: defaultPostInterviewBody},
-		{CycleID: cycleID, ApplicationRole: role, Kind: models.DecisionRejectionGeneric, Subject: defaultDecisionSubject, Body: defaultGenericBody},
+		{CycleID: cycleID, RoleID: role, Kind: models.DecisionRejectionPostInterview, Subject: defaultDecisionSubject, Body: defaultPostInterviewBody},
+		{CycleID: cycleID, RoleID: role, Kind: models.DecisionRejectionGeneric, Subject: defaultDecisionSubject, Body: defaultGenericBody},
 	}
-	err := db.Select("cycle_id", "application_role", "kind", "subject", "body").
+	err := db.Select("cycle_id", "role_id", "kind", "subject", "body").
 		Clauses(clause.OnConflict{DoNothing: true}).Create(&seeds).Error
 	if err != nil {
 		return nil, err
 	}
 
 	templates := []models.DecisionTemplate{}
-	err = db.Where("cycle_id = ? AND application_role = ?", cycleID, role).Order("kind").Find(&templates).Error
+	err = db.Where("cycle_id = ? AND role_id = ?", cycleID, role).Order("kind").Find(&templates).Error
 	return templates, err
 }
 
 // UpdateDecisionTemplate replaces one (cycle, role, kind) letter.
-func (d *DecisionDB) UpdateDecisionTemplate(ctx context.Context, cycleID string, role models.Role, kind models.DecisionKind, in DecisionTemplateUpdate) (models.DecisionTemplate, error) {
+func (d *DecisionDB) UpdateDecisionTemplate(ctx context.Context, cycleID string, role string, kind models.DecisionKind, in DecisionTemplateUpdate) (models.DecisionTemplate, error) {
 	return utils.UpdateReturning[models.DecisionTemplate](d.db.WithContext(ctx),
 		map[string]any{"subject": in.Subject, "body": in.Body, "updated_by": in.UpdatedBy},
-		"cycle_id = ? AND application_role = ? AND kind = ?", cycleID, role, kind)
+		"cycle_id = ? AND role_id = ? AND kind = ?", cycleID, role, kind)
 }
 
 const decisionKindExpr = `COALESCE(dd.kind, CASE
@@ -108,7 +108,7 @@ const decisionKindExpr = `COALESCE(dd.kind, CASE
 		ELSE 'rejection_generic'::decision_kind
 	END)`
 
-const decisionRowColumns = `a.id AS application_id, a.cycle_id, a.application_role, a.user_nuid AS applicant_nuid,
+const decisionRowColumns = `a.id AS application_id, a.cycle_id, a.role_id, a.user_nuid AS applicant_nuid,
 	u.full_name, u.email, a.stage, ` + decisionKindExpr + ` AS kind,
 	ivs.nuids AS interviewer_nuids, ivs.names AS interviewer_names,
 	dd.feedback, dd.compliments, dd.body_override, dd.author_nuid, au.full_name AS author_name,
@@ -142,8 +142,8 @@ func decisionsFrom(db *gorm.DB, f DecisionFilter, applicationID string) *gorm.DB
 	if f.CycleID != "" {
 		q = q.Where("a.cycle_id = ?", f.CycleID)
 	}
-	if f.Role != nil {
-		q = q.Where("a.application_role = ?", *f.Role)
+	if f.RoleID != nil {
+		q = q.Where("a.role_id = ?", *f.RoleID)
 	}
 	if f.Kind != nil {
 		q = q.Where(decisionKindExpr+" = ?", *f.Kind)
@@ -284,24 +284,24 @@ func applyDecisionStage(tx *gorm.DB, applicationID string, sent bool) error {
 
 func toDecisionRow(r decisionRow) models.DecisionRow {
 	return models.DecisionRow{
-		ApplicationID:   r.ApplicationID,
-		CycleID:         r.CycleID,
-		ApplicationRole: r.ApplicationRole,
-		ApplicantNUID:   r.ApplicantNUID,
-		FullName:        r.FullName,
-		Email:           r.Email,
-		Stage:           r.Stage,
-		Kind:            r.Kind,
-		Status:          DecisionStatusFor(r.Kind, r.Feedback, r.Compliments, r.BodyOverride, r.SentAt),
-		Interviewers:    interviewersOf(r),
-		Feedback:        r.Feedback,
-		Compliments:     r.Compliments,
-		BodyOverride:    r.BodyOverride,
-		AuthorNUID:      r.AuthorNUID,
-		AuthorName:      r.AuthorName,
-		SentAt:          r.SentAt,
-		SentBy:          r.SentBy,
-		UpdatedAt:       r.UpdatedAt,
+		ApplicationID: r.ApplicationID,
+		CycleID:       r.CycleID,
+		RoleID:        r.RoleID,
+		ApplicantNUID: r.ApplicantNUID,
+		FullName:      r.FullName,
+		Email:         r.Email,
+		Stage:         r.Stage,
+		Kind:          r.Kind,
+		Status:        DecisionStatusFor(r.Kind, r.Feedback, r.Compliments, r.BodyOverride, r.SentAt),
+		Interviewers:  interviewersOf(r),
+		Feedback:      r.Feedback,
+		Compliments:   r.Compliments,
+		BodyOverride:  r.BodyOverride,
+		AuthorNUID:    r.AuthorNUID,
+		AuthorName:    r.AuthorName,
+		SentAt:        r.SentAt,
+		SentBy:        r.SentBy,
+		UpdatedAt:     r.UpdatedAt,
 	}
 }
 

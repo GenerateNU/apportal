@@ -2,9 +2,10 @@
 
 import { useState } from 'react'
 import { ChevronDown, ChevronUp, ExternalLink } from 'lucide-react'
-import type { ChallengeMetrics, Role } from '@/lib/api/types'
+import type { ChallengeMetrics } from '@/lib/api/types'
 import { useApplicant } from '@/lib/queries/applicants'
 import { useChallengeScore } from '@/lib/queries/challenge-score'
+import { useChallenges } from '@/lib/queries/challenges'
 import { useSubmission } from '@/lib/queries/submissions'
 
 const CHALLENGE_METRIC_LABEL: { key: keyof ChallengeMetrics; label: string }[] =
@@ -59,22 +60,24 @@ function challengeRepoSearchUrl(query: string): string {
 export function ChallengeCard({
   applicantNuid,
   applicationId,
+  cycleId,
   role,
 }: {
   applicantNuid: string
   applicationId: string
-  role: Role
+  cycleId: string
+  role: string
 }) {
   const { data: score } = useChallengeScore(applicantNuid)
   const { data: submission } = useSubmission(applicationId)
   const { data: applicant } = useApplicant(applicantNuid)
+  const { data: challenges = [] } = useChallenges(cycleId, role)
   const [showHistory, setShowHistory] = useState(false)
 
-  // The challenge is engineer-only — try a best-effort repo match for every
-  // engineering interviewee, not just those who already have a score, since
-  // a repo can exist even if they never finished (or started) an attempt.
+  // Only roles with a challenge get one. Try a best-effort repo match for
+  // every such applicant, scored or not — a repo can exist without an attempt.
   const repoQueries =
-    role === 'software_engineer' && applicant
+    challenges.length > 0 && applicant
       ? buildChallengeRepoQueries(applicant.full_name)
       : []
 

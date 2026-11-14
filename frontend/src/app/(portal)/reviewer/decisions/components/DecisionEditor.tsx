@@ -10,6 +10,7 @@ import { FeedbackFields } from './FeedbackFields'
 import { MessagePreview } from './MessagePreview'
 import { renderDecision } from './render'
 import { useFeedbackDraft } from './useFeedbackDraft'
+import { useRoleLookup } from '@/lib/queries/roles'
 
 // The chief's board only. A chief reads the finished message, not the review
 // history behind it — the lead's feedback is already in the letter, so the
@@ -32,6 +33,7 @@ export function DecisionEditor({
   cycleId,
   onSent,
 }: DecisionEditorProps) {
+  const { roleLabel } = useRoleLookup()
   const needsFeedback = row.kind === 'rejection_post_interview'
   // Chiefs may always write, so a lead who never filled theirs in doesn't
   // block the send.
@@ -40,7 +42,8 @@ export function DecisionEditor({
   const rendered = renderDecision(
     { ...row, feedback: draft.feedback, compliments: draft.compliments },
     template,
-    cycleName
+    cycleName,
+    roleLabel(row.role_id)
   )
 
   return (

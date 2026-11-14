@@ -48,12 +48,12 @@ func (l *LeadAssignmentDB) CreateLeadAssignments(ctx context.Context, pairs []Le
 
 // ListLeadAssignmentsForCycle returns every assignment for one role in a
 // cycle, so the planner can seed loads and coverage in one query.
-func (l *LeadAssignmentDB) ListLeadAssignmentsForCycle(ctx context.Context, cycleID string, role models.Role) ([]models.LeadAssignment, error) {
+func (l *LeadAssignmentDB) ListLeadAssignmentsForCycle(ctx context.Context, cycleID string, role string) ([]models.LeadAssignment, error) {
 	assignments := []models.LeadAssignment{}
 	err := l.db.WithContext(ctx).Table("lead_assignments la").
 		Select("la.*").
 		Joins("JOIN applications a ON a.id = la.application_id").
-		Where("a.cycle_id = ? AND a.application_role = ?", cycleID, role).
+		Where("a.cycle_id = ? AND a.role_id = ?", cycleID, role).
 		Order("la.assigned_at").Order("la.id").
 		Find(&assignments).Error
 	return assignments, err
@@ -61,23 +61,23 @@ func (l *LeadAssignmentDB) ListLeadAssignmentsForCycle(ctx context.Context, cycl
 
 // DeleteLeadAssignmentsForCycle clears one role's assignments in a cycle, for
 // a chief undoing a bad run, and returns how many were removed.
-func (l *LeadAssignmentDB) DeleteLeadAssignmentsForCycle(ctx context.Context, cycleID string, role models.Role) (int, error) {
+func (l *LeadAssignmentDB) DeleteLeadAssignmentsForCycle(ctx context.Context, cycleID string, role string) (int, error) {
 	db := l.db.WithContext(ctx)
-	apps := db.Model(&models.Application{}).Select("id").Where("cycle_id = ? AND application_role = ?", cycleID, role)
+	apps := db.Model(&models.Application{}).Select("id").Where("cycle_id = ? AND role_id = ?", cycleID, role)
 	res := db.Where("application_id IN (?)", apps).Delete(&models.LeadAssignment{})
 	return int(res.RowsAffected), res.Error
 }
 
 // ListReviewerProgressForCycle pairs every assignment for one role in a cycle
 // with its review's submission time; the left join keeps unreviewed pairs.
-func (l *LeadAssignmentDB) ListReviewerProgressForCycle(ctx context.Context, cycleID string, role models.Role) ([]ReviewerProgressRow, error) {
+func (l *LeadAssignmentDB) ListReviewerProgressForCycle(ctx context.Context, cycleID string, role string) ([]ReviewerProgressRow, error) {
 	rows := []ReviewerProgressRow{}
 	err := l.db.WithContext(ctx).Table("lead_assignments la").
 		Select("la.lead_nuid, la.application_id, a.user_nuid AS applicant_nuid, u.full_name, u.email, la.assigned_at, wr.submitted_at").
 		Joins("JOIN applications a ON a.id = la.application_id").
 		Joins("JOIN users u ON u.nuid = a.user_nuid").
 		Joins("LEFT JOIN written_reviews wr ON wr.application_id = la.application_id AND wr.reviewer_nuid = la.lead_nuid").
-		Where("a.cycle_id = ? AND a.application_role = ?", cycleID, role).
+		Where("a.cycle_id = ? AND a.role_id = ?", cycleID, role).
 		Order("la.lead_nuid").Order("la.assigned_at").
 		Scan(&rows).Error
 	return rows, err

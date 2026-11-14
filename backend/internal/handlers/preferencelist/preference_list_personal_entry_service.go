@@ -30,7 +30,7 @@ func (s *preferenceListService) upsertPersonalEntry(ctx context.Context, in *Ups
 		PreferenceListID: in.ID,
 		OwnerNUID:        utils.CurrentActor(ctx).NUID,
 		ApplicationID:    in.ApplicationID,
-		Role:             app.Role,
+		RoleID:           app.RoleID,
 		Reasoning:        in.Body.Reasoning,
 	})
 	if err != nil {

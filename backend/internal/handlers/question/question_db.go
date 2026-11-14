@@ -20,7 +20,7 @@ func NewQuestionDB(db *gorm.DB) *QuestionDB {
 func (q *QuestionDB) CreateQuestion(ctx context.Context, in QuestionCreate) (models.Question, error) {
 	question := models.Question{
 		CycleID:      in.CycleID,
-		Role:         in.Role,
+		RoleID:       in.RoleID,
 		QuestionText: in.QuestionText,
 		QuestionType: in.QuestionType,
 		IsRequired:   in.IsRequired,
@@ -28,7 +28,7 @@ func (q *QuestionDB) CreateQuestion(ctx context.Context, in QuestionCreate) (mod
 		Options:      in.Options,
 		PageTitle:    in.PageTitle,
 	}
-	err := utils.Insert(q.db.WithContext(ctx), &question, "cycle_id", "application_role", "question_text",
+	err := utils.Insert(q.db.WithContext(ctx), &question, "cycle_id", "role_id", "question_text",
 		"question_type", "is_required", "display_order", "options", "page_title")
 	return question, err
 }
@@ -39,12 +39,12 @@ func (q *QuestionDB) GetQuestion(ctx context.Context, id string) (models.Questio
 	return question, utils.DBErr(err)
 }
 
-// ListQuestions returns a cycle's questions in display order. A non-nil role
+// ListQuestions returns a cycle's questions in display order. A non-nil roleID
 // narrows to that role's questions plus the global ones.
-func (q *QuestionDB) ListQuestions(ctx context.Context, cycleID string, role *models.Role) ([]models.Question, error) {
+func (q *QuestionDB) ListQuestions(ctx context.Context, cycleID string, roleID *string) ([]models.Question, error) {
 	query := q.db.WithContext(ctx).Where("cycle_id = ?", cycleID)
-	if role != nil {
-		query = query.Where("application_role = ? OR application_role IS NULL", *role)
+	if roleID != nil {
+		query = query.Where("role_id = ? OR role_id IS NULL", *roleID)
 	}
 	questions := []models.Question{}
 	err := query.Order("display_order").Order("created_at").Find(&questions).Error

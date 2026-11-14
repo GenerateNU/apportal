@@ -5,7 +5,7 @@ import { fillTemplate, renderDecision } from './render'
 const template: DecisionTemplate = {
   id: 't1',
   cycle_id: 'c1',
-  application_role: 'software_engineer',
+  role_id: 'role-swe',
   kind: 'rejection_post_interview',
   subject: 'Generate — {{cycle}} {{role}} Application Update',
   body: 'Dear {{applicant_name}},\n\nTo shed some light, {{feedback}} That said, {{compliments}}',
@@ -16,7 +16,7 @@ const template: DecisionTemplate = {
 const row: DecisionRow = {
   application_id: 'a1',
   cycle_id: 'c1',
-  application_role: 'software_engineer',
+  role_id: 'role-swe',
   applicant_nuid: '001',
   full_name: 'Dao Ho',
   email: 'dao@example.com',
@@ -53,7 +53,8 @@ describe('renderDecision', () => {
     const { subject, body, missing } = renderDecision(
       row,
       template,
-      'Fall 2026'
+      'Fall 2026',
+      'Software Engineer'
     )
 
     expect(subject).toBe(
@@ -67,7 +68,12 @@ describe('renderDecision', () => {
 
   it('reports the paragraphs the interviewer still owes', () => {
     const pending = { ...row, feedback: undefined, compliments: undefined }
-    const { body, missing } = renderDecision(pending, template, 'Fall 2026')
+    const { body, missing } = renderDecision(
+      pending,
+      template,
+      'Fall 2026',
+      'Software Engineer'
+    )
 
     expect(body).toContain('[feedback needed]')
     expect(missing).toEqual(['feedback', 'compliments'])
@@ -81,22 +87,25 @@ describe('renderDecision', () => {
     }
     const pending = { ...row, feedback: undefined, compliments: undefined }
 
-    expect(renderDecision(pending, generic, 'Fall 2026').missing).toEqual([])
+    expect(
+      renderDecision(pending, generic, 'Fall 2026', 'Software Engineer').missing
+    ).toEqual([])
   })
 
   it('fills placeholders inside a hand-written override', () => {
     const overridden = { ...row, body_override: 'Dear {{applicant_name}}, no.' }
 
-    expect(renderDecision(overridden, template, 'Fall 2026').body).toBe(
-      'Dear Dao, no.'
-    )
+    expect(
+      renderDecision(overridden, template, 'Fall 2026', 'Software Engineer')
+        .body
+    ).toBe('Dear Dao, no.')
   })
 
   it('leaves a one-word name alone', () => {
     const mononym = { ...row, full_name: 'Prince' }
 
-    expect(renderDecision(mononym, template, 'Fall 2026').body).toContain(
-      'Dear Prince,'
-    )
+    expect(
+      renderDecision(mononym, template, 'Fall 2026', 'Software Engineer').body
+    ).toContain('Dear Prince,')
   })
 })

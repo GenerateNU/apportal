@@ -6,7 +6,6 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { QuestionQuestionType } from './questionQuestionType';
-import type { QuestionRole } from './questionRole';
 
 export interface Question {
   /** A URL to the JSON Schema for this object. */
@@ -20,5 +19,5 @@ export interface Question {
   page_title?: string;
   question_text: string;
   question_type: QuestionQuestionType;
-  role?: QuestionRole;
+  role_id?: string;
 }

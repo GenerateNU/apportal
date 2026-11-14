@@ -1,8 +1,8 @@
 import { useMemo } from 'react'
-import type { ApplicationStage, ChiefVote, Role } from '@/lib/api/types'
-import { ROLE_COLUMNS } from '@/lib/roles'
+import type { ApplicationStage, ChiefVote } from '@/lib/api/types'
 import { useApplications } from './applications'
 import { useChiefReviewsByApplicationIdBatch } from './chief-reviews'
+import { useCycleRoles } from './roles'
 import { useCurrentUser } from './users'
 
 export type ChiefReviewVoteScope = 'needsVote' | 'all'
@@ -10,7 +10,8 @@ export type ChiefReviewVoteValueFilter = 'all' | ChiefVote
 
 export interface ChiefReviewQueueFilters {
   cycleId: string
-  role: Role | 'all'
+  // A role ID, or 'all'.
+  role: string
   stage: ApplicationStage | 'all'
   search: string
   voteScope: ChiefReviewVoteScope
@@ -23,12 +24,13 @@ export interface ChiefReviewQueueFilters {
 // cycle.
 export function useChiefReviewQueue(filters: ChiefReviewQueueFilters) {
   const { data: currentUser } = useCurrentUser()
+  const { roleIds, isLoading: rolesLoading } = useCycleRoles(filters.cycleId)
   const { data: applications = [], isLoading: applicationsLoading } =
     useApplications(
       filters.cycleId
         ? {
             cycle_id: filters.cycleId,
-            ...(filters.role !== 'all' && { role: filters.role }),
+            ...(filters.role !== 'all' && { role_id: filters.role }),
             ...(filters.stage !== 'all' && { stage: filters.stage }),
             ...(filters.search && { search: filters.search }),
           }
@@ -61,8 +63,9 @@ export function useChiefReviewQueue(filters: ChiefReviewQueueFilters) {
       return true
     })
 
-    return ROLE_COLUMNS.flatMap((r) => visible.filter((a) => a.role === r))
+    return roleIds.flatMap((r) => visible.filter((a) => a.role_id === r))
   }, [
+    roleIds,
     applications,
     chiefReviewsByApplicationId,
     currentUser?.nuid,
@@ -72,7 +75,7 @@ export function useChiefReviewQueue(filters: ChiefReviewQueueFilters) {
 
   return {
     orderedApplications,
-    isLoading: applicationsLoading || reviewsLoading,
+    isLoading: applicationsLoading || reviewsLoading || rolesLoading,
   }
 }
 
@@ -104,7 +107,7 @@ export function parseChiefReviewQueueSearchParams(params: {
   get(name: string): string | null
 }): ChiefReviewQueueFilterParams {
   return {
-    role: (params.get('role') as Role | null) ?? 'all',
+    role: params.get('role') ?? 'all',
     stage: (params.get('stage') as ApplicationStage | null) ?? 'all',
     search: params.get('search') ?? '',
     voteScope:

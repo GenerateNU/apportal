@@ -139,7 +139,7 @@ export const useUpsertDecision = <TError = ErrorModel | ErrorModel | ErrorModel 
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Reviewer only. ?role= selects the role (required). Returns both kinds, creating default-content rows on first access.
+ * Reviewer only. ?role_id= selects the role (required). Returns both kinds, creating default-content rows on first access.
  * @summary A cycle's rejection letter templates for one role
  */
 export const listDecisionTemplates = (
@@ -239,7 +239,7 @@ export function useListDecisionTemplates<TData = Awaited<ReturnType<typeof listD
 
 
 /**
- * Chief only. ?role= and ?kind= select which letter (both required). Replaces subject and body together — there is no partial update.
+ * Chief only. ?role_id= and ?kind= select which letter (both required). Replaces subject and body together — there is no partial update.
  * @summary Replace one rejection letter template
  */
 export const updateDecisionTemplate = (

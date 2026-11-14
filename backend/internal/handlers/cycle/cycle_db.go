@@ -5,6 +5,7 @@ import (
 
 	"gorm.io/gorm"
 
+	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 )
@@ -26,7 +27,13 @@ func (c *CycleDB) CreateCycle(ctx context.Context, in CycleCreate) (models.Cycle
 		OpensAt:         in.OpensAt,
 		ClosesAt:        in.ClosesAt,
 	}
-	err := utils.Insert(c.db.WithContext(ctx), &cycle, "branch_id", "name", "status", "application_type", "opens_at", "closes_at")
+	// Starts with the previous same-type cycle's roles, edited from there.
+	err := c.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := utils.Insert(tx, &cycle, "branch_id", "name", "status", "application_type", "opens_at", "closes_at"); err != nil {
+			return err
+		}
+		return role.CopyPreviousCycleRoles(tx, cycle.ID)
+	})
 	return cycle, err
 }
 
@@ -54,24 +61,24 @@ func (c *CycleDB) GetCycle(ctx context.Context, id string) (models.Cycle, error)
 
 // CycleRoleSummary counts a role's questions (including global ones),
 // challenges, and submitted applications within a cycle.
-func (c *CycleDB) CycleRoleSummary(ctx context.Context, cycleID string, role models.Role) (models.CycleRoleSummary, error) {
+func (c *CycleDB) CycleRoleSummary(ctx context.Context, cycleID string, role string) (models.CycleRoleSummary, error) {
 	db := c.db.WithContext(ctx)
 	var questions, challenges, submissions int64
 	err := db.Model(&models.Question{}).
-		Where("cycle_id = ? AND (application_role = ? OR application_role IS NULL)", cycleID, role).
+		Where("cycle_id = ? AND (role_id = ? OR role_id IS NULL)", cycleID, role).
 		Count(&questions).Error
 	if err == nil {
 		err = db.Model(&models.CodeChallenge{}).
-			Where("cycle_id = ? AND application_role = ?", cycleID, role).
+			Where("cycle_id = ? AND role_id = ?", cycleID, role).
 			Count(&challenges).Error
 	}
 	if err == nil {
 		err = db.Model(&models.Application{}).
-			Where("cycle_id = ? AND application_role = ? AND stage != ?", cycleID, role, models.StageDraft).
+			Where("cycle_id = ? AND role_id = ? AND stage != ?", cycleID, role, models.StageDraft).
 			Count(&submissions).Error
 	}
 	return models.CycleRoleSummary{
-		Role:            role,
+		RoleID:          role,
 		QuestionCount:   int(questions),
 		ChallengeCount:  int(challenges),
 		SubmissionCount: int(submissions),

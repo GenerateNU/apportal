@@ -15,7 +15,7 @@ function question(id: string, text: string): Question {
     display_order: 0,
     is_required: false,
     cycle_id: 'c1',
-    role: 'software_engineer',
+    role_id: 'software_engineer',
     created_at: '',
   }
 }

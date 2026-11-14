@@ -6,7 +6,6 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { CapacityInputBodyExcludedApplicationIds } from './capacityInputBodyExcludedApplicationIds';
-import type { CapacityInputBodyRole } from './capacityInputBodyRole';
 import type { CapacityInputBodyTeams } from './capacityInputBodyTeams';
 
 export interface CapacityInputBody {
@@ -19,6 +18,6 @@ export interface CapacityInputBody {
   coverage: number;
   excluded_application_ids?: CapacityInputBodyExcludedApplicationIds;
   /** Applicant role whose pool is being planned */
-  role: CapacityInputBodyRole;
+  role_id: string;
   teams: CapacityInputBodyTeams;
 }

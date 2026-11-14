@@ -15,14 +15,14 @@ type ReviewQuestionsOutput struct {
 }
 
 type ListReviewQuestionsInput struct {
-	ID   string `path:"id" doc:"Cycle ID"`
-	Role string `query:"role" doc:"Optional role filter"`
+	ID     string `path:"id" doc:"Cycle ID"`
+	RoleID string `query:"role_id" doc:"Optional role filter"`
 }
 
 type CreateReviewQuestionInput struct {
 	ID   string `path:"id" doc:"Cycle ID"`
 	Body struct {
-		Role         *models.Role        `json:"role,omitempty" doc:"Omit for a global question shown for all roles"`
+		RoleID       *string             `json:"role_id,omitempty" doc:"Omit for a global question shown for all roles"`
 		QuestionText string              `json:"question_text"`
 		QuestionType models.QuestionType `json:"question_type,omitempty"`
 		IsRequired   *bool               `json:"is_required,omitempty"`
@@ -51,7 +51,7 @@ type DeleteReviewQuestionInput struct {
 
 type ReviewQuestionCreate struct {
 	CycleID      string
-	Role         *models.Role // nil = global (shown for all roles)
+	RoleID       *string // nil = global (shown for all roles)
 	QuestionText string
 	QuestionType models.QuestionType
 	IsRequired   bool

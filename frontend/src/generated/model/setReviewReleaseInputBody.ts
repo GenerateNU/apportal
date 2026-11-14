@@ -5,7 +5,6 @@
  * Generate application portal — applications, reviews, and the hiring pipeline.
  * OpenAPI spec version: 0.1.0
  */
-import type { SetReviewReleaseInputBodyRole } from './setReviewReleaseInputBodyRole';
 
 export interface SetReviewReleaseInputBody {
   /** A URL to the JSON Schema for this object. */
@@ -14,6 +13,6 @@ export interface SetReviewReleaseInputBody {
   kind: string;
   /** True releases reviews to all reviewers; false hides them again */
   released: boolean;
-  /** Applicant role: software_engineer or software_designer */
-  role: SetReviewReleaseInputBodyRole;
+  /** Applicant role ID */
+  role_id: string;
 }

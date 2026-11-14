@@ -11,7 +11,7 @@ export type UpdateDecisionTemplateParams = {
 /**
  * Applicant role
  */
-role?: string;
+role_id?: string;
 /**
  * Which letter
  */

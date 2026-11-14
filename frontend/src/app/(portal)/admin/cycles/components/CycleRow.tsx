@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import type { Cycle, CycleStatus } from '@/lib/api/types'
+import type { Cycle, CycleStatus, Role } from '@/lib/api/types'
 import { useUpdateCycle } from '@/lib/queries/cycles'
 import {
   APPLICATION_TYPE_LABEL,
@@ -19,8 +19,9 @@ import {
   type ApplicationType,
 } from '../lib/cycle-meta'
 import { CycleDialog } from './CycleDialog'
+import { CycleRoles } from './CycleRoles'
 
-export function CycleRow({ cycle }: { cycle: Cycle }) {
+export function CycleRow({ cycle, roles }: { cycle: Cycle; roles: Role[] }) {
   const updateCycle = useUpdateCycle()
   const [showEdit, setShowEdit] = useState(false)
 
@@ -46,6 +47,9 @@ export function CycleRow({ cycle }: { cycle: Cycle }) {
               cycle.application_type as ApplicationType
             ] ?? cycle.application_type}
           </span>
+        </div>
+        <div className="mt-2">
+          <CycleRoles cycleId={cycle.id} roles={roles} />
         </div>
       </div>
 

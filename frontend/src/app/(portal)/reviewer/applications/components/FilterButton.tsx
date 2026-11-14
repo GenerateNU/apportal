@@ -27,9 +27,8 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
-import type { Question, QuestionType, Role } from '@/lib/api/types'
+import type { Question, QuestionType } from '@/lib/api/types'
 import { RATING_OPTIONS } from '@/lib/interview-ratings'
-import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 import { ORDERED_STAGES, stageLabel } from './constants'
 import { AVAILABILITY_DAY_OPTIONS } from './meetingAvailability'
 
@@ -82,7 +81,7 @@ function specialQuestion(
     display_order: -1,
     is_required: false,
     cycle_id: '',
-    role: 'backend_developer' as Role,
+    role_id: null,
     created_at: '',
   }
 }
@@ -90,11 +89,8 @@ function specialQuestion(
 const SPECIAL_QUESTIONS: { special: SpecialFilter; question: Question }[] = [
   {
     special: 'role',
-    question: specialQuestion(
-      'role',
-      'Role',
-      ROLE_COLUMNS.map((r) => ROLE_LABEL[r])
-    ),
+    // Options come from the cycle's roles; see withRoleOptions.
+    question: specialQuestion('role', 'Role', []),
   },
   {
     special: 'rating',
@@ -136,6 +132,14 @@ const CHOICE_TYPES: QuestionType[] = ['checkbox', 'dropdown', 'multiple_choice']
 // Matches the panels' w-72.
 const SUBMENU_WIDTH_PX = 288
 
+function withRoleOptions(roleOptions: string[]) {
+  return SPECIAL_QUESTIONS.map((s) =>
+    s.special === 'role'
+      ? { ...s, question: { ...s.question, options: roleOptions } }
+      : s
+  )
+}
+
 function isChoiceQuestion(type: QuestionType) {
   return CHOICE_TYPES.includes(type)
 }
@@ -155,6 +159,8 @@ interface FilterChipsProps {
   // Specials the host page owns some other way — the preference list picks
   // role with its own tabs, since entries and their ranks are per-role.
   hiddenSpecials?: SpecialFilter[]
+  // Names of the cycle's roles; the Role filter is hidden without them.
+  roleOptions?: string[]
 }
 
 export function FilterChips({
@@ -163,7 +169,9 @@ export function FilterChips({
   onFilterChange,
   hasAvailability,
   hiddenSpecials,
+  roleOptions = [],
 }: FilterChipsProps) {
+  const specials = withRoleOptions(roleOptions)
   const [isOpen, setIsOpen] = useState(false)
   const [filterValues, setFilterValues] = useState<Record<string, FilterValue>>(
     {}
@@ -188,12 +196,15 @@ export function FilterChips({
   // One filter per question (plus the special ones), so anything already
   // filtered on drops off the list of things you can add.
   const availableColumns = [
-    ...SPECIAL_QUESTIONS.filter(
-      ({ special }) =>
-        (special !== 'availability' || hasAvailability) &&
-        !hiddenSpecials?.includes(special) &&
-        !filters.some((f) => f.special === special)
-    ).map(({ question }) => question),
+    ...specials
+      .filter(
+        ({ special }) =>
+          (special !== 'availability' || hasAvailability) &&
+          (special !== 'role' || roleOptions.length > 0) &&
+          !hiddenSpecials?.includes(special) &&
+          !filters.some((f) => f.special === special)
+      )
+      .map(({ question }) => question),
     ...columns.filter((q) => !filters.some((f) => f.question_id === q.id)),
   ]
 
@@ -235,7 +246,7 @@ export function FilterChips({
         <FilterChip
           key={filter.question_id}
           filter={filter}
-          question={questionForFilter(filter, columns)}
+          question={questionForFilter(filter, columns, specials)}
           onUpdate={(values) => onFilterChange({ ...filter, values }, 'update')}
           onRemove={() => onFilterChange(filter, 'remove')}
         />
@@ -332,11 +343,11 @@ export function FilterChips({
 // the cycle+role question it was built from.
 function questionForFilter(
   filter: AnswerFilter,
-  columns: Question[]
+  columns: Question[],
+  specials: typeof SPECIAL_QUESTIONS
 ): Question | undefined {
   if (filter.special) {
-    return SPECIAL_QUESTIONS.find(({ special }) => special === filter.special)
-      ?.question
+    return specials.find(({ special }) => special === filter.special)?.question
   }
   return columns.find((q) => q.id === filter.question_id)
 }

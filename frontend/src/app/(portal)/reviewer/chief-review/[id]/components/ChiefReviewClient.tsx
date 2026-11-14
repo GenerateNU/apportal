@@ -14,7 +14,7 @@ import {
   Pencil,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import type { ChiefReviewComment, ChiefVote, Role } from '@/lib/api/types'
+import type { ChiefReviewComment, ChiefVote } from '@/lib/api/types'
 import { useAnswers } from '@/lib/queries/answers'
 import { useApplicant } from '@/lib/queries/applicants'
 import {
@@ -43,8 +43,8 @@ import {
   CHIEF_VOTE_LABEL,
   CHIEF_VOTE_ORDER,
 } from '@/lib/chief-votes'
-import { ROLE_LABEL } from '@/lib/roles'
 import { ResponseField } from '@/app/(portal)/reviewer/applications/components/ResponseField'
+import { useRoleLookup } from '@/lib/queries/roles'
 
 export function ChiefReviewClient({
   applicationId,
@@ -54,9 +54,10 @@ export function ChiefReviewClient({
 }: {
   applicationId: string
   cycleId: string
-  role: Role
+  role: string
   applicantNuid: string
 }) {
+  const { roleLabel } = useRoleLookup()
   const router = useRouter()
   const searchParams = useSearchParams()
   // Only present when opened from the queue with non-default filters — see
@@ -218,7 +219,7 @@ export function ChiefReviewClient({
             <h1 className="text-text-default truncate text-base font-semibold">
               {applicant?.full_name ?? 'Applicant'}
             </h1>
-            <p className="text-text-muted text-xs">{ROLE_LABEL[role]}</p>
+            <p className="text-text-muted text-xs">{roleLabel(role)}</p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">

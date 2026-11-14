@@ -28,7 +28,7 @@ type ApplicationsOutput struct {
 type CreateApplicationInput struct {
 	Body struct {
 		CycleID      string          `json:"cycle_id" minLength:"1"`
-		Role         models.Role     `json:"role"`
+		RoleID       string          `json:"role_id"`
 		Availability json.RawMessage `json:"availability,omitempty"`
 		ResumeURL    *string         `json:"resume_url,omitempty"`
 	}
@@ -48,11 +48,11 @@ type ListApplicationsInput struct {
 	// RecordingReviewerNUID is the recording-review counterpart of
 	// InterviewerNUID: the lead's own "interviews assigned to me to review" queue.
 	RecordingReviewerNUID string `query:"recording_reviewer_nuid" doc:"Limit to applications this lead is assigned to review the interview recording of"`
-	Role                  string `query:"role"`
-	// Roles is the any-of counterpart of Role, for the filter menu's
+	RoleID                string `query:"role_id"`
+	// RoleIDs is the any-of counterpart of RoleID, for the filter menu's
 	// multi-select. Comma-separated for the same reason as RatingFilters.
-	Roles string `query:"roles" doc:"Comma-separated list of applicant roles, e.g. \"software_engineer,software_designer\"; an application matches any of them"`
-	Stage string `query:"stage"`
+	RoleIDs string `query:"role_ids" doc:"Comma-separated list of applicant role IDs; an application matches any of them"`
+	Stage   string `query:"stage"`
 	// Stages is the any-of counterpart of Stage, for the filter menu's
 	// multi-select. Comma-separated for the same reason as RatingFilters.
 	Stages string `query:"stages" doc:"Comma-separated list of stages, e.g. \"accepted,rejected\"; an application matches any of them"`
@@ -85,7 +85,7 @@ type UpdateApplicationInput struct {
 type ApplicationCreate struct {
 	CycleID      string
 	UserNUID     string
-	Role         models.Role
+	RoleID       string
 	Availability json.RawMessage
 	ResumeURL    *string
 }
@@ -103,10 +103,10 @@ type ApplicationUpdate struct {
 type ApplicationFilter struct {
 	CycleID  string
 	UserNUID string
-	Role     *models.Role
-	// Roles matches any of several roles; combined with Role it narrows further.
-	Roles []models.Role
-	Stage *models.ApplicationStage
+	RoleID   *string
+	// RoleIDs matches any of several roles; combined with RoleID it narrows further.
+	RoleIDs []string
+	Stage   *models.ApplicationStage
 	// Stages matches any of several stages; combined with Stage it narrows further.
 	Stages        []models.ApplicationStage
 	AnswerFilters []AnswerFilter

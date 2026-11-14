@@ -3,10 +3,9 @@
 import { ChevronRight } from 'lucide-react'
 import { Avatar } from '@/components/ui/avatar'
 import type { DecisionRow, DecisionTemplate } from '@/lib/api/types'
-import { ROLE_CHIP_CLASS } from '@/lib/roles'
-import { ROLE_LABEL } from '@/lib/roles'
 import { KIND_LABEL, STATUS_BADGE, STATUS_LABEL, isDecided } from './constants'
 import { DecisionEditor } from './DecisionEditor'
+import { useRoleLookup } from '@/lib/queries/roles'
 
 interface DecisionListRowProps {
   row: DecisionRow
@@ -29,6 +28,7 @@ export function DecisionListRow({
   onToggle,
   onSent,
 }: DecisionListRowProps) {
+  const { roleLabel, roleChipClass } = useRoleLookup()
   return (
     <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
       <button
@@ -68,9 +68,9 @@ export function DecisionListRow({
         </div>
 
         <span
-          className={`hidden shrink-0 rounded-md px-2 py-0.5 text-xs font-medium sm:inline ${ROLE_CHIP_CLASS[row.application_role]}`}
+          className={`hidden shrink-0 rounded-md px-2 py-0.5 text-xs font-medium sm:inline ${roleChipClass(row.role_id)}`}
         >
-          {ROLE_LABEL[row.application_role]}
+          {roleLabel(row.role_id)}
         </span>
         <span className="text-text-muted hidden w-28 shrink-0 text-xs md:block">
           {KIND_LABEL[row.kind]}

@@ -11,18 +11,19 @@ import {
   updateQuestion,
 } from '@/generated/questions/questions'
 import type { RequestOptions } from '@/lib/api/orval-mutator'
-import type { Question, Role } from '@/lib/api/types'
+import type { Question } from '@/lib/api/types'
 import { queryKeys } from './keys'
 
 export function useQuestions(
   cycleId: string,
-  role?: Role,
+  roleId?: string,
   opts?: RequestOptions
 ) {
   return useQuery({
-    queryKey: queryKeys.questions.list(cycleId, role),
+    queryKey: queryKeys.questions.list(cycleId, roleId),
     queryFn: async () =>
-      ((await listCycleQuestions(cycleId, { role }, opts)) ?? []) as Question[],
+      ((await listCycleQuestions(cycleId, { role_id: roleId }, opts)) ??
+        []) as Question[],
     enabled: !!cycleId,
   })
 }
@@ -31,14 +32,14 @@ export function useQuestions(
 // applications list spanning several cycle/role combinations at once. Each
 // pair gets its own cache entry, shared with useQuestions.
 export function useQuestionsByCycleRoles(
-  pairs: { cycleId: string; role: Role }[],
+  pairs: { cycleId: string; roleId: string }[],
   opts?: RequestOptions
 ) {
   return useQueries({
-    queries: pairs.map(({ cycleId, role }) => ({
-      queryKey: queryKeys.questions.list(cycleId, role),
+    queries: pairs.map(({ cycleId, roleId }) => ({
+      queryKey: queryKeys.questions.list(cycleId, roleId),
       queryFn: async () =>
-        ((await listCycleQuestions(cycleId, { role }, opts)) ??
+        ((await listCycleQuestions(cycleId, { role_id: roleId }, opts)) ??
           []) as Question[],
       enabled: !!cycleId,
     })),
@@ -81,9 +82,9 @@ export function useUpdateQuestion() {
 // order) with no way to recover if one PATCH failed. This instead optimistically
 // rewrites the cached list once, PATCHes only the cards whose position changed,
 // rolls the cache back on failure, and invalidates a single time on settle.
-export function useReorderQuestions(cycleId: string, role?: Role) {
+export function useReorderQuestions(cycleId: string, roleId?: string) {
   const queryClient = useQueryClient()
-  const key = queryKeys.questions.list(cycleId, role)
+  const key = queryKeys.questions.list(cycleId, roleId)
   return useMutation({
     mutationFn: async (vars: {
       ordered: Question[]

@@ -5,11 +5,10 @@
  * Generate application portal — applications, reviews, and the hiring pipeline.
  * OpenAPI spec version: 0.1.0
  */
-import type { GetAssignmentPoolRole } from './getAssignmentPoolRole';
 
 export type GetAssignmentPoolParams = {
 /**
  * Applicant role
  */
-role?: GetAssignmentPoolRole;
+role_id?: string;
 };

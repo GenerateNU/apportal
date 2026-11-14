@@ -9,12 +9,16 @@ import {
   listDecisions,
 } from '@/generated/decisions/decisions'
 import { getServerRequestOptions } from '@/lib/api/server-request-options'
-import type { DecisionRow, DecisionTemplate, Role } from '@/lib/api/types'
+import type { DecisionRow, DecisionTemplate } from '@/lib/api/types'
 import { getServerCurrentUser } from '@/lib/auth/server-user'
 import { defaultPipelineCycleId } from '@/lib/cycles'
 import type { DecisionListParams } from '@/lib/queries/decisions'
 import { queryKeys } from '@/lib/queries/keys'
-import { prefetchCycles } from '@/lib/queries/server-prefetch'
+import {
+  defaultRoleId,
+  prefetchCycles,
+  prefetchRoles,
+} from '@/lib/queries/server-prefetch'
 import { DecisionQueueClient } from './components/DecisionQueueClient'
 import { DecisionsClient } from './components/DecisionsClient'
 
@@ -43,22 +47,23 @@ async function currentReviewer() {
   }
 }
 
-// The chief board mounts filtered to this role; the lead queue is unfiltered.
-const CHIEF_DEFAULT_ROLE: Role = 'software_engineer'
-
 export default async function DecisionsPage() {
   const queryClient = new QueryClient()
   const requestOptions = await getServerRequestOptions()
-  const [reviewer, cycles] = await Promise.all([
+  const [reviewer, cycles, roles] = await Promise.all([
     currentReviewer(),
     prefetchCycles(queryClient, requestOptions),
+    prefetchRoles(queryClient, requestOptions),
   ])
   if (!reviewer) notFound()
 
   const cycleId = defaultPipelineCycleId(cycles)
+  // The chief board mounts filtered to the cycle's first role; the lead
+  // queue is unfiltered.
+  const chiefRoleId = cycleId && defaultRoleId(roles, cycleId)
   if (cycleId) {
     const params: DecisionListParams | undefined = reviewer.isChief
-      ? { role: CHIEF_DEFAULT_ROLE }
+      ? { role_id: chiefRoleId || undefined }
       : undefined
     await Promise.all([
       queryClient.prefetchQuery({
@@ -68,12 +73,13 @@ export default async function DecisionsPage() {
             []) as DecisionRow[],
       }),
       reviewer.isChief &&
+        chiefRoleId &&
         queryClient.prefetchQuery({
-          queryKey: queryKeys.decisions.templates(cycleId, CHIEF_DEFAULT_ROLE),
+          queryKey: queryKeys.decisions.templates(cycleId, chiefRoleId),
           queryFn: async () =>
             ((await listDecisionTemplates(
               cycleId,
-              { role: CHIEF_DEFAULT_ROLE },
+              { role_id: chiefRoleId },
               requestOptions
             )) ?? []) as DecisionTemplate[],
         }),

@@ -12,15 +12,15 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { MEETING_DAY_LABEL } from '@/app/(portal)/reviewer/applications/components/meetingAvailability'
-import type { PreferenceListDetail, Role } from '@/lib/api/types'
+import type { PreferenceListDetail } from '@/lib/api/types'
 import { pickDefaultCycleId, useCycles } from '@/lib/queries/cycles'
 import { usePreferenceListDetails } from '@/lib/queries/preference-lists'
+import { useCycleRolePicker } from '@/hooks/useRoleSelection'
 import { useChiefs, useLeads } from '@/lib/queries/users'
 import {
   PREFERENCE_LIST_STATUS_BADGE,
   PREFERENCE_LIST_STATUS_LABEL,
 } from '@/lib/preference-list-status'
-import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 
 export function PreferenceListsOverviewClient() {
   const searchParams = useSearchParams()
@@ -34,7 +34,7 @@ export function PreferenceListsOverviewClient() {
     if (defaultId) setCycleId(defaultId)
   }
 
-  const [role, setRole] = useState<Role>(ROLE_COLUMNS[0])
+  const { role, setRole, roleIds, roleLabel } = useCycleRolePicker(cycleId)
 
   const { data: lists = [], isLoading } = usePreferenceListDetails(cycleId)
 
@@ -61,20 +61,20 @@ export function PreferenceListsOverviewClient() {
         </Select>
 
         <div className="flex rounded-md border border-gray-200 bg-white">
-          {ROLE_COLUMNS.map((r, i) => (
+          {roleIds.map((r, i) => (
             <button
               key={r}
               type="button"
               onClick={() => setRole(r)}
               className={`px-3 py-1.5 text-sm transition-colors ${i === 0 ? 'rounded-l-md' : ''} ${
-                i === ROLE_COLUMNS.length - 1 ? 'rounded-r-md' : ''
+                i === roleIds.length - 1 ? 'rounded-r-md' : ''
               } ${
                 role === r
                   ? 'text-text-default bg-gray-100 font-medium'
                   : 'text-text-subtle hover:text-text-secondary'
               }`}
             >
-              {ROLE_LABEL[r]}
+              {roleLabel(r)}
             </button>
           ))}
         </div>
@@ -110,10 +110,10 @@ function GroupColumn({
   nameByNuid,
 }: {
   list: PreferenceListDetail
-  role: Role
+  role: string
   nameByNuid: Map<string, string>
 }) {
-  const entries = list.entries.filter((e) => e.application_role === role)
+  const entries = list.entries.filter((e) => e.role_id === role)
   const memberNames = list.members.map(
     (m) => nameByNuid.get(m.lead_nuid) ?? m.lead_nuid
   )

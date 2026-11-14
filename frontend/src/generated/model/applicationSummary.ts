@@ -5,7 +5,6 @@
  * Generate application portal — applications, reviews, and the hiring pipeline.
  * OpenAPI spec version: 0.1.0
  */
-import type { ApplicationSummaryRole } from './applicationSummaryRole';
 import type { ApplicationSummaryStage } from './applicationSummaryStage';
 
 export interface ApplicationSummary {
@@ -16,7 +15,7 @@ export interface ApplicationSummary {
   id: string;
   resume_url?: string;
   returner: boolean;
-  role: ApplicationSummaryRole;
+  role_id: string;
   stage: ApplicationSummaryStage;
   submitted_at?: string;
   updated_at: string;

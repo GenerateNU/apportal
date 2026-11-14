@@ -10,5 +10,5 @@ export type UpdateInterviewScriptParams = {
 /**
  * Applicant role
  */
-role?: string;
+role_id?: string;
 };

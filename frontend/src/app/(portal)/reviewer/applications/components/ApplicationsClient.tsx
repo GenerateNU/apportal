@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import type { ApplicationStage, Role, WrittenAnswer } from '@/lib/api/types'
+import type { ApplicationStage, WrittenAnswer } from '@/lib/api/types'
 import { usePersistedFilters } from '@/hooks/usePersistedFilters'
 import { useAnswersByApplicationIdBatches } from '@/lib/queries/answers'
 import {
@@ -19,7 +19,6 @@ import {
 } from '@/lib/queries/applications'
 import { pickDefaultCycleId, useCycles } from '@/lib/queries/cycles'
 import { useCurrentUser } from '@/lib/queries/users'
-import { ROLE_COLUMNS } from '@/lib/roles'
 import { ORDERED_STAGES, PAGE_SIZE } from './constants'
 import { BulkActionBar } from './BulkActionBar'
 import { availabilityOptionsFor, shortDays } from './meetingAvailability'
@@ -29,6 +28,7 @@ import { TableView } from './TableView'
 import { useApplicationFilters } from './useApplicationFilters'
 import { KanbanView } from './KanbanView'
 import { ApplicationDetail } from './ApplicationDetail'
+import { useCycleRoles } from '@/lib/queries/roles'
 
 type View = 'table' | 'kanban'
 
@@ -43,10 +43,6 @@ const SEARCH_DEBOUNCE_MS = 250
 // dropped the standalone role, which is a filter chip now; v3 added the
 // Returner chip.
 const FILTERS_STORAGE_KEY = 'applications-filters-v3'
-
-// The table opens on one role, which is what the server prefetch in ../page.tsx
-// is keyed to. The Role chip is what widens it from there.
-const DEFAULT_ROLES: Role[] = [ROLE_COLUMNS[0]]
 
 type StoredFilters = {
   view: View
@@ -161,7 +157,12 @@ export function ApplicationsClient() {
 
   // Which questions the chips can be built from, and the query params they
   // translate to — shared with the preference-list applicant pool.
+  // The table opens on the cycle's first role, which is what the server
+  // prefetch in ../page.tsx is keyed to. The Role chip widens it from there.
+  const { roleIds } = useCycleRoles(activeCycle)
+  const defaultRoles = useMemo(() => roleIds.slice(0, 1), [roleIds])
   const {
+    roleOptions,
     columns,
     questionsByCycleRole,
     availabilityQuestionIdByRole,
@@ -169,7 +170,7 @@ export function ApplicationsClient() {
     filterParams,
   } = useApplicationFilters({
     cycleId: activeCycle,
-    defaultRoles: DEFAULT_ROLES,
+    defaultRoles,
     filters,
     setFilters,
   })
@@ -179,7 +180,7 @@ export function ApplicationsClient() {
   // totals and the stage counts trustworthy: they describe the same match,
   // counted server-side over every row rather than the page in hand.
   const listParams = useMemo(() => {
-    if (!activeCycle) return undefined
+    if (!activeCycle || defaultRoles.length === 0) return undefined
     return {
       cycle_id: activeCycle,
       ...filterParams,
@@ -191,7 +192,14 @@ export function ApplicationsClient() {
         limit: PAGE_SIZE,
       }),
     }
-  }, [activeCycle, activeStage, debouncedSearch, filterParams, view])
+  }, [
+    activeCycle,
+    activeStage,
+    debouncedSearch,
+    filterParams,
+    view,
+    defaultRoles,
+  ])
 
   const {
     applications,
@@ -232,7 +240,7 @@ export function ApplicationsClient() {
         nuid: app.user_nuid,
         fullName: app.full_name,
         email: app.email,
-        role: app.role,
+        role: app.role_id,
         cycleId: app.cycle_id,
         stage: app.stage,
         submittedAt: app.submitted_at,
@@ -247,7 +255,7 @@ export function ApplicationsClient() {
       map[app.id] = shortDays(
         availabilityOptionsFor(
           answersByApplicationId[app.id],
-          availabilityQuestionIdByRole[app.role]
+          availabilityQuestionIdByRole[app.role_id]
         )
       )
     }
@@ -408,6 +416,7 @@ export function ApplicationsClient() {
             filters={filters}
             onFilterChange={handleFilterChange}
             hasAvailability={hasAvailability}
+            roleOptions={roleOptions}
             bulkBar={
               isChief && selectedIds.size > 0 ? (
                 <BulkActionBar

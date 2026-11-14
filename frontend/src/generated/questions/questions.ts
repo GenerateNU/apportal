@@ -68,7 +68,7 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
 /**
- * Optional ?role= returns that role's questions plus global ones.
+ * Optional ?role_id= returns that role's questions plus global ones.
  * @summary List a cycle's questions
  */
 export const listCycleQuestions = (

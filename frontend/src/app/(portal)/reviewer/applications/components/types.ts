@@ -1,4 +1,4 @@
-import type { ApplicationStage, Role } from '@/lib/api/types'
+import type { ApplicationStage } from '@/lib/api/types'
 
 export type { ApplicationStage } from '@/lib/api/types'
 
@@ -7,7 +7,7 @@ export type ApplicantApplication = {
   nuid: string
   fullName: string
   email: string
-  role: Role
+  role: string
   cycleId: string
   stage: ApplicationStage
   submittedAt?: string

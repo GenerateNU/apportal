@@ -5,7 +5,6 @@
  * Generate application portal — applications, reviews, and the hiring pipeline.
  * OpenAPI spec version: 0.1.0
  */
-import type { CreateChallengeInputBodyRole } from './createChallengeInputBodyRole';
 
 export interface CreateChallengeInputBody {
   /** A URL to the JSON Schema for this object. */
@@ -14,5 +13,5 @@ export interface CreateChallengeInputBody {
   due_at?: string;
   instructions?: string;
   name: string;
-  role: CreateChallengeInputBodyRole;
+  role_id: string;
 }

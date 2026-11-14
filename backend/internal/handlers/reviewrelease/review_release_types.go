@@ -13,7 +13,7 @@ type ReviewGateOutput struct {
 type SetReviewReleaseInput struct {
 	ID   string `path:"id" doc:"Cycle ID"`
 	Body struct {
-		Role     models.Role       `json:"role" doc:"Applicant role: software_engineer or software_designer"`
+		RoleID   string            `json:"role_id" doc:"Applicant role ID"`
 		Kind     models.ReviewKind `json:"kind" doc:"Review kind: written or recording"`
 		Released bool              `json:"released" doc:"True releases reviews to all reviewers; false hides them again"`
 	}

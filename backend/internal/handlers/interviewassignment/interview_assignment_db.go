@@ -52,10 +52,10 @@ func reviewerDetails(db *gorm.DB) *gorm.DB {
 		Joins("JOIN users u ON u.nuid = r.reviewer_nuid")
 }
 
-func cycleInterviews(db *gorm.DB, cycleID string, role models.Role) *gorm.DB {
+func cycleInterviews(db *gorm.DB, cycleID string, role string) *gorm.DB {
 	return db.Table("interviews i").Select("i.id").
 		Joins("JOIN applications a ON a.id = i.application_id").
-		Where("a.cycle_id = ? AND a.application_role = ?", cycleID, role)
+		Where("a.cycle_id = ? AND a.role_id = ?", cycleID, role)
 }
 
 func (d *InterviewAssignmentDB) ListInterviewers(ctx context.Context, applicationIDs []string) ([]models.InterviewerDetail, error) {
@@ -76,7 +76,7 @@ func (d *InterviewAssignmentDB) GetInterviewer(ctx context.Context, id string) (
 	return out, utils.DBErr(err)
 }
 
-func (d *InterviewAssignmentDB) ListInterviewersForCycle(ctx context.Context, cycleID string, role models.Role) ([]models.InterviewerDetail, error) {
+func (d *InterviewAssignmentDB) ListInterviewersForCycle(ctx context.Context, cycleID string, role string) ([]models.InterviewerDetail, error) {
 	out := []models.InterviewerDetail{}
 	db := d.db.WithContext(ctx)
 	err := interviewerDetails(db).
@@ -143,7 +143,7 @@ func (d *InterviewAssignmentDB) RemoveInterviewer(ctx context.Context, id string
 	return utils.ErrConflict
 }
 
-func (d *InterviewAssignmentDB) DeleteInterviewersForCycle(ctx context.Context, cycleID string, role models.Role) (int, error) {
+func (d *InterviewAssignmentDB) DeleteInterviewersForCycle(ctx context.Context, cycleID string, role string) (int, error) {
 	db := d.db.WithContext(ctx)
 	res := db.Where("interview_id IN (?)", cycleInterviews(db, cycleID, role).Where("i.conducted_at IS NULL AND i.submitted_at IS NULL")).
 		Delete(&models.Interviewer{})
@@ -205,7 +205,7 @@ func (d *InterviewAssignmentDB) GetReviewer(ctx context.Context, id string) (mod
 	return out, utils.DBErr(err)
 }
 
-func (d *InterviewAssignmentDB) ListReviewersForCycle(ctx context.Context, cycleID string, role models.Role) ([]models.InterviewReviewerDetail, error) {
+func (d *InterviewAssignmentDB) ListReviewersForCycle(ctx context.Context, cycleID string, role string) ([]models.InterviewReviewerDetail, error) {
 	out := []models.InterviewReviewerDetail{}
 	db := d.db.WithContext(ctx)
 	err := reviewerDetails(db).
@@ -261,7 +261,7 @@ func (d *InterviewAssignmentDB) RemoveReviewer(ctx context.Context, id string) e
 	return utils.ErrConflict
 }
 
-func (d *InterviewAssignmentDB) DeleteReviewersForCycle(ctx context.Context, cycleID string, role models.Role) (int, error) {
+func (d *InterviewAssignmentDB) DeleteReviewersForCycle(ctx context.Context, cycleID string, role string) (int, error) {
 	db := d.db.WithContext(ctx)
 	res := db.Where("writeup_submitted_at IS NULL AND interview_id IN (?)", cycleInterviews(db, cycleID, role)).
 		Delete(&models.InterviewReviewer{})

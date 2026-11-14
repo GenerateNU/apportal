@@ -20,22 +20,22 @@ func NewChallengeDB(db *gorm.DB) *ChallengeDB {
 func (c *ChallengeDB) CreateChallenge(ctx context.Context, in ChallengeCreate) (models.CodeChallenge, error) {
 	challenge := models.CodeChallenge{
 		CycleID:      in.CycleID,
-		Role:         in.Role,
+		RoleID:       in.RoleID,
 		Name:         in.Name,
 		ChallengeURL: in.ChallengeURL,
 		Instructions: in.Instructions,
 		DueAt:        in.DueAt,
 	}
 	err := utils.Insert(c.db.WithContext(ctx), &challenge,
-		"cycle_id", "application_role", "name", "challenge_url", "instructions", "due_at")
+		"cycle_id", "role_id", "name", "challenge_url", "instructions", "due_at")
 	return challenge, err
 }
 
 // ListChallenges returns a cycle's challenges, optionally filtered to one role.
-func (c *ChallengeDB) ListChallenges(ctx context.Context, cycleID string, role *models.Role) ([]models.CodeChallenge, error) {
+func (c *ChallengeDB) ListChallenges(ctx context.Context, cycleID string, roleID *string) ([]models.CodeChallenge, error) {
 	q := c.db.WithContext(ctx).Where("cycle_id = ?", cycleID)
-	if role != nil {
-		q = q.Where("application_role = ?", *role)
+	if roleID != nil {
+		q = q.Where("role_id = ?", *roleID)
 	}
 	challenges := []models.CodeChallenge{}
 	return challenges, q.Order("created_at").Find(&challenges).Error

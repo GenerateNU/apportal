@@ -10,10 +10,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import type { Role } from '@/lib/api/types'
 import { groupQuestionsIntoPages } from '@/lib/applicationPages'
-import { ROLE_LABEL } from '@/lib/roles'
 import type { QuestionCardQuestion } from './QuestionCard'
+import { useRoleLookup } from '@/lib/queries/roles'
 
 function PreviewField({ question }: { question: QuestionCardQuestion }) {
   const options = question.options ?? []
@@ -139,11 +138,12 @@ export function LivePreview({
   // "review" skips pagination and those two blocks entirely.
   kind?: 'application' | 'review'
   cycleName: string
-  role: Role
+  role: string
   questions: QuestionCardQuestion[]
   description?: string
   instructions?: string
 }) {
+  const { roleLabel } = useRoleLookup()
   const pages =
     kind === 'application'
       ? groupQuestionsIntoPages(questions)
@@ -154,7 +154,7 @@ export function LivePreview({
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-8">
-      <p className="text-text-subtle text-sm">{ROLE_LABEL[role]}</p>
+      <p className="text-text-subtle text-sm">{roleLabel(role)}</p>
       <h2 className="text-text-default mb-8 text-xl font-semibold">
         {cycleName} {kind === 'application' ? 'Application' : 'Written Review'}
       </h2>

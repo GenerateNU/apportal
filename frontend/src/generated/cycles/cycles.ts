@@ -162,7 +162,7 @@ export function useListCycles<TData = Awaited<ReturnType<typeof listCycles>>, TE
 
 
 /**
- * Chief only.
+ * Chief only. Starts with a copy of the roles of the branch's latest cycle of the same application type.
  * @summary Create a cycle
  */
 export const createCycle = (
@@ -383,7 +383,7 @@ export const useUpdateCycle = <TError = ErrorModel | ErrorModel | ErrorModel | E
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * One entry per applicant role: question count (role-specific plus global), code challenge count, and submitted application count — computed via COUNT queries instead of requiring the full row sets.
+ * One entry per role of the cycle: question count (role-specific plus global), code challenge count, and submitted application count — computed via COUNT queries instead of requiring the full row sets.
  * @summary Per-role template counts for a cycle
  */
 export const cycleTemplateSummary = (

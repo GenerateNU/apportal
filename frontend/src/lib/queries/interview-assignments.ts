@@ -10,7 +10,7 @@ import {
   unassignAllInterviewers,
 } from '@/generated/interview-assignments/interview-assignments'
 import type { RequestOptions } from '@/lib/api/orval-mutator'
-import type { InterviewReviewer, Role } from '@/lib/api/types'
+import type { InterviewReviewer } from '@/lib/api/types'
 import { chunkIds } from './interviews'
 import { queryKeys } from './keys'
 
@@ -124,9 +124,14 @@ export function useUnassignAllInterviewers() {
   return useMutation({
     mutationFn: (vars: {
       cycleId: string
-      role: Role
+      roleId: string
       opts?: RequestOptions
-    }) => unassignAllInterviewers(vars.cycleId, { role: vars.role }, vars.opts),
+    }) =>
+      unassignAllInterviewers(
+        vars.cycleId,
+        { role_id: vars.roleId },
+        vars.opts
+      ),
     onSuccess: invalidate,
   })
 }
@@ -136,12 +141,12 @@ export function useUnassignAllInterviewReviewers() {
   return useMutation({
     mutationFn: (vars: {
       cycleId: string
-      role: Role
+      roleId: string
       opts?: RequestOptions
     }) =>
       unassignAllInterviewReviewers(
         vars.cycleId,
-        { role: vars.role },
+        { role_id: vars.roleId },
         vars.opts
       ),
     onSuccess: invalidate,

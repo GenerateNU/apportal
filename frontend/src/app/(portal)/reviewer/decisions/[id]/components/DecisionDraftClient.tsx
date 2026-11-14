@@ -11,20 +11,20 @@ import type {
   DecisionRow,
   DecisionTemplate,
   ReviewQuestion,
-  Role,
 } from '@/lib/api/types'
 import { useCycles } from '@/lib/queries/cycles'
 import { useDecisionContext, useDecisions } from '@/lib/queries/decisions'
 import { useDecisionTemplates } from '@/lib/queries/decisions'
 import { useReviewQuestions } from '@/lib/queries/review-questions'
 import { useCurrentUser } from '@/lib/queries/users'
-import { ROLE_CHIP_CLASS, ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 import { DecisionContextPanel } from '../../components/DecisionContextPanel'
 import { FeedbackFields } from '../../components/FeedbackFields'
 import { MessagePreview } from '../../components/MessagePreview'
 import { feedbackState } from '../../components/constants'
 import { renderDecision } from '../../components/render'
 import { useFeedbackDraft } from '../../components/useFeedbackDraft'
+import { useCycleRoles } from '@/lib/queries/roles'
+import { useRoleLookup } from '@/lib/queries/roles'
 
 // One applicant: everything already said about them on the left, the two
 // paragraphs and the letter they land in on the right. Same shape as the lead
@@ -36,11 +36,12 @@ export function DecisionDraftClient({
 }: {
   applicationId: string
   cycleId: string
-  role: Role
+  role: string
 }) {
   const { data: currentUser } = useCurrentUser()
   const { data: cycles = [] } = useCycles({})
   const { data: rows = [], isLoading } = useDecisions(cycleId)
+  const { roleIds } = useCycleRoles(cycleId)
   const { data: templates = [] } = useDecisionTemplates(cycleId, role)
   const { data: reviewQuestions = [] } = useReviewQuestions(cycleId, role)
   const { data: contextById = {}, isLoading: contextLoading } =
@@ -52,12 +53,12 @@ export function DecisionDraftClient({
   // the list reads rather than however the server happened to sort.
   const queue = useMemo(
     () =>
-      ROLE_COLUMNS.flatMap((r) =>
+      roleIds.flatMap((r) =>
         rows
-          .filter((x) => x.application_role === r)
+          .filter((x) => x.role_id === r)
           .sort((a, b) => a.full_name.localeCompare(b.full_name))
       ),
-    [rows]
+    [rows, roleIds]
   )
   const index = queue.findIndex((r) => r.application_id === applicationId)
   const nextUnwritten = queue
@@ -136,11 +137,13 @@ function DraftBody({
   nextHref?: string
   previousHref?: string
 }) {
+  const { roleLabel, roleChipClass } = useRoleLookup()
   const draft = useFeedbackDraft(row, cycleId, canWrite)
   const rendered = renderDecision(
     { ...row, feedback: draft.feedback, compliments: draft.compliments },
     template,
-    cycleName
+    cycleName,
+    roleLabel(row.role_id)
   )
 
   return (
@@ -156,9 +159,9 @@ function DraftBody({
           <p className="text-text-faint text-xs break-all">{row.email}</p>
         </div>
         <span
-          className={`rounded-md px-2 py-0.5 text-xs font-medium ${ROLE_CHIP_CLASS[row.application_role]}`}
+          className={`rounded-md px-2 py-0.5 text-xs font-medium ${roleChipClass(row.role_id)}`}
         >
-          {ROLE_LABEL[row.application_role]}
+          {roleLabel(row.role_id)}
         </span>
       </div>
 

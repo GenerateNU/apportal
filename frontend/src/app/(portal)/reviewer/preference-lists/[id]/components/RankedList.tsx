@@ -23,9 +23,8 @@ import type {
   MeetingDay,
   PreferenceListComment,
 } from '@/lib/api/types'
-import { ROLE_LABEL } from '@/lib/roles'
-import type { Role } from '@/lib/api/types'
 import { EntryRow, type PreferenceEntry } from './EntryRow'
+import { useRoleLookup } from '@/lib/queries/roles'
 
 export function RankedList({
   role,
@@ -49,7 +48,7 @@ export function RankedList({
   isAddingComment,
   isEditingComment,
 }: {
-  role: Role
+  role: string
   entries: PreferenceEntry[]
   candidates: ApplicationSummary[]
   locked: boolean
@@ -57,7 +56,7 @@ export function RankedList({
   meetingDay?: MeetingDay | null
   availabilityBadgeFor: (
     applicationId: string,
-    role: Role
+    role: string
   ) => { label: string; className: string } | undefined
   draftedByApplicationId: Record<string, string | undefined>
   onOpenSettings: () => void
@@ -73,6 +72,7 @@ export function RankedList({
   isAddingComment?: boolean
   isEditingComment?: boolean
 }) {
+  const { roleLabel } = useRoleLookup()
   const [hideDrafted, setHideDrafted] = useState(false)
   const sensors = useSensors(
     // Without a threshold, a tap on the row's buttons starts a drag on touch.
@@ -150,11 +150,11 @@ export function RankedList({
             badge: availabilityBadgeFor(a.id, role),
           }))}
           onValueChange={onAdd}
-          placeholder={`Add a ${ROLE_LABEL[role].toLowerCase()}…`}
+          placeholder={`Add a ${roleLabel(role)}…`}
           searchPlaceholder="Search applicants…"
           emptyText="No matching applicants."
           className="w-full sm:w-72"
-          ariaLabel={`Add a ${ROLE_LABEL[role].toLowerCase()} applicant`}
+          ariaLabel={`Add a ${roleLabel(role)} applicant`}
         />
       )}
 

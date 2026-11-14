@@ -6,7 +6,6 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { ReviewQuestionQuestionType } from './reviewQuestionQuestionType';
-import type { ReviewQuestionRole } from './reviewQuestionRole';
 
 export interface ReviewQuestion {
   /** A URL to the JSON Schema for this object. */
@@ -20,5 +19,5 @@ export interface ReviewQuestion {
   options?: unknown;
   question_text: string;
   question_type: ReviewQuestionQuestionType;
-  role?: ReviewQuestionRole;
+  role_id?: string;
 }

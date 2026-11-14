@@ -9,7 +9,6 @@ import type { InterviewerPreviewInputBodyCapOverrides } from './interviewerPrevi
 import type { InterviewerPreviewInputBodyConflicts } from './interviewerPreviewInputBodyConflicts';
 import type { InterviewerPreviewInputBodyExcludedApplicationIds } from './interviewerPreviewInputBodyExcludedApplicationIds';
 import type { InterviewerPreviewInputBodyLeads } from './interviewerPreviewInputBodyLeads';
-import type { InterviewerPreviewInputBodyRole } from './interviewerPreviewInputBodyRole';
 
 export interface InterviewerPreviewInputBody {
   /** A URL to the JSON Schema for this object. */
@@ -21,5 +20,5 @@ export interface InterviewerPreviewInputBody {
   conflicts?: InterviewerPreviewInputBodyConflicts;
   excluded_application_ids?: InterviewerPreviewInputBodyExcludedApplicationIds;
   leads: InterviewerPreviewInputBodyLeads;
-  role: InterviewerPreviewInputBodyRole;
+  role_id: string;
 }

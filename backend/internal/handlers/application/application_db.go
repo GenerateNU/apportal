@@ -23,26 +23,26 @@ func (a *ApplicationDB) CreateApplication(ctx context.Context, in ApplicationCre
 	app := models.Application{
 		CycleID:      in.CycleID,
 		UserNUID:     in.UserNUID,
-		Role:         in.Role,
+		RoleID:       in.RoleID,
 		Availability: in.Availability,
 		ResumeURL:    in.ResumeURL,
 	}
 	err := utils.Insert(a.db.WithContext(ctx), &app,
-		"cycle_id", "user_nuid", "application_role", "availability", "resume_url")
+		"cycle_id", "user_nuid", "role_id", "availability", "resume_url")
 	return app, err
 }
 
 // DistinctApplicationRoles returns the roles among ids within cycleID, so a
 // caller can check a batch shares one role before treating it as a unit.
-func (a *ApplicationDB) DistinctApplicationRoles(ctx context.Context, ids []string, cycleID string) ([]models.Role, error) {
+func (a *ApplicationDB) DistinctApplicationRoles(ctx context.Context, ids []string, cycleID string) ([]string, error) {
 	if len(ids) == 0 {
 		return nil, nil
 	}
-	var roles []models.Role
+	var roles []string
 	err := a.db.WithContext(ctx).Model(&models.Application{}).
-		Distinct("application_role").
+		Distinct("role_id").
 		Where("id IN ? AND cycle_id = ?", ids, cycleID).
-		Pluck("application_role", &roles).Error
+		Pluck("role_id", &roles).Error
 	return roles, err
 }
 
@@ -95,7 +95,7 @@ func (a *ApplicationDB) ListApplicationsPage(ctx context.Context, f ApplicationF
 
 func listApplicationsQuery(db *gorm.DB, f ApplicationFilter) *gorm.DB {
 	q := applicationsFrom(db, f, applicationFilterAll).
-		Distinct("a.id", "a.cycle_id", "a.user_nuid", "a.application_role", "a.stage", "a.availability",
+		Distinct("a.id", "a.cycle_id", "a.user_nuid", "a.role_id", "a.stage", "a.availability",
 			"a.resume_url", "a.submitted_at", "a.updated_at", "u.full_name", "u.email", "u.returner").
 		Order("a.submitted_at DESC NULLS LAST")
 	if f.Limit != nil {
@@ -136,11 +136,11 @@ func applicationsFrom(db *gorm.DB, f ApplicationFilter, scope applicationFilterS
 	if f.UserNUID != "" {
 		q = q.Where("a.user_nuid = ?", f.UserNUID)
 	}
-	if f.Role != nil {
-		q = q.Where("a.application_role = ?", *f.Role)
+	if f.RoleID != nil {
+		q = q.Where("a.role_id = ?", *f.RoleID)
 	}
-	if len(f.Roles) > 0 {
-		q = q.Where("a.application_role IN ?", f.Roles)
+	if len(f.RoleIDs) > 0 {
+		q = q.Where("a.role_id IN ?", f.RoleIDs)
 	}
 	if scope != applicationFilterExceptStage {
 		if f.Stage != nil {

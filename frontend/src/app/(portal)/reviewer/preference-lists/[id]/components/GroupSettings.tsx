@@ -14,8 +14,8 @@ import {
   AVAILABILITY_DAY_OPTIONS,
   MEETING_DAY_LABEL,
 } from '@/app/(portal)/reviewer/applications/components/meetingAvailability'
-import type { MeetingDay, PreferenceListMember, Role } from '@/lib/api/types'
-import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
+import type { MeetingDay, PreferenceListMember } from '@/lib/api/types'
+import { useRoleLookup } from '@/lib/queries/roles'
 
 // Meeting day, deadlines and membership are set once and then read at a
 // glance — folded away so the ranking, which is what the page is for, isn't
@@ -27,6 +27,7 @@ export function GroupSettings({
   isChief,
   meetingDay,
   onMeetingDayChange,
+  roleIds,
   closesAtByRole,
   onSetDeadline,
   deadlineError,
@@ -43,8 +44,10 @@ export function GroupSettings({
   isChief: boolean
   meetingDay?: MeetingDay | null
   onMeetingDayChange: (day: MeetingDay | null) => void
-  closesAtByRole: Record<Role, string | undefined>
-  onSetDeadline: (role: Role, closesAt: string | null) => void
+  // The cycle's roles, in order; each gets a deadline row.
+  roleIds: string[]
+  closesAtByRole: Record<string, string | undefined>
+  onSetDeadline: (role: string, closesAt: string | null) => void
   deadlineError: boolean
   members: PreferenceListMember[]
   nameByNuid: Map<string, string>
@@ -53,6 +56,7 @@ export function GroupSettings({
   onAddMember: (nuid: string) => void
   onRemoveMember: (memberId: string) => void
 }) {
+  const { roleLabel } = useRoleLookup()
   const atMemberCap = members.length >= maxMembers
   const memberNames = members
     .map((m) => nameByNuid.get(m.lead_nuid) ?? m.lead_nuid)
@@ -114,12 +118,12 @@ export function GroupSettings({
             // cycle-wide setting, and hiding one behind a filter chip would
             // be a trap.
             <div className="flex flex-col gap-2 text-sm">
-              {ROLE_COLUMNS.map((r) => {
+              {roleIds.map((r) => {
                 const closesAt = closesAtByRole[r]
                 return (
                   <div key={r} className="flex flex-wrap items-center gap-2">
                     <span className="text-text-muted font-medium">
-                      Deadline for every {ROLE_LABEL[r]} list this cycle:
+                      Deadline for every {roleLabel(r)} list this cycle:
                     </span>
                     <DateTimePicker
                       value={closesAt ? new Date(closesAt) : undefined}

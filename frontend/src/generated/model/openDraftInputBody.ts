@@ -5,13 +5,12 @@
  * Generate application portal — applications, reviews, and the hiring pipeline.
  * OpenAPI spec version: 0.1.0
  */
-import type { OpenDraftInputBodyRole } from './openDraftInputBodyRole';
 
 export interface OpenDraftInputBody {
   /** A URL to the JSON Schema for this object. */
   readonly $schema?: string;
-  /** Applicant role: software_engineer or software_designer */
-  role: OpenDraftInputBodyRole;
+  /** Applicant role ID */
+  role_id: string;
   /**
    * How many times around the board; defaults to 1
    * @minimum 0

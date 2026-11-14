@@ -22,11 +22,11 @@ interviewer_nuid?: string;
  * Limit to applications this lead is assigned to review the interview recording of
  */
 recording_reviewer_nuid?: string;
-role?: string;
+role_id?: string;
 /**
- * Comma-separated list of applicant roles, e.g. "software_engineer,software_designer"; an application matches any of them
+ * Comma-separated list of applicant role IDs; an application matches any of them
  */
-roles?: string;
+role_ids?: string;
 stage?: string;
 /**
  * Comma-separated list of stages, e.g. "accepted,rejected"; an application matches any of them

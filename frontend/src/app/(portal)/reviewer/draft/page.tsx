@@ -10,8 +10,11 @@ import type { DraftBoard } from '@/lib/api/types'
 import { pickDefaultCycleId } from '@/lib/queries/cycles'
 import { queryKeys } from '@/lib/queries/keys'
 import { fetchPreferenceLists } from '@/lib/queries/preference-lists'
-import { prefetchCycles } from '@/lib/queries/server-prefetch'
-import { ROLE_COLUMNS } from '@/lib/roles'
+import {
+  defaultRoleId,
+  prefetchCycles,
+  prefetchRoles,
+} from '@/lib/queries/server-prefetch'
 import { DraftClient } from './components/DraftClient'
 
 // Auth-gated, live data fetched per request from the backend — never prerender
@@ -22,10 +25,13 @@ export default async function DraftPage() {
   const queryClient = new QueryClient()
   const requestOptions = await getServerRequestOptions()
 
-  const cycles = await prefetchCycles(queryClient, requestOptions)
+  const [cycles, roles] = await Promise.all([
+    prefetchCycles(queryClient, requestOptions),
+    prefetchRoles(queryClient, requestOptions),
+  ])
   const cycleId = pickDefaultCycleId(cycles)
-  if (cycleId) {
-    const role = ROLE_COLUMNS[0]
+  const role = cycleId && defaultRoleId(roles, cycleId)
+  if (cycleId && role) {
     // An unopened board 404s; that isn't dehydrated, so the client fetches it
     // and lands on the setup screen as before.
     await Promise.all([
@@ -34,7 +40,7 @@ export default async function DraftPage() {
         queryFn: () =>
           getDraftBoard(
             cycleId,
-            { role },
+            { role_id: role },
             requestOptions
           ) as Promise<DraftBoard>,
       }),

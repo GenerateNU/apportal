@@ -7,15 +7,14 @@ import {
 import { listCycleChallenges } from '@/generated/code-challenges/code-challenges'
 import { getCycle } from '@/generated/cycles/cycles'
 import { listCycleQuestions } from '@/generated/questions/questions'
-import type { Role } from '@/lib/api/types'
+import { getServerRequestOptions } from '@/lib/api/server-request-options'
 import { queryKeys } from '@/lib/queries/keys'
+import { prefetchRoles } from '@/lib/queries/server-prefetch'
 import { NewApplicationForm } from './components/NewApplicationForm'
 
 // Auth-gated, live data fetched per request from the backend — never prerender
 // this at build time (the backend isn't running then).
 export const dynamic = 'force-dynamic'
-
-const VALID_ROLES: Role[] = ['software_engineer', 'software_designer']
 
 export default async function NewApplicationPage({
   searchParams,
@@ -23,34 +22,39 @@ export default async function NewApplicationPage({
   searchParams: Promise<{ cycle?: string; role?: string }>
 }) {
   const { cycle: cycleId, role } = await searchParams
-  if (!cycleId || !role || !VALID_ROLES.includes(role as Role)) {
-    notFound()
-  }
-  const validRole = role as Role
+  if (!cycleId || !role) notFound()
 
   const queryClient = new QueryClient()
+  const requestOptions = await getServerRequestOptions()
 
-  const [cycle] = await Promise.all([
+  const [cycle, roles] = await Promise.all([
     queryClient.fetchQuery({
       queryKey: queryKeys.cycles.detail(cycleId),
-      queryFn: () => getCycle(cycleId),
+      queryFn: () => getCycle(cycleId, requestOptions),
+    }),
+    prefetchRoles(queryClient, requestOptions),
+    queryClient.prefetchQuery({
+      queryKey: queryKeys.questions.list(cycleId, role),
+      queryFn: () =>
+        listCycleQuestions(cycleId, { role_id: role }, requestOptions),
     }),
     queryClient.prefetchQuery({
-      queryKey: queryKeys.questions.list(cycleId, validRole),
-      queryFn: () => listCycleQuestions(cycleId, { role: validRole }),
-    }),
-    queryClient.prefetchQuery({
-      queryKey: queryKeys.challenges.list(cycleId, validRole),
-      queryFn: () => listCycleChallenges(cycleId, { role: validRole }),
+      queryKey: queryKeys.challenges.list(cycleId, role),
+      queryFn: () =>
+        listCycleChallenges(cycleId, { role_id: role }, requestOptions),
     }),
   ])
+  // The role must be one this cycle recruits for.
+  if (!roles.some((r) => r.id === role && r.cycle_id === cycleId)) {
+    notFound()
+  }
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
       <NewApplicationForm
         cycleId={cycleId}
         cycleName={cycle.name}
-        role={validRole}
+        role={role}
       />
     </HydrationBoundary>
   )

@@ -38,7 +38,6 @@ import type {
   ApplicationSummary,
   Interview,
   InterviewRating,
-  Role,
 } from '@/lib/api/types'
 import { useApplications } from '@/lib/queries/applications'
 import { pickDefaultCycleId, useCycles } from '@/lib/queries/cycles'
@@ -53,7 +52,6 @@ import {
 } from '@/lib/queries/review-releases'
 import { useCurrentUser, useReviewerNames } from '@/lib/queries/users'
 import { RATING_COLORS, RATING_LABEL } from '@/lib/interview-ratings'
-import { ROLE_CHIP_CLASS, ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 import {
   stageBadge,
   stageLabel,
@@ -64,6 +62,9 @@ import {
   REVIEW_STATE_DOT,
 } from '../../my-reviews/constants'
 import { INTERVIEW_STATE_LABEL } from '../../my-interviews/constants'
+import { useRoleLookup } from '@/lib/queries/roles'
+import {} from '@/hooks/useRoleSelection'
+import { useCycleRoleFilter } from '@/hooks/useRoleSelection'
 
 // Applicants who are actually in the interview pipeline — everyone else
 // (still in lead/chief review, say) doesn't belong on this page yet.
@@ -114,11 +115,13 @@ const SWIMLANE_GRID_COLS_CLASS: Record<number, string> = {
   6: 'grid-cols-[repeat(6,17rem)] sm:grid-cols-[repeat(6,20rem)]',
 }
 
-const FILTERS_STORAGE_KEY = 'interview-ratings-filters-v1'
+// v2: role went from an enum value to a role ID.
+const FILTERS_STORAGE_KEY = 'interview-ratings-filters-v2'
 
 type StoredFilters = {
   cycleId: string
-  role: Role | 'all'
+  // A role ID, or 'all'.
+  role: string
   groupByInterviewer: boolean
   interviewerFilter: string
   searchQuery: string
@@ -144,7 +147,9 @@ export function InterviewRatingsClient() {
     const defaultId = pickDefaultCycleId(cycles)
     if (defaultId) setCycleId(defaultId)
   }
-  const [activeRole, setActiveRole] = useState<Role | 'all'>('all')
+  // A role ID, or 'all'.
+  const { activeRole, setActiveRole, roleIds, roleLabel } =
+    useCycleRoleFilter(cycleId)
   const [groupByInterviewer, setGroupByInterviewer] = useState(true)
   const [interviewerFilter, setInterviewerFilter] = useState('all')
   const [collapsedLanes, setCollapsedLanes] = useState<Set<string>>(new Set())
@@ -157,9 +162,7 @@ export function InterviewRatingsClient() {
       if (stored.cycleId && cycles.some((c) => c.id === stored.cycleId)) {
         setCycleId(stored.cycleId)
       }
-      if (stored.role === 'all' || ROLE_COLUMNS.includes(stored.role as Role)) {
-        setActiveRole(stored.role as Role | 'all')
-      }
+      if (typeof stored.role === 'string') setActiveRole(stored.role)
       if (typeof stored.groupByInterviewer === 'boolean') {
         setGroupByInterviewer(stored.groupByInterviewer)
       }
@@ -170,7 +173,7 @@ export function InterviewRatingsClient() {
         setSearchQuery(stored.searchQuery)
       }
     },
-    [cycles]
+    [cycles, setActiveRole]
   )
 
   // So following a card into an interview and coming back restores this
@@ -196,7 +199,7 @@ export function InterviewRatingsClient() {
   const { data: applications = [] } = useApplications(
     {
       ...(cycleId && { cycle_id: cycleId }),
-      ...(activeRole !== 'all' && { role: activeRole }),
+      ...(activeRole !== 'all' && { role_id: activeRole }),
     },
     undefined,
     { enabled: !!cycleId }
@@ -209,12 +212,13 @@ export function InterviewRatingsClient() {
 
   // The blind-review gate is per cycle x applicant role, so the button acts on
   // whichever roles the page is currently showing — both, under "All roles".
-  const releaseRoles = activeRole === 'all' ? ROLE_COLUMNS : [activeRole]
+  const releaseRoles = activeRole === 'all' ? roleIds : [activeRole]
   const { data: reviewGates = [] } = useReviewGates(isChief ? cycleId : '')
   const setRelease = useSetReviewRelease()
   const recordingGates = reviewGates.filter(
     (g) =>
-      g.kind === 'recording' && (activeRole === 'all' || g.role === activeRole)
+      g.kind === 'recording' &&
+      (activeRole === 'all' || g.role_id === activeRole)
   )
   const allReleased =
     recordingGates.length > 0 && recordingGates.every((g) => g.released)
@@ -229,7 +233,7 @@ export function InterviewRatingsClient() {
   const scopeLabel =
     activeRole === 'all'
       ? 'all applicants'
-      : `${ROLE_LABEL[activeRole].toLowerCase()} applicants`
+      : `${roleLabel(activeRole)} applicants`
 
   function confirmRelease() {
     if (confirmingRelease === null) return
@@ -239,7 +243,7 @@ export function InterviewRatingsClient() {
       releaseRoles.map((role) =>
         setRelease.mutateAsync({
           cycleId,
-          body: { role, kind: 'recording', released },
+          body: { role_id: role, kind: 'recording', released },
         })
       )
     )
@@ -516,7 +520,7 @@ export function InterviewRatingsClient() {
 
           <Select
             value={activeRole}
-            onValueChange={(val) => setActiveRole(val as Role | 'all')}
+            onValueChange={(val) => setActiveRole(val)}
           >
             <SelectTrigger
               className="min-w-40 flex-1 sm:w-48 sm:flex-none"
@@ -526,9 +530,9 @@ export function InterviewRatingsClient() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All roles</SelectItem>
-              {ROLE_COLUMNS.map((r) => (
+              {roleIds.map((r) => (
                 <SelectItem key={r} value={r}>
-                  {ROLE_LABEL[r]}
+                  {roleLabel(r)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -787,6 +791,7 @@ function RatingCard({
   showInterviewer: boolean
   showRole: boolean
 }) {
+  const { roleLabel, roleChipClass } = useRoleLookup()
   const state: ReviewState = interviewSubmitted(interview)
     ? 'submitted'
     : interview?.writeup
@@ -810,9 +815,9 @@ function RatingCard({
           </p>
           {showRole && (
             <span
-              className={`shrink-0 rounded-md px-1.5 py-0.5 text-xs font-medium ${ROLE_CHIP_CLASS[application.role]}`}
+              className={`shrink-0 rounded-md px-1.5 py-0.5 text-xs font-medium ${roleChipClass(application.role_id)}`}
             >
-              {ROLE_LABEL[application.role]}
+              {roleLabel(application.role_id)}
             </span>
           )}
         </div>

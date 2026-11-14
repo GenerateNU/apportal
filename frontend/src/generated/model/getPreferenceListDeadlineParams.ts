@@ -5,11 +5,10 @@
  * Generate application portal — applications, reviews, and the hiring pipeline.
  * OpenAPI spec version: 0.1.0
  */
-import type { GetPreferenceListDeadlineRole } from './getPreferenceListDeadlineRole';
 
 export type GetPreferenceListDeadlineParams = {
 /**
  * Applicant role
  */
-role?: GetPreferenceListDeadlineRole;
+role_id?: string;
 };

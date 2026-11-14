@@ -67,7 +67,7 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
 /**
- * Reviewer only. ?role= selects which role's script to fetch (required). Creates a default-content row on first access.
+ * Reviewer only. ?role_id= selects which role's script to fetch (required). Creates a default-content row on first access.
  * @summary Get a cycle's per-role interview script
  */
 export const getInterviewScript = (
@@ -167,7 +167,7 @@ export function useGetInterviewScript<TData = Awaited<ReturnType<typeof getInter
 
 
 /**
- * Chief only. ?role= selects which role's script to update (required). Replaces the whole script — there's no partial update.
+ * Chief only. ?role_id= selects which role's script to update (required). Replaces the whole script — there's no partial update.
  * @summary Replace a cycle's per-role interview script
  */
 export const updateInterviewScript = (

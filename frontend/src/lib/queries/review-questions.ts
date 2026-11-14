@@ -6,18 +6,18 @@ import {
   updateReviewQuestion,
 } from '@/generated/review-questions/review-questions'
 import type { RequestOptions } from '@/lib/api/orval-mutator'
-import type { ReviewQuestion, Role } from '@/lib/api/types'
+import type { ReviewQuestion } from '@/lib/api/types'
 import { queryKeys } from './keys'
 
 export function useReviewQuestions(
   cycleId: string,
-  role?: Role,
+  roleId?: string,
   opts?: RequestOptions
 ) {
   return useQuery({
-    queryKey: queryKeys.reviewQuestions.list(cycleId, role),
+    queryKey: queryKeys.reviewQuestions.list(cycleId, roleId),
     queryFn: async () =>
-      ((await listCycleReviewQuestions(cycleId, { role }, opts)) ??
+      ((await listCycleReviewQuestions(cycleId, { role_id: roleId }, opts)) ??
         []) as ReviewQuestion[],
     enabled: !!cycleId,
   })
@@ -57,9 +57,9 @@ export function useUpdateReviewQuestion() {
 
 // Persists a full reorder of one cycle/role's review questions in a single
 // mutation — same rationale as useReorderQuestions in questions.ts.
-export function useReorderReviewQuestions(cycleId: string, role?: Role) {
+export function useReorderReviewQuestions(cycleId: string, roleId?: string) {
   const queryClient = useQueryClient()
-  const key = queryKeys.reviewQuestions.list(cycleId, role)
+  const key = queryKeys.reviewQuestions.list(cycleId, roleId)
   return useMutation({
     mutationFn: async (vars: {
       ordered: ReviewQuestion[]

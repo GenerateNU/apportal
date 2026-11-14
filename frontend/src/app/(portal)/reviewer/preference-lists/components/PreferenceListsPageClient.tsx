@@ -24,7 +24,6 @@ import {
 } from '@/components/ui/select'
 import { DateTimePicker } from '@/components/ui/datetime-picker'
 import { MEETING_DAY_LABEL } from '@/app/(portal)/reviewer/applications/components/meetingAvailability'
-import type { Role } from '@/lib/api/types'
 import { pickDefaultCycleId, useCycles } from '@/lib/queries/cycles'
 import {
   useCreatePreferenceList,
@@ -36,7 +35,7 @@ import {
   PREFERENCE_LIST_STATUS_BADGE,
   PREFERENCE_LIST_STATUS_LABEL,
 } from '@/lib/preference-list-status'
-import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
+import { useCycleRoles, useRoleLookup } from '@/lib/queries/roles'
 
 export function PreferenceListsPageClient({ isChief }: { isChief: boolean }) {
   const searchParams = useSearchParams()
@@ -48,6 +47,7 @@ export function PreferenceListsPageClient({ isChief }: { isChief: boolean }) {
     if (defaultId) setCycleId(defaultId)
   }
 
+  const { roleIds } = useCycleRoles(cycleId)
   const [dialogOpen, setDialogOpen] = useState(false)
   const { data: lists = [] } = usePreferenceLists(cycleId)
 
@@ -90,7 +90,7 @@ export function PreferenceListsPageClient({ isChief }: { isChief: boolean }) {
 
       {isChief && cycleId && (
         <div className="flex flex-col gap-2">
-          {ROLE_COLUMNS.map((r) => (
+          {roleIds.map((r) => (
             <DeadlineEditor key={r} cycleId={cycleId} role={r} />
           ))}
         </div>
@@ -154,21 +154,22 @@ export function PreferenceListsPageClient({ isChief }: { isChief: boolean }) {
   )
 }
 
-function DeadlineEditor({ cycleId, role }: { cycleId: string; role: Role }) {
+function DeadlineEditor({ cycleId, role }: { cycleId: string; role: string }) {
+  const { roleLabel } = useRoleLookup()
   const { data: deadline } = usePreferenceListDeadline(cycleId, role)
   const setDeadline = useSetPreferenceListDeadline()
 
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm">
       <span className="text-text-muted font-medium">
-        Submission deadline for {ROLE_LABEL[role]}:
+        Submission deadline for {roleLabel(role)}:
       </span>
       <DateTimePicker
         value={deadline?.closes_at ? new Date(deadline.closes_at) : undefined}
         onValueChange={(date) =>
           setDeadline.mutate({
             cycleId,
-            role,
+            roleId: role,
             closesAt: date.toISOString(),
           })
         }
@@ -177,7 +178,9 @@ function DeadlineEditor({ cycleId, role }: { cycleId: string; role: Role }) {
       {deadline?.closes_at && (
         <button
           type="button"
-          onClick={() => setDeadline.mutate({ cycleId, role, closesAt: null })}
+          onClick={() =>
+            setDeadline.mutate({ cycleId, roleId: role, closesAt: null })
+          }
           className="text-text-faint hover:text-text-muted inline-flex items-center gap-1 text-xs"
         >
           <X size={12} />

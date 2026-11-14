@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/GenerateNU/apportal/backend/internal/handlers/application"
+	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/user"
 	"github.com/GenerateNU/apportal/backend/internal/middleware"
 	"github.com/GenerateNU/apportal/backend/internal/models"
@@ -17,6 +18,7 @@ type preferenceListService struct {
 	applicationDB    *application.ApplicationDB
 	preferenceListDB *PreferenceListDB
 	userDB           *user.UserDB
+	roleDB           *role.RoleDB
 }
 
 var validMeetingDays = map[string]bool{
@@ -57,8 +59,8 @@ func preferenceListDeadlinePassed(d models.PreferenceListDeadline) bool {
 // applications.go guards against writes after the application deadline.
 // Entry-level mutations (add/remove/reorder/reasoning-edit) are scoped to
 // whichever role the target application has, not the whole group.
-func (s *preferenceListService) checkEntryNotLocked(ctx context.Context, cycleID string, role models.Role) error {
-	deadline, err := s.preferenceListDB.GetOrCreatePreferenceListDeadline(ctx, cycleID, role)
+func (s *preferenceListService) checkEntryNotLocked(ctx context.Context, cycleID, roleID string) error {
+	deadline, err := s.preferenceListDB.GetOrCreatePreferenceListDeadline(ctx, cycleID, roleID)
 	if err != nil {
 		return utils.StoreErr(err)
 	}
@@ -74,8 +76,15 @@ func (s *preferenceListService) checkEntryNotLocked(ctx context.Context, cycleID
 // deadline should be able to lock it while another role's window is still
 // open.
 func (s *preferenceListService) checkGroupNotLocked(ctx context.Context, cycleID string) error {
-	for _, role := range models.AllRoles() {
-		deadline, err := s.preferenceListDB.GetOrCreatePreferenceListDeadline(ctx, cycleID, role)
+	roles, err := s.roleDB.ListCycleRoles(ctx, cycleID)
+	if err != nil {
+		return utils.StoreErr(err)
+	}
+	if len(roles) == 0 {
+		return nil
+	}
+	for _, r := range roles {
+		deadline, err := s.preferenceListDB.GetOrCreatePreferenceListDeadline(ctx, cycleID, r.ID)
 		if err != nil {
 			return utils.StoreErr(err)
 		}
@@ -275,13 +284,13 @@ func (s *preferenceListService) upsertEntry(ctx context.Context, in *UpsertPrefe
 	if app.CycleID != list.CycleID {
 		return nil, huma.Error422UnprocessableEntity("application is not in this list's cycle")
 	}
-	if err := s.checkEntryNotLocked(ctx, list.CycleID, app.Role); err != nil {
+	if err := s.checkEntryNotLocked(ctx, list.CycleID, app.RoleID); err != nil {
 		return nil, err
 	}
 	entry, err := s.preferenceListDB.UpsertPreferenceListEntry(ctx, PreferenceListEntryUpsert{
 		PreferenceListID: in.ID,
 		ApplicationID:    in.ApplicationID,
-		Role:             app.Role,
+		RoleID:           app.RoleID,
 		Reasoning:        in.Body.Reasoning,
 		UpdatedBy:        utils.CurrentActor(ctx).NUID,
 	})
@@ -309,7 +318,7 @@ func (s *preferenceListService) deleteEntry(ctx context.Context, in *PreferenceL
 	if app.CycleID != list.CycleID {
 		return nil, huma.Error422UnprocessableEntity("application is not in this list's cycle")
 	}
-	if err := s.checkEntryNotLocked(ctx, list.CycleID, app.Role); err != nil {
+	if err := s.checkEntryNotLocked(ctx, list.CycleID, app.RoleID); err != nil {
 		return nil, err
 	}
 	if err := s.preferenceListDB.DeletePreferenceListEntry(ctx, in.ID, in.ApplicationID); err != nil {
@@ -380,10 +389,10 @@ func (s *preferenceListService) getDeadline(ctx context.Context, in *PreferenceL
 	if err := utils.RequireReviewer(ctx); err != nil {
 		return nil, err
 	}
-	if !in.Role.Valid() {
-		return nil, huma.Error422UnprocessableEntity("role is invalid")
+	if err := role.RequireCycleRole(ctx, s.roleDB, in.ID, in.RoleID); err != nil {
+		return nil, err
 	}
-	d, err := s.preferenceListDB.GetOrCreatePreferenceListDeadline(ctx, in.ID, in.Role)
+	d, err := s.preferenceListDB.GetOrCreatePreferenceListDeadline(ctx, in.ID, in.RoleID)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
@@ -394,10 +403,10 @@ func (s *preferenceListService) setDeadline(ctx context.Context, in *SetPreferen
 	if err := utils.RequireChief(ctx); err != nil {
 		return nil, err
 	}
-	if !in.Role.Valid() {
-		return nil, huma.Error422UnprocessableEntity("role is invalid")
+	if err := role.RequireCycleRole(ctx, s.roleDB, in.ID, in.RoleID); err != nil {
+		return nil, err
 	}
-	d, err := s.preferenceListDB.UpsertPreferenceListDeadline(ctx, in.ID, in.Role, in.Body.ClosesAt, utils.CurrentActor(ctx).NUID)
+	d, err := s.preferenceListDB.UpsertPreferenceListDeadline(ctx, in.ID, in.RoleID, in.Body.ClosesAt, utils.CurrentActor(ctx).NUID)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}

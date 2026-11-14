@@ -11,10 +11,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import type { Role } from '@/lib/api/types'
 import { pickDefaultCycleId, useCycles } from '@/lib/queries/cycles'
-import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 import { InterviewScriptContent } from './InterviewScriptContent'
+import { useCycleRolePicker } from '@/hooks/useRoleSelection'
 
 export function InterviewScriptPageClient({ isChief }: { isChief: boolean }) {
   const searchParams = useSearchParams()
@@ -26,25 +25,23 @@ export function InterviewScriptPageClient({ isChief }: { isChief: boolean }) {
     if (defaultId) setCycleId(defaultId)
   }
 
-  const roleParam = searchParams.get('role')
-  const [role, setRole] = useState<Role>(
-    roleParam === 'software_designer'
-      ? 'software_designer'
-      : 'software_engineer'
+  const { role, setRole, roleIds, roleLabel } = useCycleRolePicker(
+    cycleId,
+    searchParams.get('role')
   )
 
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
-          <Select value={role} onValueChange={(v) => setRole(v as Role)}>
+          <Select value={role} onValueChange={setRole}>
             <SelectTrigger className="w-48" aria-label="Filter by role">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {ROLE_COLUMNS.map((r) => (
+              {roleIds.map((r) => (
                 <SelectItem key={r} value={r}>
-                  {ROLE_LABEL[r]}
+                  {roleLabel(r)}
                 </SelectItem>
               ))}
             </SelectContent>

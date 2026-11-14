@@ -26,6 +26,12 @@ func UniqueViolation(err error) bool {
 	return false
 }
 
+// ForeignKeyViolation reports whether err is a Postgres foreign-key violation (23503).
+func ForeignKeyViolation(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == "23503"
+}
+
 // InvalidInput reports whether err is a Postgres data-integrity violation caused
 // by bad client input rather than a server fault: a foreign key referencing a
 // row that does not exist (23503), a missing required column (23502), or a

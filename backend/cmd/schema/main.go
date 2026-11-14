@@ -21,7 +21,6 @@ import (
 
 // Keep in step with the enum types in internal/models/enums.go.
 const prelude = `
-CREATE TYPE application_role AS ENUM ('software_engineer', 'software_designer');
 CREATE TYPE application_stage AS ENUM ('draft', 'submitted', 'lead_review', 'chief_review', 'interview', 'interview_scheduled', 'interview_conducted', 'interview_review', 'selection', 'accepted', 'rejected', 'withdrawn');
 CREATE TYPE application_type AS ENUM ('member', 'lead', 'chief');
 CREATE TYPE cycle_status AS ENUM ('draft', 'open', 'closed', 'archived');
@@ -33,7 +32,7 @@ CREATE TYPE user_role AS ENUM ('applicant', 'member', 'lead', 'chief', 'admin');
 
 func main() {
 	tables, err := gormschema.New("postgres", gormschema.WithConfig(&gorm.Config{NamingStrategy: db.NamingStrategy})).Load(
-		&models.User{}, &models.Branch{}, &models.Cycle{}, &models.ApplicationTemplate{}, &models.CycleStage{},
+		&models.User{}, &models.Branch{}, &models.Role{}, &models.Cycle{}, &models.ApplicationTemplate{}, &models.CycleStage{},
 		&models.Question{}, &models.CodeChallenge{}, &models.Application{}, &models.WrittenAnswer{},
 		&models.CodeSubmission{}, &models.InterviewScript{}, &models.LeadAssignment{},
 		&models.WrittenReview{}, &models.ReviewQuestion{}, &models.WrittenReviewAnswer{},

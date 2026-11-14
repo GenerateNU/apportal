@@ -194,17 +194,17 @@ var defaultPostInterviewChecklist = json.RawMessage(`[
 
 // GetOrCreateInterviewScript fetches the (cycle, role) script, creating it
 // with default content on first access so callers never see a missing row.
-func (i *InterviewDB) GetOrCreateInterviewScript(ctx context.Context, cycleID string, role models.Role) (models.InterviewScript, error) {
+func (i *InterviewDB) GetOrCreateInterviewScript(ctx context.Context, cycleID string, role string) (models.InterviewScript, error) {
 	db := i.db.WithContext(ctx)
 	var script models.InterviewScript
-	err := db.Where("cycle_id = ? AND application_role = ?", cycleID, role).Take(&script).Error
+	err := db.Where("cycle_id = ? AND role_id = ?", cycleID, role).Take(&script).Error
 	if !errors.Is(err, gorm.ErrRecordNotFound) {
 		return script, err
 	}
 
 	script = models.InterviewScript{
 		CycleID:                cycleID,
-		ApplicationRole:        role,
+		RoleID:                 role,
 		IntroSpeech:            defaultIntroSpeech,
 		RecordingReminder:      defaultRecordingReminder,
 		Questions:              defaultQuestions,
@@ -213,7 +213,7 @@ func (i *InterviewDB) GetOrCreateInterviewScript(ctx context.Context, cycleID st
 		ChallengeTracks:        defaultChallengeTracks,
 		PostInterviewChecklist: defaultPostInterviewChecklist,
 	}
-	res := db.Select("cycle_id", "application_role", "intro_speech", "recording_reminder", "questions",
+	res := db.Select("cycle_id", "role_id", "intro_speech", "recording_reminder", "questions",
 		"closing_note", "challenge_intro", "challenge_tracks", "post_interview_checklist").
 		Clauses(clause.OnConflict{DoNothing: true}, clause.Returning{}).
 		Create(&script)
@@ -223,12 +223,12 @@ func (i *InterviewDB) GetOrCreateInterviewScript(ctx context.Context, cycleID st
 
 	// Lost a race with a concurrent create; read what the other writer inserted.
 	script = models.InterviewScript{}
-	err = db.Where("cycle_id = ? AND application_role = ?", cycleID, role).Take(&script).Error
+	err = db.Where("cycle_id = ? AND role_id = ?", cycleID, role).Take(&script).Error
 	return script, err
 }
 
 // UpdateInterviewScript replaces a (cycle, role) script's content.
-func (i *InterviewDB) UpdateInterviewScript(ctx context.Context, cycleID string, role models.Role, in InterviewScriptUpdate) (models.InterviewScript, error) {
+func (i *InterviewDB) UpdateInterviewScript(ctx context.Context, cycleID string, role string, in InterviewScriptUpdate) (models.InterviewScript, error) {
 	return utils.UpdateReturning[models.InterviewScript](i.db.WithContext(ctx), map[string]any{
 		"intro_speech":             in.IntroSpeech,
 		"recording_reminder":       in.RecordingReminder,
@@ -239,5 +239,5 @@ func (i *InterviewDB) UpdateInterviewScript(ctx context.Context, cycleID string,
 		"post_interview_checklist": models.JSONValue(in.PostInterviewChecklist),
 		"updated_by":               in.UpdatedBy,
 		"updated_at":               gorm.Expr("NOW()"),
-	}, "cycle_id = ? AND application_role = ?", cycleID, role)
+	}, "cycle_id = ? AND role_id = ?", cycleID, role)
 }

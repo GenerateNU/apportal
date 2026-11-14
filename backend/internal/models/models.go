@@ -31,6 +31,16 @@ type Branch struct {
 	CreatedAt time.Time `json:"created_at" gorm:"not null;default:now()"`
 }
 
+// Role is a position a branch recruits for (e.g. Software Engineer). Applications
+// and per-role cycle config point at one by ID.
+type Role struct {
+	ID        string    `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	CycleID   string    `json:"cycle_id" gorm:"type:uuid;not null;uniqueIndex:roles_cycle_id_name_key,priority:1"`
+	Name      string    `json:"name" gorm:"not null;uniqueIndex:roles_cycle_id_name_key,priority:2"`
+	CreatedAt time.Time `json:"created_at" gorm:"not null;default:now()"`
+	Cycle     Cycle     `json:"-" gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:RESTRICT"`
+}
+
 type Cycle struct {
 	ID              string          `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
 	BranchID        string          `json:"branch_id" gorm:"type:uuid;not null;index:idx_cycles_branch"`
@@ -57,20 +67,21 @@ type Cycle struct {
 // enforces them, so a lead can still submit a review after ReviewClosesAt
 // passes.
 type ApplicationTemplate struct {
-	ID              string      `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
-	CycleID         string      `json:"cycle_id" gorm:"type:uuid;not null;uniqueIndex:application_templates_cycle_id_application_role_key,priority:1"`
-	ApplicationRole Role        `json:"application_role" gorm:"type:application_role;not null;uniqueIndex:application_templates_cycle_id_application_role_key,priority:2"`
-	Title           string      `json:"title" gorm:"not null"`
-	Description     *string     `json:"description,omitempty"`
-	Instructions    *string     `json:"instructions,omitempty"`
-	OpensAt         *time.Time  `json:"opens_at,omitempty"`
-	ClosesAt        *time.Time  `json:"closes_at,omitempty"`
-	Status          CycleStatus `json:"status" gorm:"type:cycle_status;not null;default:draft"`
-	CreatedAt       time.Time   `json:"created_at" gorm:"not null;default:now()"`
-	UpdatedAt       time.Time   `json:"updated_at" gorm:"not null;default:now()"`
-	ReviewStatus    CycleStatus `json:"review_status" gorm:"type:cycle_status;not null;default:draft"`
-	ReviewClosesAt  *time.Time  `json:"review_closes_at,omitempty"`
-	Cycle           Cycle       `json:"-" gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
+	ID             string      `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	CycleID        string      `json:"cycle_id" gorm:"type:uuid;not null;uniqueIndex:application_templates_cycle_id_role_id_key,priority:1"`
+	RoleID         string      `json:"role_id" gorm:"type:uuid;not null;uniqueIndex:application_templates_cycle_id_role_id_key,priority:2"`
+	Title          string      `json:"title" gorm:"not null"`
+	Description    *string     `json:"description,omitempty"`
+	Instructions   *string     `json:"instructions,omitempty"`
+	OpensAt        *time.Time  `json:"opens_at,omitempty"`
+	ClosesAt       *time.Time  `json:"closes_at,omitempty"`
+	Status         CycleStatus `json:"status" gorm:"type:cycle_status;not null;default:draft"`
+	CreatedAt      time.Time   `json:"created_at" gorm:"not null;default:now()"`
+	UpdatedAt      time.Time   `json:"updated_at" gorm:"not null;default:now()"`
+	ReviewStatus   CycleStatus `json:"review_status" gorm:"type:cycle_status;not null;default:draft"`
+	ReviewClosesAt *time.Time  `json:"review_closes_at,omitempty"`
+	Cycle          Cycle       `json:"-" gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
+	Role           Role        `json:"-" gorm:"foreignKey:RoleID;references:ID;constraint:OnDelete:RESTRICT"`
 }
 
 type CycleStage struct {
@@ -88,7 +99,7 @@ type CycleStage struct {
 type Question struct {
 	ID           string          `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
 	CycleID      string          `json:"cycle_id" gorm:"type:uuid;not null;index:idx_questions_cycle_role,priority:1"`
-	Role         *Role           `json:"role,omitempty" gorm:"column:application_role;type:application_role;index:idx_questions_cycle_role,priority:2"`
+	RoleID       *string         `json:"role_id,omitempty" gorm:"type:uuid;index:idx_questions_cycle_role,priority:2"`
 	QuestionText string          `json:"question_text" gorm:"not null"`
 	QuestionType QuestionType    `json:"question_type" gorm:"type:question_type;not null;default:long_answer"`
 	IsRequired   bool            `json:"is_required" gorm:"not null;default:true"`
@@ -96,24 +107,26 @@ type Question struct {
 	Options      json.RawMessage `json:"options,omitempty" gorm:"serializer:jsonb;type:jsonb"`
 	// PageTitle, when set, means a new page starts at this question, titled
 	// PageTitle. Only role-specific questions may carry one — a global
-	// question (Role == nil) is shared across every role's form at
+	// question (RoleID == nil) is shared across every role's form at
 	// potentially different relative positions, so a page boundary on one
 	// wouldn't mean the same thing for another.
 	PageTitle *string   `json:"page_title,omitempty"`
 	CreatedAt time.Time `json:"created_at" gorm:"not null;default:now()"`
 	Cycle     Cycle     `json:"-" gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
+	Role      *Role     `json:"-" gorm:"foreignKey:RoleID;references:ID;constraint:OnDelete:RESTRICT"`
 }
 
 type CodeChallenge struct {
 	ID           string     `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
 	CycleID      string     `json:"cycle_id" gorm:"type:uuid;not null"`
-	Role         Role       `json:"role" gorm:"column:application_role;type:application_role;not null"`
+	RoleID       string     `json:"role_id" gorm:"type:uuid;not null"`
 	Name         string     `json:"name" gorm:"not null"`
 	ChallengeURL *string    `json:"challenge_url,omitempty"`
 	Instructions *string    `json:"instructions,omitempty"`
 	DueAt        *time.Time `json:"due_at,omitempty"`
 	CreatedAt    time.Time  `json:"created_at" gorm:"not null;default:now()"`
 	Cycle        Cycle      `json:"-" gorm:"foreignKey:CycleID;references:ID"`
+	Role         Role       `json:"-" gorm:"foreignKey:RoleID;references:ID;constraint:OnDelete:RESTRICT"`
 }
 
 // CycleRoleSummary reports one applicant role's template counts within a
@@ -122,10 +135,10 @@ type CodeChallenge struct {
 // been submitted. Computed via COUNT queries rather than requiring callers to
 // fetch the full row sets just to take their length.
 type CycleRoleSummary struct {
-	Role            Role `json:"role"`
-	QuestionCount   int  `json:"question_count"`
-	ChallengeCount  int  `json:"challenge_count"`
-	SubmissionCount int  `json:"submission_count"`
+	RoleID          string `json:"role_id"`
+	QuestionCount   int    `json:"question_count"`
+	ChallengeCount  int    `json:"challenge_count"`
+	SubmissionCount int    `json:"submission_count"`
 }
 
 type Applicant struct {
@@ -147,7 +160,7 @@ type Application struct {
 	ID           string           `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
 	CycleID      string           `json:"cycle_id" gorm:"type:uuid;not null;index:idx_applications_cycle;uniqueIndex:applications_cycle_id_user_nuid_role_key,priority:1"`
 	UserNUID     string           `json:"user_nuid" gorm:"not null;index:idx_applications_user;uniqueIndex:applications_cycle_id_user_nuid_role_key,priority:2"`
-	Role         Role             `json:"role" gorm:"column:application_role;type:application_role;not null;uniqueIndex:applications_cycle_id_user_nuid_role_key,priority:3"`
+	RoleID       string           `json:"role_id" gorm:"type:uuid;not null;uniqueIndex:applications_cycle_id_user_nuid_role_key,priority:3"`
 	Stage        ApplicationStage `json:"stage" gorm:"type:application_stage;not null;default:draft;index:idx_applications_stage"`
 	Availability json.RawMessage  `json:"availability,omitempty" gorm:"serializer:jsonb;type:jsonb"`
 	ResumeURL    *string          `json:"resume_url,omitempty"`
@@ -157,6 +170,7 @@ type Application struct {
 	UpdatedAt   time.Time  `json:"updated_at" gorm:"not null;default:now()"`
 	Cycle       Cycle      `json:"-" gorm:"foreignKey:CycleID;references:ID"`
 	User        User       `json:"-" gorm:"foreignKey:UserNUID;references:NUID"`
+	Role        Role       `json:"-" gorm:"foreignKey:RoleID;references:ID;constraint:OnDelete:RESTRICT"`
 }
 
 // ApplicationSummary bundles an application with its applicant's display name

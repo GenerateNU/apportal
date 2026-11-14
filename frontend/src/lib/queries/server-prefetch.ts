@@ -5,6 +5,10 @@ import type { RequestOptions } from '@/lib/api/orval-mutator'
 import type { Cycle, InterviewScript, Role, User } from '@/lib/api/types'
 import { fetchCycles, pickDefaultCycleId } from './cycles'
 import { queryKeys } from './keys'
+import { fetchRoles } from './roles'
+import { cycleRoleIds, defaultRoleId } from '@/lib/roles'
+
+export { cycleRoleIds, defaultRoleId }
 
 // Server-only prefetches shared across pages. A failure falls back to letting
 // the client fetch rather than failing the whole render.
@@ -21,23 +25,40 @@ export function prefetchCycles(
     .catch(() => [])
 }
 
+export function prefetchRoles(
+  queryClient: QueryClient,
+  opts: RequestOptions
+): Promise<Role[]> {
+  return queryClient
+    .fetchQuery({
+      queryKey: queryKeys.roles.list(),
+      queryFn: () => fetchRoles(opts),
+    })
+    .catch(() => [])
+}
+
 // The interview-script view and editor resolve cycle and role the same way.
 export async function prefetchInterviewScript(
   queryClient: QueryClient,
   searchParams: { cycle?: string; role?: string },
   opts: RequestOptions
 ) {
-  const cycles = await prefetchCycles(queryClient, opts)
+  const [cycles, roles] = await Promise.all([
+    prefetchCycles(queryClient, opts),
+    prefetchRoles(queryClient, opts),
+  ])
   const cycleId = searchParams.cycle || pickDefaultCycleId(cycles)
   if (!cycleId) return
-  const role: Role =
-    searchParams.role === 'software_designer'
-      ? 'software_designer'
-      : 'software_engineer'
+  const roleId = searchParams.role || defaultRoleId(roles, cycleId)
+  if (!roleId) return
   await queryClient.prefetchQuery({
-    queryKey: queryKeys.interviewScript.detail(cycleId, role),
+    queryKey: queryKeys.interviewScript.detail(cycleId, roleId),
     queryFn: () =>
-      getInterviewScript(cycleId, { role }, opts) as Promise<InterviewScript>,
+      getInterviewScript(
+        cycleId,
+        { role_id: roleId },
+        opts
+      ) as Promise<InterviewScript>,
   })
 }
 

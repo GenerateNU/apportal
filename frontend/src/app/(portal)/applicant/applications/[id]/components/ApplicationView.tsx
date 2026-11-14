@@ -4,17 +4,16 @@ import { useMemo } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Lock } from 'lucide-react'
 import { MarkdownContent } from '@/components/MarkdownContent'
-import type { Role } from '@/lib/api/types'
 import { useApplicationTemplate } from '@/lib/queries/application-templates'
 import { useApplication } from '@/lib/queries/applications'
 import { useAnswers } from '@/lib/queries/answers'
 import { useChallenges } from '@/lib/queries/challenges'
 import { useQuestions } from '@/lib/queries/questions'
 import { useSubmission } from '@/lib/queries/submissions'
-import { ROLE_LABEL } from '@/lib/roles'
 import { APPLICANT_STATUS } from '../../lib/status'
 import { ApplicationFields } from '../../components/ApplicationFields'
 import type { AnswerValue } from '../../components/QuestionField'
+import { useRoleLookup } from '@/lib/queries/roles'
 
 const noop = () => {}
 
@@ -29,8 +28,9 @@ export function ApplicationView({
   applicationId: string
   cycleId: string
   cycleName: string
-  role: Role
+  role: string
 }) {
+  const { roleLabel } = useRoleLookup()
   const { data: application } = useApplication(applicationId)
   const { data: questions = [] } = useQuestions(cycleId, role)
   const { data: challenges = [] } = useChallenges(cycleId, role)
@@ -71,7 +71,7 @@ export function ApplicationView({
       <header className="mb-6 flex items-start justify-between gap-3">
         <div>
           <h1 className="text-text-default text-2xl font-semibold">
-            {ROLE_LABEL[role]}
+            {roleLabel(role)}
           </h1>
           <p className="text-text-muted mt-1 text-sm">{cycleName}</p>
         </div>

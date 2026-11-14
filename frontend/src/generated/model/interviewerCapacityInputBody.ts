@@ -7,12 +7,11 @@
  */
 import type { InterviewerCapacityInputBodyExcludedApplicationIds } from './interviewerCapacityInputBodyExcludedApplicationIds';
 import type { InterviewerCapacityInputBodyLeads } from './interviewerCapacityInputBodyLeads';
-import type { InterviewerCapacityInputBodyRole } from './interviewerCapacityInputBodyRole';
 
 export interface InterviewerCapacityInputBody {
   /** A URL to the JSON Schema for this object. */
   readonly $schema?: string;
   excluded_application_ids?: InterviewerCapacityInputBodyExcludedApplicationIds;
   leads: InterviewerCapacityInputBodyLeads;
-  role: InterviewerCapacityInputBodyRole;
+  role_id: string;
 }

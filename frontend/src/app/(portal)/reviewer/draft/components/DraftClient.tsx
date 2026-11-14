@@ -21,7 +21,6 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { APIError } from '@/lib/api/client'
-import type { Role } from '@/lib/api/types'
 import { useApplications } from '@/lib/queries/applications'
 import { pickDefaultCycleId, useCycles } from '@/lib/queries/cycles'
 import {
@@ -40,8 +39,8 @@ import {
   usePreferenceList,
   usePreferenceLists,
 } from '@/lib/queries/preference-lists'
+import { useCycleRolePicker } from '@/hooks/useRoleSelection'
 import { useCurrentUser } from '@/lib/queries/users'
-import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 import {
   DRAFT_STATUS_BADGE,
   DRAFT_STATUS_LABEL,
@@ -67,7 +66,7 @@ export function DraftClient() {
   }
   // Separate boards per role, switched here — engineers and designers draft
   // independently, the same way their preference ranks are scoped.
-  const [role, setRole] = useState<Role>(ROLE_COLUMNS[0])
+  const { role, setRole, roleIds, roleLabel } = useCycleRolePicker(cycleId)
 
   const {
     data: board,
@@ -81,9 +80,9 @@ export function DraftClient() {
   // Only the operator picks, and the pool exists solely to pick from — so a
   // roomful of leads watching a polling board doesn't each fetch it.
   const { data: pool = [] } = useApplications(
-    cycleId ? { cycle_id: cycleId, role } : undefined,
+    cycleId ? { cycle_id: cycleId, role_id: role } : undefined,
     undefined,
-    { enabled: !!cycleId && isChief }
+    { enabled: !!cycleId && !!role && isChief }
   )
 
   // The on-the-clock team's own ranking, so the operator can pick straight
@@ -118,7 +117,7 @@ export function DraftClient() {
   const [removingPick, setRemovingPick] = useState<number | null>(null)
   const [pickError, setPickError] = useState('')
 
-  const draftScope = { cycleId, role, draftId: board?.id ?? '' }
+  const draftScope = { cycleId, roleId: role, draftId: board?.id ?? '' }
   const effectiveOrder =
     order ?? board?.teams.map((t) => t.preference_list_id) ?? []
   const effectiveRounds = rounds ?? board?.rounds ?? 1
@@ -213,14 +212,14 @@ export function DraftClient() {
             View only
           </span>
         )}
-        <Select value={role} onValueChange={(v) => setRole(v as Role)}>
+        <Select value={role} onValueChange={setRole}>
           <SelectTrigger className="w-48" aria-label="Draft board role">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {ROLE_COLUMNS.map((r) => (
+            {roleIds.map((r) => (
               <SelectItem key={r} value={r}>
-                {ROLE_LABEL[r]}
+                {roleLabel(r)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -256,7 +255,7 @@ export function DraftClient() {
       <>
         {header}
         <div className={SECTION_CLASS}>
-          <h2 className={SECTION_HEADER_CLASS}>{ROLE_LABEL[role]} draft</h2>
+          <h2 className={SECTION_HEADER_CLASS}>{roleLabel(role)} draft</h2>
           {isChief ? (
             <>
               <p className="text-text-muted text-sm">
@@ -265,7 +264,7 @@ export function DraftClient() {
               </p>
               <div>
                 <Button
-                  onClick={() => openDraft.mutate({ cycleId, role })}
+                  onClick={() => openDraft.mutate({ cycleId, roleId: role })}
                   disabled={openDraft.isPending}
                 >
                   {openDraft.isPending && (

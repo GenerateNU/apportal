@@ -5,11 +5,10 @@
  * Generate application portal — applications, reviews, and the hiring pipeline.
  * OpenAPI spec version: 0.1.0
  */
-import type { CycleRoleSummaryRole } from './cycleRoleSummaryRole';
 
 export interface CycleRoleSummary {
   challenge_count: number;
   question_count: number;
-  role: CycleRoleSummaryRole;
+  role_id: string;
   submission_count: number;
 }

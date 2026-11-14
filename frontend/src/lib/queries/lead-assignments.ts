@@ -12,7 +12,6 @@ import {
 } from '@/generated/lead-assignments/lead-assignments'
 import type { LeadAssignment } from '@/generated/model'
 import type { RequestOptions } from '@/lib/api/orval-mutator'
-import type { Role } from '@/lib/api/types'
 import { queryKeys } from './keys'
 
 export function useLeadAssignments(
@@ -85,9 +84,9 @@ export function useUnassignAllLeads() {
   return useMutation({
     mutationFn: (vars: {
       cycleId: string
-      role: Role
+      roleId: string
       opts?: RequestOptions
-    }) => unassignAllLeads(vars.cycleId, { role: vars.role }, vars.opts),
+    }) => unassignAllLeads(vars.cycleId, { role_id: vars.roleId }, vars.opts),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.leadAssignments.all })
       queryClient.invalidateQueries({ queryKey: queryKeys.reviewGates.all })

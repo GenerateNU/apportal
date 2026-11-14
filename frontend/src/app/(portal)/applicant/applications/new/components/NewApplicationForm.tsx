@@ -19,7 +19,6 @@ import { APIError } from '@/lib/api/client'
 import type {
   Application,
   CodeSubmission,
-  Role,
   User,
   WrittenAnswer,
 } from '@/lib/api/types'
@@ -35,10 +34,10 @@ import { useChallenges } from '@/lib/queries/challenges'
 import { useQuestions } from '@/lib/queries/questions'
 import { usePutSubmission, useSubmission } from '@/lib/queries/submissions'
 import { useCurrentUser } from '@/lib/queries/users'
-import { ROLE_LABEL } from '@/lib/roles'
 import { ApplicationFields } from '../../components/ApplicationFields'
 import type { AnswerValue } from '../../components/QuestionField'
 import { QuestionOutline } from './QuestionOutline'
+import { useRoleLookup } from '@/lib/queries/roles'
 
 const DEFAULT_SUBMIT_ERROR =
   'Something went wrong submitting your application. Please try again.'
@@ -74,7 +73,7 @@ export function NewApplicationForm({
 }: {
   cycleId: string
   cycleName: string
-  role: Role
+  role: string
 }) {
   const router = useRouter()
   const { data: currentUser, isLoading } = useCurrentUser()
@@ -120,7 +119,7 @@ function ResumeGate({
 }: {
   cycleId: string
   cycleName: string
-  role: Role
+  role: string
   currentUser: User
   onDone: (applicationId: string) => void
 }) {
@@ -128,7 +127,7 @@ function ResumeGate({
   const { data: existing = [], isLoading: loadingExisting } = useApplications({
     user_nuid: currentUser.nuid,
     cycle_id: cycleId,
-    role,
+    role_id: role,
   })
   const existingApp = existing[0]
   const isDraft = existingApp?.stage === 'draft'
@@ -207,12 +206,13 @@ function Form({
 }: {
   cycleId: string
   cycleName: string
-  role: Role
+  role: string
   onDone: (applicationId: string) => void
   initialApplication: Application | null
   initialAnswers: WrittenAnswer[]
   initialSubmission: CodeSubmission | null
 }) {
+  const { roleLabel } = useRoleLookup()
   const { data: questions = [] } = useQuestions(cycleId, role)
   const { data: challenges = [] } = useChallenges(cycleId, role)
   const { data: template } = useApplicationTemplate(cycleId, role)
@@ -324,7 +324,7 @@ function Form({
         const created = await createApplication.mutateAsync({
           body: {
             cycle_id: cycleId,
-            role,
+            role_id: role,
             resume_url: snapshot.resumeUrl || undefined,
             availability: snapshot.availability,
           },
@@ -647,7 +647,7 @@ function Form({
       <header className="mb-8">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h1 className="text-text-default text-2xl font-semibold">
-            {ROLE_LABEL[role]}
+            {roleLabel(role)}
           </h1>
           <div className="flex flex-wrap items-center gap-3">
             {saveStatus === 'saving' && (

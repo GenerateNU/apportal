@@ -47,6 +47,7 @@ import type {
   PreferenceListSummary as GenPreferenceListSummary,
   Question as GenQuestion,
   QuestionAverageScore,
+  Role as GenRole,
   ReviewerProgress as GenReviewerProgress,
   ReviewQuestion as GenReviewQuestion,
   ReviewQuestionAverage as GenReviewQuestionAverage,
@@ -54,7 +55,6 @@ import type {
   WrittenAnswer as GenWrittenAnswer,
   WrittenReviewAnswer as GenWrittenReviewAnswer,
   WrittenReviewDetail as GenWrittenReviewDetail,
-  ApplicationRole,
   ApplicationStage,
   InterviewDetailRating,
   QuestionQuestionType,
@@ -68,7 +68,6 @@ export type {
   CycleStatus,
   CycleRoleSummary,
 } from '@/generated/model'
-export type Role = ApplicationRole
 export type InterviewRating = InterviewDetailRating
 export type QuestionType = QuestionQuestionType
 export type UserRole = UserRolesAnyOfItem
@@ -98,16 +97,18 @@ export type User = Omit<GenUser, '$schema' | 'roles'> & {
 
 export type Branch = Omit<GenBranch, '$schema'>
 
+export type Role = Omit<GenRole, '$schema'>
+
 export type Cycle = Omit<GenCycle, '$schema'>
 
 export type ApplicationTemplate = Omit<GenApplicationTemplate, '$schema'>
 
 export type Applicant = Omit<GenApplicant, '$schema'>
 
-export type Question = Omit<GenQuestion, '$schema' | 'options' | 'role'> & {
+export type Question = Omit<GenQuestion, '$schema' | 'options' | 'role_id'> & {
   // JSONB array of choice labels (multiple_choice / checkbox questions).
   options: string[] | null
-  role: Role | null
+  role_id: string | null
 }
 
 // Same shape as Question, minus page_title (review forms are short; no
@@ -115,10 +116,10 @@ export type Question = Omit<GenQuestion, '$schema' | 'options' | 'role'> & {
 // reviews, scoped to a cycle and (optionally) a specific role.
 export type ReviewQuestion = Omit<
   GenReviewQuestion,
-  '$schema' | 'options' | 'role'
+  '$schema' | 'options' | 'role_id'
 > & {
   options: string[] | null
-  role: Role | null
+  role_id: string | null
 }
 
 export type CodeChallenge = Omit<GenCodeChallenge, '$schema'>
@@ -137,11 +138,10 @@ export type Application = Omit<
 // separate applicant-profile fetch just to show who applied.
 export type ApplicationSummary = Omit<
   GenApplicationSummary,
-  'availability' | 'resume_url' | 'role' | 'stage'
+  'availability' | 'resume_url' | 'stage'
 > & {
   availability: Record<string, boolean> | null
   resume_url: string | null
-  role: Role
   stage: ApplicationStage
 }
 
@@ -209,13 +209,8 @@ export interface InterviewScriptChallengeTracks {
 
 export type InterviewScript = Omit<
   GenInterviewScript,
-  | '$schema'
-  | 'questions'
-  | 'challenge_tracks'
-  | 'post_interview_checklist'
-  | 'application_role'
+  '$schema' | 'questions' | 'challenge_tracks' | 'post_interview_checklist'
 > & {
-  application_role: Role
   questions: InterviewScriptQuestion[]
   challenge_tracks: InterviewScriptChallengeTracks
   post_interview_checklist: string[]
@@ -240,7 +235,7 @@ export type PreferenceListStatus = 'draft' | 'submitted'
 export type MeetingDay = 'monday' | 'tuesday' | 'wednesday' | 'thursday'
 
 // A group is scoped to a cycle only — role lives on each entry (see
-// PreferenceListEntryDetail.application_role), not on the group itself, so
+// PreferenceListEntryDetail.role_id), not on the group itself, so
 // one group covers every role in its cycle.
 export type PreferenceList = Omit<
   GenPreferenceList,
@@ -265,24 +260,15 @@ export type PreferenceListMember = Omit<GenPreferenceListMember, '$schema'>
 
 export type PreferenceListEntry = Omit<GenPreferenceListEntry, '$schema'>
 
-export type PreferenceListEntryDetail = Omit<
-  GenPreferenceListEntryDetail,
-  'application_role'
-> & {
-  application_role: Role
-}
+export type PreferenceListEntryDetail = GenPreferenceListEntryDetail
 
 export type PreferenceListPersonalEntry = Omit<
   GenPreferenceListPersonalEntry,
   '$schema'
 >
 
-export type PreferenceListPersonalEntryDetail = Omit<
-  GenPreferenceListPersonalEntryDetail,
-  'application_role'
-> & {
-  application_role: Role
-}
+export type PreferenceListPersonalEntryDetail =
+  GenPreferenceListPersonalEntryDetail
 
 // application_id absent means a comment on the group as a whole; present
 // means a comment on that one applicant/entry in the shared list.
@@ -312,18 +298,12 @@ export type PreferenceListDetail = Omit<
   meeting_day?: MeetingDay
 }
 
-export type PreferenceListDeadline = Omit<
-  GenPreferenceListDeadline,
-  '$schema' | 'application_role'
-> & {
-  application_role: Role
-}
+export type PreferenceListDeadline = Omit<GenPreferenceListDeadline, '$schema'>
 
 // The snake draft board. Orval leaves the generated members/teams/picks
-// collections nullable and the role/status as loose strings; these pin the
+// collections nullable and the status as a loose string; these pin the
 // shapes the board actually renders.
-export type Draft = Omit<GenDraft, '$schema' | 'application_role'> & {
-  application_role: Role
+export type Draft = Omit<GenDraft, '$schema'> & {
   status: DraftStatus
 }
 
@@ -339,9 +319,8 @@ export type { DraftSlot }
 
 export type DraftBoard = Omit<
   GenDraftBoard,
-  '$schema' | 'application_role' | 'teams' | 'picks' | 'slots'
+  '$schema' | 'teams' | 'picks' | 'slots'
 > & {
-  application_role: Role
   status: DraftStatus
   teams: DraftTeamDetail[]
   picks: DraftPickDetail[]
@@ -359,19 +338,14 @@ export type DecisionKind =
 export type DecisionStatus =
   (typeof DecisionRowStatus)[keyof typeof DecisionRowStatus]
 
-export type DecisionTemplate = Omit<
-  GenDecisionTemplate,
-  '$schema' | 'application_role' | 'kind'
-> & {
-  application_role: Role
+export type DecisionTemplate = Omit<GenDecisionTemplate, '$schema' | 'kind'> & {
   kind: DecisionKind
 }
 
 export type DecisionRow = Omit<
   GenDecisionRow,
-  '$schema' | 'application_role' | 'stage' | 'interviewers'
+  '$schema' | 'stage' | 'interviewers'
 > & {
-  application_role: Role
   stage: ApplicationStage
   interviewers: DecisionInterviewer[]
 }

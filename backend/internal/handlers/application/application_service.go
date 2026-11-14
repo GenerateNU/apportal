@@ -10,6 +10,7 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/handlers/challenge"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/codesubmission"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/question"
+	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/GenerateNU/apportal/backend/internal/middleware"
 	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
@@ -22,6 +23,7 @@ type applicationService struct {
 	challengeDB           *challenge.ChallengeDB
 	codeSubmissionDB      *codesubmission.CodeSubmissionDB
 	questionDB            *question.QuestionDB
+	roleDB                *role.RoleDB
 }
 
 func (s *applicationService) create(ctx context.Context, in *CreateApplicationInput) (*ApplicationOutput, error) {
@@ -29,11 +31,11 @@ func (s *applicationService) create(ctx context.Context, in *CreateApplicationIn
 	if !ok || actor.NUID == "" {
 		return nil, huma.Error401Unauthorized("authentication required")
 	}
-	if !in.Body.Role.Valid() {
-		return nil, huma.Error422UnprocessableEntity("valid role is required")
+	if err := role.RequireCycleRole(ctx, s.roleDB, in.Body.CycleID, in.Body.RoleID); err != nil {
+		return nil, err
 	}
 
-	tpl, err := s.applicationTemplateDB.GetOrCreateApplicationTemplate(ctx, in.Body.CycleID, in.Body.Role)
+	tpl, err := s.applicationTemplateDB.GetOrCreateApplicationTemplate(ctx, in.Body.CycleID, in.Body.RoleID)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
@@ -44,7 +46,7 @@ func (s *applicationService) create(ctx context.Context, in *CreateApplicationIn
 	app, err := s.applicationDB.CreateApplication(ctx, ApplicationCreate{
 		CycleID:      in.Body.CycleID,
 		UserNUID:     actor.NUID,
-		Role:         in.Body.Role,
+		RoleID:       in.Body.RoleID,
 		Availability: in.Body.Availability,
 		ResumeURL:    in.Body.ResumeURL,
 	})
@@ -97,7 +99,7 @@ func (s *applicationService) list(ctx context.Context, in *ListApplicationsInput
 	if err != nil {
 		return nil, err
 	}
-	roles, err := parseRoles(in.Roles)
+	roleIDs, err := parseRoleIDs(in.RoleIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +116,7 @@ func (s *applicationService) list(ctx context.Context, in *ListApplicationsInput
 		RecordingReviewerNUID: in.RecordingReviewerNUID,
 		AnswerFilters:         answerFilters,
 		InterviewRatings:      ratingFilters,
-		Roles:                 roles,
+		RoleIDs:               roleIDs,
 		Stages:                stages,
 		Returner:              returner,
 		Search:                in.Search,
@@ -124,12 +126,11 @@ func (s *applicationService) list(ctx context.Context, in *ListApplicationsInput
 		// someone else's user_nuid never do.
 		IncludeDraft: in.UserNUID != "" && hasActor && actor.NUID == in.UserNUID,
 	}
-	if in.Role != "" {
-		parsed := models.Role(in.Role)
-		if !parsed.Valid() {
-			return nil, huma.Error422UnprocessableEntity("invalid role")
+	if in.RoleID != "" {
+		if err := role.ParseRoleID(in.RoleID); err != nil {
+			return nil, err
 		}
-		filter.Role = &parsed
+		filter.RoleID = &in.RoleID
 	}
 	if in.Stage != "" {
 		parsed := models.ApplicationStage(in.Stage)
@@ -175,24 +176,23 @@ func parseReturner(raw string) (*bool, error) {
 	}
 }
 
-// parseRoles decodes a comma-separated list of applicant roles.
-func parseRoles(raw string) ([]models.Role, error) {
+// parseRoleIDs decodes a comma-separated list of applicant role IDs.
+func parseRoleIDs(raw string) ([]string, error) {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
 		return nil, nil
 	}
 	parts := strings.Split(raw, ",")
-	roles := make([]models.Role, 0, len(parts))
+	roles := make([]string, 0, len(parts))
 	for _, part := range parts {
 		part = strings.TrimSpace(part)
 		if part == "" {
 			continue
 		}
-		role := models.Role(part)
-		if !role.Valid() {
-			return nil, huma.Error422UnprocessableEntity("invalid role in roles: " + part)
+		if err := role.ParseRoleID(part); err != nil {
+			return nil, huma.Error422UnprocessableEntity("invalid role in role_ids: " + part)
 		}
-		roles = append(roles, role)
+		roles = append(roles, part)
 	}
 	return roles, nil
 }
@@ -267,7 +267,7 @@ func (s *applicationService) update(ctx context.Context, in *UpdateApplicationIn
 	// stop enforced regardless of who's making the request, unlike the
 	// owner-only rules below.
 	if current.Stage == models.StageDraft {
-		tpl, err := s.applicationTemplateDB.GetOrCreateApplicationTemplate(ctx, current.CycleID, current.Role)
+		tpl, err := s.applicationTemplateDB.GetOrCreateApplicationTemplate(ctx, current.CycleID, current.RoleID)
 		if err != nil {
 			return nil, utils.StoreErr(err)
 		}
@@ -324,7 +324,7 @@ func (s *applicationService) update(ctx context.Context, in *UpdateApplicationIn
 // file if the role has a challenge. This backs the draft->submitted
 // transition so completeness isn't only enforced by the client.
 func (s *applicationService) requireComplete(ctx context.Context, app models.Application) error {
-	questions, err := s.questionDB.ListQuestions(ctx, app.CycleID, &app.Role)
+	questions, err := s.questionDB.ListQuestions(ctx, app.CycleID, &app.RoleID)
 	if err != nil {
 		return utils.StoreErr(err)
 	}
@@ -349,7 +349,7 @@ func (s *applicationService) requireComplete(ctx context.Context, app models.App
 		}
 	}
 
-	challenges, err := s.challengeDB.ListChallenges(ctx, app.CycleID, &app.Role)
+	challenges, err := s.challengeDB.ListChallenges(ctx, app.CycleID, &app.RoleID)
 	if err != nil {
 		return utils.StoreErr(err)
 	}

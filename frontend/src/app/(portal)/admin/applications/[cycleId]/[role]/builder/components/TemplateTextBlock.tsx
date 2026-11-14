@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import type { Role } from '@/lib/api/types'
 import { useUpdateApplicationTemplate } from '@/lib/queries/application-templates'
 
 // Editable free-text block shown before/after the question list in the
@@ -17,7 +16,7 @@ export function TemplateTextBlock({
   value,
 }: {
   cycleId: string
-  role: Role
+  role: string
   field: 'description' | 'instructions'
   label: string
   placeholder: string
@@ -38,7 +37,7 @@ export function TemplateTextBlock({
     if (trimmed === persisted) return
     updateTemplate.mutate({
       cycleId,
-      role,
+      roleId: role,
       body:
         field === 'description'
           ? { description: trimmed }

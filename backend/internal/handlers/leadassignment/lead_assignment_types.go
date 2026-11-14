@@ -22,8 +22,8 @@ type CreateLeadAssignmentInput struct {
 }
 
 type DeleteAllLeadAssignmentsInput struct {
-	ID   string      `path:"id" doc:"Cycle ID"`
-	Role models.Role `query:"role" doc:"Applicant role"`
+	ID     string `path:"id" doc:"Cycle ID"`
+	RoleID string `query:"role_id" doc:"Applicant role"`
 }
 
 type DeleteAllLeadAssignmentsOutput struct {

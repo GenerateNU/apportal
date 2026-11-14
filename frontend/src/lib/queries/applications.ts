@@ -21,7 +21,6 @@ import type {
   Application,
   ApplicationStage,
   ApplicationSummary,
-  Role,
 } from '@/lib/api/types'
 import { queryKeys } from './keys'
 
@@ -36,11 +35,11 @@ export interface ApplicationListParams {
   // the reviewer-side counterpart of interviewer_nuid.
   recording_reviewer_nuid?: string
   stage?: ApplicationStage
-  // Comma-separated any-of counterparts of stage/role, and the interview
+  // Comma-separated any-of counterparts of stage/role_id, and the interview
   // ratings filter — all built by the filter menu.
   stages?: string
-  role?: Role
-  roles?: string
+  role_id?: string
+  role_ids?: string
   rating_filters?: string
   answer_filters?: AnswerFilterParam[]
   // Narrow to applicants who have (true) or haven't (false) worked on a

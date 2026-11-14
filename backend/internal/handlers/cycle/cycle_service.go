@@ -3,6 +3,7 @@ package cycle
 import (
 	"context"
 
+	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 	"github.com/danielgtaylor/huma/v2"
@@ -10,6 +11,7 @@ import (
 
 type cycleService struct {
 	cycleDB *CycleDB
+	roleDB  *role.RoleDB
 }
 
 func (s *cycleService) create(ctx context.Context, in *CreateCycleInput) (*CycleOutput, error) {
@@ -66,10 +68,13 @@ func (s *cycleService) list(ctx context.Context, in *ListCyclesInput) (*CyclesOu
 }
 
 func (s *cycleService) templateSummary(ctx context.Context, in *CycleIDInput) (*CycleTemplateSummaryOutput, error) {
-	roles := []models.Role{models.RoleSoftwareEngineer, models.RoleSoftwareDesigner}
+	roles, err := s.roleDB.ListCycleRoles(ctx, in.ID)
+	if err != nil {
+		return nil, utils.StoreErr(err)
+	}
 	summaries := make([]models.CycleRoleSummary, 0, len(roles))
-	for _, role := range roles {
-		summary, err := s.cycleDB.CycleRoleSummary(ctx, in.ID, role)
+	for _, r := range roles {
+		summary, err := s.cycleDB.CycleRoleSummary(ctx, in.ID, r.ID)
 		if err != nil {
 			return nil, utils.StoreErr(err)
 		}

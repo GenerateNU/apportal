@@ -17,9 +17,9 @@ import type { DecisionRow } from '@/lib/api/types'
 import { defaultPipelineCycleId } from '@/lib/cycles'
 import { useCycles } from '@/lib/queries/cycles'
 import { useDecisions } from '@/lib/queries/decisions'
-import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 import { ReviewRow } from '../../my-reviews/components/ReviewRow'
 import { feedbackState, FEEDBACK_STATE_LABEL } from './constants'
+import { useCycleRoles } from '@/lib/queries/roles'
 
 // A lead's decision queue, laid out like their review and interview queues:
 // everyone assigned to them, unfinished on top, one click into the applicant.
@@ -34,22 +34,25 @@ export function DecisionQueueClient() {
   }
 
   const { data: rows = [], isLoading } = useDecisions(cycleId)
+  const { roleIds, roleLabel } = useCycleRoles(cycleId)
 
   // Grouped by role, unfinished first — it's a work queue, so the top of it
   // should be the work. Same ordering the detail page walks with next/back.
   const sections = useMemo(() => {
     const rank = { none: 0, draft: 1, submitted: 2 }
-    return ROLE_COLUMNS.map((role) => ({
-      role,
-      rows: rows
-        .filter((r) => r.application_role === role)
-        .sort((a, b) => {
-          const byState = rank[feedbackState(a)] - rank[feedbackState(b)]
-          if (byState !== 0) return byState
-          return a.full_name.localeCompare(b.full_name)
-        }),
-    })).filter((s) => s.rows.length > 0)
-  }, [rows])
+    return roleIds
+      .map((role) => ({
+        role,
+        rows: rows
+          .filter((r) => r.role_id === role)
+          .sort((a, b) => {
+            const byState = rank[feedbackState(a)] - rank[feedbackState(b)]
+            if (byState !== 0) return byState
+            return a.full_name.localeCompare(b.full_name)
+          }),
+      }))
+      .filter((s) => s.rows.length > 0)
+  }, [rows, roleIds])
 
   const written = rows.filter((r) => feedbackState(r) === 'submitted').length
   const next = sections
@@ -112,7 +115,7 @@ export function DecisionQueueClient() {
         sections.map(({ role, rows: roleRows }) => (
           <div key={role} className="flex flex-col gap-2">
             <h2 className="text-text-faint text-xs font-semibold tracking-wide uppercase">
-              {ROLE_LABEL[role]} ({roleRows.length})
+              {roleLabel(role)} ({roleRows.length})
             </h2>
             <div className="divide-y divide-gray-100 overflow-hidden rounded-lg border border-gray-200 bg-white">
               {roleRows.map((row) => (

@@ -6,7 +6,6 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { CreateReviewQuestionInputBodyQuestionType } from './createReviewQuestionInputBodyQuestionType';
-import type { CreateReviewQuestionInputBodyRole } from './createReviewQuestionInputBodyRole';
 
 export interface CreateReviewQuestionInputBody {
   /** A URL to the JSON Schema for this object. */
@@ -19,5 +18,5 @@ export interface CreateReviewQuestionInputBody {
   question_text: string;
   question_type?: CreateReviewQuestionInputBodyQuestionType;
   /** Omit for a global question shown for all roles */
-  role?: CreateReviewQuestionInputBodyRole;
+  role_id?: string;
 }

@@ -84,16 +84,16 @@ type PreferenceListEntry struct {
 
 // PreferenceListEntryDetail enriches an entry with the applicant's display
 // name/email/role, joined from applications+users — same shape
-// ApplicationSummary bundles onto a bare application row. ApplicationRole
+// ApplicationSummary bundles onto a bare application row. RoleID
 // isn't stored on the entry itself; it's read off the joined application so
 // the frontend can split one group's entries into per-role tabs without a
 // second lookup.
 type PreferenceListEntryDetail struct {
 	PreferenceListEntry
-	FullName        string `json:"full_name"`
-	Email           string `json:"email"`
-	ApplicationRole Role   `json:"application_role"`
-	Returner        bool   `json:"returner"`
+	FullName string `json:"full_name"`
+	Email    string `json:"email"`
+	RoleID   string `json:"role_id"`
+	Returner bool   `json:"returner"`
 }
 
 // PreferenceListPersonalEntry is one lead's own private ranking of an
@@ -120,11 +120,11 @@ type PreferenceListPersonalEntry struct {
 // list ("<Name>'s list") without a separate user lookup.
 type PreferenceListPersonalEntryDetail struct {
 	PreferenceListPersonalEntry
-	OwnerName       string `json:"owner_name"`
-	FullName        string `json:"full_name"`
-	Email           string `json:"email"`
-	ApplicationRole Role   `json:"application_role"`
-	Returner        bool   `json:"returner"`
+	OwnerName string `json:"owner_name"`
+	FullName  string `json:"full_name"`
+	Email     string `json:"email"`
+	RoleID    string `json:"role_id"`
+	Returner  bool   `json:"returner"`
 }
 
 // PreferenceListComment is an open comment within a group's shared list —
@@ -169,12 +169,13 @@ type PreferenceListDetail struct {
 // on PreferenceList itself, since one deadline governs every list sharing
 // that (cycle, role), not just the list that happens to store it.
 type PreferenceListDeadline struct {
-	ID              string     `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
-	CycleID         string     `json:"cycle_id" gorm:"type:uuid;not null;uniqueIndex:preference_list_deadlines_cycle_id_application_role_key,priority:1"`
-	ApplicationRole Role       `json:"application_role" gorm:"type:application_role;not null;uniqueIndex:preference_list_deadlines_cycle_id_application_role_key,priority:2"`
-	ClosesAt        *time.Time `json:"closes_at,omitempty"`
-	UpdatedAt       time.Time  `json:"updated_at" gorm:"not null;default:now()"`
-	UpdatedBy       *string    `json:"updated_by,omitempty"`
-	Cycle           Cycle      `json:"-" gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
-	UpdatedByUser   *User      `json:"-" gorm:"foreignKey:UpdatedBy;references:NUID"`
+	ID            string     `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	CycleID       string     `json:"cycle_id" gorm:"type:uuid;not null;uniqueIndex:preference_list_deadlines_cycle_id_role_id_key,priority:1"`
+	RoleID        string     `json:"role_id" gorm:"type:uuid;not null;uniqueIndex:preference_list_deadlines_cycle_id_role_id_key,priority:2"`
+	ClosesAt      *time.Time `json:"closes_at,omitempty"`
+	UpdatedAt     time.Time  `json:"updated_at" gorm:"not null;default:now()"`
+	UpdatedBy     *string    `json:"updated_by,omitempty"`
+	Cycle         Cycle      `json:"-" gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
+	UpdatedByUser *User      `json:"-" gorm:"foreignKey:UpdatedBy;references:NUID"`
+	Role          Role       `json:"-" gorm:"foreignKey:RoleID;references:ID;constraint:OnDelete:RESTRICT"`
 }

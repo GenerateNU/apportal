@@ -38,7 +38,6 @@ import type {
   ApplicationSummary,
   MeetingDay,
   PreferenceListStatus,
-  Role,
 } from '@/lib/api/types'
 import { useAnswersByApplicationIdBatches } from '@/lib/queries/answers'
 import { useApplication, useApplications } from '@/lib/queries/applications'
@@ -50,7 +49,7 @@ import {
   useDeletePreferenceList,
   useDeletePreferenceListEntry,
   usePreferenceList,
-  usePreferenceListDeadline,
+  usePreferenceListDeadlines,
   useRemovePreferenceListMember,
   useReorderPersonalPreferenceListEntries,
   useReorderPreferenceListEntries,
@@ -68,7 +67,7 @@ import {
   useReviewerNames,
 } from '@/lib/queries/users'
 import { useQuestionsByCycleRoles } from '@/lib/queries/questions'
-import { ROLE_CHIP_CLASS, ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
+import { useCycleRoles } from '@/lib/queries/roles'
 import { usePersistedFilters } from '@/hooks/usePersistedFilters'
 import type {
   AnswerFilter,
@@ -157,7 +156,10 @@ export function PreferenceListDetailClient({
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [editingName, setEditingName] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
-  const [roleTab, setRoleTab] = useState<Role>(ROLE_COLUMNS[0])
+  const { roleIds, roleLabel, roleChipClass } = useCycleRoles(
+    list?.cycle_id ?? ''
+  )
+  const [roleTab, setRoleTab] = useState('')
   // The applicant whose slide-over is open, if any.
   const [openApplicant, setOpenApplicant] = useState<PreferenceEntry | null>(
     null
@@ -169,7 +171,7 @@ export function PreferenceListDetailClient({
   const { roles, columns, hasAvailability, filterParams } =
     useApplicationFilters({
       cycleId: list?.cycle_id ?? '',
-      defaultRoles: ROLE_COLUMNS,
+      defaultRoles: roleIds,
       filters,
       setFilters,
     })
@@ -217,14 +219,14 @@ export function PreferenceListDetailClient({
   // flagged free/busy against whichever day this group has settled on,
   // scoped to their own role's copy of that question.
   const questionQueries = useQuestionsByCycleRoles(
-    ROLE_COLUMNS.map((r) => ({ cycleId: list?.cycle_id ?? '', role: r }))
+    roleIds.map((r) => ({ cycleId: list?.cycle_id ?? '', roleId: r }))
   )
   const availabilityQuestionIdByRole = Object.fromEntries(
-    ROLE_COLUMNS.map((r, i) => [
+    roleIds.map((r, i) => [
       r,
       findAvailabilityQuestionId(questionQueries[i]?.data),
     ])
-  ) as Record<Role, string | undefined>
+  ) as Record<string, string | undefined>
 
   // Every entry's (shared and personal, any role) application ids, plus the
   // current tab's whole candidate pool (so applicants not yet added can also
@@ -247,25 +249,15 @@ export function PreferenceListDetailClient({
   // Deadlines are still per (cycle, role) — a group covers every role, so we
   // need every role's deadline to know both the current tab's lock state
   // and whether the whole group (every role) has closed.
-  const engineerDeadline = usePreferenceListDeadline(
+  const closesAtByRole = usePreferenceListDeadlines(
     list?.cycle_id ?? '',
-    'software_engineer'
+    roleIds
   )
-  const designerDeadline = usePreferenceListDeadline(
-    list?.cycle_id ?? '',
-    'software_designer'
-  )
-  const deadlineQueryByRole: Record<Role, typeof engineerDeadline> = {
-    software_engineer: engineerDeadline,
-    software_designer: designerDeadline,
-  }
-  const closesAtByRole = Object.fromEntries(
-    ROLE_COLUMNS.map((r) => [r, deadlineQueryByRole[r].data?.closes_at])
-  ) as Record<Role, string | undefined>
   const lockedByRole = Object.fromEntries(
-    ROLE_COLUMNS.map((r) => [r, deadlinePassed(closesAtByRole[r])])
-  ) as Record<Role, boolean>
-  const groupLocked = ROLE_COLUMNS.every((r) => lockedByRole[r])
+    roleIds.map((r) => [r, deadlinePassed(closesAtByRole[r])])
+  ) as Record<string, boolean>
+  const groupLocked =
+    roleIds.length > 0 && roleIds.every((r) => lockedByRole[r])
 
   // Only for an entry the current filters exclude from `applications` —
   // otherwise the row's own summary is already cached and the drawer opens
@@ -345,7 +337,7 @@ export function PreferenceListDetailClient({
   const meetingDay = list.meeting_day
   const activeRole = roles.includes(roleTab) ? roleTab : roles[0]
 
-  function availabilityBadgeFor(applicationId: string, role: Role) {
+  function availabilityBadgeFor(applicationId: string, role: string) {
     if (!meetingDay) return undefined
     const options = availabilityOptionsFor(
       answersByApplicationId[applicationId],
@@ -366,20 +358,20 @@ export function PreferenceListDetailClient({
 
   // 'group' reads the shared ranking; anything else is that owner's personal
   // one. Both shapes carry the fields EntryRow renders.
-  function entriesForView(mode: string, role: Role): PreferenceEntry[] {
+  function entriesForView(mode: string, role: string): PreferenceEntry[] {
     return mode === 'group'
-      ? list!.entries.filter((e) => e.application_role === role)
+      ? list!.entries.filter((e) => e.role_id === role)
       : list!.personal_entries.filter(
-          (e) => e.owner_nuid === mode && e.application_role === role
+          (e) => e.owner_nuid === mode && e.role_id === role
         )
   }
 
   // The pool spans every role, so each tab offers only its own — adding
   // someone under the wrong heading would file them under their real role
   // anyway, where you weren't looking.
-  function candidatesFor(role: Role, taken: Set<string>) {
+  function candidatesFor(role: string, taken: Set<string>) {
     return applications
-      .filter((a) => a.role === role && !taken.has(a.id))
+      .filter((a) => a.role_id === role && !taken.has(a.id))
       .sort(byName)
   }
 
@@ -573,16 +565,18 @@ export function PreferenceListDetailClient({
           This group is fully read-only.
         </div>
       ) : (
-        ROLE_COLUMNS.filter((r) => lockedByRole[r]).map((r) => (
-          <div
-            key={r}
-            className="border-border bg-muted/40 text-text-muted flex items-center gap-2 rounded-lg border px-4 py-3 text-sm"
-          >
-            <Lock size={14} />
-            The {ROLE_LABEL[r]} deadline has passed — its shared list is
-            read-only. Other roles and group settings remain editable.
-          </div>
-        ))
+        roleIds
+          .filter((r) => lockedByRole[r])
+          .map((r) => (
+            <div
+              key={r}
+              className="border-border bg-muted/40 text-text-muted flex items-center gap-2 rounded-lg border px-4 py-3 text-sm"
+            >
+              <Lock size={14} />
+              The {roleLabel(r)} deadline has passed — its shared list is
+              read-only. Other roles and group settings remain editable.
+            </div>
+          ))
       )}
 
       <GroupSettings
@@ -594,9 +588,10 @@ export function PreferenceListDetailClient({
         onMeetingDayChange={(day) =>
           setMeetingDay.mutate({ id: list.id, meetingDay: day })
         }
+        roleIds={roleIds}
         closesAtByRole={closesAtByRole}
         onSetDeadline={(role, closesAt) =>
-          setDeadline.mutate({ cycleId: list.cycle_id, role, closesAt })
+          setDeadline.mutate({ cycleId: list.cycle_id, roleId: role, closesAt })
         }
         deadlineError={setDeadline.isError}
         members={list.members}
@@ -627,9 +622,9 @@ export function PreferenceListDetailClient({
                 }`}
               >
                 <span
-                  className={`rounded px-1.5 py-0.5 text-[10px] ${ROLE_CHIP_CLASS[r]}`}
+                  className={`rounded px-1.5 py-0.5 text-[10px] ${roleChipClass(r)}`}
                 >
-                  {ROLE_LABEL[r]}
+                  {roleLabel(r)}
                 </span>
                 <span className="text-text-faint text-xs">
                   {entriesForView(viewMode, r).length}
@@ -755,7 +750,7 @@ export function PreferenceListDetailClient({
             nuid: openApplicantSummary.user_nuid,
             fullName: openApplicant.full_name,
             email: openApplicant.email,
-            role: openApplicantSummary.role,
+            role: openApplicantSummary.role_id,
             cycleId: openApplicantSummary.cycle_id,
             stage: openApplicantSummary.stage,
             submittedAt: openApplicantSummary.submitted_at,

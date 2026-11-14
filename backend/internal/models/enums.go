@@ -3,28 +3,6 @@ package models
 // Enum types mirror the Postgres ENUMs defined in the init migration.
 // They are plain strings so they encode/decode cleanly to JSON and SQL.
 
-type Role string
-
-const (
-	RoleSoftwareEngineer Role = "software_engineer"
-	RoleSoftwareDesigner Role = "software_designer"
-)
-
-func (r Role) Valid() bool {
-	switch r {
-	case RoleSoftwareEngineer, RoleSoftwareDesigner:
-		return true
-	}
-	return false
-}
-
-// AllRoles enumerates every valid Role — used where callers need to check a
-// condition across every role rather than one specific one (e.g. whether a
-// whole cycle's preference-list review window has closed).
-func AllRoles() []Role {
-	return []Role{RoleSoftwareEngineer, RoleSoftwareDesigner}
-}
-
 type ApplicationStage string
 
 const (

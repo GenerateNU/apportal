@@ -5,12 +5,10 @@
  * Generate application portal — applications, reviews, and the hiring pipeline.
  * OpenAPI spec version: 0.1.0
  */
-import type { InterviewScriptApplicationRole } from './interviewScriptApplicationRole';
 
 export interface InterviewScript {
   /** A URL to the JSON Schema for this object. */
   readonly $schema?: string;
-  application_role: InterviewScriptApplicationRole;
   challenge_intro: string;
   challenge_tracks: unknown;
   closing_note: string;
@@ -21,6 +19,7 @@ export interface InterviewScript {
   post_interview_checklist: unknown;
   questions: unknown;
   recording_reminder: string;
+  role_id: string;
   updated_at: string;
   updated_by?: string;
 }

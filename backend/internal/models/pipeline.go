@@ -40,7 +40,7 @@ type WrittenReview struct {
 type ReviewQuestion struct {
 	ID           string          `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
 	CycleID      string          `json:"cycle_id" gorm:"type:uuid;not null"`
-	Role         *Role           `json:"role,omitempty" gorm:"column:application_role;type:application_role"`
+	RoleID       *string         `json:"role_id,omitempty" gorm:"type:uuid"`
 	QuestionText string          `json:"question_text" gorm:"not null"`
 	QuestionType QuestionType    `json:"question_type" gorm:"type:question_type;not null;default:long_answer"`
 	IsRequired   bool            `json:"is_required" gorm:"not null;default:true"`
@@ -49,6 +49,7 @@ type ReviewQuestion struct {
 	Description  *string         `json:"description,omitempty"`
 	CreatedAt    time.Time       `json:"created_at" gorm:"not null;default:now()"`
 	Cycle        Cycle           `json:"-" gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
+	Role         *Role           `json:"-" gorm:"foreignKey:RoleID;references:ID;constraint:OnDelete:RESTRICT"`
 }
 
 // WrittenReviewAnswer: a reviewer's answer to one ReviewQuestion within a
@@ -82,7 +83,7 @@ type WrittenReviewDetail struct {
 // not per application.
 type ReviewGate struct {
 	CycleID        string     `json:"cycle_id"`
-	Role           Role       `json:"role"`
+	RoleID         string     `json:"role_id"`
 	Kind           ReviewKind `json:"kind"`
 	AssignedCount  int        `json:"assigned_count"`
 	SubmittedCount int        `json:"submitted_count"`
@@ -267,11 +268,12 @@ type LeadSelection struct {
 }
 
 type ReviewRelease struct {
-	CycleID         string     `json:"cycle_id" gorm:"primaryKey;type:uuid"`
-	ApplicationRole Role       `json:"application_role" gorm:"primaryKey;type:application_role"`
-	ReviewKind      ReviewKind `json:"review_kind" gorm:"primaryKey;type:text;check:review_releases_review_kind_check,review_kind IN ('written','recording')"`
-	ReleasedBy      string     `json:"released_by" gorm:"not null"`
-	ReleasedAt      time.Time  `json:"released_at" gorm:"not null;default:now()"`
-	Cycle           Cycle      `json:"-" gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
-	Releaser        User       `json:"-" gorm:"foreignKey:ReleasedBy;references:NUID"`
+	CycleID    string     `json:"cycle_id" gorm:"primaryKey;type:uuid"`
+	RoleID     string     `json:"role_id" gorm:"primaryKey;type:uuid"`
+	ReviewKind ReviewKind `json:"review_kind" gorm:"primaryKey;type:text;check:review_releases_review_kind_check,review_kind IN ('written','recording')"`
+	ReleasedBy string     `json:"released_by" gorm:"not null"`
+	ReleasedAt time.Time  `json:"released_at" gorm:"not null;default:now()"`
+	Cycle      Cycle      `json:"-" gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
+	Releaser   User       `json:"-" gorm:"foreignKey:ReleasedBy;references:NUID"`
+	Role       Role       `json:"-" gorm:"foreignKey:RoleID;references:ID;constraint:OnDelete:RESTRICT"`
 }

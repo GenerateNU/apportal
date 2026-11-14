@@ -9,15 +9,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import type { Role } from '@/lib/api/types'
 import { pickDefaultCycleId, useCycles } from '@/lib/queries/cycles'
 import { useInterviewerPool } from '@/lib/queries/interview-assignment-plan'
 import { useLeads } from '@/lib/queries/users'
-import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 import { ConflictBuilder, type DraftConflict } from './ConflictBuilder'
 import { InterviewerPlanPanel } from './InterviewerPlanPanel'
 import { MeetingDayPicker, type DraftLeadDay } from './MeetingDayPicker'
 import { ReviewerPlanPanel } from './ReviewerPlanPanel'
+import { useCycleRolePicker } from '@/hooks/useRoleSelection'
 
 type Stage = 'interviewer' | 'reviewer'
 
@@ -35,7 +34,7 @@ export function InterviewAssignmentPlanClient() {
     const defaultId = pickDefaultCycleId(cycles)
     if (defaultId) setCycleId(defaultId)
   }
-  const [role, setRole] = useState<Role>('software_engineer')
+  const { role, setRole, roleIds, roleLabel } = useCycleRolePicker(cycleId)
   const [meetingDays, setMeetingDays] = useState<DraftLeadDay[]>([])
   const [conflicts, setConflicts] = useState<DraftConflict[]>([])
   const [stage, setStage] = useState<Stage>('interviewer')
@@ -58,14 +57,14 @@ export function InterviewAssignmentPlanClient() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <Select value={role} onValueChange={(val) => setRole(val as Role)}>
+          <Select value={role} onValueChange={(val) => setRole(val)}>
             <SelectTrigger className="w-56" aria-label="Applicant role">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {ROLE_COLUMNS.map((r) => (
+              {roleIds.map((r) => (
                 <SelectItem key={r} value={r}>
-                  {ROLE_LABEL[r]}
+                  {roleLabel(r)}
                 </SelectItem>
               ))}
             </SelectContent>

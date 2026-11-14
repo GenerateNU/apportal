@@ -11,14 +11,14 @@ type InterviewScriptOutput struct {
 }
 
 type GetInterviewScriptInput struct {
-	ID   string `path:"id" doc:"Cycle ID"`
-	Role string `query:"role" doc:"Applicant role"`
+	ID     string `path:"id" doc:"Cycle ID"`
+	RoleID string `query:"role_id" doc:"Applicant role"`
 }
 
 type UpdateInterviewScriptInput struct {
-	ID   string `path:"id" doc:"Cycle ID"`
-	Role string `query:"role" doc:"Applicant role"`
-	Body struct {
+	ID     string `path:"id" doc:"Cycle ID"`
+	RoleID string `query:"role_id" doc:"Applicant role"`
+	Body   struct {
 		IntroSpeech            string          `json:"intro_speech" minLength:"1"`
 		RecordingReminder      string          `json:"recording_reminder" minLength:"1"`
 		Questions              json.RawMessage `json:"questions"`

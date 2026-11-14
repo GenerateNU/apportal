@@ -7,7 +7,6 @@ import {
 } from '@/generated/assignment-planning/assignment-planning'
 import type { PreviewPlanInputBody, CapacityInputBody } from '@/generated/model'
 import type { RequestOptions } from '@/lib/api/orval-mutator'
-import type { Role } from '@/lib/api/types'
 import { queryKeys } from './keys'
 
 // Capacity and preview are read-only: they compute a proposal and hand it back
@@ -17,16 +16,16 @@ import { queryKeys } from './keys'
 
 export function useAssignmentPool(
   cycleId: string,
-  role: Role,
+  roleId: string,
   opts?: RequestOptions
 ) {
   return useQuery({
-    queryKey: queryKeys.assignmentPlan.pool(cycleId, role),
+    queryKey: queryKeys.assignmentPlan.pool(cycleId, roleId),
     queryFn: async () => {
-      const pool = await getAssignmentPool(cycleId, { role }, opts)
+      const pool = await getAssignmentPool(cycleId, { role_id: roleId }, opts)
       return { ...pool, applicants: pool.applicants ?? [] }
     },
-    enabled: !!cycleId,
+    enabled: !!cycleId && !!roleId,
   })
 }
 

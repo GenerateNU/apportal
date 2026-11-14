@@ -1,4 +1,7 @@
+'use client'
+
 import { ReturnerBadge } from '@/components/ReturnerBadge'
+import { useRoleLookup } from '@/lib/queries/roles'
 import type { ApplicantApplication } from './types'
 import { StageSelect } from './StageSelect'
 
@@ -11,14 +14,17 @@ export function KanbanCard({
   availabilityDays: string[]
   editable: boolean
 }) {
+  const { roleLabel, roleChipClass } = useRoleLookup()
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-3 shadow-sm transition-shadow hover:shadow-md">
       <p className="text-text-default truncate text-sm font-medium">
         {applicant.fullName}
       </p>
       <div className="mt-2.5 flex flex-wrap items-center gap-1">
-        <span className="text-text-secondary rounded bg-gray-100 px-1.5 py-0.5 text-xs capitalize">
-          {applicant.role.replace('_', ' ')}
+        <span
+          className={`rounded px-1.5 py-0.5 text-xs ${roleChipClass(applicant.role)}`}
+        >
+          {roleLabel(applicant.role)}
         </span>
         {applicant.returner && <ReturnerBadge />}
         {availabilityDays.map((d) => (

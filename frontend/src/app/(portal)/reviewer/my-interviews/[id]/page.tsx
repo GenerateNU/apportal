@@ -13,7 +13,7 @@ import {
 } from '@/generated/interviews/interviews'
 import { listCycleQuestions } from '@/generated/questions/questions'
 import { listInterviewReviewers } from '@/generated/recording-reviews/recording-reviews'
-import type { Application, Interview, Role } from '@/lib/api/types'
+import type { Application, Interview } from '@/lib/api/types'
 import { APIError } from '@/lib/api/client'
 import { getServerRequestOptions } from '@/lib/api/server-request-options'
 import { queryKeys } from '@/lib/queries/keys'
@@ -42,7 +42,7 @@ export default async function InterviewConductPage({
     notFound()
   }
 
-  const role = application.role as Role
+  const role = application.role_id
 
   // Fetched directly (not through queryClient.fetchQuery) because "no
   // interview yet" is a real, common outcome here, and TanStack's fetchQuery
@@ -68,7 +68,11 @@ export default async function InterviewConductPage({
     queryClient.prefetchQuery({
       queryKey: queryKeys.questions.list(application.cycle_id, role),
       queryFn: () =>
-        listCycleQuestions(application.cycle_id, { role }, requestOptions),
+        listCycleQuestions(
+          application.cycle_id,
+          { role_id: role },
+          requestOptions
+        ),
     }),
     queryClient.prefetchQuery({
       queryKey: queryKeys.applicants.detail(application.user_nuid),

@@ -4,7 +4,6 @@ import type {
   AnswerFilterParam,
   ApplicationStage,
   ReviewerRole,
-  Role,
 } from '@/lib/api/types'
 
 export const queryKeys = {
@@ -40,8 +39,8 @@ export const queryKeys = {
       recording_reviewer_nuid?: string
       stage?: ApplicationStage
       stages?: string
-      role?: Role
-      roles?: string
+      role_id?: string
+      role_ids?: string
       rating_filters?: string
       answer_filters?: AnswerFilterParam[]
       returner?: boolean
@@ -55,8 +54,8 @@ export const queryKeys = {
       assigned_to?: string
       stage?: ApplicationStage
       stages?: string
-      role?: Role
-      roles?: string
+      role_id?: string
+      role_ids?: string
       rating_filters?: string
       answer_filters?: AnswerFilterParam[]
       returner?: boolean
@@ -75,6 +74,13 @@ export const queryKeys = {
     detail: (id: string) => [...queryKeys.branches.details(), id] as const,
   },
 
+  roles: {
+    all: ['roles'] as const,
+    lists: () => [...queryKeys.roles.all, 'list'] as const,
+    list: (branchId?: string) =>
+      [...queryKeys.roles.lists(), branchId ?? 'all'] as const,
+  },
+
   cycles: {
     all: ['cycles'] as const,
     lists: () => [...queryKeys.cycles.all, 'list'] as const,
@@ -89,8 +95,8 @@ export const queryKeys = {
   applicationTemplates: {
     all: ['application-templates'] as const,
     details: () => [...queryKeys.applicationTemplates.all, 'detail'] as const,
-    detail: (cycleId: string, role: Role) =>
-      [...queryKeys.applicationTemplates.details(), cycleId, role] as const,
+    detail: (cycleId: string, roleId: string) =>
+      [...queryKeys.applicationTemplates.details(), cycleId, roleId] as const,
     openList: () =>
       [...queryKeys.applicationTemplates.all, 'open-list'] as const,
   },
@@ -98,22 +104,22 @@ export const queryKeys = {
   questions: {
     all: ['questions'] as const,
     lists: () => [...queryKeys.questions.all, 'list'] as const,
-    list: (cycleId: string, role?: Role) =>
-      [...queryKeys.questions.lists(), cycleId, role ?? 'any'] as const,
+    list: (cycleId: string, roleId?: string) =>
+      [...queryKeys.questions.lists(), cycleId, roleId ?? 'any'] as const,
   },
 
   reviewQuestions: {
     all: ['review-questions'] as const,
     lists: () => [...queryKeys.reviewQuestions.all, 'list'] as const,
-    list: (cycleId: string, role?: Role) =>
-      [...queryKeys.reviewQuestions.lists(), cycleId, role ?? 'any'] as const,
+    list: (cycleId: string, roleId?: string) =>
+      [...queryKeys.reviewQuestions.lists(), cycleId, roleId ?? 'any'] as const,
   },
 
   challenges: {
     all: ['challenges'] as const,
     lists: () => [...queryKeys.challenges.all, 'list'] as const,
-    list: (cycleId: string, role?: Role) =>
-      [...queryKeys.challenges.lists(), cycleId, role ?? 'any'] as const,
+    list: (cycleId: string, roleId?: string) =>
+      [...queryKeys.challenges.lists(), cycleId, roleId ?? 'any'] as const,
   },
 
   answers: {
@@ -171,8 +177,8 @@ export const queryKeys = {
   // mutations keyed by the in-flight team layout rather than queries.
   assignmentPlan: {
     all: ['assignment-plan'] as const,
-    pool: (cycleId: string, role: Role) =>
-      [...queryKeys.assignmentPlan.all, 'pool', cycleId, role] as const,
+    pool: (cycleId: string, roleId: string) =>
+      [...queryKeys.assignmentPlan.all, 'pool', cycleId, roleId] as const,
   },
 
   interviews: {
@@ -198,8 +204,8 @@ export const queryKeys = {
   interviewScript: {
     all: ['interview-script'] as const,
     details: () => [...queryKeys.interviewScript.all, 'detail'] as const,
-    detail: (cycleId: string, role: Role) =>
-      [...queryKeys.interviewScript.details(), cycleId, role] as const,
+    detail: (cycleId: string, roleId: string) =>
+      [...queryKeys.interviewScript.details(), cycleId, roleId] as const,
   },
 
   recordingReviews: {
@@ -232,19 +238,19 @@ export const queryKeys = {
   // roster the chief types in, so only pool sizes are cached queries.
   interviewAssignmentPlan: {
     all: ['interview-assignment-plan'] as const,
-    interviewerPool: (cycleId: string, role: Role) =>
+    interviewerPool: (cycleId: string, roleId: string) =>
       [
         ...queryKeys.interviewAssignmentPlan.all,
         'interviewer-pool',
         cycleId,
-        role,
+        roleId,
       ] as const,
-    reviewerPool: (cycleId: string, role: Role) =>
+    reviewerPool: (cycleId: string, roleId: string) =>
       [
         ...queryKeys.interviewAssignmentPlan.all,
         'reviewer-pool',
         cycleId,
-        role,
+        roleId,
       ] as const,
   },
 
@@ -258,18 +264,22 @@ export const queryKeys = {
   reviewerProgress: {
     all: ['reviewer-progress'] as const,
     lists: () => [...queryKeys.reviewerProgress.all, 'list'] as const,
-    list: (cycleId: string, role?: Role) =>
-      [...queryKeys.reviewerProgress.lists(), cycleId, role ?? 'all'] as const,
+    list: (cycleId: string, roleId?: string) =>
+      [
+        ...queryKeys.reviewerProgress.lists(),
+        cycleId,
+        roleId ?? 'all',
+      ] as const,
   },
 
   reviewQuestionAverages: {
     all: ['review-question-averages'] as const,
     lists: () => [...queryKeys.reviewQuestionAverages.all, 'list'] as const,
-    list: (cycleId: string, role?: Role) =>
+    list: (cycleId: string, roleId?: string) =>
       [
         ...queryKeys.reviewQuestionAverages.lists(),
         cycleId,
-        role ?? 'all',
+        roleId ?? 'all',
       ] as const,
   },
 
@@ -290,8 +300,8 @@ export const queryKeys = {
 
   drafts: {
     all: ['drafts'] as const,
-    board: (cycleId: string, role: Role) =>
-      [...queryKeys.drafts.all, 'board', cycleId, role] as const,
+    board: (cycleId: string, roleId: string) =>
+      [...queryKeys.drafts.all, 'board', cycleId, roleId] as const,
     // Every board in the cycle at once — what marks an applicant as taken
     // wherever they're still listed.
     drafted: (cycleId: string) =>
@@ -308,14 +318,14 @@ export const queryKeys = {
     list: (
       cycleId: string,
       params?: {
-        role?: Role
+        role_id?: string
         kind?: string
         interviewer_nuid?: string
         search?: string
       }
     ) => [...queryKeys.decisions.listsForCycle(cycleId), params ?? {}] as const,
-    templates: (cycleId: string, role: Role) =>
-      [...queryKeys.decisions.all, 'templates', cycleId, role] as const,
+    templates: (cycleId: string, roleId: string) =>
+      [...queryKeys.decisions.all, 'templates', cycleId, roleId] as const,
     // One entry per batch of applications fetched together. Keyed by the exact
     // id list so a batch stays cached as more are loaded alongside it.
     context: (applicationIds: string[]) =>
@@ -324,7 +334,7 @@ export const queryKeys = {
 
   preferenceListDeadline: {
     all: ['preference-list-deadline'] as const,
-    detail: (cycleId: string, role: Role) =>
-      [...queryKeys.preferenceListDeadline.all, cycleId, role] as const,
+    detail: (cycleId: string, roleId: string) =>
+      [...queryKeys.preferenceListDeadline.all, cycleId, roleId] as const,
   },
 } as const

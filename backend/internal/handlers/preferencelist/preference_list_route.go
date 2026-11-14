@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/GenerateNU/apportal/backend/internal/handlers/application"
+	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/user"
 	"github.com/danielgtaylor/huma/v2"
 	"gorm.io/gorm"
@@ -13,7 +14,7 @@ func Route(api huma.API, db *gorm.DB) {
 	applicationDB := application.NewApplicationDB(db)
 	preferenceListDB := NewPreferenceListDB(db)
 	userDB := user.NewUserDB(db)
-	s := &preferenceListService{applicationDB: applicationDB, preferenceListDB: preferenceListDB, userDB: userDB}
+	s := &preferenceListService{applicationDB: applicationDB, preferenceListDB: preferenceListDB, userDB: userDB, roleDB: role.NewRoleDB(db)}
 
 	huma.Register(api, huma.Operation{
 		OperationID:   "create-preference-list",

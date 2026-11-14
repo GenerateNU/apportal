@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { useRoleLookup } from '@/lib/queries/roles'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
@@ -13,7 +14,6 @@ import {
   Lock,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import type { Role } from '@/lib/api/types'
 import { useAnswers } from '@/lib/queries/answers'
 import { useApplicant } from '@/lib/queries/applicants'
 import { useApplicationTemplate } from '@/lib/queries/application-templates'
@@ -26,7 +26,6 @@ import {
   useWrittenReviews,
   useWrittenReviewsByApplicationIds,
 } from '@/lib/queries/written-reviews'
-import { ROLE_CHIP_CLASS, ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 import { REVIEW_STATE_BADGE, REVIEWED_TEXT } from '../../constants'
 import { ResponseField } from '@/app/(portal)/reviewer/applications/components/ResponseField'
 import {
@@ -42,7 +41,7 @@ export function ReviewClient({
 }: {
   applicationId: string
   cycleId: string
-  role: Role
+  role: string
   applicantNuid: string
 }) {
   const router = useRouter()
@@ -61,12 +60,14 @@ export function ReviewClient({
   const { data: assignedApplications = [] } = useApplications({
     assigned_to: currentUser?.nuid ?? '',
   })
+  // All roles, in the same order the queue page groups them.
+  const { roleIds, roleLabel, roleChipClass } = useRoleLookup()
   const orderedQueue = useMemo(
     () =>
-      ROLE_COLUMNS.flatMap((r) =>
-        assignedApplications.filter((a) => a.role === r)
+      roleIds.flatMap((r) =>
+        assignedApplications.filter((a) => a.role_id === r)
       ),
-    [assignedApplications]
+    [assignedApplications, roleIds]
   )
   const queueIds = useMemo(() => orderedQueue.map((a) => a.id), [orderedQueue])
   const queueReviewQueries = useWrittenReviewsByApplicationIds(queueIds)
@@ -201,9 +202,9 @@ export function ReviewClient({
               {applicant?.full_name ?? 'Applicant'}
             </h1>
             <span
-              className={`w-fit shrink-0 rounded-md px-2 py-0.5 text-xs font-medium ${ROLE_CHIP_CLASS[role]}`}
+              className={`w-fit shrink-0 rounded-md px-2 py-0.5 text-xs font-medium ${roleChipClass(role)}`}
             >
-              {ROLE_LABEL[role]}
+              {roleLabel(role)}
             </span>
           </div>
         </div>

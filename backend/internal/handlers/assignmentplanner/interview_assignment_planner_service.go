@@ -8,6 +8,7 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/handlers/application"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/interviewassignment"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/leadassignment"
+	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/user"
 	"github.com/GenerateNU/apportal/backend/internal/interviewassign"
 	"github.com/GenerateNU/apportal/backend/internal/models"
@@ -61,11 +62,11 @@ func (s *interviewAssignmentPlannerService) interviewerPool(ctx context.Context,
 	if err := utils.RequireChief(ctx); err != nil {
 		return nil, err
 	}
-	if !in.Role.Valid() {
-		return nil, huma.Error422UnprocessableEntity("role is invalid")
+	if err := role.ParseRoleID(in.RoleID); err != nil {
+		return nil, err
 	}
 
-	pool, err := s.interviewPool(ctx, in.ID, in.Role)
+	pool, err := s.interviewPool(ctx, in.ID, in.RoleID)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
@@ -85,11 +86,11 @@ func (s *interviewAssignmentPlannerService) interviewerCapacity(ctx context.Cont
 	if err := utils.RequireChief(ctx); err != nil {
 		return nil, err
 	}
-	if !in.Body.Role.Valid() {
-		return nil, huma.Error422UnprocessableEntity("role is invalid")
+	if err := role.ParseRoleID(in.Body.RoleID); err != nil {
+		return nil, err
 	}
 
-	pool, err := s.interviewPool(ctx, in.ID, in.Body.Role)
+	pool, err := s.interviewPool(ctx, in.ID, in.Body.RoleID)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
@@ -107,20 +108,20 @@ func (s *interviewAssignmentPlannerService) interviewerCapacity(ctx context.Cont
 }
 
 func (s *interviewAssignmentPlannerService) buildInterviewerPlan(ctx context.Context, in *InterviewerPreviewInput) (interviewerRun, error) {
-	if !in.Body.Role.Valid() {
-		return interviewerRun{}, huma.Error422UnprocessableEntity("role is invalid")
+	if err := role.ParseRoleID(in.Body.RoleID); err != nil {
+		return interviewerRun{}, err
 	}
 	if len(in.Body.Leads) == 0 {
 		return interviewerRun{}, huma.Error422UnprocessableEntity("at least one lead is required")
 	}
 
-	pool, err := s.interviewPool(ctx, in.ID, in.Body.Role)
+	pool, err := s.interviewPool(ctx, in.ID, in.Body.RoleID)
 	if err != nil {
 		return interviewerRun{}, utils.StoreErr(err)
 	}
 	pool = excludeApplications(pool, in.Body.ExcludedApplicationIDs)
 
-	existingRows, err := s.interviewAssignmentDB.ListInterviewersForCycle(ctx, in.ID, in.Body.Role)
+	existingRows, err := s.interviewAssignmentDB.ListInterviewersForCycle(ctx, in.ID, in.Body.RoleID)
 	if err != nil {
 		return interviewerRun{}, utils.StoreErr(err)
 	}
@@ -143,7 +144,7 @@ func (s *interviewAssignmentPlannerService) buildInterviewerPlan(ctx context.Con
 		}
 	}
 
-	wroteReview, err := s.wroteReviewByApplication(ctx, in.ID, in.Body.Role)
+	wroteReview, err := s.wroteReviewByApplication(ctx, in.ID, in.Body.RoleID)
 	if err != nil {
 		return interviewerRun{}, utils.StoreErr(err)
 	}
@@ -156,7 +157,7 @@ func (s *interviewAssignmentPlannerService) buildInterviewerPlan(ctx context.Con
 		Conflicts:    toConflictMap(in.Body.Conflicts),
 		Cap:          in.Body.Cap,
 		CapOverrides: in.Body.CapOverrides,
-		Seed:         interviewassign.SeedFrom(in.ID, string(in.Body.Role), "interviewer"),
+		Seed:         interviewassign.SeedFrom(in.ID, in.Body.RoleID, "interviewer"),
 	})
 	if err != nil {
 		return interviewerRun{}, huma.Error422UnprocessableEntity(err.Error())
@@ -286,11 +287,11 @@ func (s *interviewAssignmentPlannerService) reviewerPool(ctx context.Context, in
 	if err := utils.RequireChief(ctx); err != nil {
 		return nil, err
 	}
-	if !in.Role.Valid() {
-		return nil, huma.Error422UnprocessableEntity("role is invalid")
+	if err := role.ParseRoleID(in.RoleID); err != nil {
+		return nil, err
 	}
 
-	pool, _, err := s.reviewablePool(ctx, in.ID, in.Role)
+	pool, _, err := s.reviewablePool(ctx, in.ID, in.RoleID)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
@@ -306,7 +307,7 @@ func (s *interviewAssignmentPlannerService) reviewerPool(ctx context.Context, in
 	return out, nil
 }
 
-func (s *interviewAssignmentPlannerService) reviewablePool(ctx context.Context, cycleID string, role models.Role) ([]models.ApplicationSummary, map[string][]string, error) {
+func (s *interviewAssignmentPlannerService) reviewablePool(ctx context.Context, cycleID string, role string) ([]models.ApplicationSummary, map[string][]string, error) {
 	pool, err := s.interviewPool(ctx, cycleID, role)
 	if err != nil {
 		return nil, nil, err
@@ -333,11 +334,11 @@ func (s *interviewAssignmentPlannerService) reviewerCapacity(ctx context.Context
 	if err := utils.RequireChief(ctx); err != nil {
 		return nil, err
 	}
-	if !in.Body.Role.Valid() {
-		return nil, huma.Error422UnprocessableEntity("role is invalid")
+	if err := role.ParseRoleID(in.Body.RoleID); err != nil {
+		return nil, err
 	}
 
-	pool, _, err := s.reviewablePool(ctx, in.ID, in.Body.Role)
+	pool, _, err := s.reviewablePool(ctx, in.ID, in.Body.RoleID)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
@@ -355,14 +356,14 @@ func (s *interviewAssignmentPlannerService) reviewerCapacity(ctx context.Context
 }
 
 func (s *interviewAssignmentPlannerService) buildReviewerPlan(ctx context.Context, in *ReviewerPreviewInput) (reviewerRun, error) {
-	if !in.Body.Role.Valid() {
-		return reviewerRun{}, huma.Error422UnprocessableEntity("role is invalid")
+	if err := role.ParseRoleID(in.Body.RoleID); err != nil {
+		return reviewerRun{}, err
 	}
 	if len(in.Body.Leads) == 0 {
 		return reviewerRun{}, huma.Error422UnprocessableEntity("at least one lead is required")
 	}
 
-	pool, interviewerOf, err := s.reviewablePool(ctx, in.ID, in.Body.Role)
+	pool, interviewerOf, err := s.reviewablePool(ctx, in.ID, in.Body.RoleID)
 	if err != nil {
 		return reviewerRun{}, utils.StoreErr(err)
 	}
@@ -381,7 +382,7 @@ func (s *interviewAssignmentPlannerService) buildReviewerPlan(ctx context.Contex
 		}
 	}
 
-	existingRows, err := s.interviewAssignmentDB.ListReviewersForCycle(ctx, in.ID, in.Body.Role)
+	existingRows, err := s.interviewAssignmentDB.ListReviewersForCycle(ctx, in.ID, in.Body.RoleID)
 	if err != nil {
 		return reviewerRun{}, utils.StoreErr(err)
 	}
@@ -401,7 +402,7 @@ func (s *interviewAssignmentPlannerService) buildReviewerPlan(ctx context.Contex
 		Cap:          in.Body.Cap,
 		CapOverrides: in.Body.CapOverrides,
 		Coverage:     in.Body.Coverage,
-		Seed:         interviewassign.SeedFrom(in.ID, string(in.Body.Role), "reviewer"),
+		Seed:         interviewassign.SeedFrom(in.ID, in.Body.RoleID, "reviewer"),
 	})
 	if err != nil {
 		return reviewerRun{}, huma.Error422UnprocessableEntity(err.Error())
@@ -530,11 +531,11 @@ func (s *interviewAssignmentPlannerService) decorateReviewerPlan(ctx context.Con
 
 // interviewPool is every application in the generic interview stage — the
 // same filter the manual /reviewer/interview-assignments page uses.
-func (s *interviewAssignmentPlannerService) interviewPool(ctx context.Context, cycleID string, role models.Role) ([]models.ApplicationSummary, error) {
+func (s *interviewAssignmentPlannerService) interviewPool(ctx context.Context, cycleID string, role string) ([]models.ApplicationSummary, error) {
 	stage := models.StageInterview
 	return s.applicationDB.ListApplications(ctx, application.ApplicationFilter{
 		CycleID: cycleID,
-		Role:    &role,
+		RoleID:  &role,
 		Stage:   &stage,
 	})
 }
@@ -543,7 +544,7 @@ func (s *interviewAssignmentPlannerService) interviewPool(ctx context.Context, c
 // assigned to write its lead review — a lead-assignment row stands in for
 // "wrote this applicant's review" (by the interview stage, lead review has
 // already happened), so no join to written_reviews is needed.
-func (s *interviewAssignmentPlannerService) wroteReviewByApplication(ctx context.Context, cycleID string, role models.Role) (map[string]map[string]bool, error) {
+func (s *interviewAssignmentPlannerService) wroteReviewByApplication(ctx context.Context, cycleID string, role string) (map[string]map[string]bool, error) {
 	assignments, err := s.leadAssignmentDB.ListLeadAssignmentsForCycle(ctx, cycleID, role)
 	if err != nil {
 		return nil, err

@@ -9,7 +9,6 @@ import type { ReviewerPreviewInputBodyCapOverrides } from './reviewerPreviewInpu
 import type { ReviewerPreviewInputBodyConflicts } from './reviewerPreviewInputBodyConflicts';
 import type { ReviewerPreviewInputBodyExcludedApplicationIds } from './reviewerPreviewInputBodyExcludedApplicationIds';
 import type { ReviewerPreviewInputBodyLeads } from './reviewerPreviewInputBodyLeads';
-import type { ReviewerPreviewInputBodyRole } from './reviewerPreviewInputBodyRole';
 
 export interface ReviewerPreviewInputBody {
   /** A URL to the JSON Schema for this object. */
@@ -23,5 +22,5 @@ export interface ReviewerPreviewInputBody {
   coverage: number;
   excluded_application_ids?: ReviewerPreviewInputBodyExcludedApplicationIds;
   leads: ReviewerPreviewInputBodyLeads;
-  role: ReviewerPreviewInputBodyRole;
+  role_id: string;
 }

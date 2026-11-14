@@ -5,18 +5,20 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"gorm.io/gorm"
+
+	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 )
 
 func Route(api huma.API, db *gorm.DB) {
 	questionDB := NewQuestionDB(db)
-	s := &questionService{questionDB: questionDB}
+	s := &questionService{questionDB: questionDB, roleDB: role.NewRoleDB(db)}
 
 	huma.Register(api, huma.Operation{
 		OperationID: "list-cycle-questions",
 		Method:      http.MethodGet,
 		Path:        "/cycles/{id}/questions",
 		Summary:     "List a cycle's questions",
-		Description: "Optional ?role= returns that role's questions plus global ones.",
+		Description: "Optional ?role_id= returns that role's questions plus global ones.",
 		Tags:        []string{"Questions"},
 	}, s.list)
 

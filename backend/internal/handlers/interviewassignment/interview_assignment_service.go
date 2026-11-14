@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/GenerateNU/apportal/backend/internal/models"
+	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 	"github.com/danielgtaylor/huma/v2"
 )
@@ -90,14 +90,14 @@ func (s *interviewAssignmentService) unassignAllReviewers(ctx context.Context, i
 	return s.unassignAll(ctx, in, s.interviewAssignmentDB.DeleteReviewersForCycle)
 }
 
-func (s *interviewAssignmentService) unassignAll(ctx context.Context, in *UnassignAllInput, del func(context.Context, string, models.Role) (int, error)) (*UnassignAllOutput, error) {
+func (s *interviewAssignmentService) unassignAll(ctx context.Context, in *UnassignAllInput, del func(context.Context, string, string) (int, error)) (*UnassignAllOutput, error) {
 	if err := utils.RequireChief(ctx); err != nil {
 		return nil, err
 	}
-	if !in.Role.Valid() {
-		return nil, huma.Error422UnprocessableEntity("role is invalid")
+	if err := role.ParseRoleID(in.RoleID); err != nil {
+		return nil, err
 	}
-	deleted, err := del(ctx, in.ID, in.Role)
+	deleted, err := del(ctx, in.ID, in.RoleID)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
