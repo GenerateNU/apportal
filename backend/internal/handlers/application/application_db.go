@@ -176,6 +176,10 @@ func applicationsFrom(db *gorm.DB, f ApplicationFilter, scope applicationFilterS
 	if f.Returner != nil {
 		q = q.Where("u.returner = ?", *f.Returner)
 	}
+	if len(f.TagIDs) > 0 {
+		// Ids are UUID-validated by the caller, so the literal is safe to build.
+		q = q.Where("a.tag_ids && ?::uuid[]", "{"+strings.Join(f.TagIDs, ",")+"}")
+	}
 	if !f.IncludeDraft {
 		q = q.Where("a.stage != ?", models.StageDraft)
 	}

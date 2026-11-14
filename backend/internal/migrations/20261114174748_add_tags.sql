@@ -1,5 +1,7 @@
 -- Modify "applications" table
 ALTER TABLE "public"."applications" ADD CONSTRAINT "applications_tag_ids_max" CHECK (cardinality(tag_ids) <= 3), ADD COLUMN "tag_ids" uuid[] NOT NULL DEFAULT '{}';
+-- Create index "idx_applications_tag_ids" to table: "applications"
+CREATE INDEX "idx_applications_tag_ids" ON "public"."applications" USING gin ("tag_ids");
 -- Create "cycle_tags" table
 CREATE TABLE "public"."cycle_tags" (
   "id" uuid NOT NULL DEFAULT gen_random_uuid(),

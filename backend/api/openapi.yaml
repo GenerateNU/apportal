@@ -4602,6 +4602,13 @@ paths:
               - "true"
               - "false"
             type: string
+        - description: Comma-separated cycle tag ids; an application matches any of them
+          explode: false
+          in: query
+          name: tag_ids
+          schema:
+            description: Comma-separated cycle tag ids; an application matches any of them
+            type: string
         - description: Case-insensitive substring match on the applicant's name, NUID, or email
           explode: false
           in: query

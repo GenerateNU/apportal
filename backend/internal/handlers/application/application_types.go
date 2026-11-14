@@ -68,6 +68,7 @@ type ListApplicationsInput struct {
 	// Returner is a string rather than a bool so an omitted param stays
 	// distinguishable from an explicit "false" (show only first-timers).
 	Returner string `query:"returner" doc:"\"true\" for applicants who worked on a Generate project before, \"false\" for first-timers; omit for both" enum:"true,false"`
+	TagIDs   string `query:"tag_ids" doc:"Comma-separated cycle tag ids; an application matches any of them"`
 	Search   string `query:"search" doc:"Case-insensitive substring match on the applicant's name, NUID, or email"`
 	Limit    int    `query:"limit" doc:"Max results per page; omit (or 0) to return every match" minimum:"0" maximum:"200"`
 	Offset   int    `query:"offset" doc:"Number of results to skip" minimum:"0"`
@@ -119,6 +120,8 @@ type ApplicationFilter struct {
 	InterviewRatings      []models.InterviewRating
 	// Returner is a pointer so "first-timers only" differs from "no filter".
 	Returner *bool
+	// TagIDs keeps applications carrying any of these tags. Must be UUIDs.
+	TagIDs []string
 	// IncludeDraft admits drafts; only set it when users list their own
 	// applications, since drafts are invisible everywhere else.
 	IncludeDraft bool

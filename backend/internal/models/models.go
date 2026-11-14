@@ -148,7 +148,7 @@ type Application struct {
 	UpdatedAt   time.Time  `json:"updated_at" gorm:"not null;default:now()"`
 	// TagIDs reference cycle_tags in this application's cycle. A uuid[] has no
 	// foreign key, so the tag handlers keep it consistent.
-	TagIDs []string `json:"tag_ids" gorm:"serializer:pgarray;type:uuid[];not null;default:'{}';check:applications_tag_ids_max,cardinality(tag_ids) <= 3"`
+	TagIDs []string `json:"tag_ids" gorm:"serializer:pgarray;type:uuid[];not null;default:'{}';index:idx_applications_tag_ids,type:gin;check:applications_tag_ids_max,cardinality(tag_ids) <= 3"`
 	Cycle  Cycle    `json:"-" gorm:"foreignKey:CycleID;references:ID"`
 	User   User     `json:"-" gorm:"foreignKey:UserNUID;references:NUID"`
 }
