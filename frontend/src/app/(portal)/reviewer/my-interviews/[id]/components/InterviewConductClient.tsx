@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import {
   ArrowDown,
   ArrowLeft,
@@ -43,7 +44,9 @@ import {
   useInterviewsByApplicationIds,
   useUpsertInterview,
 } from '@/lib/queries/interviews'
+import { queryKeys } from '@/lib/queries/keys'
 import { useQuestions } from '@/lib/queries/questions'
+import { useCollaborativeInterview } from '@/lib/realtime/useCollaborativeInterview'
 import {
   useRecordingReviews,
   useUpsertRecordingReview,
@@ -128,17 +131,18 @@ export function InterviewConductClient({
   )
   const upsertRecordingReview = useUpsertRecordingReview()
 
-  const ownWriteup = interviewers.find(
+  const isInterviewer = interviewers.some(
     (iv) => iv.interviewer_nuid === currentUser?.nuid
   )
-  const otherWriteups = interviewers.filter(
-    (iv) => iv.interviewer_nuid !== currentUser?.nuid
+  const isChief = !!currentUser?.roles.some(
+    (r) => r === 'chief' || r === 'admin'
   )
-  const canEditInterview = !!ownWriteup
+  const writeupSubmitted = !!interview?.submitted_at
+  const canEditInterview = !!interview && (isInterviewer || isChief)
   const canReview =
     !!currentUser &&
     recordingReviews.some((r) => r.reviewer_nuid === currentUser.nuid)
-  const allInterviewersSubmitted = interviewSubmitted(interview)
+  const writeupDone = interviewSubmitted(interview)
 
   // The rest of my interview queue, so a "next" button can jump to the next
   // assigned applicant who still needs to be interviewed — same ordering
@@ -160,11 +164,8 @@ export function InterviewConductClient({
     useInterviewsByApplicationIds(queueIds)
   const needsInterviewAt = useMemo(
     () => (i: number) =>
-      !interviewByApplicationId?.[orderedQueue[i].id]?.interviewers.some(
-        (iv) =>
-          iv.interviewer_nuid === currentUser?.nuid && !!iv.writeup_submitted_at
-      ),
-    [interviewByApplicationId, orderedQueue, currentUser?.nuid]
+      !interviewByApplicationId?.[orderedQueue[i].id]?.submitted_at,
+    [interviewByApplicationId, orderedQueue]
   )
   const nextApplicationId = useMemo(() => {
     const currentIndex = orderedQueue.findIndex((a) => a.id === applicationId)
@@ -189,37 +190,63 @@ export function InterviewConductClient({
     [answers]
   )
 
-  const [recordingUrl, setRecordingUrl] = useState('')
-  const [notesUrl, setNotesUrl] = useState('')
-  const [comments, setComments] = useState('')
-  const [rating, setRating] = useState<InterviewRating | ''>('')
-  const [seeded, setSeeded] = useState(false)
+  const queryClient = useQueryClient()
+  const {
+    ready: collabReady,
+    text: comments,
+    fields: collabFields,
+    peers,
+    typingPeers,
+    textareaRef,
+    onTextChange,
+    setField,
+    notifySaved,
+  } = useCollaborativeInterview({
+    room: interview ? applicationId : null,
+    initial: interview
+      ? {
+          text: interview.writeup ?? '',
+          fields: {
+            recording_url: interview.recording_url ?? '',
+            notes_url: interview.notes_url ?? '',
+            rating: interview.rating ?? '',
+          },
+        }
+      : null,
+    me: currentUser
+      ? { nuid: currentUser.nuid, name: currentUser.full_name }
+      : null,
+    onRemoteSaved: () =>
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.interviews.detail(applicationId),
+      }),
+  })
+  const recordingUrl = collabFields.recording_url
+  const notesUrl = collabFields.notes_url
+  const rating = collabFields.rating as InterviewRating | ''
   const [savedInterview, setSavedInterview] = useState(false)
 
-  if (!seeded && interview) {
-    setRecordingUrl(interview.recording_url ?? '')
-    setNotesUrl(interview.notes_url ?? '')
-    setComments(ownWriteup?.writeup ?? '')
-    setRating(interview.rating ?? '')
-    setSeeded(true)
-  }
-
-  const ownSubmitted = !!ownWriteup?.writeup_submitted_at
   const missingInterviewRequired = !comments.trim() || !rating
 
+  const someoneTyping = typingPeers.length > 0
+
   async function saveInterview(submit: boolean) {
+    if (someoneTyping) return
     setSavedInterview(false)
-    await upsertInterview.mutateAsync({
-      applicationId,
-      body: {
-        recording_url: recordingUrl || undefined,
-        notes_url: notesUrl || undefined,
-        writeup: comments || undefined,
-        rating: rating || undefined,
-        submit,
-      },
-    })
-    setSavedInterview(true)
+    try {
+      await upsertInterview.mutateAsync({
+        applicationId,
+        body: {
+          recording_url: recordingUrl || undefined,
+          notes_url: notesUrl || undefined,
+          writeup: comments,
+          rating: rating || undefined,
+          submit,
+        },
+      })
+      notifySaved()
+      setSavedInterview(true)
+    } catch {}
   }
 
   const ownReview = recordingReviews.find(
@@ -339,7 +366,7 @@ export function InterviewConductClient({
             <ArrowDown data-icon="inline-start" size={14} />
             Write-up
           </Button>
-          {allInterviewersSubmitted && (
+          {writeupDone && (
             <span
               className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium ${REVIEW_STATE_BADGE.submitted}`}
             >
@@ -481,11 +508,26 @@ export function InterviewConductClient({
               Interview
             </h2>
 
-            {ownSubmitted && (
+            {upsertInterview.isError && (
+              <p className="text-destructive text-sm">
+                Couldn&apos;t save the interview. Try again.
+              </p>
+            )}
+
+            {interviewerNames && (
+              <p className="text-text-muted text-sm">
+                Interviewers: {interviewerNames}
+              </p>
+            )}
+
+            {writeupSubmitted && (
               <div className="border-border bg-muted/40 text-text-muted flex items-center gap-2 rounded-lg border px-4 py-3 text-sm">
-                <Lock size={14} />
-                You&apos;ve submitted your write-up. You can still make changes
-                below.
+                <CheckCircle2 size={14} />
+                Submitted
+                {interview?.submitted_at
+                  ? ` on ${new Date(interview.submitted_at).toLocaleDateString()}`
+                  : ''}
+                . You can still make changes below.
               </div>
             )}
 
@@ -496,8 +538,7 @@ export function InterviewConductClient({
             )}
             {!canEditInterview && !!interview && (
               <p className="text-text-faint text-sm">
-                You&apos;re not an assigned interviewer — showing their
-                write-ups for context.
+                You&apos;re not an assigned interviewer, so this is read-only.
               </p>
             )}
 
@@ -508,9 +549,11 @@ export function InterviewConductClient({
                   <div className="flex items-center gap-2">
                     <Input
                       value={recordingUrl}
-                      onChange={(e) => setRecordingUrl(e.target.value)}
+                      onChange={(e) =>
+                        setField('recording_url', e.target.value)
+                      }
                       placeholder="https://…"
-                      disabled={upsertInterview.isPending}
+                      disabled={!collabReady}
                     />
                     {interview?.recording_url && (
                       <a
@@ -545,9 +588,9 @@ export function InterviewConductClient({
                   <div className="flex items-center gap-2">
                     <Input
                       value={notesUrl}
-                      onChange={(e) => setNotesUrl(e.target.value)}
+                      onChange={(e) => setField('notes_url', e.target.value)}
                       placeholder="https://…"
-                      disabled={upsertInterview.isPending}
+                      disabled={!collabReady}
                     />
                     {interview?.notes_url && (
                       <a
@@ -576,45 +619,55 @@ export function InterviewConductClient({
                 )}
               </div>
 
-              {canEditInterview && (
-                <div className="flex flex-col gap-1.5">
-                  <Label>Your write-up</Label>
-                  <textarea
-                    className={TEXTAREA_CLASS}
-                    value={comments}
-                    onChange={(e) => setComments(e.target.value)}
-                    placeholder="Summarize how the interview went…"
-                    disabled={upsertInterview.isPending}
-                  />
+              <div className="flex flex-col gap-1.5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <Label>Write-up</Label>
+                  {peers.length > 0 && (
+                    <span className="text-text-muted inline-flex items-center gap-1.5 text-xs">
+                      <span className="size-2 rounded-full bg-green-500" />
+                      Also here: {peers.map((p) => p.name).join(', ')}
+                    </span>
+                  )}
                 </div>
-              )}
-
-              {otherWriteups.map((iv) => (
-                <div key={iv.id} className="flex flex-col gap-1.5">
-                  <Label>
-                    {iv.interviewer_name ?? nameFor(iv.interviewer_nuid)}
-                    &apos;s write-up
-                    {!iv.writeup_submitted_at && (
-                      <span className="text-text-faint font-normal">
-                        {' '}
-                        · draft
-                      </span>
-                    )}
-                  </Label>
+                {typingPeers.length > 0 && (
+                  <p className="text-text-muted inline-flex items-center gap-1.5 text-xs">
+                    <Loader2 className="animate-spin" size={12} />
+                    {typingPeers.map((p) => p.name).join(', ')}{' '}
+                    {typingPeers.length === 1 ? 'is' : 'are'} typing. You can
+                    edit once they pause.
+                  </p>
+                )}
+                {canEditInterview ? (
+                  <textarea
+                    ref={textareaRef}
+                    className={`${TEXTAREA_CLASS} ${typingPeers.length > 0 ? 'bg-muted/40 cursor-not-allowed' : ''}`}
+                    value={comments}
+                    onChange={onTextChange}
+                    placeholder={
+                      collabReady
+                        ? 'Summarize how the interview went…'
+                        : 'Connecting…'
+                    }
+                    disabled={!collabReady}
+                    readOnly={typingPeers.length > 0}
+                    aria-readonly={typingPeers.length > 0}
+                  />
+                ) : (
                   <p className="text-text-default text-sm whitespace-pre-wrap">
-                    {iv.writeup || (
+                    {(collabReady ? comments : interview?.writeup) || (
                       <span className="text-text-faint">Not added yet.</span>
                     )}
                   </p>
-                </div>
-              ))}
+                )}
+              </div>
 
               <div className="flex flex-col gap-1.5">
                 <Label>Rating</Label>
                 {canEditInterview ? (
                   <Select
                     value={rating}
-                    onValueChange={(v) => setRating(v as InterviewRating)}
+                    onValueChange={(v) => setField('rating', v)}
+                    disabled={!collabReady}
                   >
                     <SelectTrigger aria-label="Rating">
                       <SelectValue placeholder="Choose a rating" />
@@ -649,49 +702,42 @@ export function InterviewConductClient({
                     Saved
                   </span>
                 )}
-                {ownSubmitted ? (
+                {someoneTyping && (
+                  <span className="text-text-muted text-sm sm:mr-auto">
+                    Waiting for {typingPeers.map((p) => p.name).join(', ')} to
+                    finish typing…
+                  </span>
+                )}
+                {!writeupSubmitted && (
                   <Button
-                    onClick={() => saveInterview(true)}
-                    disabled={upsertInterview.isPending}
+                    variant="outline"
+                    onClick={() => saveInterview(false)}
+                    disabled={upsertInterview.isPending || someoneTyping}
                     className="w-full sm:w-auto"
                   >
-                    {upsertInterview.isPending ? (
-                      <>
-                        <Loader2 className="animate-spin" size={14} />
-                        Saving…
-                      </>
-                    ) : (
-                      'Save changes'
-                    )}
+                    Save draft
                   </Button>
-                ) : (
-                  <>
-                    <Button
-                      variant="outline"
-                      onClick={() => saveInterview(false)}
-                      disabled={upsertInterview.isPending}
-                      className="w-full sm:w-auto"
-                    >
-                      Save draft
-                    </Button>
-                    <Button
-                      onClick={() => saveInterview(true)}
-                      disabled={
-                        upsertInterview.isPending || missingInterviewRequired
-                      }
-                      className="w-full sm:w-auto"
-                    >
-                      {upsertInterview.isPending ? (
-                        <>
-                          <Loader2 className="animate-spin" size={14} />
-                          Saving…
-                        </>
-                      ) : (
-                        'Submit write-up'
-                      )}
-                    </Button>
-                  </>
                 )}
+                <Button
+                  onClick={() => saveInterview(writeupSubmitted ? false : true)}
+                  disabled={
+                    upsertInterview.isPending ||
+                    missingInterviewRequired ||
+                    someoneTyping
+                  }
+                  className="w-full sm:w-auto"
+                >
+                  {upsertInterview.isPending ? (
+                    <>
+                      <Loader2 className="animate-spin" size={14} />
+                      Saving…
+                    </>
+                  ) : writeupSubmitted ? (
+                    'Save changes'
+                  ) : (
+                    'Submit write-up'
+                  )}
+                </Button>
               </div>
             )}
           </div>
@@ -702,9 +748,9 @@ export function InterviewConductClient({
               Recording reviews
             </h2>
 
-            {!allInterviewersSubmitted ? (
+            {!writeupDone ? (
               <p className="text-text-faint text-sm">
-                Waiting for every interviewer to submit their write-up before
+                Waiting for the interview write-up to be submitted before
                 reviews can start.
               </p>
             ) : (

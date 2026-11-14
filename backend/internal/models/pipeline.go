@@ -183,22 +183,22 @@ type Interview struct {
 	// alongside RecordingURL.
 	NotesURL    *string          `json:"notes_url,omitempty" gorm:"comment:link to the interviewer's notes doc (e.g. Granola)"`
 	Rating      *InterviewRating `json:"rating,omitempty" gorm:"type:interview_rating"`
+	Writeup     *string          `json:"writeup,omitempty"`
+	SubmittedAt *time.Time       `json:"submitted_at,omitempty"`
 	CreatedAt   time.Time        `json:"created_at" gorm:"not null;default:now()"`
 	UpdatedAt   time.Time        `json:"updated_at" gorm:"not null;default:now()"`
 	Application Application      `json:"-" gorm:"foreignKey:ApplicationID;references:ID;constraint:OnDelete:CASCADE"`
 }
 
 type Interviewer struct {
-	ID                 string     `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
-	InterviewID        string     `json:"interview_id" gorm:"type:uuid;not null;uniqueIndex:interviewers_interview_id_interviewer_nuid_key,priority:1"`
-	InterviewerNUID    string     `json:"interviewer_nuid" gorm:"not null;index:idx_interviewers_interviewer;uniqueIndex:interviewers_interview_id_interviewer_nuid_key,priority:2"`
-	AssignedBy         string     `json:"assigned_by" gorm:"not null"`
-	AssignedAt         time.Time  `json:"assigned_at" gorm:"not null;default:now()"`
-	Writeup            *string    `json:"writeup,omitempty"`
-	WriteupSubmittedAt *time.Time `json:"writeup_submitted_at,omitempty"`
-	Interview          Interview  `json:"-" gorm:"foreignKey:InterviewID;references:ID;constraint:OnDelete:CASCADE"`
-	User               User       `json:"-" gorm:"foreignKey:InterviewerNUID;references:NUID"`
-	Assigner           User       `json:"-" gorm:"foreignKey:AssignedBy;references:NUID"`
+	ID              string    `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	InterviewID     string    `json:"interview_id" gorm:"type:uuid;not null;uniqueIndex:interviewers_interview_id_interviewer_nuid_key,priority:1"`
+	InterviewerNUID string    `json:"interviewer_nuid" gorm:"not null;index:idx_interviewers_interviewer;uniqueIndex:interviewers_interview_id_interviewer_nuid_key,priority:2"`
+	AssignedBy      string    `json:"assigned_by" gorm:"not null"`
+	AssignedAt      time.Time `json:"assigned_at" gorm:"not null;default:now()"`
+	Interview       Interview `json:"-" gorm:"foreignKey:InterviewID;references:ID;constraint:OnDelete:CASCADE"`
+	User            User      `json:"-" gorm:"foreignKey:InterviewerNUID;references:NUID"`
+	Assigner        User      `json:"-" gorm:"foreignKey:AssignedBy;references:NUID"`
 }
 
 type InterviewReviewer struct {

@@ -101,10 +101,7 @@ export function useUpsertInterview() {
 }
 
 export function interviewSubmitted(interview: Interview | null | undefined) {
-  return (
-    !!interview?.interviewers.length &&
-    interview.interviewers.every((iv) => !!iv.writeup_submitted_at)
-  )
+  return !!interview?.submitted_at
 }
 
 export const MAX_BULK_APPLICATIONS = 200

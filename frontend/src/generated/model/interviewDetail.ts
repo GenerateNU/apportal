@@ -20,5 +20,7 @@ export interface InterviewDetail {
   rating?: InterviewDetailRating;
   recording_url?: string;
   scheduled_at?: string;
+  submitted_at?: string;
   updated_at: string;
+  writeup?: string;
 }
