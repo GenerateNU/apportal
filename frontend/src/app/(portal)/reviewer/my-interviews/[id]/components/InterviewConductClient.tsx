@@ -537,11 +537,9 @@ export function InterviewConductClient({
                 This interview hasn&apos;t started yet.
               </p>
             )}
-            {!isInterviewer && !!interview && (
+            {!canEditInterview && !!interview && (
               <p className="text-text-faint text-sm">
-                {canEditInterview
-                  ? 'You’re not an assigned interviewer. As a chief, you can override the rating.'
-                  : 'You’re not an assigned interviewer, so this is read-only.'}
+                You&apos;re not an assigned interviewer, so this is read-only.
               </p>
             )}
 
@@ -706,12 +704,6 @@ export function InterviewConductClient({
                   >
                     <Check size={14} />
                     Saved
-                  </span>
-                )}
-                {someoneTyping && (
-                  <span className="text-text-muted text-sm sm:mr-auto">
-                    Waiting for {typingPeers.map((p) => p.name).join(', ')} to
-                    finish typing…
                   </span>
                 )}
                 {!writeupSubmitted && isInterviewer && (
