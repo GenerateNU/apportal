@@ -208,6 +208,7 @@ export function ReviewClient({
               {ROLE_LABEL[role]}
             </span>
             <CandidateTags
+              compact
               applicationId={applicationId}
               cycleId={cycleId}
               tagIds={application?.tag_ids}
