@@ -2,6 +2,7 @@
 
 import { Plus } from 'lucide-react'
 import { ReturnerBadge } from '@/components/ReturnerBadge'
+import { Badge } from '@/components/ui/badge'
 import type { Role } from '@/lib/api/types'
 import type { PreferenceEntry } from './EntryRow'
 
@@ -54,7 +55,7 @@ export function ReferencePane({
             return (
               <li
                 key={entry.id}
-                className={`flex items-start gap-2 rounded-lg border border-gray-200 p-3 ${
+                className={`flex items-start gap-2 border border-gray-200 p-3 ${
                   already ? 'bg-gray-50' : 'bg-white'
                 }`}
               >
@@ -76,16 +77,14 @@ export function ReferencePane({
                     </button>
                     {entry.returner && <ReturnerBadge />}
                     {draftedBy && (
-                      <span className="text-text-muted rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium">
+                      <Badge size="sm" className="text-text-muted">
                         Drafted · {draftedBy}
-                      </span>
+                      </Badge>
                     )}
                     {badge && (
-                      <span
-                        className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${badge.className}`}
-                      >
+                      <Badge size="sm" className={badge.className}>
                         {badge.label}
-                      </span>
+                      </Badge>
                     )}
                   </div>
                   {entry.reasoning && (

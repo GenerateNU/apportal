@@ -4,6 +4,10 @@ import { PageContainer } from '@/components/PageContainer'
 import { useMemo } from 'react'
 import { Loader2 } from 'lucide-react'
 import { HelpContact } from '@/components/HelpContact'
+import { Badge } from '@/components/ui/badge'
+import { Card } from '@/components/ui/card'
+import { EmptyState } from '@/components/ui/empty-state'
+import { PageHeader } from '@/components/ui/page-header'
 import { ApplicationRoleCard } from './ApplicationRoleCard'
 import type {
   Application,
@@ -33,12 +37,10 @@ export function ApplicationsClient() {
   if (!currentUser) {
     return (
       <div className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-8">
-        <h1 className="text-text-default text-2xl font-semibold">
-          My Applications
-        </h1>
-        <p className="text-text-muted mt-2 text-sm">
-          Sign in to apply to open roles.
-        </p>
+        <PageHeader
+          title="My Applications"
+          subtitle="Sign in to apply to open roles."
+        />
       </div>
     )
   }
@@ -77,17 +79,15 @@ function Dashboard({ user }: { user: User }) {
   return (
     <PageContainer className="mx-auto w-full max-w-3xl">
       <header className="mb-8">
-        <h1 className="text-text-default text-2xl font-semibold">
-          My Applications
-        </h1>
-        <p className="text-text-muted mt-1 text-sm">
-          Apply to open roles and track where your applications stand.
-        </p>
+        <PageHeader
+          title="My Applications"
+          subtitle="Apply to open roles and track where your applications stand."
+        />
         <HelpContact className="mt-3 text-left" />
       </header>
 
       {visibleCycles.length === 0 ? (
-        <EmptyState applications={applications} />
+        <NoOpenCycles applications={applications} />
       ) : (
         <div className="flex flex-col gap-8">
           {visibleCycles.map((cycle, cycleIndex) => (
@@ -183,17 +183,13 @@ function CycleSection({
   )
 }
 
-function EmptyState({ applications }: { applications: Application[] }) {
+function NoOpenCycles({ applications }: { applications: Application[] }) {
   if (applications.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-gray-200 bg-white p-10 text-center">
-        <p className="text-text-default text-sm font-medium">
-          No open application cycles right now
-        </p>
-        <p className="text-text-muted mt-1 text-sm">
-          Check back when recruitment opens.
-        </p>
-      </div>
+      <EmptyState
+        title="No open application cycles right now"
+        description="Check back when recruitment opens."
+      />
     )
   }
 
@@ -206,21 +202,16 @@ function EmptyState({ applications }: { applications: Application[] }) {
       {applications.map((application) => {
         const status = APPLICANT_STATUS[application.stage]
         return (
-          <div
+          <Card
             key={application.id}
-            className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-gray-100 bg-white p-4"
+            variant="flat"
+            className="flex flex-wrap items-center justify-between gap-2"
           >
-            <span
-              className={`inline-flex rounded-md px-2 py-0.5 text-xs font-medium ${ROLE_CHIP_CLASS[application.role]}`}
-            >
+            <Badge className={ROLE_CHIP_CLASS[application.role]}>
               {ROLE_LABEL[application.role]}
-            </span>
-            <span
-              className={`inline-flex rounded-md px-2 py-0.5 text-xs font-medium ${status.className}`}
-            >
-              {status.label}
-            </span>
-          </div>
+            </Badge>
+            <Badge className={status.className}>{status.label}</Badge>
+          </Card>
         )
       })}
     </div>

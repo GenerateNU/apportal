@@ -4,6 +4,10 @@ import { PageContainer } from '@/components/PageContainer'
 import { useState } from 'react'
 import { Pencil, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { EmptyState } from '@/components/ui/empty-state'
+import { PageHeader } from '@/components/ui/page-header'
 import {
   Select,
   SelectContent,
@@ -27,26 +31,22 @@ export function CyclesClient() {
 
   return (
     <PageContainer>
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <h1 className="text-text-default text-2xl font-semibold">Cycles</h1>
-          <p className="text-text-muted mt-1 text-sm">
-            Create recruiting cycles and open or close them for applicants.
-          </p>
-        </div>
-        <Button className="shrink-0" onClick={() => setShowCreate(true)}>
-          <Plus className="h-4 w-4" />
-          New cycle
-        </Button>
-      </div>
+      <PageHeader
+        title="Cycles"
+        subtitle="Create recruiting cycles and open or close them for applicants."
+        actions={
+          <Button onClick={() => setShowCreate(true)}>
+            <Plus className="h-4 w-4" />
+            New cycle
+          </Button>
+        }
+      />
 
       {cycles.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-gray-200 bg-white p-10 text-center">
-          <p className="text-text-default text-sm font-medium">No cycles yet</p>
-          <p className="text-text-muted mt-1 text-sm">
-            Create one to start collecting applications.
-          </p>
-        </div>
+        <EmptyState
+          title="No cycles yet"
+          description="Create one to start collecting applications."
+        />
       ) : (
         <div className="flex flex-col gap-3">
           {cycles.map((cycle) => (
@@ -75,23 +75,26 @@ function CycleRow({ cycle }: { cycle: Cycle }) {
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-gray-100 bg-white p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+    <Card
+      variant="flat"
+      className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
+    >
       <div className="min-w-0">
         <div className="flex items-center gap-2">
           <span className="text-text-default truncate text-sm font-semibold">
             {cycle.name}
           </span>
-          <span className="text-text-muted rounded-md bg-gray-100 px-1.5 py-0.5 text-xs font-medium">
+          <Badge size="sm" className="text-text-muted">
             {APPLICATION_TYPE_LABEL[
               cycle.application_type as ApplicationType
             ] ?? cycle.application_type}
-          </span>
+          </Badge>
         </div>
       </div>
 
       <div className="flex shrink-0 items-center gap-2">
         <span
-          className={`inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium ${status.badge}`}
+          className={`inline-flex items-center gap-1.5 px-2 py-1 text-xs font-medium ${status.badge}`}
         >
           <span className={`h-1.5 w-1.5 rounded-full ${status.dot}`} />
           {status.label}
@@ -125,6 +128,6 @@ function CycleRow({ cycle }: { cycle: Cycle }) {
       </div>
 
       <CycleDialog open={showEdit} onOpenChange={setShowEdit} cycle={cycle} />
-    </div>
+    </Card>
   )
 }

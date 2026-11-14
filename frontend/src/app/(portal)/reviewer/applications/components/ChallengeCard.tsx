@@ -6,6 +6,8 @@ import type { ChallengeMetrics, Role } from '@/lib/api/types'
 import { useApplicant } from '@/lib/queries/applicants'
 import { useChallengeScore } from '@/lib/queries/challenge-score'
 import { useSubmission } from '@/lib/queries/submissions'
+import { Card } from '@/components/ui/card'
+import { SectionLabel } from '@/components/ui/section-label'
 
 const CHALLENGE_METRIC_LABEL: { key: keyof ChallengeMetrics; label: string }[] =
   [
@@ -81,10 +83,8 @@ export function ChallengeCard({
   if (!score && !submission && repoQueries.length === 0) return null
 
   return (
-    <div className="mb-4 flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-      <h2 className="text-text-faint text-xs font-semibold tracking-wide uppercase">
-        Technical challenge
-      </h2>
+    <Card className="mb-4 flex flex-col gap-3">
+      <SectionLabel>Technical challenge</SectionLabel>
 
       {submission && (
         <a
@@ -198,6 +198,6 @@ export function ChallengeCard({
           )}
         </div>
       )}
-    </div>
+    </Card>
   )
 }

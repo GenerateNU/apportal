@@ -2,8 +2,10 @@
 
 import { useState } from 'react'
 import { Eye, ListOrdered, Loader2 } from 'lucide-react'
-import { Avatar } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Input } from '@/components/ui/input'
 import {
   Dialog,
@@ -13,6 +15,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { LoadingText } from '@/components/ui/loading-text'
+import { PageHeader } from '@/components/ui/page-header'
+import { PersonCell } from '@/components/ui/person-cell'
+import { SectionLabel } from '@/components/ui/section-label'
 import {
   Select,
   SelectContent,
@@ -42,12 +48,7 @@ import {
 } from '@/lib/queries/preference-lists'
 import { useCurrentUser } from '@/lib/queries/users'
 import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
-import {
-  DRAFT_STATUS_BADGE,
-  DRAFT_STATUS_LABEL,
-  SECTION_CLASS,
-  SECTION_HEADER_CLASS,
-} from './constants'
+import { DRAFT_STATUS_BADGE, DRAFT_STATUS_LABEL } from './constants'
 import { DraftBoardGrid } from './DraftBoardGrid'
 import { DraftSetup } from './DraftSetup'
 import { OnTheClockPanel } from './OnTheClockPanel'
@@ -189,63 +190,58 @@ export function DraftClient() {
   }
 
   const header = (
-    <div className="flex flex-wrap items-end justify-between gap-3">
-      <div>
-        <h1 className="text-text-default text-2xl font-semibold">Draft</h1>
-        <p className="text-text-muted mt-1 text-sm">
-          Teams claim applicants in snake order — the first round runs down the
-          order, the next back up it, so the last team picks twice at the turn.
-        </p>
-      </div>
-      <div className="flex flex-wrap items-center gap-3">
-        {board && (
-          <span
-            className={`rounded-md px-2 py-0.5 text-xs font-medium ${DRAFT_STATUS_BADGE[board.status]}`}
-          >
-            {DRAFT_STATUS_LABEL[board.status]}
-          </span>
-        )}
-        {/* Every control on this page is already chief-gated; this just says
+    <PageHeader
+      title="Draft"
+      subtitle="Teams claim applicants in snake order — the first round runs down the order, the next back up it, so the last team picks twice at the turn."
+      actions={
+        <>
+          {board && (
+            <Badge className={DRAFT_STATUS_BADGE[board.status]}>
+              {DRAFT_STATUS_LABEL[board.status]}
+            </Badge>
+          )}
+          {/* Every control on this page is already chief-gated; this just says
             so up front rather than leaving a lead hunting for the buttons. */}
-        {!isChief && (
-          <span className="text-text-muted inline-flex items-center gap-1 rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium">
-            <Eye size={12} />
-            View only
-          </span>
-        )}
-        <Select value={role} onValueChange={(v) => setRole(v as Role)}>
-          <SelectTrigger className="w-48" aria-label="Draft board role">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {ROLE_COLUMNS.map((r) => (
-              <SelectItem key={r} value={r}>
-                {ROLE_LABEL[r]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={cycleId} onValueChange={setCycleId}>
-          <SelectTrigger className="w-40" aria-label="Cycle">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {cycles.map((c) => (
-              <SelectItem key={c.id} value={c.id}>
-                {c.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-    </div>
+          {!isChief && (
+            <Badge className="text-text-muted">
+              <Eye size={12} />
+              View only
+            </Badge>
+          )}
+          <Select value={role} onValueChange={(v) => setRole(v as Role)}>
+            <SelectTrigger className="w-48" aria-label="Draft board role">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {ROLE_COLUMNS.map((r) => (
+                <SelectItem key={r} value={r}>
+                  {ROLE_LABEL[r]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={cycleId} onValueChange={setCycleId}>
+            <SelectTrigger className="w-40" aria-label="Cycle">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {cycles.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </>
+      }
+    />
   )
 
   if (!cycleId || isLoading) {
     return (
       <>
         {header}
-        <p className="text-text-muted text-sm">Loading…</p>
+        <LoadingText />
       </>
     )
   }
@@ -255,8 +251,8 @@ export function DraftClient() {
     return (
       <>
         {header}
-        <div className={SECTION_CLASS}>
-          <h2 className={SECTION_HEADER_CLASS}>{ROLE_LABEL[role]} draft</h2>
+        <Card padding="none" className="flex flex-col gap-3 p-5">
+          <SectionLabel>{ROLE_LABEL[role]} draft</SectionLabel>
           {isChief ? (
             <>
               <p className="text-text-muted text-sm">
@@ -280,7 +276,7 @@ export function DraftClient() {
               This draft hasn&apos;t been opened yet.
             </p>
           )}
-        </div>
+        </Card>
       </>
     )
   }
@@ -317,13 +313,13 @@ export function DraftClient() {
             starting={updateDraft.isPending}
           />
         ) : (
-          <div className={SECTION_CLASS}>
-            <h2 className={SECTION_HEADER_CLASS}>Draft order</h2>
+          <Card padding="none" className="flex flex-col gap-3 p-5">
+            <SectionLabel>Draft order</SectionLabel>
             <p className="text-text-muted text-sm">
               The order is still being set. The board appears here once the
               draft starts.
             </p>
-          </div>
+          </Card>
         )}
       </>
     )
@@ -498,22 +494,20 @@ export function DraftClient() {
                             { onSuccess: closeChangeDialog }
                           )
                         }}
-                        className="hover:bg-muted flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left transition-colors disabled:cursor-default disabled:hover:bg-transparent"
+                        className="hover:bg-muted flex w-full items-center px-2 py-2 text-left transition-colors disabled:cursor-default disabled:hover:bg-transparent"
                       >
-                        <Avatar name={a.full_name || a.user_nuid} size="sm" />
-                        <div className="min-w-0 flex-1">
-                          <span className="text-text-default block truncate text-sm font-medium">
-                            {a.full_name || a.user_nuid}
-                          </span>
-                          <span className="text-text-subtle block truncate text-xs">
-                            {a.email}
-                          </span>
-                        </div>
-                        {current && (
-                          <span className="text-text-muted shrink-0 rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium">
-                            Current
-                          </span>
-                        )}
+                        <PersonCell
+                          name={a.full_name || a.user_nuid}
+                          secondary={a.email}
+                          className="flex-1"
+                          trailing={
+                            current && (
+                              <Badge className="text-text-muted ml-auto">
+                                Current
+                              </Badge>
+                            )
+                          }
+                        />
                       </button>
                     </li>
                   )
@@ -529,50 +523,30 @@ export function DraftClient() {
         </DialogContent>
       </Dialog>
 
-      <Dialog
+      <ConfirmDialog
         open={confirming !== null}
         onOpenChange={(open) => !open && setConfirming(null)}
-      >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>
-              {confirming === 'delete' ? 'Delete this board?' : 'Reset picks?'}
-            </DialogTitle>
-            <DialogDescription>
-              {confirming === 'delete'
-                ? `Removes the board, its order, and all ${board.picks.length} picks. Every applicant it claimed goes back to the stage they were in before their pick.`
-                : `Clears all ${board.picks.length} picks and returns the board to setup, putting each applicant back in the stage they were in before their pick. The draft order is kept.`}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirming(null)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              disabled={resetDraft.isPending || deleteDraft.isPending}
-              onClick={() => {
-                const mutation =
-                  confirming === 'delete' ? deleteDraft : resetDraft
-                mutation.mutate(draftScope, {
-                  onSuccess: () => {
-                    // Both land back on an editable order, so the locally held
-                    // setup state has to re-seed from the server.
-                    setOrder(null)
-                    setRounds(null)
-                    setConfirming(null)
-                  },
-                })
-              }}
-            >
-              {(resetDraft.isPending || deleteDraft.isPending) && (
-                <Loader2 className="animate-spin" size={14} />
-              )}
-              {confirming === 'delete' ? 'Delete board' : 'Reset picks'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        title={confirming === 'delete' ? 'Delete this board?' : 'Reset picks?'}
+        description={
+          confirming === 'delete'
+            ? `Removes the board, its order, and all ${board.picks.length} picks. Every applicant it claimed goes back to the stage they were in before their pick.`
+            : `Clears all ${board.picks.length} picks and returns the board to setup, putting each applicant back in the stage they were in before their pick. The draft order is kept.`
+        }
+        confirmLabel={confirming === 'delete' ? 'Delete board' : 'Reset picks'}
+        pending={resetDraft.isPending || deleteDraft.isPending}
+        onConfirm={() => {
+          const mutation = confirming === 'delete' ? deleteDraft : resetDraft
+          mutation.mutate(draftScope, {
+            onSuccess: () => {
+              // Both land back on an editable order, so the locally held
+              // setup state has to re-seed from the server.
+              setOrder(null)
+              setRounds(null)
+              setConfirming(null)
+            },
+          })
+        }}
+      />
     </>
   )
 }

@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { PageContainer } from '@/components/PageContainer'
 import { Button } from '@/components/ui/button'
+import { Card, Toolbar } from '@/components/ui/card'
 import {
   Dialog,
   DialogContent,
@@ -22,6 +23,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { PageHeader } from '@/components/ui/page-header'
 import {
   Select,
   SelectContent,
@@ -29,6 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { StatStrip, StatTile } from '@/components/ui/stat-tile'
 import type { Role } from '@/lib/api/types'
 import {
   useAssignmentPool,
@@ -167,82 +170,77 @@ export function AssignmentPlanClient() {
 
   return (
     <PageContainer>
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-text-default text-2xl font-semibold">
-            Plan assignments
-          </h1>
-          <p className="text-text-muted mt-1 text-sm">
-            Group leads into teams, size the review cap, then preview who
-            reviews what before assigning.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <Select
-            value={role}
-            onValueChange={(val) => {
-              setRole(val as Role)
-              setExcludedIds(new Set())
-              resetResults()
-            }}
-          >
-            <SelectTrigger className="w-56" aria-label="Applicant role">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {ROLE_COLUMNS.map((r) => (
-                <SelectItem key={r} value={r}>
-                  {ROLE_LABEL[r]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select
-            value={cycleId}
-            onValueChange={(val) => {
-              setCycleId(val)
-              setExcludedIds(new Set())
-              resetResults()
-            }}
-          >
-            <SelectTrigger className="w-40" aria-label="Cycle">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {cycles.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+      <PageHeader
+        title="Plan assignments"
+        subtitle="Group leads into teams, size the review cap, then preview who reviews what before assigning."
+        actions={
+          <>
+            <Select
+              value={role}
+              onValueChange={(val) => {
+                setRole(val as Role)
+                setExcludedIds(new Set())
+                resetResults()
+              }}
+            >
+              <SelectTrigger className="w-56" aria-label="Applicant role">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ROLE_COLUMNS.map((r) => (
+                  <SelectItem key={r} value={r}>
+                    {ROLE_LABEL[r]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={cycleId}
+              onValueChange={(val) => {
+                setCycleId(val)
+                setExcludedIds(new Set())
+                resetResults()
+              }}
+            >
+              <SelectTrigger className="w-40" aria-label="Cycle">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {cycles.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </>
+        }
+      />
 
-      <div className="flex flex-wrap items-center gap-6 rounded-xl border border-gray-100 bg-white p-4">
-        <div className="flex flex-col">
-          <span className="text-text-faint text-xs">Awaiting review</span>
-          <span className="text-text-default text-sm font-semibold">
-            {poolAppliedSize ?? '—'} {ROLE_LABEL[role].toLowerCase()}{' '}
-            application
-            {poolAppliedSize === 1 ? '' : 's'}
-          </span>
-          {excludedIds.size > 0 && (
-            <span className="text-text-faint text-xs">
-              {excludedIds.size} excluded
-            </span>
-          )}
-        </div>
-        <div className="flex flex-col">
-          <span className="text-text-faint text-xs">Leads available</span>
-          <span className="text-text-default text-sm font-semibold">
-            {pool?.lead_count ?? leads.length}
-          </span>
-        </div>
-      </div>
+      <Card variant="flat">
+        <StatStrip className="items-center">
+          <StatTile
+            label="Awaiting review"
+            value={
+              <>
+                {poolAppliedSize ?? '—'} {ROLE_LABEL[role].toLowerCase()}{' '}
+                application
+                {poolAppliedSize === 1 ? '' : 's'}
+              </>
+            }
+            hint={
+              excludedIds.size > 0 ? `${excludedIds.size} excluded` : undefined
+            }
+          />
+          <StatTile
+            label="Leads available"
+            value={pool?.lead_count ?? leads.length}
+          />
+        </StatStrip>
+      </Card>
 
       {pool && pool.applicants.length > 0 && (
-        <section className="rounded-xl border border-gray-100 bg-white p-4">
+        <Card variant="flat">
           <button
             type="button"
             className="text-text-default flex w-full items-center gap-2 text-sm font-semibold"
@@ -265,7 +263,7 @@ export function AssignmentPlanClient() {
                 return (
                   <label
                     key={applicant.application_id}
-                    className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-gray-50"
+                    className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50"
                   >
                     <input
                       type="checkbox"
@@ -286,7 +284,7 @@ export function AssignmentPlanClient() {
               })}
             </div>
           )}
-        </section>
+        </Card>
       )}
 
       <TeamBuilder
@@ -299,7 +297,7 @@ export function AssignmentPlanClient() {
       />
 
       {/* Sizing */}
-      <section className="flex flex-col gap-3 rounded-xl border border-gray-100 bg-white p-4">
+      <Card variant="flat" className="flex flex-col gap-3">
         <h2 className="text-text-default text-sm font-semibold">Sizing</h2>
         <div className="flex flex-wrap items-end gap-4">
           <div className="flex flex-col gap-1.5">
@@ -363,17 +361,20 @@ export function AssignmentPlanClient() {
         )}
 
         {capacity && (
-          <div className="flex flex-col gap-2 rounded-lg bg-gray-50 p-3">
-            <div className="flex flex-wrap gap-5">
-              <Figure label="Minimum cap" value={capacity.min_cap} />
-              <Figure label="Suggested cap" value={capacity.suggested_cap} />
-              <Figure label="Even split" value={capacity.even_split} />
-              <Figure label="Reviews needed" value={capacity.required_slots} />
-              <Figure
+          <div className="flex flex-col gap-2 bg-gray-50 p-3">
+            <StatStrip className="gap-5">
+              <StatTile label="Minimum cap" value={capacity.min_cap} />
+              <StatTile label="Suggested cap" value={capacity.suggested_cap} />
+              <StatTile label="Even split" value={capacity.even_split} />
+              <StatTile
+                label="Reviews needed"
+                value={capacity.required_slots}
+              />
+              <StatTile
                 label="Deepest possible coverage"
                 value={`${capacity.max_coverage} per app`}
               />
-            </div>
+            </StatStrip>
             {(capacity.notes ?? []).map((note) => (
               <p key={note} className="text-text-muted text-xs">
                 {note}
@@ -381,7 +382,7 @@ export function AssignmentPlanClient() {
             ))}
           </div>
         )}
-      </section>
+      </Card>
 
       {preview.isError && (
         <p className="text-destructive text-sm">
@@ -395,7 +396,7 @@ export function AssignmentPlanClient() {
 
           {/* Commit bar. The preview above is what gets written, but the server
               re-plans at commit time, so the count is described as "up to". */}
-          <div className="flex flex-wrap items-center gap-3 rounded-xl border border-gray-100 bg-white p-4">
+          <Toolbar>
             <div className="flex flex-col">
               <span className="text-text-default text-sm font-medium">
                 Ready to assign
@@ -426,7 +427,7 @@ export function AssignmentPlanClient() {
                 Assign reviewers
               </Button>
             </div>
-          </div>
+          </Toolbar>
 
           {commit.isError && (
             <p className="text-destructive text-sm">
@@ -473,13 +474,4 @@ function errorMessage(error: unknown): string {
     ?.response?.data?.detail
   if (detail) return detail
   return error instanceof Error ? error.message : String(error)
-}
-
-function Figure({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div className="flex flex-col">
-      <span className="text-text-faint text-xs">{label}</span>
-      <span className="text-text-default text-sm font-semibold">{value}</span>
-    </div>
-  )
 }

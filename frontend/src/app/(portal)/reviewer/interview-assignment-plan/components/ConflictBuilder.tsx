@@ -2,7 +2,9 @@
 
 import { useState } from 'react'
 import { Plus, X } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Toolbar } from '@/components/ui/card'
 import {
   Select,
   SelectContent,
@@ -66,7 +68,7 @@ export function ConflictBuilder({
         </p>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-gray-100 bg-white p-4">
+      <Toolbar className="gap-2">
         <Select value={leadNuid} onValueChange={setLeadNuid}>
           <SelectTrigger className="h-8 w-48 text-xs" aria-label="Lead">
             <SelectValue placeholder="Select a lead…" />
@@ -104,14 +106,14 @@ export function ConflictBuilder({
           <Plus size={14} />
           Add conflict
         </Button>
-      </div>
+      </Toolbar>
 
       {value.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {value.map((conflict, i) => (
-            <span
+            <Badge
               key={`${conflict.leadNuid}-${conflict.applicationId}`}
-              className="text-text-muted inline-flex items-center gap-1 rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium"
+              className="text-text-muted"
             >
               {nameOfLead(conflict.leadNuid)} ⊘{' '}
               {nameOfApplicant(conflict.applicationId)}
@@ -123,7 +125,7 @@ export function ConflictBuilder({
               >
                 <X size={12} />
               </button>
-            </span>
+            </Badge>
           ))}
         </div>
       )}

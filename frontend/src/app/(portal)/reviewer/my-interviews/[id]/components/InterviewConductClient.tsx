@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
   ArrowDown,
-  ArrowLeft,
   ArrowRight,
   Check,
   CheckCircle2,
@@ -18,6 +17,10 @@ import {
   Pencil,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { BackLink } from '@/components/ui/back-link'
+import { Badge } from '@/components/ui/badge'
+import { Card } from '@/components/ui/card'
+import { SectionLabel } from '@/components/ui/section-label'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -293,33 +296,23 @@ export function InterviewConductClient({
       {/* Top bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 bg-white px-4 py-3 sm:px-8">
         <div className="flex min-w-0 flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-4">
-          <Link
-            href={backLink.href}
-            className="text-text-muted hover:text-text-default inline-flex items-center gap-1 text-sm"
-          >
-            <ArrowLeft size={14} />
-            {backLink.label}
-          </Link>
+          <BackLink href={backLink.href}>{backLink.label}</BackLink>
           <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 sm:border-l sm:border-gray-200 sm:pl-4">
             <h1 className="text-text-default min-w-0 text-lg font-semibold break-words">
               {applicant?.full_name ?? 'Applicant'}
             </h1>
-            <span
-              className={`w-fit rounded-md px-2 py-0.5 text-xs font-medium ${ROLE_CHIP_CLASS[role]}`}
-            >
-              {ROLE_LABEL[role]}
-            </span>
+            <Badge className={ROLE_CHIP_CLASS[role]}>{ROLE_LABEL[role]}</Badge>
             <CandidateTags
               applicationId={applicationId}
               cycleId={cycleId}
               tagIds={application?.tag_ids}
             />
             {interview?.rating && (
-              <span
-                className={`w-fit rounded-md px-2 py-0.5 text-xs font-medium ${RATING_COLORS[interview.rating].bg} ${RATING_COLORS[interview.rating].text}`}
+              <Badge
+                className={`${RATING_COLORS[interview.rating].bg} ${RATING_COLORS[interview.rating].text}`}
               >
                 {RATING_LABEL[interview.rating]}
-              </span>
+              </Badge>
             )}
             {interviewerNames && (
               <span className="text-text-subtle text-sm">
@@ -345,12 +338,10 @@ export function InterviewConductClient({
             Write-up
           </Button>
           {writeupDone && (
-            <span
-              className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium ${REVIEW_STATE_BADGE.submitted}`}
-            >
+            <Badge className={REVIEW_STATE_BADGE.submitted}>
               <CheckCircle2 size={12} />
               Interviewed
-            </span>
+            </Badge>
           )}
           {previousApplicationId && (
             <Button
@@ -393,7 +384,7 @@ export function InterviewConductClient({
             role={role}
           />
 
-          <div className="mb-4 flex flex-col gap-2 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+          <Card className="mb-4 flex flex-col gap-2">
             <button
               type="button"
               onClick={() => setScriptOpen((v) => !v)}
@@ -413,11 +404,9 @@ export function InterviewConductClient({
                 <InterviewScriptContent cycleId={cycleId} role={role} />
               </>
             )}
-          </div>
+          </Card>
 
-          <h2 className="text-text-faint mb-4 text-xs font-semibold tracking-wide uppercase">
-            Application
-          </h2>
+          <SectionLabel className="mb-4">Application</SectionLabel>
           <div className="space-y-4">
             {questions.map((q) => (
               <ResponseField
@@ -431,15 +420,10 @@ export function InterviewConductClient({
 
           {otherWrittenReviews.length > 0 && (
             <div className="mt-6">
-              <h2 className="text-text-faint mb-3 text-xs font-semibold tracking-wide uppercase">
-                Lead review comments
-              </h2>
+              <SectionLabel className="mb-3">Lead review comments</SectionLabel>
               <div className="flex flex-col gap-3">
                 {otherWrittenReviews.map((r) => (
-                  <div
-                    key={r.id}
-                    className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm"
-                  >
+                  <Card key={r.id}>
                     <span className="text-text-muted text-xs">
                       Reviewer {r.reviewer_name || r.reviewer_nuid}
                     </span>
@@ -468,7 +452,7 @@ export function InterviewConductClient({
                         )
                       })}
                     </div>
-                  </div>
+                  </Card>
                 ))}
               </div>
             </div>
@@ -478,13 +462,11 @@ export function InterviewConductClient({
         {/* Interview + recording reviews */}
         <div className="flex flex-col gap-6 px-4 py-4 sm:px-8 sm:py-6 lg:overflow-y-auto">
           {/* Interview write-up */}
-          <div
+          <Card
             id="interview-writeup"
-            className="flex scroll-mt-4 flex-col gap-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm"
+            className="flex scroll-mt-4 flex-col gap-4 p-5"
           >
-            <h2 className="text-text-faint text-xs font-semibold tracking-wide uppercase">
-              Interview
-            </h2>
+            <SectionLabel>Interview</SectionLabel>
 
             {upsertInterview.isError && (
               <p className="text-destructive text-sm">
@@ -499,7 +481,7 @@ export function InterviewConductClient({
             )}
 
             {writeupSubmitted && (
-              <div className="border-border bg-muted/40 text-text-muted flex items-center gap-2 rounded-lg border px-4 py-3 text-sm">
+              <div className="border-border bg-muted/40 text-text-muted flex items-center gap-2 border px-4 py-3 text-sm">
                 <CheckCircle2 size={14} />
                 Submitted
                 {interview?.submitted_at
@@ -687,13 +669,11 @@ export function InterviewConductClient({
                 </Button>
               </div>
             )}
-          </div>
+          </Card>
 
           {/* Recording reviews */}
-          <div className="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-            <h2 className="text-text-faint text-xs font-semibold tracking-wide uppercase">
-              Recording reviews
-            </h2>
+          <Card className="flex flex-col gap-4 p-5">
+            <SectionLabel>Recording reviews</SectionLabel>
 
             {!writeupDone ? (
               <p className="text-text-faint text-sm">
@@ -705,7 +685,7 @@ export function InterviewConductClient({
                 {canReview && (
                   <div className="flex flex-col gap-3">
                     {reviewSubmitted && (
-                      <div className="border-border bg-muted/40 text-text-muted flex items-center gap-2 rounded-lg border px-4 py-3 text-sm">
+                      <div className="border-border bg-muted/40 text-text-muted flex items-center gap-2 border px-4 py-3 text-sm">
                         <Lock size={14} />
                         You&apos;ve submitted your review. You can still make
                         changes below.
@@ -802,15 +782,12 @@ export function InterviewConductClient({
 
                 {otherReviews.length > 0 && (
                   <div>
-                    <h3 className="text-text-faint mt-2 mb-3 text-xs font-semibold tracking-wide uppercase">
+                    <SectionLabel as="h3" className="mt-2 mb-3">
                       Other reviews
-                    </h3>
+                    </SectionLabel>
                     <div className="flex flex-col gap-3">
                       {otherReviews.map((r) => (
-                        <div
-                          key={r.id}
-                          className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm"
-                        >
+                        <Card key={r.id}>
                           <span className="text-text-muted text-xs">
                             {nameFor(r.reviewer_nuid)}
                           </span>
@@ -823,7 +800,7 @@ export function InterviewConductClient({
                               </span>
                             )}
                           </p>
-                        </div>
+                        </Card>
                       ))}
                     </div>
                   </div>
@@ -834,23 +811,18 @@ export function InterviewConductClient({
                 )}
               </>
             )}
-          </div>
+          </Card>
 
           {/* Open calibration discussion — any reviewer can post */}
-          <div className="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-            <h2 className="text-text-faint text-xs font-semibold tracking-wide uppercase">
-              Comments
-            </h2>
+          <Card className="flex flex-col gap-4 p-5">
+            <SectionLabel>Comments</SectionLabel>
             <div className="flex flex-col gap-3">
               {discussionComments.map((c) => {
                 const editing = editingCommentId === c.id
                 const edited = c.updated_at !== c.created_at
                 const isOwn = c.author_nuid === currentUser?.nuid
                 return (
-                  <div
-                    key={c.id}
-                    className="rounded-xl border border-gray-100 bg-white p-4"
-                  >
+                  <Card key={c.id} variant="flat">
                     {editing ? (
                       <div className="flex flex-col gap-2">
                         <textarea
@@ -904,11 +876,11 @@ export function InterviewConductClient({
                         )}
                       </div>
                     )}
-                  </div>
+                  </Card>
                 )
               })}
 
-              <div className="rounded-xl border border-gray-100 bg-white p-4">
+              <Card variant="flat">
                 <textarea
                   value={newComment}
                   onChange={(e) => setNewComment(e.target.value)}
@@ -931,9 +903,9 @@ export function InterviewConductClient({
                     )}
                   </Button>
                 </div>
-              </div>
+              </Card>
             </div>
-          </div>
+          </Card>
         </div>
       </div>
     </div>

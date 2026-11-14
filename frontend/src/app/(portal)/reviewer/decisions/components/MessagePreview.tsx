@@ -2,6 +2,8 @@
 
 import { Check, Copy, Mail } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { SectionLabel } from '@/components/ui/section-label'
 import type { RenderedDecision } from './render'
 import { useCopy } from './useCopy'
 
@@ -24,9 +26,9 @@ export function MessagePreview({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h4 className="text-text-faint text-xs font-semibold tracking-wide uppercase">
+        <SectionLabel as="h3">
           Message{overridden && ' (edited by hand)'}
-        </h4>
+        </SectionLabel>
         <div className="flex flex-wrap items-center gap-1.5">
           <CopyButton
             onClick={() =>
@@ -53,14 +55,14 @@ export function MessagePreview({
         </div>
       </div>
 
-      <div className="rounded-lg border border-gray-200 bg-white">
+      <Card variant="flat" padding="none">
         <p className="text-text-muted border-b border-gray-200 px-3 py-2 text-xs">
           {rendered.subject}
         </p>
         <pre className="text-text-default px-3 py-3 font-sans text-sm break-words whitespace-pre-wrap lg:max-h-[28rem] lg:overflow-y-auto">
           {rendered.body}
         </pre>
-      </div>
+      </Card>
     </div>
   )
 }

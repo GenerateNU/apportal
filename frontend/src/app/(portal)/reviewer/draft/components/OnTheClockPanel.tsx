@@ -2,15 +2,17 @@
 
 import { ArrowRight, Loader2 } from 'lucide-react'
 import { Avatar } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
 import { ReturnerBadge } from '@/components/ReturnerBadge'
 import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
 import { SearchableSelect } from '@/components/ui/searchable-select'
+import { SectionLabel } from '@/components/ui/section-label'
 import type {
   ApplicationSummary,
   DraftBoard,
   PreferenceListDetail,
 } from '@/lib/api/types'
-import { SECTION_HEADER_CLASS } from './constants'
 import { roundOf } from './snake'
 
 // What the operator actually drives during the draft: whose turn it is, that
@@ -46,8 +48,8 @@ export function OnTheClockPanel({
   const team = board.teams.find((t) => t.id === board.on_the_clock_team_id)
   if (!board.on_the_clock || !team) {
     return (
-      <div className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-        <h2 className={SECTION_HEADER_CLASS}>On the clock</h2>
+      <Card padding="none" className="flex flex-col gap-3 p-5">
+        <SectionLabel>On the clock</SectionLabel>
         <p className="text-text-muted text-sm">
           {board.status === 'complete'
             ? 'This draft is complete.'
@@ -55,7 +57,7 @@ export function OnTheClockPanel({
               ? 'Every slot is filled — add a round to keep going.'
               : 'Nothing is on the clock.'}
         </p>
-      </div>
+      </Card>
     )
   }
 
@@ -67,12 +69,12 @@ export function OnTheClockPanel({
   const available = pool.filter((a) => !takenByApplicationId[a.id])
 
   return (
-    <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+    <Card padding="none" className="overflow-hidden">
       {/* The brand-blue band is the page's focal point — from across a room
           it's the only thing that has to be legible. */}
       <div className="bg-brand-blue text-brand-white flex flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-5">
         <div className="flex min-w-0 flex-wrap items-center gap-3">
-          <span className="rounded-md bg-white/20 px-2 py-0.5 text-xs font-semibold tracking-wide uppercase">
+          <span className="bg-white/20 px-2 py-0.5 text-xs font-semibold tracking-wide uppercase">
             On the clock
           </span>
           <div>
@@ -102,7 +104,7 @@ export function OnTheClockPanel({
 
       <div className="flex flex-col gap-3 p-4 sm:p-5">
         {error && <p className="text-destructive text-sm">{error}</p>}
-        <h3 className={SECTION_HEADER_CLASS}>{team.name}&apos;s list</h3>
+        <SectionLabel as="h3">{team.name}&apos;s list</SectionLabel>
         {teamListLoading ? (
           <p className="text-text-muted text-sm">Loading their list…</p>
         ) : !teamList ? (
@@ -122,10 +124,10 @@ export function OnTheClockPanel({
               return (
                 <li
                   key={entry.id}
-                  className={`group flex items-center gap-3 rounded-xl border px-3 py-2.5 transition-shadow ${
+                  className={`group flex items-center gap-3 border px-3 py-2.5 ${
                     takenBy
                       ? 'border-gray-100 bg-gray-50/60'
-                      : 'border-gray-200 bg-white shadow-sm hover:shadow-md'
+                      : 'border-gray-200 bg-white'
                   }`}
                 >
                   <span className="text-text-subtle w-5 shrink-0 text-center text-sm font-semibold">
@@ -150,9 +152,9 @@ export function OnTheClockPanel({
                     </span>
                   </div>
                   {takenBy ? (
-                    <span className="text-text-muted max-w-[40%] shrink-0 truncate rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium">
+                    <Badge className="text-text-muted block max-w-[40%] truncate">
                       Drafted · {takenBy}
-                    </span>
+                    </Badge>
                   ) : (
                     canPick && (
                       <Button
@@ -179,6 +181,6 @@ export function OnTheClockPanel({
           </ol>
         )}
       </div>
-    </div>
+    </Card>
   )
 }

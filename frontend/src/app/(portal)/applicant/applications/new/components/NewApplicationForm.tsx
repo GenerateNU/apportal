@@ -38,6 +38,7 @@ import { useCurrentUser } from '@/lib/queries/users'
 import { ROLE_LABEL } from '@/lib/roles'
 import { ApplicationFields } from '../../components/ApplicationFields'
 import type { AnswerValue } from '../../components/QuestionField'
+import { PageHeader } from '@/components/ui/page-header'
 import { QuestionOutline } from './QuestionOutline'
 
 const DEFAULT_SUBMIT_ERROR =
@@ -645,41 +646,41 @@ function Form({
       </button>
 
       <header className="mb-8">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-text-default text-2xl font-semibold">
-            {ROLE_LABEL[role]}
-          </h1>
-          <div className="flex flex-wrap items-center gap-3">
-            {saveStatus === 'saving' && (
-              <span className="text-text-subtle text-xs">Saving…</span>
-            )}
-            {saveStatus === 'saved' && (
-              <span className="text-text-subtle text-xs">
-                All changes saved
-              </span>
-            )}
-            {saveStatus === 'error' && (
-              <span className="text-destructive text-xs">
-                Couldn&apos;t save
-              </span>
-            )}
-            {applicationId && (
-              <button
-                type="button"
-                onClick={() => setConfirmDiscard(true)}
-                className="text-text-subtle hover:text-text-default text-xs underline underline-offset-2"
-              >
-                Discard and start over
-              </button>
-            )}
-          </div>
-        </div>
-        <p className="text-text-muted mt-1 text-sm">{cycleName}</p>
+        <PageHeader
+          title={ROLE_LABEL[role]}
+          subtitle={cycleName}
+          actions={
+            <div className="flex flex-wrap items-center gap-3">
+              {saveStatus === 'saving' && (
+                <span className="text-text-subtle text-xs">Saving…</span>
+              )}
+              {saveStatus === 'saved' && (
+                <span className="text-text-subtle text-xs">
+                  All changes saved
+                </span>
+              )}
+              {saveStatus === 'error' && (
+                <span className="text-destructive text-xs">
+                  Couldn&apos;t save
+                </span>
+              )}
+              {applicationId && (
+                <button
+                  type="button"
+                  onClick={() => setConfirmDiscard(true)}
+                  className="text-text-subtle hover:text-text-default text-xs underline underline-offset-2"
+                >
+                  Discard and start over
+                </button>
+              )}
+            </div>
+          }
+        />
         <HelpContact className="mt-3 text-left" />
       </header>
 
       {deadlineClosed && (
-        <p className="border-destructive/30 bg-destructive/5 text-destructive mb-6 rounded-lg border px-4 py-3 text-sm">
+        <p className="border-destructive/30 bg-destructive/5 text-destructive mb-6 border px-4 py-3 text-sm">
           The application deadline has passed. Your answers are saved, but this
           application can no longer be edited or submitted.
         </p>
@@ -700,7 +701,7 @@ function Form({
       {pages.length > 1 && (
         <details
           ref={mobileOutlineRef}
-          className="group mb-6 rounded-lg border border-gray-200 bg-white lg:hidden"
+          className="group mb-6 border border-gray-200 bg-white lg:hidden"
         >
           <summary className="text-text-default flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-medium [&::-webkit-details-marker]:hidden">
             Jump to a question

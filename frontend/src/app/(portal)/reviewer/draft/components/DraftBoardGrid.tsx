@@ -1,9 +1,18 @@
 'use client'
 
 import { ArrowLeft, ArrowRight, Pencil, X } from 'lucide-react'
-import { Avatar } from '@/components/ui/avatar'
+import { PersonCell } from '@/components/ui/person-cell'
+import { SectionLabel } from '@/components/ui/section-label'
 import type { DraftBoard } from '@/lib/api/types'
-import { SECTION_HEADER_CLASS } from './constants'
+import {
+  TABLE_CELL,
+  TABLE_FRAME,
+  TABLE_HEAD,
+  TABLE_ROW,
+} from '@/components/ui/table-styles'
+import { cn } from '@/lib/utils'
+
+const HEAD_CELL = cn(TABLE_HEAD, 'border-r border-r-gray-100 text-left')
 
 // The board: one row per round, one column per team in order. Odd rounds run
 // left to right, even rounds right to left — the arrow on each row says which,
@@ -43,24 +52,25 @@ export function DraftBoardGrid({
 
   return (
     <div className="flex flex-col gap-3">
-      <h2 className={SECTION_HEADER_CLASS}>Board</h2>
-      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
+      <SectionLabel>Board</SectionLabel>
+      <div className={TABLE_FRAME}>
         <table className="w-full min-w-max border-collapse">
           <thead>
             <tr>
-              <th className="text-text-muted w-14 border-r border-b border-gray-100 bg-gray-50 px-4 py-3 text-left text-xs font-medium sm:w-20">
-                Round
-              </th>
+              <th className={cn(HEAD_CELL, 'w-14 sm:w-20')}>Round</th>
               {teams.map((team) => (
                 <th
                   key={team.id}
-                  className="min-w-44 border-r border-b border-gray-100 bg-gray-50 px-4 py-3 text-left last:border-r-0 sm:min-w-56"
+                  className={cn(
+                    HEAD_CELL,
+                    'min-w-44 last:border-r-0 sm:min-w-56'
+                  )}
                 >
                   <span className="text-text-default block text-sm font-semibold">
                     {team.name}
                   </span>
                   {team.member_names.length > 0 && (
-                    <span className="text-text-subtle mt-0.5 block truncate text-xs font-normal">
+                    <span className="text-text-subtle mt-0.5 block truncate font-sans text-xs font-normal tracking-normal normal-case">
                       {team.member_names.join(', ')}
                     </span>
                   )}
@@ -70,11 +80,13 @@ export function DraftBoardGrid({
           </thead>
           <tbody>
             {rounds.map((round) => (
-              <tr
-                key={round}
-                className="border-b border-gray-100 last:border-b-0"
-              >
-                <td className="text-text-subtle border-r border-gray-100 px-3 py-3 align-top text-xs sm:px-4">
+              <tr key={round} className={TABLE_ROW}>
+                <td
+                  className={cn(
+                    TABLE_CELL,
+                    'text-text-subtle border-r border-gray-100 align-top text-xs'
+                  )}
+                >
                   <span className="inline-flex items-center gap-1 font-medium">
                     {round}
                     {round % 2 === 1 ? (
@@ -102,9 +114,9 @@ export function DraftBoardGrid({
                       className="border-r border-gray-100 p-2 align-top last:border-r-0"
                     >
                       <div
-                        className={`group flex min-h-16 items-start gap-2.5 rounded-lg border px-3 py-2.5 transition-shadow ${
+                        className={`group flex min-h-16 items-start gap-2.5 border px-3 py-2.5 ${
                           pick
-                            ? 'border-gray-200 bg-white shadow-sm hover:shadow-md'
+                            ? 'border-gray-200 bg-white'
                             : onTheClock
                               ? 'border-brand-blue border-dashed bg-blue-50'
                               : 'border-gray-100 bg-gray-50/60'
@@ -112,15 +124,11 @@ export function DraftBoardGrid({
                       >
                         {pick ? (
                           <>
-                            <Avatar name={pick.full_name} size="sm" />
-                            <div className="min-w-0 flex-1">
-                              <span className="text-text-default block truncate text-sm font-medium">
-                                {pick.full_name || pick.application_id}
-                              </span>
-                              <span className="text-text-subtle block text-xs">
-                                Pick #{slot}
-                              </span>
-                            </div>
+                            <PersonCell
+                              name={pick.full_name || pick.application_id}
+                              secondary={`Pick #${slot}`}
+                              className="flex-1"
+                            />
                             {canEdit && (
                               <div className="flex shrink-0 items-center gap-1 transition-opacity [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-focus-within:opacity-100 [@media(hover:hover)]:group-hover:opacity-100">
                                 {/* Hover-reveal only where hover exists; touch has no other way to see these. */}
@@ -129,7 +137,7 @@ export function DraftBoardGrid({
                                   onClick={() => onChangePick(slot)}
                                   aria-label={`Change pick ${slot}`}
                                   title="Change this pick"
-                                  className="text-text-subtle hover:text-brand-blue rounded p-0.5 transition-colors pointer-coarse:p-2"
+                                  className="text-text-subtle hover:text-brand-blue p-0.5 transition-colors pointer-coarse:p-2"
                                 >
                                   <Pencil size={12} />
                                 </button>
@@ -139,7 +147,7 @@ export function DraftBoardGrid({
                                   disabled={removingPick === slot}
                                   aria-label={`Undo pick ${slot}`}
                                   title="Undo this pick"
-                                  className="text-text-subtle hover:text-destructive rounded p-0.5 transition-colors disabled:opacity-40 pointer-coarse:p-2"
+                                  className="text-text-subtle hover:text-destructive p-0.5 transition-colors disabled:opacity-40 pointer-coarse:p-2"
                                 >
                                   <X size={13} />
                                 </button>

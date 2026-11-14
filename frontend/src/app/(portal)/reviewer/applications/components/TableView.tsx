@@ -6,12 +6,17 @@ import { FILTER_STAGES } from './constants'
 import { isAvailabilityQuestion } from './meetingAvailability'
 import { ApplicantRow } from './ApplicantRow'
 import { FilterChips } from './FilterButton'
+import { SegmentedTabs } from '@/components/ui/segmented-tabs'
+import { TABLE_FRAME, TABLE_HEAD } from '@/components/ui/table-styles'
+import { cn } from '@/lib/utils'
 import {
   chunkIds,
   useInterviewsByApplicationIdBatches,
 } from '@/lib/queries/interviews'
 
 const TRAILING_COLUMNS = ['Stage', 'Submitted', 'Availability']
+
+const HEAD_CELL = cn(TABLE_HEAD, 'border-r border-r-gray-100 text-left')
 
 // How many rows from the end the next fetch starts. Counted in rows rather
 // than pixels so it doesn't encode an assumption about row height, zoom, or
@@ -145,7 +150,7 @@ export function TableView({
   }, [hasMore, onLoadMore, triggerIndex])
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col rounded-lg border border-gray-200 bg-white">
+    <div className={cn(TABLE_FRAME, 'flex min-h-0 flex-1 flex-col')}>
       <div className="space-y-3 border-b border-gray-100 px-4 py-3">
         {bulkBar ?? (
           <FilterChips
@@ -156,23 +161,16 @@ export function TableView({
             tagNames={tagNames}
           />
         )}
-        <div className="flex shrink-0 items-center gap-1 overflow-x-auto">
-          {FILTER_STAGES.map(({ label, value }) => (
-            <button
-              key={value}
-              onClick={() => onStageChange(value)}
-              className={`shrink-0 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-                activeStage === value
-                  ? 'text-brand-blue bg-blue-50'
-                  : 'text-text-muted hover:text-text-secondary hover:bg-gray-100'
-              }`}
-            >
-              {label}
-              <span className="text-text-subtle ml-1.5 text-xs">
-                {countByStage(value)}
-              </span>
-            </button>
-          ))}
+        <div className="overflow-x-auto">
+          <SegmentedTabs
+            tabs={FILTER_STAGES.map(({ label, value }) => ({
+              id: value,
+              label,
+              count: countByStage(value),
+            }))}
+            value={activeStage}
+            onChange={onStageChange}
+          />
         </div>
       </div>
 
@@ -187,9 +185,9 @@ export function TableView({
       >
         <table className="h-full w-full min-w-180">
           <thead className="sticky top-0 z-20">
-            <tr className="bg-gray-50">
+            <tr>
               {selectable && (
-                <th className="w-10 border-r border-b border-gray-100 bg-gray-50 px-3 py-2">
+                <th className={cn(HEAD_CELL, 'w-10')}>
                   <input
                     type="checkbox"
                     className="accent-primary"
@@ -202,14 +200,14 @@ export function TableView({
                   />
                 </th>
               )}
-              <th className="text-text-muted min-w-36 border-r border-b border-gray-100 bg-gray-50 px-3 py-2 text-left text-xs font-medium whitespace-nowrap">
+              <th className={cn(HEAD_CELL, 'min-w-36 whitespace-nowrap')}>
                 Rating
               </th>
               {tableColumns.map((q) => (
                 <th
                   key={q.id}
                   title={q.question_text}
-                  className="text-text-muted max-w-50 truncate border-r border-b border-gray-100 bg-gray-50 px-3 py-2 text-left text-xs font-medium last:border-r-0"
+                  className={cn(HEAD_CELL, 'max-w-50 truncate last:border-r-0')}
                 >
                   {q.question_text}
                 </th>
@@ -217,7 +215,7 @@ export function TableView({
               {TRAILING_COLUMNS.map((label) => (
                 <th
                   key={label}
-                  className="text-text-muted border-r border-b border-gray-100 bg-gray-50 px-3 py-2 text-left text-xs font-medium whitespace-nowrap last:border-r-0"
+                  className={cn(HEAD_CELL, 'whitespace-nowrap last:border-r-0')}
                 >
                   {label}
                 </th>

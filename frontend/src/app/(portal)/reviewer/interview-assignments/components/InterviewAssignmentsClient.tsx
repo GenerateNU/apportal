@@ -3,15 +3,12 @@ import { PageContainer } from '@/components/PageContainer'
 
 import { useMemo, useState } from 'react'
 import { Loader2, Trash2, Users, X } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+import { Card, Toolbar } from '@/components/ui/card'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { EmptyState } from '@/components/ui/empty-state'
+import { PageHeader } from '@/components/ui/page-header'
 import {
   Select,
   SelectContent,
@@ -240,50 +237,45 @@ export function InterviewAssignmentsClient() {
 
   return (
     <PageContainer>
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-text-default text-2xl font-semibold">
-            Interview assignments
-          </h1>
-          <p className="text-text-muted mt-1 text-sm">
-            Assign interviewers and recording reviewers to each applicant a
-            chief has advanced.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <Select
-            value={activeRole}
-            onValueChange={(val) => setActiveRole(val as Role | 'all')}
-          >
-            <SelectTrigger className="w-56" aria-label="Filter by role">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All roles</SelectItem>
-              {ROLE_COLUMNS.map((r) => (
-                <SelectItem key={r} value={r}>
-                  {ROLE_LABEL[r]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={cycleId} onValueChange={setCycleId}>
-            <SelectTrigger className="w-40" aria-label="Filter by cycle">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {cycles.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+      <PageHeader
+        title="Interview assignments"
+        subtitle="Assign interviewers and recording reviewers to each applicant a chief has advanced."
+        actions={
+          <>
+            <Select
+              value={activeRole}
+              onValueChange={(val) => setActiveRole(val as Role | 'all')}
+            >
+              <SelectTrigger className="w-56" aria-label="Filter by role">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All roles</SelectItem>
+                {ROLE_COLUMNS.map((r) => (
+                  <SelectItem key={r} value={r}>
+                    {ROLE_LABEL[r]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={cycleId} onValueChange={setCycleId}>
+              <SelectTrigger className="w-40" aria-label="Filter by cycle">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {cycles.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </>
+        }
+      />
 
       {/* Bulk toolbar */}
-      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-gray-100 bg-white p-4">
+      <Toolbar>
         <span className="text-text-faint text-sm">
           {selected.size} selected
         </span>
@@ -365,17 +357,13 @@ export function InterviewAssignmentsClient() {
             )}
           </Button>
         </div>
-      </div>
+      </Toolbar>
 
       {applications.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-gray-200 bg-white p-10 text-center">
-          <p className="text-text-default text-sm font-medium">
-            No applicants to assign yet
-          </p>
-          <p className="text-text-muted mt-1 text-sm">
-            Applicants show up here once a chief advances them to interview.
-          </p>
-        </div>
+        <EmptyState
+          title="No applicants to assign yet"
+          description="Applicants show up here once a chief advances them to interview."
+        />
       ) : (
         ROLE_COLUMNS.map((role) => {
           const roleApps = applications.filter((a) => a.role === role)
@@ -479,96 +467,65 @@ export function InterviewAssignmentsClient() {
         })
       )}
 
-      <Dialog
+      <ConfirmDialog
         open={!!removingGroup}
         onOpenChange={(open) => !open && setRemovingGroup(null)}
+        title={
+          <>
+            Remove {removingGroup?.groupName} from{' '}
+            {removingGroup?.applicantName}?
+          </>
+        }
+        description={
+          <>
+            {removingGroup?.members.map((m) => m.name).join(', ')} will no
+            longer interview {removingGroup?.applicantName}. The group itself is
+            kept.
+          </>
+        }
+        confirmLabel="Remove group"
+        pending={removingGroupPending}
+        onConfirm={confirmRemoveGroup}
       >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>
-              Remove {removingGroup?.groupName} from{' '}
-              {removingGroup?.applicantName}?
-            </DialogTitle>
-            <DialogDescription>
-              {removingGroup?.members.map((m) => m.name).join(', ')} will no
-              longer interview {removingGroup?.applicantName}. The group itself
-              is kept.
-            </DialogDescription>
-          </DialogHeader>
-          {removeGroupFailed && (
-            <p className="text-destructive text-sm">
-              Some interviewers couldn&apos;t be removed. Try again.
-            </p>
-          )}
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setRemovingGroup(null)}
-              disabled={removingGroupPending}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              disabled={removingGroupPending}
-              onClick={confirmRemoveGroup}
-            >
-              {removingGroupPending && (
-                <Loader2 className="animate-spin" size={14} />
-              )}
-              Remove group
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        {removeGroupFailed && (
+          <p className="text-destructive text-sm">
+            Some interviewers couldn&apos;t be removed. Try again.
+          </p>
+        )}
+      </ConfirmDialog>
 
-      <Dialog
+      <ConfirmDialog
         open={!!confirmingUnassignAll}
         onOpenChange={(open) => !open && setConfirmingUnassignAll(null)}
-      >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>
-              Unassign all{' '}
-              {confirmingUnassignAll?.kind === 'interviewers'
-                ? 'interviewers'
-                : 'reviewers'}
-              ?
-            </DialogTitle>
-            <DialogDescription>
-              This removes every{' '}
-              {confirmingUnassignAll?.kind === 'interviewers'
-                ? 'interviewer'
-                : 'recording-review'}{' '}
-              assignment for{' '}
-              {confirmingUnassignAll &&
-                ROLE_LABEL[confirmingUnassignAll.role].toLowerCase()}{' '}
-              applicants in this cycle, except{' '}
-              {confirmingUnassignAll?.kind === 'interviewers'
-                ? 'on interviews already conducted'
-                : 'reviewers who already submitted'}
-              . This cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setConfirmingUnassignAll(null)}
-              disabled={unassigningAll}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              disabled={unassigningAll}
-              onClick={confirmUnassignAll}
-            >
-              {unassigningAll && <Loader2 className="animate-spin" size={14} />}
-              Unassign all
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        title={
+          <>
+            Unassign all{' '}
+            {confirmingUnassignAll?.kind === 'interviewers'
+              ? 'interviewers'
+              : 'reviewers'}
+            ?
+          </>
+        }
+        description={
+          <>
+            This removes every{' '}
+            {confirmingUnassignAll?.kind === 'interviewers'
+              ? 'interviewer'
+              : 'recording-review'}{' '}
+            assignment for{' '}
+            {confirmingUnassignAll &&
+              ROLE_LABEL[confirmingUnassignAll.role].toLowerCase()}{' '}
+            applicants in this cycle, except{' '}
+            {confirmingUnassignAll?.kind === 'interviewers'
+              ? 'on interviews already conducted'
+              : 'reviewers who already submitted'}
+            . This cannot be undone.
+          </>
+        }
+        confirmLabel="Unassign all"
+        pending={unassigningAll}
+        onConfirm={confirmUnassignAll}
+      />
     </PageContainer>
   )
 }
@@ -643,7 +600,10 @@ function InterviewAssignmentRow({
     .map((l) => ({ value: l.nuid, label: l.full_name }))
 
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-gray-100 bg-white p-4 sm:flex-row sm:items-center sm:gap-4">
+    <Card
+      variant="flat"
+      className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4"
+    >
       <div className="flex min-w-0 items-center gap-2 sm:w-56 sm:shrink-0">
         <input
           type="checkbox"
@@ -655,11 +615,9 @@ function InterviewAssignmentRow({
         <span className="text-text-default truncate text-sm font-medium">
           {name}
         </span>
-        <span
-          className={`inline-flex shrink-0 rounded-md px-2 py-0.5 text-xs font-medium ${ROLE_CHIP_CLASS[application.role]}`}
-        >
+        <Badge className={ROLE_CHIP_CLASS[application.role]}>
           {ROLE_LABEL[application.role]}
-        </span>
+        </Badge>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -669,7 +627,7 @@ function InterviewAssignmentRow({
         {groupBlocks.map(({ group, members }) => (
           <div
             key={group.id}
-            className="flex flex-col gap-1 rounded-lg border border-gray-200 px-2.5 py-1.5"
+            className="flex flex-col gap-1 border border-gray-200 px-2.5 py-1.5"
           >
             <div className="flex items-center gap-1.5">
               <Users size={12} className="text-text-faint" />
@@ -728,7 +686,7 @@ function InterviewAssignmentRow({
           onRemove={onRemoveReviewer}
         />
       </div>
-    </div>
+    </Card>
   )
 }
 
@@ -757,10 +715,7 @@ function AssigneeChips({
         </span>
       )}
       {chips.map((c) => (
-        <span
-          key={c.id}
-          className="text-text-muted inline-flex items-center gap-1 rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium"
-        >
+        <Badge key={c.id} className="text-text-muted">
           {c.label}
           <button
             type="button"
@@ -770,7 +725,7 @@ function AssigneeChips({
           >
             <X size={12} />
           </button>
-        </span>
+        </Badge>
       ))}
       {options.length > 0 && (
         <Select value="" onValueChange={onAdd}>

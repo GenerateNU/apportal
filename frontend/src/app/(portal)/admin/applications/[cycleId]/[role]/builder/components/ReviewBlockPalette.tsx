@@ -7,6 +7,7 @@ import {
   REVIEW_QUESTION_TYPES,
   QUESTION_TYPE_META,
 } from './constants'
+import { SectionLabel } from '@/components/ui/section-label'
 
 export function ReviewBlockPalette({
   cycleId,
@@ -36,9 +37,9 @@ export function ReviewBlockPalette({
 
   return (
     <div>
-      <p className="text-text-subtle mb-2 px-3 text-xs font-medium tracking-wider uppercase">
+      <SectionLabel as="p" className="mb-2 px-3">
         Add a block
-      </p>
+      </SectionLabel>
       <div className="flex flex-col gap-0.5">
         {REVIEW_QUESTION_TYPES.map((type) => {
           const meta = QUESTION_TYPE_META[type]

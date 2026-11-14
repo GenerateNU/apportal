@@ -30,15 +30,15 @@ export default function NavItem({
     <Link
       href={href}
       aria-label={collapsed ? label : undefined}
-      className={`flex items-center gap-2.5 rounded-md px-2.5 py-2.5 text-sm font-medium transition-colors ${collapsed ? 'justify-center' : ''} ${
+      className={`relative flex items-center gap-3 px-3 py-2 text-sm transition-colors ${collapsed ? 'justify-center' : ''} ${
         isActive
-          ? 'text-brand-blue bg-blue-50'
-          : 'text-text-secondary hover:text-text-default hover:bg-gray-100'
+          ? 'before:bg-ink text-ink bg-gray-100 font-semibold before:absolute before:inset-y-1 before:left-0 before:w-[3px]'
+          : 'text-ink/70 hover:text-ink font-medium hover:bg-gray-50'
       }`}
     >
       <Icon
         size={16}
-        className={`shrink-0 ${isActive ? 'text-brand-blue' : 'text-text-subtle'}`}
+        className={`shrink-0 ${isActive ? 'text-ink' : 'text-ink/50'}`}
       />
       {!collapsed && label}
     </Link>

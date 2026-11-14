@@ -2,7 +2,7 @@
 import { PageContainer } from '@/components/PageContainer'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Search, List, Columns } from 'lucide-react'
+import { List, Columns } from 'lucide-react'
 import {
   Select,
   SelectContent,
@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/select'
 import type { ApplicationStage, Role, WrittenAnswer } from '@/lib/api/types'
 import { usePersistedFilters } from '@/hooks/usePersistedFilters'
+import { SegmentedTabs } from '@/components/ui/segmented-tabs'
 import { useAnswersByApplicationIdBatches } from '@/lib/queries/answers'
 import {
   useInfiniteApplications,
@@ -29,6 +30,8 @@ import { TableView } from './TableView'
 import { useApplicationFilters } from './useApplicationFilters'
 import { KanbanView } from './KanbanView'
 import { ApplicationDetail } from './ApplicationDetail'
+import { PageHeader } from '@/components/ui/page-header'
+import { SearchInput } from '@/components/ui/search-input'
 
 type View = 'table' | 'kanban'
 
@@ -331,62 +334,57 @@ export function ApplicationsClient() {
   // instead — which leaves the sticky header with no scrollport to pin against.
   return (
     <PageContainer className="min-h-0 flex-1 overflow-hidden">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <h1 className="text-text-default text-2xl font-semibold">
-          Applications
-        </h1>
+      <PageHeader
+        title="Applications"
+        actions={
+          <div className="flex flex-wrap items-center gap-3">
+            <Select value={activeCycle} onValueChange={setActiveCycle}>
+              <SelectTrigger className="w-40" aria-label="Filter by cycle">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {cycles.map((cycle) => (
+                  <SelectItem key={cycle.id} value={cycle.id}>
+                    {cycle.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <Select value={activeCycle} onValueChange={setActiveCycle}>
-            <SelectTrigger className="w-40" aria-label="Filter by cycle">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {cycles.map((cycle) => (
-                <SelectItem key={cycle.id} value={cycle.id}>
-                  {cycle.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <div className="relative w-full sm:w-60">
-            <Search className="text-text-subtle absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Search name or NUID..."
+            <SearchInput
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="focus:border-brand-blue text-text-default placeholder:text-text-subtle w-full rounded-md border border-gray-200 py-1.5 pr-3 pl-9 text-sm focus:outline-none"
+              onChange={setSearch}
+              placeholder="Search name or NUID..."
+              className="sm:w-60"
+            />
+
+            <SegmentedTabs<View>
+              tabs={[
+                {
+                  id: 'table',
+                  label: (
+                    <>
+                      <List className="h-4 w-4" />
+                      <span className="sr-only">Table view</span>
+                    </>
+                  ),
+                },
+                {
+                  id: 'kanban',
+                  label: (
+                    <>
+                      <Columns className="h-4 w-4" />
+                      <span className="sr-only">Kanban view</span>
+                    </>
+                  ),
+                },
+              ]}
+              value={view}
+              onChange={setView}
             />
           </div>
-
-          <div className="flex rounded-md border border-gray-200 bg-white">
-            <button
-              onClick={() => setView('table')}
-              className={`rounded-l-md p-1.5 transition-colors ${
-                view === 'table'
-                  ? 'text-text-default bg-gray-100'
-                  : 'text-text-subtle hover:text-text-secondary'
-              }`}
-              aria-label="Table view"
-            >
-              <List className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => setView('kanban')}
-              className={`rounded-r-md p-1.5 transition-colors ${
-                view === 'kanban'
-                  ? 'text-text-default bg-gray-100'
-                  : 'text-text-subtle hover:text-text-secondary'
-              }`}
-              aria-label="Kanban view"
-            >
-              <Columns className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      </div>
+        }
+      />
 
       <div className="flex min-h-0 flex-1 flex-col">
         {view === 'table' ? (

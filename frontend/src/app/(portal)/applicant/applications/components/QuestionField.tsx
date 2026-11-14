@@ -5,6 +5,7 @@ import { Loader2, Paperclip, X } from 'lucide-react'
 import { FileAnswerLink } from '@/components/FileAnswerLink'
 import { MarkdownContent } from '@/components/MarkdownContent'
 import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -182,9 +183,9 @@ export function QuestionField({
   const options = question.options ?? []
 
   return (
-    <div
+    <Card
       id={`question-${question.id}`}
-      className="flex scroll-mt-6 flex-col gap-3 rounded-lg border border-gray-200 bg-white p-4 shadow-sm sm:p-5"
+      className="flex scroll-mt-6 flex-col gap-3 sm:p-5"
     >
       <Label className="text-base">
         {index + 1}. {question.question_text}
@@ -317,6 +318,6 @@ export function QuestionField({
           })}
         </div>
       )}
-    </div>
+    </Card>
   )
 }

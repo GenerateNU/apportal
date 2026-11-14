@@ -12,10 +12,14 @@ import {
   EyeOff,
   Loader2,
   MoreVertical,
-  Search,
   UserCheck,
 } from 'lucide-react'
+import { Badge, StatusDot } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { EmptyState } from '@/components/ui/empty-state'
+import { PageHeader } from '@/components/ui/page-header'
+import { SearchInput } from '@/components/ui/search-input'
 import { ProgressBar } from '@/components/ProgressBar'
 import { Tooltip } from '@/components/Tooltip'
 import {
@@ -370,102 +374,101 @@ export function ChiefReviewQueueClient() {
 
   return (
     <PageContainer>
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-text-default text-2xl font-semibold">
-            Chief review
-          </h1>
-          <p className="text-text-muted mt-1 text-sm">
+      <PageHeader
+        title="Chief review"
+        subtitle={
+          <>
             Review each applicant&apos;s lead scores and decide who advances to
             an interview.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <Select
-            value={activeStage}
-            onValueChange={(val) =>
-              setActiveStage(val as ApplicationStage | 'all')
-            }
-          >
-            <SelectTrigger className="w-56" aria-label="Filter by stage">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {FILTER_STAGES.map(({ label, value }) => (
-                <SelectItem key={value} value={value}>
-                  {label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select
-            value={activeRole}
-            onValueChange={(val) => setActiveRole(val as Role | 'all')}
-          >
-            <SelectTrigger className="w-56" aria-label="Filter by role">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All roles</SelectItem>
-              {ROLE_COLUMNS.map((r) => (
-                <SelectItem key={r} value={r}>
-                  {ROLE_LABEL[r]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={cycleId} onValueChange={setCycleId}>
-            <SelectTrigger className="w-40" aria-label="Filter by cycle">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {cycles.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <div className="relative w-full sm:w-60">
-            <Search className="text-text-subtle absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Search name or NUID..."
+          </>
+        }
+        actions={
+          <>
+            <Select
+              value={activeStage}
+              onValueChange={(val) =>
+                setActiveStage(val as ApplicationStage | 'all')
+              }
+            >
+              <SelectTrigger className="w-56" aria-label="Filter by stage">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {FILTER_STAGES.map(({ label, value }) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={activeRole}
+              onValueChange={(val) => setActiveRole(val as Role | 'all')}
+            >
+              <SelectTrigger className="w-56" aria-label="Filter by role">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All roles</SelectItem>
+                {ROLE_COLUMNS.map((r) => (
+                  <SelectItem key={r} value={r}>
+                    {ROLE_LABEL[r]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={cycleId} onValueChange={setCycleId}>
+              <SelectTrigger className="w-40" aria-label="Filter by cycle">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {cycles.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <SearchInput
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="focus:border-brand-blue text-text-default placeholder:text-text-subtle w-full rounded-md border border-gray-200 py-1.5 pr-3 pl-9 text-sm focus:outline-none"
+              onChange={setSearch}
+              placeholder="Search name or NUID..."
+              className="sm:w-60"
             />
-          </div>
-          <Select
-            value={voteScope}
-            onValueChange={(val) => setVoteScope(val as VoteScope)}
-          >
-            <SelectTrigger className="w-40" aria-label="Filter by vote status">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="needsVote">Needs my vote</SelectItem>
-              <SelectItem value="all">All</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select
-            value={voteValue}
-            onValueChange={(val) => setVoteValue(val as VoteValueFilter)}
-          >
-            <SelectTrigger className="w-52" aria-label="Filter by vote value">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Any vote</SelectItem>
-              {CHIEF_VOTE_ORDER.map((vote) => (
-                <SelectItem key={vote} value={vote}>
-                  My vote: {CHIEF_VOTE_LABEL[vote]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+            <Select
+              value={voteScope}
+              onValueChange={(val) => setVoteScope(val as VoteScope)}
+            >
+              <SelectTrigger
+                className="w-40"
+                aria-label="Filter by vote status"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="needsVote">Needs my vote</SelectItem>
+                <SelectItem value="all">All</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select
+              value={voteValue}
+              onValueChange={(val) => setVoteValue(val as VoteValueFilter)}
+            >
+              <SelectTrigger className="w-52" aria-label="Filter by vote value">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Any vote</SelectItem>
+                {CHIEF_VOTE_ORDER.map((vote) => (
+                  <SelectItem key={vote} value={vote}>
+                    My vote: {CHIEF_VOTE_LABEL[vote]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </>
+        }
+      />
 
       {!isLoading && applications.length > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -514,12 +517,9 @@ export function ChiefReviewQueueClient() {
       {!isLoading && applications.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
           {CHIEF_VOTE_ORDER.map((vote) => (
-            <span
-              key={vote}
-              className={`rounded-md px-2 py-0.5 text-xs font-medium ${CHIEF_VOTE_BADGE_CLASS[vote]}`}
-            >
+            <Badge key={vote} className={CHIEF_VOTE_BADGE_CLASS[vote]}>
               {ownVoteCountByValue[vote]} {CHIEF_VOTE_LABEL[vote]}
-            </span>
+            </Badge>
           ))}
         </div>
       )}
@@ -530,31 +530,31 @@ export function ChiefReviewQueueClient() {
           Loading…
         </div>
       ) : applications.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-gray-200 bg-white p-10 text-center">
-          <p className="text-text-default text-sm font-medium">
-            {debouncedSearch
+        <EmptyState
+          title={
+            debouncedSearch
               ? 'No applications match that search.'
-              : 'Nothing to review yet'}
-          </p>
-          <p className="text-text-muted mt-1 text-sm">
-            {debouncedSearch
+              : 'Nothing to review yet'
+          }
+          description={
+            debouncedSearch
               ? 'Try a different name or NUID.'
-              : 'Submitted applications will show up here.'}
-          </p>
-        </div>
+              : 'Submitted applications will show up here.'
+          }
+        />
       ) : visibleApplications.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-gray-200 bg-white p-10 text-center">
-          <p className="text-text-default text-sm font-medium">
-            {voteValue !== 'all'
+        <EmptyState
+          title={
+            voteValue !== 'all'
               ? 'No applicants match this vote'
-              : "You're all caught up"}
-          </p>
-          <p className="text-text-muted mt-1 text-sm">
-            {voteValue !== 'all'
+              : "You're all caught up"
+          }
+          description={
+            voteValue !== 'all'
               ? 'Try "Any vote" to clear the vote-value filter.'
-              : 'Every applicant in this filter already has your vote — switch to "All" to see them.'}
-          </p>
-        </div>
+              : 'Every applicant in this filter already has your vote — switch to "All" to see them.'
+          }
+        />
       ) : (
         <div className="flex flex-col gap-8">
           {ROLE_COLUMNS.map((role) => {
@@ -581,14 +581,16 @@ export function ChiefReviewQueueClient() {
                       unanimousStrongByApplicationId[application.id]
                     const highlightUnanimous = showVotes && unanimousStrong
                     return (
-                      <div
+                      <Card
                         key={application.id}
-                        className={`flex flex-col gap-3 rounded-xl border p-4 transition-colors hover:bg-gray-50 sm:flex-row sm:items-center sm:justify-between sm:gap-4 ${
+                        variant="flat"
+                        interactive
+                        className={`flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 ${
                           highlightUnanimous === 'strong_interview'
                             ? 'border-status-open bg-status-open/5'
                             : highlightUnanimous === 'strong_no_interview'
                               ? 'border-red-300 bg-red-50'
-                              : 'border-gray-100 bg-white'
+                              : ''
                         }`}
                       >
                         <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1.5">
@@ -596,20 +598,20 @@ export function ChiefReviewQueueClient() {
                             {application.full_name || application.user_nuid}
                           </span>
                           {leadProgress && leadProgress.total > 0 && (
-                            <span
-                              className={`rounded-md px-2 py-0.5 text-xs font-medium ${
+                            <Badge
+                              className={
                                 leadProgress.completed === leadProgress.total
                                   ? 'bg-status-open/15 text-status-open'
                                   : 'bg-gray-100 text-gray-600'
-                              }`}
+                              }
                             >
                               {leadProgress.completed}/{leadProgress.total}{' '}
                               reviews completed
-                            </span>
+                            </Badge>
                           )}
-                          <span className="rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+                          <Badge className="text-gray-600">
                             {chiefVoteCount}/{chiefs.length} chiefs reviewed
-                          </span>
+                          </Badge>
                           {showVotes && votes.length > 0 && (
                             <span
                               className="flex items-center gap-1"
@@ -621,19 +623,21 @@ export function ChiefReviewQueueClient() {
                                 .join(', ')}
                             >
                               {votes.map((v, i) => (
-                                <span
+                                <StatusDot
                                   key={i}
-                                  className={`h-2 w-2 rounded-full ${CHIEF_VOTE_DOT_CLASS[v]}`}
+                                  className={CHIEF_VOTE_DOT_CLASS[v]}
                                 />
                               ))}
                             </span>
                           )}
                           {highlightUnanimous && (
-                            <span
-                              className={`rounded-md px-2 py-0.5 text-xs font-medium ${CHIEF_VOTE_BADGE_CLASS[highlightUnanimous]}`}
+                            <Badge
+                              className={
+                                CHIEF_VOTE_BADGE_CLASS[highlightUnanimous]
+                              }
                             >
                               Unanimous {CHIEF_VOTE_LABEL[highlightUnanimous]}
-                            </span>
+                            </Badge>
                           )}
                           <DropdownMenu>
                             <Tooltip label="More actions">
@@ -696,17 +700,15 @@ export function ChiefReviewQueueClient() {
                         </div>
                         <div className="flex shrink-0 flex-wrap items-center gap-2">
                           {submitted && ownVote && (
-                            <span
-                              className={`rounded-md px-2 py-0.5 text-xs font-medium ${CHIEF_VOTE_BADGE_CLASS[ownVote]}`}
-                            >
+                            <Badge className={CHIEF_VOTE_BADGE_CLASS[ownVote]}>
                               {CHIEF_VOTE_LABEL[ownVote]}
-                            </span>
+                            </Badge>
                           )}
                           {submitted && (
-                            <span className="bg-brand-blue/10 text-brand-blue inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium">
+                            <Badge className="bg-brand-blue/10 text-brand-blue">
                               <Check size={12} />
                               Submitted
-                            </span>
+                            </Badge>
                           )}
                           <Button
                             variant="outline"
@@ -720,7 +722,7 @@ export function ChiefReviewQueueClient() {
                             <ArrowRight data-icon="inline-end" size={14} />
                           </Button>
                         </div>
-                      </div>
+                      </Card>
                     )
                   })}
                 </div>

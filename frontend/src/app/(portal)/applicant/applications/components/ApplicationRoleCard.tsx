@@ -9,6 +9,7 @@ import {
 } from '@/app/(portal)/admin/applications/components/constants'
 import type { Application, ApplicationTemplate, Cycle } from '@/lib/api/types'
 import { formatDate } from '@/lib/utils'
+import { Badge, StatusDot } from '@/components/ui/badge'
 import { APPLICANT_STATUS } from '../lib/status'
 
 interface ApplicationRoleCardProps {
@@ -52,24 +53,20 @@ export function ApplicationRoleCard({
     <button
       type="button"
       onClick={handleClick}
-      className="group min-w-0 rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm transition-shadow hover:shadow-md"
+      className="group min-w-0 border border-gray-200 bg-white px-4 py-3 transition-colors hover:bg-gray-50"
     >
       <div className="flex items-center justify-between gap-2 text-left">
-        <span
-          className={`inline-flex min-w-0 truncate rounded-md px-2 py-0.5 text-xs font-medium ${paletteClass(cycleColorIndex)}`}
-        >
+        <Badge className={`min-w-0 truncate ${paletteClass(cycleColorIndex)}`}>
           {cycle.name}
-        </span>
+        </Badge>
         {status ? (
           <span className="text-text-subtle flex shrink-0 items-center gap-1.5 text-xs">
-            <span className="h-2 w-2 shrink-0 rounded-full bg-gray-400" />
+            <StatusDot className="bg-gray-400" />
             {status.label}
           </span>
         ) : (
           <span className="text-text-subtle flex shrink-0 items-center gap-1.5 text-xs">
-            <span
-              className={`h-2 w-2 shrink-0 rounded-full ${cycleStatusDot[cycle.status]}`}
-            />
+            <StatusDot className={cycleStatusDot[cycle.status]} />
             {cycleStatusLabel[cycle.status]}
           </span>
         )}

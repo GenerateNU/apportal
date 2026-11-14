@@ -2,6 +2,7 @@
 
 import type { QuestionType } from '@/lib/api/types'
 import { QUESTION_TYPE_META } from './constants'
+import { SectionLabel } from '@/components/ui/section-label'
 
 // Minimal shape — satisfied by both Question and ReviewQuestion, so this one
 // component works for both the application and review-question builders.
@@ -24,9 +25,9 @@ export function QuestionOutline({
 
   return (
     <div>
-      <p className="text-text-subtle mb-2 px-3 text-xs font-medium tracking-wider uppercase">
+      <SectionLabel as="p" className="mb-2 px-3">
         Questions
-      </p>
+      </SectionLabel>
       {questions.length === 0 ? (
         <p className="text-text-faint px-3 text-sm">No questions yet.</p>
       ) : (

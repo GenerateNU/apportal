@@ -25,9 +25,10 @@ import {
   X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { SectionLabel } from '@/components/ui/section-label'
 import type { DraftBoard, PreferenceListSummary } from '@/lib/api/types'
-import { SECTION_CLASS, SECTION_HEADER_CLASS } from './constants'
 
 // The order editor, shown while the draft is still in setup. Seats are
 // preference list groups; everything about the board — who picks when, whose
@@ -88,9 +89,9 @@ export function DraftSetup({
 
   return (
     <>
-      <div className={SECTION_CLASS}>
+      <Card padding="none" className="flex flex-col gap-3 p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className={SECTION_HEADER_CLASS}>Draft order</h2>
+          <SectionLabel>Draft order</SectionLabel>
           <span className="text-text-subtle text-xs">
             {order.length} teams × {rounds} rounds = {order.length * rounds}{' '}
             picks
@@ -129,10 +130,10 @@ export function DraftSetup({
             </SortableContext>
           </DndContext>
         )}
-      </div>
+      </Card>
 
-      <div className={SECTION_CLASS}>
-        <h2 className={SECTION_HEADER_CLASS}>Groups not drafting</h2>
+      <Card padding="none" className="flex flex-col gap-3 p-5">
+        <SectionLabel>Groups not drafting</SectionLabel>
         {unselected.length === 0 ? (
           <p className="text-text-muted text-sm">
             Every group in this cycle is in the draft.
@@ -142,7 +143,7 @@ export function DraftSetup({
             {unselected.map((g) => (
               <li
                 key={g.id}
-                className="flex items-center gap-3 rounded-xl border border-gray-100 bg-gray-50/60 px-3 py-2.5"
+                className="flex items-center gap-3 border border-gray-100 bg-gray-50/60 px-3 py-2.5"
               >
                 <div className="min-w-0 flex-1">
                   <span className="text-text-secondary block truncate text-sm font-medium">
@@ -165,10 +166,10 @@ export function DraftSetup({
             ))}
           </ul>
         )}
-      </div>
+      </Card>
 
-      <div className={SECTION_CLASS}>
-        <h2 className={SECTION_HEADER_CLASS}>Rounds</h2>
+      <Card padding="none" className="flex flex-col gap-3 p-5">
+        <SectionLabel>Rounds</SectionLabel>
         <div className="flex flex-wrap items-center gap-3">
           <Input
             id="draft-rounds"
@@ -183,7 +184,7 @@ export function DraftSetup({
             How many times around the board. You can add more mid-draft.
           </span>
         </div>
-      </div>
+      </Card>
 
       <div className="flex flex-wrap items-center gap-2">
         <Button variant="outline" onClick={onSave} disabled={saving}>
@@ -244,12 +245,12 @@ function SeatRow({
         transition,
         opacity: isDragging ? 0.5 : 1,
       }}
-      className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2.5 shadow-sm transition-shadow hover:shadow-md"
+      className="flex items-center gap-2 border border-gray-200 bg-white px-3 py-2.5"
     >
       <button
         type="button"
         aria-label={`Drag ${name} to reorder`}
-        className="text-text-faint hover:text-text-subtle cursor-grab touch-none rounded-md p-1 hover:bg-gray-100 active:cursor-grabbing pointer-coarse:p-2"
+        className="text-text-faint hover:text-text-subtle cursor-grab touch-none p-1 hover:bg-gray-100 active:cursor-grabbing pointer-coarse:p-2"
         {...attributes}
         {...listeners}
       >
@@ -272,7 +273,7 @@ function SeatRow({
           onClick={() => onMove(index, -1)}
           disabled={index === 0}
           aria-label={`Move ${name} up`}
-          className="text-text-subtle hover:text-brand-blue disabled:hover:text-text-subtle rounded p-1 transition-colors disabled:opacity-30 pointer-coarse:p-2"
+          className="text-text-subtle hover:text-brand-blue disabled:hover:text-text-subtle p-1 transition-colors disabled:opacity-30 pointer-coarse:p-2"
         >
           <ArrowUp size={14} />
         </button>
@@ -281,7 +282,7 @@ function SeatRow({
           onClick={() => onMove(index, 1)}
           disabled={index === total - 1}
           aria-label={`Move ${name} down`}
-          className="text-text-subtle hover:text-brand-blue disabled:hover:text-text-subtle rounded p-1 transition-colors disabled:opacity-30 pointer-coarse:p-2"
+          className="text-text-subtle hover:text-brand-blue disabled:hover:text-text-subtle p-1 transition-colors disabled:opacity-30 pointer-coarse:p-2"
         >
           <ArrowDown size={14} />
         </button>
@@ -289,7 +290,7 @@ function SeatRow({
           type="button"
           onClick={onRemove}
           aria-label={`Remove ${name} from the draft`}
-          className="text-text-subtle hover:text-destructive rounded p-1 transition-colors pointer-coarse:p-2"
+          className="text-text-subtle hover:text-destructive p-1 transition-colors pointer-coarse:p-2"
         >
           <X size={14} />
         </button>

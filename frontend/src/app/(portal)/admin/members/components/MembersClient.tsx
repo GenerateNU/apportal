@@ -2,7 +2,7 @@
 import { PageContainer } from '@/components/PageContainer'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Search, UserPlus } from 'lucide-react'
+import { UserPlus } from 'lucide-react'
 import {
   Select,
   SelectContent,
@@ -15,8 +15,14 @@ import { useMembersInfinite } from '@/lib/queries/users'
 import { isMember, STAFF_ROLES, USER_ROLE_LABEL } from '../lib/role-meta'
 import { AddMemberDialog } from './AddMemberDialog'
 import { Button } from '@/components/ui/button'
+import { EmptyState } from '@/components/ui/empty-state'
+import { PageHeader } from '@/components/ui/page-header'
+import { SearchInput } from '@/components/ui/search-input'
 import { MemberRow } from './MemberRow'
 import { ApplicantRow } from './ApplicantRow'
+import { SegmentedTabs } from '@/components/ui/segmented-tabs'
+import { TABLE_FRAME, TABLE_HEAD } from '@/components/ui/table-styles'
+import { cn } from '@/lib/utils'
 
 type RoleFilter = UserRole | 'all'
 type ViewType = 'staff' | 'applicants'
@@ -91,55 +97,38 @@ export function MembersClient() {
 
   return (
     <PageContainer>
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <h1 className="text-text-default text-2xl font-semibold">Members</h1>
-          <p className="text-text-muted mt-1 text-sm">{headerLabel}</p>
-        </div>
-        {view === 'staff' && (
-          <Button className="shrink-0" onClick={() => setShowAddMember(true)}>
-            <UserPlus />
-            Add user
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        title="Members"
+        subtitle={headerLabel}
+        actions={
+          view === 'staff' && (
+            <Button onClick={() => setShowAddMember(true)}>
+              <UserPlus />
+              Add user
+            </Button>
+          )
+        }
+      />
 
       <div className="flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white p-1">
-          <button
-            onClick={() => {
-              setView('staff')
-              setRoleFilter('all')
-            }}
-            className={`rounded px-3 py-1.5 text-sm font-medium transition-colors ${
-              view === 'staff'
-                ? 'text-text-default bg-gray-100'
-                : 'text-text-muted hover:text-text-default'
-            }`}
-          >
-            Staff
-          </button>
-          <button
-            onClick={() => setView('applicants')}
-            className={`rounded px-3 py-1.5 text-sm font-medium transition-colors ${
-              view === 'applicants'
-                ? 'text-text-default bg-gray-100'
-                : 'text-text-muted hover:text-text-default'
-            }`}
-          >
-            Applicants
-          </button>
-        </div>
+        <SegmentedTabs<ViewType>
+          tabs={[
+            { id: 'staff', label: 'Staff' },
+            { id: 'applicants', label: 'Applicants' },
+          ]}
+          value={view}
+          onChange={(id) => {
+            setView(id)
+            if (id === 'staff') setRoleFilter('all')
+          }}
+        />
 
-        <div className="relative max-w-md min-w-48 flex-1">
-          <Search className="text-text-faint pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search members…"
-            className="focus:border-brand-blue focus:ring-brand-blue w-full rounded-lg border border-gray-300 py-2 pr-3 pl-9 text-sm outline-none focus:ring-1"
-          />
-        </div>
+        <SearchInput
+          value={search}
+          onChange={setSearch}
+          placeholder="Search members…"
+          className="max-w-md min-w-48 flex-1"
+        />
 
         {view === 'staff' && (
           <Select
@@ -164,31 +153,27 @@ export function MembersClient() {
       <AddMemberDialog open={showAddMember} onOpenChange={setShowAddMember} />
 
       {members.length === 0 && !hasNextPage ? (
-        <div className="rounded-xl border border-dashed border-gray-200 bg-white p-10 text-center">
-          <p className="text-text-default text-sm font-medium">
-            {isFiltered
+        <EmptyState
+          title={
+            isFiltered
               ? 'No matches found'
               : view === 'staff'
                 ? 'No staff members yet'
-                : 'No applicants'}
-          </p>
-        </div>
+                : 'No applicants'
+          }
+        />
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div className={TABLE_FRAME}>
           <div className="sm:min-w-120">
-            <div
-              className={`text-text-subtle grid ${gridCols} gap-4 border-b border-gray-100 px-4 py-3 text-xs font-medium tracking-wide uppercase`}
-            >
+            <div className={cn('grid gap-4', gridCols, TABLE_HEAD)}>
               <span>User</span>
               <span className="hidden sm:block">Joined</span>
               <span>{view === 'staff' ? 'Role' : 'Status'}</span>
               {view === 'applicants' && <span>Returner</span>}
             </div>
-            <div className="divide-y divide-gray-100">
+            <div>
               {members.length === 0 ? (
-                <p className="text-text-faint px-4 py-6 text-center text-sm">
-                  Searching more results…
-                </p>
+                <EmptyState size="sm" title="Searching more results…" />
               ) : (
                 members.map((user) =>
                   view === 'staff' ? (

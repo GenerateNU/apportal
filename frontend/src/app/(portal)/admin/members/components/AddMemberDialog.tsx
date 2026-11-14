@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Check, Search, X } from 'lucide-react'
+import { Check, X } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -11,7 +11,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Avatar } from '@/components/ui/avatar'
+import { PersonCell } from '@/components/ui/person-cell'
+import { SearchInput } from '@/components/ui/search-input'
 import type { User, UserRole } from '@/lib/api/types'
 import { useUpdateUser, useUsers } from '@/lib/queries/users'
 import { STAFF_ROLES, USER_ROLE_LABEL } from '../lib/role-meta'
@@ -112,7 +113,7 @@ export function AddMemberDialog({
               {selectedUsers.map((u) => (
                 <span
                   key={u.nuid}
-                  className="bg-muted text-text-secondary flex items-center gap-1 rounded-full py-1 pr-1.5 pl-2.5 text-xs"
+                  className="bg-muted text-text-secondary flex items-center gap-1 py-1 pr-1.5 pl-2.5 text-xs"
                 >
                   {u.full_name}
                   <button
@@ -173,23 +174,19 @@ export function AddMemberDialog({
               </DialogDescription>
             </DialogHeader>
 
-            <div className="relative">
-              <Search className="text-text-faint pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-              <input
-                autoFocus
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search by name or email…"
-                className="focus:border-brand-blue focus:ring-brand-blue w-full rounded-lg border border-gray-300 py-2 pr-3 pl-9 text-sm outline-none focus:ring-1"
-              />
-            </div>
+            <SearchInput
+              value={search}
+              onChange={setSearch}
+              placeholder="Search by name or email…"
+              className="sm:w-full"
+            />
 
             {selectedUsers.length > 0 && (
               <div className="flex flex-wrap gap-1.5">
                 {selectedUsers.map((u) => (
                   <span
                     key={u.nuid}
-                    className="bg-muted text-text-secondary flex items-center gap-1 rounded-full py-1 pr-1.5 pl-2.5 text-xs"
+                    className="bg-muted text-text-secondary flex items-center gap-1 py-1 pr-1.5 pl-2.5 text-xs"
                   >
                     {u.full_name}
                     <button
@@ -222,22 +219,19 @@ export function AddMemberDialog({
                         type="button"
                         onClick={() => toggleUser(u)}
                         aria-pressed={isSelected ? 'true' : 'false'}
-                        className={`flex items-center gap-2.5 rounded-lg px-2 py-2 text-left hover:bg-gray-50 ${
+                        className={`px-2 py-2 text-left hover:bg-gray-50 ${
                           isSelected ? 'bg-gray-50' : ''
                         }`}
                       >
-                        <Avatar name={u.full_name} size="sm" />
-                        <div className="min-w-0 flex-1">
-                          <p className="text-text-default truncate text-sm font-medium">
-                            {u.full_name}
-                          </p>
-                          <p className="text-text-subtle truncate text-xs">
-                            {u.email}
-                          </p>
-                        </div>
-                        {isSelected && (
-                          <Check className="text-brand-blue h-4 w-4 shrink-0" />
-                        )}
+                        <PersonCell
+                          name={u.full_name}
+                          secondary={u.email}
+                          trailing={
+                            isSelected && (
+                              <Check className="text-brand-blue ml-auto h-4 w-4 shrink-0" />
+                            )
+                          }
+                        />
                       </button>
                     )
                   })

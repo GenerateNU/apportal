@@ -33,7 +33,7 @@ export function ListPicker({
         <button
           type="button"
           aria-label={ariaLabel}
-          className="text-text-muted inline-flex h-7 items-center gap-1.5 rounded-md border border-gray-200 bg-white px-2 text-sm transition-colors hover:bg-gray-50"
+          className="text-text-muted inline-flex h-7 items-center gap-1.5 border border-gray-200 bg-white px-2 text-sm transition-colors hover:bg-gray-50"
         >
           <span className="text-text-faint">{label}</span>
           <span className="text-text-default font-medium">

@@ -1,9 +1,12 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Search } from 'lucide-react'
 import { PageContainer } from '@/components/PageContainer'
 import { ProgressBar } from '@/components/ProgressBar'
+import { TABLE_FRAME } from '@/components/ui/table-styles'
+import { PageHeader } from '@/components/ui/page-header'
+import { SearchInput } from '@/components/ui/search-input'
+import { SectionLabel } from '@/components/ui/section-label'
 import {
   Select,
   SelectContent,
@@ -219,88 +222,83 @@ export function MyInterviewsClient() {
 
   return (
     <PageContainer>
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <h1 className="text-text-default text-2xl font-semibold">
-            My interviews
-          </h1>
-          <p className="text-text-muted mt-1 text-sm">
+      <PageHeader
+        title="My interviews"
+        subtitle={
+          <>
             {viewingOther
               ? `Applicants assigned to ${viewingName} to interview or review.`
               : 'Applicants assigned to you to interview or review.'}{' '}
             Click a row to open the applicant.
-          </p>
-        </div>
+          </>
+        }
+        actions={
+          <div className="flex flex-wrap items-center gap-3">
+            {isChief && (
+              <Select value={viewingNuid} onValueChange={setViewingNuid}>
+                <SelectTrigger
+                  className="min-w-40 flex-1 sm:w-48 sm:flex-none"
+                  aria-label="Viewing whose interviews"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={SELF}>Me</SelectItem>
+                  {interviewers.map((u) => (
+                    <SelectItem key={u.nuid} value={u.nuid}>
+                      {u.full_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
 
-        <div className="flex flex-wrap items-center gap-3">
-          {isChief && (
-            <Select value={viewingNuid} onValueChange={setViewingNuid}>
+            <Select
+              value={activeRole}
+              onValueChange={(val) => setActiveRole(val as Role | 'all')}
+            >
               <SelectTrigger
                 className="min-w-40 flex-1 sm:w-48 sm:flex-none"
-                aria-label="Viewing whose interviews"
+                aria-label="Filter by role"
               >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={SELF}>Me</SelectItem>
-                {interviewers.map((u) => (
-                  <SelectItem key={u.nuid} value={u.nuid}>
-                    {u.full_name}
+                <SelectItem value="all">All roles</SelectItem>
+                {ROLE_COLUMNS.map((r) => (
+                  <SelectItem key={r} value={r}>
+                    {ROLE_LABEL[r]}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-          )}
 
-          <Select
-            value={activeRole}
-            onValueChange={(val) => setActiveRole(val as Role | 'all')}
-          >
-            <SelectTrigger
-              className="min-w-40 flex-1 sm:w-48 sm:flex-none"
-              aria-label="Filter by role"
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All roles</SelectItem>
-              {ROLE_COLUMNS.map((r) => (
-                <SelectItem key={r} value={r}>
-                  {ROLE_LABEL[r]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            <Select value={cycleId} onValueChange={setCycleId}>
+              <SelectTrigger
+                className="min-w-40 flex-1 sm:w-40 sm:flex-none"
+                aria-label="Filter by cycle"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All cycles</SelectItem>
+                {cycles.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-          <Select value={cycleId} onValueChange={setCycleId}>
-            <SelectTrigger
-              className="min-w-40 flex-1 sm:w-40 sm:flex-none"
-              aria-label="Filter by cycle"
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All cycles</SelectItem>
-              {cycles.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <div className="relative w-full sm:w-60">
-            <Search className="text-text-subtle absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Search name or NUID..."
+            <SearchInput
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="focus:border-brand-blue text-text-default placeholder:text-text-subtle w-full rounded-md border border-gray-200 py-1.5 pr-3 pl-9 text-sm focus:outline-none"
+              onChange={setSearch}
+              placeholder="Search name or NUID..."
+              className="sm:w-60"
             />
           </div>
-        </div>
-      </div>
+        }
+      />
 
       {rows.length > 0 && (
         <div className="flex items-center gap-3">
@@ -330,10 +328,10 @@ export function MyInterviewsClient() {
         ) : (
           sections.map(({ role, rows: roleRows }) => (
             <div key={role} className="flex flex-col gap-2">
-              <h3 className="text-text-faint text-xs font-semibold tracking-wide uppercase">
+              <SectionLabel as="h3">
                 {ROLE_LABEL[role]} ({roleRows.length})
-              </h3>
-              <div className="divide-y divide-gray-100 overflow-hidden rounded-lg border border-gray-200 bg-white">
+              </SectionLabel>
+              <div className={TABLE_FRAME}>
                 {roleRows.map(({ application, interview, state }) => (
                   <InterviewRow
                     key={application.id}
@@ -368,30 +366,27 @@ export function MyInterviewsClient() {
           </div>
           {reviewingSections.map(({ role, rows: roleRows }) => (
             <div key={role} className="flex flex-col gap-2">
-              <h3 className="text-text-faint text-xs font-semibold tracking-wide uppercase">
+              <SectionLabel as="h3">
                 {ROLE_LABEL[role]} ({roleRows.length})
-              </h3>
-              <div className="divide-y divide-gray-100 overflow-hidden rounded-lg border border-gray-200 bg-white">
+              </SectionLabel>
+              <div className={TABLE_FRAME}>
                 {roleRows.map(({ application, state }) => (
                   // Still a real link (you can open the applicant either way),
                   // but visually recede until there's actually something to
                   // review — reduces the queue to "what can I act on now".
-                  <div
+                  <ReviewRow
                     key={application.id}
+                    href={`/reviewer/my-interviews/${application.id}`}
+                    name={application.full_name || application.user_nuid}
+                    email={application.email}
+                    stage={application.stage}
+                    state={REVIEWING_STATE[state].badge}
+                    stateLabel={REVIEWING_STATE[state].label}
+                    stateTooltip={REVIEWING_STATE[state].tooltip}
                     className={
                       state === 'waiting' ? 'opacity-50 grayscale' : undefined
                     }
-                  >
-                    <ReviewRow
-                      href={`/reviewer/my-interviews/${application.id}`}
-                      name={application.full_name || application.user_nuid}
-                      email={application.email}
-                      stage={application.stage}
-                      state={REVIEWING_STATE[state].badge}
-                      stateLabel={REVIEWING_STATE[state].label}
-                      stateTooltip={REVIEWING_STATE[state].tooltip}
-                    />
-                  </div>
+                  />
                 ))}
               </div>
             </div>

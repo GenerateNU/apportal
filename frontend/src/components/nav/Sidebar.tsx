@@ -263,7 +263,7 @@ function NavSectionGroup({
           onClick={onToggle}
           aria-expanded={!sectionCollapsed}
           aria-controls={contentId}
-          className="text-text-subtle hover:text-text-default mb-0.5 flex w-full items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors hover:bg-gray-100"
+          className="font-display text-ink/45 hover:text-ink mb-1 flex w-full items-center gap-1.5 px-3 py-1 text-[10px] font-bold tracking-[0.14em] uppercase transition-colors"
         >
           {section.label}
           <SectionCaret collapsed={sectionCollapsed} />
@@ -271,7 +271,7 @@ function NavSectionGroup({
       )}
       <div
         id={contentId}
-        className={`flex-col gap-1 ${showItems ? 'flex' : 'hidden'}`}
+        className={`flex-col gap-0.5 ${showItems ? 'flex' : 'hidden'}`}
       >
         {section.items.map(({ href, label, icon }) => (
           <NavItem
@@ -308,7 +308,7 @@ function SidebarUser({
       type="button"
       onClick={handleSignOut}
       aria-label="Sign out"
-      className="text-text-subtle hover:text-text-default flex-shrink-0 rounded-md p-2 transition-colors hover:bg-gray-100"
+      className="text-ink/60 hover:text-ink flex-shrink-0 p-2 transition-colors hover:bg-gray-100"
     >
       <LogOut size={16} />
     </button>
@@ -316,7 +316,7 @@ function SidebarUser({
 
   if (collapsed) {
     return (
-      <div className="-mx-3 flex flex-col items-center gap-2 border-t border-gray-200 px-3 py-2 pb-6">
+      <div className="flex flex-col items-center gap-2 px-2 pt-2 pb-5">
         <Tooltip label={fullName}>
           <Avatar name={fullName} size="sm" />
         </Tooltip>
@@ -326,11 +326,11 @@ function SidebarUser({
   }
 
   return (
-    <div className="-mx-3 border-t border-gray-200 px-3 py-2 pb-6">
-      <div className="flex flex-1 items-center justify-between gap-2.5">
+    <div className="px-4 pb-5">
+      <div className="flex items-center justify-between gap-2.5 border border-gray-200 py-2 pr-1 pl-2.5">
         <div className="flex min-w-0 items-center gap-2.5">
           <Avatar name={fullName} size="sm" />
-          <span className="text-text-default truncate text-sm font-medium">
+          <span className="text-ink truncate text-sm font-medium">
             {fullName}
           </span>
         </div>
@@ -374,43 +374,50 @@ export default function Sidebar({
 
   return (
     <aside
-      className={`flex h-dvh flex-col bg-gray-50 transition-[width] duration-200 ${collapsed ? 'w-16' : 'w-60'}`}
+      className={`flex h-dvh flex-col bg-white transition-[width] duration-200 ${collapsed ? 'w-16' : 'w-64'}`}
     >
       {/* Logo, with the rail toggle sharing the row. The collapsed rail is too
           narrow to fit both, so there the toggle stacks underneath. */}
       <div
-        className={`flex flex-shrink-0 items-center px-3 py-3 ${collapsed ? 'flex-col gap-2' : 'gap-3'}`}
+        className={`flex flex-shrink-0 items-center ${collapsed ? 'flex-col gap-2 px-2 py-4' : 'gap-2.5 px-5 pt-6 pb-4'}`}
       >
         <Image
           src="/GenerateNU Logo.png"
           alt="GenerateNU"
-          width={32}
-          height={32}
+          width={28}
+          height={28}
           className="object-contain"
         />
         {!collapsed && (
-          <span className="text-brand-blue flex-1 text-xl font-semibold">
+          <span className="font-display text-ink flex-1 text-lg font-bold tracking-tight uppercase">
             Generate
           </span>
         )}
         {onToggleCollapsed && (
-          <button
-            type="button"
-            onClick={onToggleCollapsed}
-            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            className="text-text-subtle hover:text-text-default rounded-md p-1.5 transition-colors hover:bg-gray-100"
+          <Tooltip
+            label={`${collapsed ? 'Expand' : 'Collapse'} sidebar · ⌘K / Ctrl+K`}
           >
-            {collapsed ? (
-              <ChevronsRight size={16} />
-            ) : (
-              <ChevronsLeft size={16} />
-            )}
-          </button>
+            <button
+              type="button"
+              onClick={onToggleCollapsed}
+              aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              aria-keyshortcuts="Meta+K Control+K"
+              className="text-ink/60 hover:text-ink p-1.5 transition-colors hover:bg-gray-100"
+            >
+              {collapsed ? (
+                <ChevronsRight size={16} />
+              ) : (
+                <ChevronsLeft size={16} />
+              )}
+            </button>
+          </Tooltip>
         )}
       </div>
 
       {/* Nav sections */}
-      <nav className="flex flex-1 flex-col gap-4 overflow-y-auto overscroll-none px-3 pt-2 pb-4">
+      <nav
+        className={`flex flex-1 flex-col gap-6 overflow-y-auto overscroll-none pt-4 pb-6 ${collapsed ? 'px-2' : 'px-4'}`}
+      >
         {sections.map((section) => (
           <NavSectionGroup
             key={section.id}

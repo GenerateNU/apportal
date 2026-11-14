@@ -4,7 +4,9 @@ import { useMemo, useState } from 'react'
 import { Check, Copy, Pencil } from 'lucide-react'
 import { PageContainer } from '@/components/PageContainer'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { LoadingText } from '@/components/ui/loading-text'
+import { PageHeader } from '@/components/ui/page-header'
+import { SearchInput } from '@/components/ui/search-input'
 import {
   Select,
   SelectContent,
@@ -84,39 +86,34 @@ export function DecisionsClient({ currentNUID }: { currentNUID: string }) {
 
   return (
     <PageContainer>
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-text-default text-2xl font-semibold">
-            Decisions
-          </h1>
-          <p className="text-text-muted mt-1 text-sm">
-            Every applicant getting a rejection, with their message ready to
-            copy. Acceptances are written by hand and don’t appear here.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="outline"
-            onClick={() => setEditingTemplates(true)}
-            disabled={templates.length === 0}
-          >
-            <Pencil size={14} />
-            Edit letters
-          </Button>
-          <Select value={cycleId} onValueChange={setCycleId}>
-            <SelectTrigger className="w-40" aria-label="Filter by cycle">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {cycles.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+      <PageHeader
+        title="Decisions"
+        subtitle="Every applicant getting a rejection, with their message ready to copy. Acceptances are written by hand and don’t appear here."
+        actions={
+          <>
+            <Button
+              variant="outline"
+              onClick={() => setEditingTemplates(true)}
+              disabled={templates.length === 0}
+            >
+              <Pencil size={14} />
+              Edit letters
+            </Button>
+            <Select value={cycleId} onValueChange={setCycleId}>
+              <SelectTrigger className="w-40" aria-label="Filter by cycle">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {cycles.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </>
+        }
+      />
 
       <div className="flex flex-wrap items-center gap-2">
         <Select value={role} onValueChange={(v) => setRole(v as Role)}>
@@ -172,11 +169,10 @@ export function DecisionsClient({ currentNUID }: { currentNUID: string }) {
           Only applicants I interviewed
         </label>
 
-        <Input
+        <SearchInput
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={setSearch}
           placeholder="Search name, NUID, or email"
-          className="w-full sm:w-64"
         />
       </div>
 
@@ -190,7 +186,7 @@ export function DecisionsClient({ currentNUID }: { currentNUID: string }) {
 
       <div className="flex flex-col gap-2">
         {isLoading ? (
-          <p className="text-text-faint px-1 text-sm">Loading…</p>
+          <LoadingText className="px-1" />
         ) : visible.length === 0 ? (
           <p className="text-text-faint px-1 text-sm">
             {mineOnly

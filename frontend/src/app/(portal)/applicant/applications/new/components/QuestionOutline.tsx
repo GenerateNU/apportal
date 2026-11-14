@@ -3,6 +3,7 @@
 import type { Question } from '@/lib/api/types'
 import type { ApplicationPage } from '@/lib/applicationPages'
 import { cn } from '@/lib/utils'
+import { SectionLabel } from '@/components/ui/section-label'
 
 // A jump-to-question nav shown alongside the form so applicants can see all
 // questions at a glance and jump straight to one — across pages, not just
@@ -30,9 +31,9 @@ export function QuestionOutline({
 
   return (
     <nav className="flex flex-col gap-0 select-none">
-      <p className="text-text-subtle mb-4 px-3 text-xs font-medium tracking-wider uppercase">
+      <SectionLabel as="p" className="mb-4 px-3">
         Questions
-      </p>
+      </SectionLabel>
       {rows.map((row) => (
         <div key={row.question.id}>
           {row.pageTitle && (

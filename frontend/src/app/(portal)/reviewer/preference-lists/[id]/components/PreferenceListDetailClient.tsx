@@ -2,25 +2,13 @@
 
 import { useCallback, useMemo, useState } from 'react'
 import Link from 'next/link'
-import {
-  ArrowLeft,
-  LayoutGrid,
-  Loader2,
-  Lock,
-  MoreHorizontal,
-  Pencil,
-  Trash2,
-} from 'lucide-react'
+import { LayoutGrid, Lock, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
 import { PageContainer } from '@/components/PageContainer'
+import { BackLink } from '@/components/ui/back-link'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+import { Card } from '@/components/ui/card'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,6 +16,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
+import { LoadingText } from '@/components/ui/loading-text'
+import { SectionLabel } from '@/components/ui/section-label'
 import {
   availabilityOptionsFor,
   findAvailabilityQuestionId,
@@ -309,13 +299,9 @@ export function PreferenceListDetailClient({
     const notFound = error instanceof APIError && error.status === 404
     return (
       <PageContainer>
-        <Link
-          href="/reviewer/preference-lists"
-          className="text-text-muted hover:text-text-default inline-flex items-center gap-1 text-sm"
-        >
-          <ArrowLeft size={14} />
+        <BackLink href="/reviewer/preference-lists">
           Back to preference lists
-        </Link>
+        </BackLink>
         <p className="text-text-faint text-sm">
           {notFound
             ? "This preference list doesn't exist, or you don't have access to it."
@@ -328,7 +314,7 @@ export function PreferenceListDetailClient({
   if (isLoading || !list) {
     return (
       <PageContainer>
-        <p className="text-text-faint text-sm">Loading…</p>
+        <LoadingText />
       </PageContainer>
     )
   }
@@ -467,13 +453,9 @@ export function PreferenceListDetailClient({
 
   return (
     <PageContainer>
-      <Link
-        href="/reviewer/preference-lists"
-        className="text-text-muted hover:text-text-default inline-flex w-fit items-center gap-1 text-sm"
-      >
-        <ArrowLeft size={14} />
+      <BackLink href="/reviewer/preference-lists">
         Back to preference lists
-      </Link>
+      </BackLink>
 
       {/* Sticky: on a long ranking you otherwise lose the list's name, its
           status and how long is left. Not on phones, where the wrapped bar
@@ -512,15 +494,13 @@ export function PreferenceListDetailClient({
               )}
             </button>
           )}
-          <span
-            className={`shrink-0 rounded-md px-2 py-0.5 text-xs font-medium ${STATUS_BADGE[list.status]}`}
-          >
+          <Badge className={STATUS_BADGE[list.status]}>
             {STATUS_LABEL[list.status]}
-          </span>
+          </Badge>
           {meetingDay && (
-            <span className="bg-brand-blue/10 text-brand-blue shrink-0 rounded-md px-2 py-0.5 text-xs font-medium">
+            <Badge className="bg-brand-blue/10 text-brand-blue">
               Meets {MEETING_DAY_LABEL[meetingDay]}
-            </span>
+            </Badge>
           )}
           {countdown && (
             <span className="text-text-subtle shrink-0 text-xs">
@@ -567,7 +547,7 @@ export function PreferenceListDetailClient({
       </div>
 
       {groupLocked ? (
-        <div className="border-border bg-muted/40 text-text-muted flex items-center gap-2 rounded-lg border px-4 py-3 text-sm">
+        <div className="border-border bg-muted/40 text-text-muted flex items-center gap-2 border px-4 py-3 text-sm">
           <Lock size={14} />
           Every role&apos;s preference list deadline for this cycle has passed.
           This group is fully read-only.
@@ -576,7 +556,7 @@ export function PreferenceListDetailClient({
         ROLE_COLUMNS.filter((r) => lockedByRole[r]).map((r) => (
           <div
             key={r}
-            className="border-border bg-muted/40 text-text-muted flex items-center gap-2 rounded-lg border px-4 py-3 text-sm"
+            className="border-border bg-muted/40 text-text-muted flex items-center gap-2 border px-4 py-3 text-sm"
           >
             <Lock size={14} />
             The {ROLE_LABEL[r]} deadline has passed — its shared list is
@@ -611,7 +591,7 @@ export function PreferenceListDetailClient({
         }
       />
 
-      <div className="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
+      <Card className="flex flex-col gap-4 sm:p-5">
         {roles.length > 1 && (
           <div className="flex flex-wrap items-center gap-1 border-b border-gray-100 pb-3">
             {roles.map((r) => (
@@ -730,12 +710,10 @@ export function PreferenceListDetailClient({
             />
           )}
         </div>
-      </div>
+      </Card>
 
-      <div className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
-        <h2 className="text-text-faint text-xs font-semibold tracking-wide uppercase">
-          Group comments
-        </h2>
+      <Card className="flex flex-col gap-3 sm:p-5">
+        <SectionLabel>Group comments</SectionLabel>
         <CommentThread
           comments={groupComments}
           currentUserNuid={currentUser?.nuid}
@@ -747,7 +725,7 @@ export function PreferenceListDetailClient({
           isEditing={updateComment.isPending}
           placeholder="Add a comment on this group…"
         />
-      </div>
+      </Card>
 
       {openApplicant && openApplicantSummary && (
         <ApplicationDetail
@@ -766,41 +744,22 @@ export function PreferenceListDetailClient({
         />
       )}
 
-      <Dialog open={confirmingDelete} onOpenChange={setConfirmingDelete}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Delete this group?</DialogTitle>
-            <DialogDescription>
-              {list.name} and its ranked applicants, personal lists and comments
-              are deleted for everyone. This can&apos;t be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setConfirmingDelete(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              disabled={deleteList.isPending}
-              onClick={() =>
-                deleteList.mutate({ id: list.id, cycleId: list.cycle_id })
-              }
-            >
-              {deleteList.isPending ? (
-                <>
-                  <Loader2 className="animate-spin" size={14} />
-                  Deleting…
-                </>
-              ) : (
-                'Delete group'
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={confirmingDelete}
+        onOpenChange={setConfirmingDelete}
+        title="Delete this group?"
+        description={
+          <>
+            {list.name} and its ranked applicants, personal lists and comments
+            are deleted for everyone. This can&apos;t be undone.
+          </>
+        }
+        confirmLabel="Delete group"
+        pending={deleteList.isPending}
+        onConfirm={() =>
+          deleteList.mutate({ id: list.id, cycleId: list.cycle_id })
+        }
+      />
     </PageContainer>
   )
 }

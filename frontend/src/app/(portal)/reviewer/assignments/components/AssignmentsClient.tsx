@@ -3,15 +3,12 @@ import { PageContainer } from '@/components/PageContainer'
 
 import { useMemo, useState } from 'react'
 import { Loader2, Lock, Trash2, Unlock, X } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+import { Card, Toolbar } from '@/components/ui/card'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { EmptyState } from '@/components/ui/empty-state'
+import { PageHeader } from '@/components/ui/page-header'
 import {
   Select,
   SelectContent,
@@ -142,66 +139,66 @@ export function AssignmentsClient() {
 
   return (
     <PageContainer>
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-text-default text-2xl font-semibold">
-            Assign reviewers
-          </h1>
-          <p className="text-text-muted mt-1 text-sm">
+      <PageHeader
+        title="Assign reviewers"
+        subtitle={
+          <>
             Assign leads to write-review applications, then release their
             reviews once everyone&apos;s in.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <Select
-            value={activeRole}
-            onValueChange={(val) => setActiveRole(val as Role | 'all')}
-          >
-            <SelectTrigger className="w-56" aria-label="Filter by role">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All roles</SelectItem>
-              {ROLE_COLUMNS.map((r) => (
-                <SelectItem key={r} value={r}>
-                  {ROLE_LABEL[r]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={cycleId} onValueChange={setCycleId}>
-            <SelectTrigger className="w-40" aria-label="Filter by cycle">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {cycles.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={leadFilter} onValueChange={setLeadFilter}>
-            <SelectTrigger
-              className="w-52"
-              aria-label="Filter by assigned lead"
+          </>
+        }
+        actions={
+          <>
+            <Select
+              value={activeRole}
+              onValueChange={(val) => setActiveRole(val as Role | 'all')}
             >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All leads</SelectItem>
-              {leads.map((lead) => (
-                <SelectItem key={lead.nuid} value={lead.nuid}>
-                  {lead.full_name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+              <SelectTrigger className="w-56" aria-label="Filter by role">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All roles</SelectItem>
+                {ROLE_COLUMNS.map((r) => (
+                  <SelectItem key={r} value={r}>
+                    {ROLE_LABEL[r]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={cycleId} onValueChange={setCycleId}>
+              <SelectTrigger className="w-40" aria-label="Filter by cycle">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {cycles.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={leadFilter} onValueChange={setLeadFilter}>
+              <SelectTrigger
+                className="w-52"
+                aria-label="Filter by assigned lead"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All leads</SelectItem>
+                {leads.map((lead) => (
+                  <SelectItem key={lead.nuid} value={lead.nuid}>
+                    {lead.full_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </>
+        }
+      />
 
       {/* Bulk toolbar */}
-      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-gray-100 bg-white p-4">
+      <Toolbar>
         <span className="text-text-faint text-sm">
           {selected.size} selected
         </span>
@@ -237,20 +234,14 @@ export function AssignmentsClient() {
             )}
           </Button>
         </div>
-      </div>
+      </Toolbar>
 
       {applications.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-gray-200 bg-white p-10 text-center">
-          <p className="text-text-default text-sm font-medium">
-            No applications in this cycle
-          </p>
-        </div>
+        <EmptyState title="No applications in this cycle" />
       ) : visibleApplications.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-gray-200 bg-white p-10 text-center">
-          <p className="text-text-default text-sm font-medium">
-            No applications assigned to {leadName[leadFilter] ?? 'this lead'}
-          </p>
-        </div>
+        <EmptyState
+          title={`No applications assigned to ${leadName[leadFilter] ?? 'this lead'}`}
+        />
       ) : (
         ROLE_COLUMNS.map((role) => {
           const roleApps = visibleApplications.filter((a) => a.role === role)
@@ -307,10 +298,10 @@ export function AssignmentsClient() {
               </div>
 
               {roleApps.length === 0 ? (
-                <p className="text-text-faint rounded-xl border border-dashed border-gray-200 bg-white px-4 py-6 text-center text-sm">
-                  No {ROLE_LABEL[role].toLowerCase()} applications in this
-                  cycle.
-                </p>
+                <EmptyState
+                  size="sm"
+                  title={`No ${ROLE_LABEL[role].toLowerCase()} applications in this cycle.`}
+                />
               ) : (
                 <div className="flex flex-col gap-2">
                   {roleApps.map((application) => (
@@ -337,60 +328,39 @@ export function AssignmentsClient() {
         })
       )}
 
-      <Dialog
+      <ConfirmDialog
         open={!!confirmingRole}
         onOpenChange={(open) => !open && setConfirmingRole(null)}
-      >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Unassign all reviewers?</DialogTitle>
-            <DialogDescription>
-              This removes all{' '}
-              {confirmingRole &&
-                (gates.find(
-                  (g) => g.role === confirmingRole && g.kind === 'written'
-                )?.assigned_count ??
-                  0)}{' '}
-              lead assignment
-              {confirmingRole &&
-              gates.find(
+        title="Unassign all reviewers?"
+        description={
+          <>
+            This removes all{' '}
+            {confirmingRole &&
+              (gates.find(
                 (g) => g.role === confirmingRole && g.kind === 'written'
-              )?.assigned_count === 1
-                ? ''
-                : 's'}{' '}
-              for {confirmingRole && ROLE_LABEL[confirmingRole].toLowerCase()}{' '}
-              applicants in this cycle. Any written reviews already submitted
-              are kept, but their assignment link is removed. This cannot be
-              undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setConfirmingRole(null)}
-              disabled={unassignAllLeads.isPending}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              disabled={unassignAllLeads.isPending}
-              onClick={() => {
-                if (!confirmingRole) return
-                unassignAllLeads.mutate(
-                  { cycleId, role: confirmingRole },
-                  { onSuccess: () => setConfirmingRole(null) }
-                )
-              }}
-            >
-              {unassignAllLeads.isPending && (
-                <Loader2 className="animate-spin" size={14} />
-              )}
-              Unassign all
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              )?.assigned_count ??
+                0)}{' '}
+            lead assignment
+            {confirmingRole &&
+            gates.find((g) => g.role === confirmingRole && g.kind === 'written')
+              ?.assigned_count === 1
+              ? ''
+              : 's'}{' '}
+            for {confirmingRole && ROLE_LABEL[confirmingRole].toLowerCase()}{' '}
+            applicants in this cycle. Any written reviews already submitted are
+            kept, but their assignment link is removed. This cannot be undone.
+          </>
+        }
+        confirmLabel="Unassign all"
+        pending={unassignAllLeads.isPending}
+        onConfirm={() => {
+          if (!confirmingRole) return
+          unassignAllLeads.mutate(
+            { cycleId, role: confirmingRole },
+            { onSuccess: () => setConfirmingRole(null) }
+          )
+        }}
+      />
     </PageContainer>
   )
 }
@@ -413,7 +383,10 @@ function AssignmentRow({
   onUnassign: (assignmentId: string) => void
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-gray-100 bg-white p-4">
+    <Card
+      variant="flat"
+      className="flex flex-wrap items-center gap-x-3 gap-y-2"
+    >
       <input
         type="checkbox"
         className="accent-primary"
@@ -424,21 +397,16 @@ function AssignmentRow({
       <span className="text-text-default min-w-0 text-sm font-medium break-words">
         {name}
       </span>
-      <span
-        className={`inline-flex rounded-md px-2 py-0.5 text-xs font-medium ${ROLE_CHIP_CLASS[application.role]}`}
-      >
+      <Badge className={ROLE_CHIP_CLASS[application.role]}>
         {ROLE_LABEL[application.role]}
-      </span>
+      </Badge>
 
       <div className="ml-auto flex flex-wrap items-center justify-end gap-1.5">
         {assignments.length === 0 ? (
           <span className="text-text-faint text-xs">Unassigned</span>
         ) : (
           assignments.map((a) => (
-            <span
-              key={a.id}
-              className="text-text-muted inline-flex items-center gap-1 rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium"
-            >
+            <Badge key={a.id} className="text-text-muted">
               {leadName[a.lead_nuid] ?? a.lead_nuid}
               <button
                 type="button"
@@ -448,10 +416,10 @@ function AssignmentRow({
               >
                 <X size={12} />
               </button>
-            </span>
+            </Badge>
           ))
         )}
       </div>
-    </div>
+    </Card>
   )
 }

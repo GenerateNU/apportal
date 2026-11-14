@@ -1,9 +1,11 @@
 'use client'
 
 import { useMemo } from 'react'
-import Link from 'next/link'
-import { ArrowLeft, Lock } from 'lucide-react'
+import { Lock } from 'lucide-react'
 import { MarkdownContent } from '@/components/MarkdownContent'
+import { Badge, StatusDot } from '@/components/ui/badge'
+import { BackLink } from '@/components/ui/back-link'
+import { PageHeader } from '@/components/ui/page-header'
 import type { Role } from '@/lib/api/types'
 import { useApplicationTemplate } from '@/lib/queries/application-templates'
 import { useApplication } from '@/lib/queries/applications'
@@ -60,30 +62,24 @@ export function ApplicationView({
 
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-6 sm:px-8 sm:py-10">
-      <Link
-        href="/applicant/applications"
-        className="text-text-muted hover:text-text-default mb-6 inline-flex items-center gap-1 text-sm"
-      >
-        <ArrowLeft size={14} />
-        My Applications
-      </Link>
+      <PageHeader
+        className="mb-6"
+        back={
+          <BackLink href="/applicant/applications">My Applications</BackLink>
+        }
+        title={ROLE_LABEL[role]}
+        subtitle={cycleName}
+        actions={
+          status && (
+            <Badge className="text-text-subtle gap-1.5 bg-transparent">
+              <StatusDot className="bg-gray-400" />
+              {status.label}
+            </Badge>
+          )
+        }
+      />
 
-      <header className="mb-6 flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-text-default text-2xl font-semibold">
-            {ROLE_LABEL[role]}
-          </h1>
-          <p className="text-text-muted mt-1 text-sm">{cycleName}</p>
-        </div>
-        {status && (
-          <span className="text-text-subtle inline-flex shrink-0 items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-medium">
-            <span className="h-2 w-2 rounded-full bg-gray-400" />
-            {status.label}
-          </span>
-        )}
-      </header>
-
-      <div className="border-border bg-muted/40 text-text-muted mb-6 flex items-center gap-2 rounded-lg border px-4 py-3 text-sm">
+      <div className="border-border bg-muted/40 text-text-muted mb-6 flex items-center gap-2 border px-4 py-3 text-sm">
         <Lock size={14} className="shrink-0" />
         You&apos;ve submitted this application. It can no longer be edited.
       </div>

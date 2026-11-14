@@ -2,6 +2,8 @@
 
 import { ChevronRight } from 'lucide-react'
 import { Avatar } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
+import { Card } from '@/components/ui/card'
 import type { DecisionRow, DecisionTemplate } from '@/lib/api/types'
 import { ROLE_CHIP_CLASS } from '@/lib/roles'
 import { ROLE_LABEL } from '@/lib/roles'
@@ -30,7 +32,7 @@ export function DecisionListRow({
   onSent,
 }: DecisionListRowProps) {
   return (
-    <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+    <Card variant="flat" padding="none" className="overflow-hidden">
       <button
         type="button"
         onClick={onToggle}
@@ -48,9 +50,9 @@ export function DecisionListRow({
               {row.full_name}
             </p>
             {!isDecided(row.stage) && (
-              <span className="shrink-0 rounded-md bg-amber-50 px-1.5 py-0.5 text-[11px] font-medium text-amber-700">
+              <Badge size="sm" className="bg-amber-50 text-amber-700">
                 Still in pipeline
-              </span>
+              </Badge>
             )}
           </div>
           <p className="text-text-faint truncate text-xs">{row.email}</p>
@@ -67,11 +69,11 @@ export function DecisionListRow({
           </p>
         </div>
 
-        <span
-          className={`hidden shrink-0 rounded-md px-2 py-0.5 text-xs font-medium sm:inline ${ROLE_CHIP_CLASS[row.application_role]}`}
+        <Badge
+          className={`hidden sm:inline-flex ${ROLE_CHIP_CLASS[row.application_role]}`}
         >
           {ROLE_LABEL[row.application_role]}
-        </span>
+        </Badge>
         <span className="text-text-muted hidden w-28 shrink-0 text-xs md:block">
           {KIND_LABEL[row.kind]}
         </span>
@@ -82,11 +84,9 @@ export function DecisionListRow({
               'No interviewer'
             : '—'}
         </span>
-        <span
-          className={`shrink-0 rounded-md px-2 py-0.5 text-xs font-medium ${STATUS_BADGE[row.status]}`}
-        >
+        <Badge className={STATUS_BADGE[row.status]}>
           {STATUS_LABEL[row.status]}
-        </span>
+        </Badge>
       </button>
 
       {open && (
@@ -98,6 +98,6 @@ export function DecisionListRow({
           onSent={onSent}
         />
       )}
-    </div>
+    </Card>
   )
 }

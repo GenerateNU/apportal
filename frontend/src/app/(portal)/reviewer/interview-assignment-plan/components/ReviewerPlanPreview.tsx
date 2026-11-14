@@ -1,6 +1,9 @@
 'use client'
 
 import { AlertTriangle, Check } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Card, Toolbar } from '@/components/ui/card'
+import { StatTile } from '@/components/ui/stat-tile'
 import type {
   InterviewReviewPlanPreview as InterviewReviewPlanPreviewType,
   PlannedReviewer,
@@ -32,30 +35,30 @@ export function ReviewerPlanPreview({
 
   return (
     <section className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-gray-100 bg-white p-4">
-        <Stat label="Applicants" value={plan.pool_size} />
-        <Stat label="Reviews to create" value={plan.total_added} />
-        <Stat label="Target coverage" value={`${plan.coverage} per app`} />
+      <Toolbar>
+        <StatTile label="Applicants" value={plan.pool_size} />
+        <StatTile label="Reviews to create" value={plan.total_added} />
+        <StatTile label="Target coverage" value={`${plan.coverage} per app`} />
         <div className="ml-auto flex flex-wrap items-center gap-1.5">
           {depths.map((depth) => (
-            <span
+            <Badge
               key={depth}
-              className={`inline-flex rounded-md px-2 py-0.5 text-xs font-medium ${
+              className={
                 depth >= plan.coverage
                   ? 'bg-chip-1-bg text-chip-1-text'
                   : 'bg-chip-3-bg text-chip-3-text'
-              }`}
+              }
             >
               {plan.coverage_counts[depth]} app
               {plan.coverage_counts[depth] === 1 ? '' : 's'} · {depth} reviewer
               {depth === 1 ? '' : 's'}
-            </span>
+            </Badge>
           ))}
         </div>
-      </div>
+      </Toolbar>
 
       {warnings.length > 0 && (
-        <div className="flex flex-col gap-2 rounded-xl border border-amber-200 bg-amber-50 p-4">
+        <div className="flex flex-col gap-2 border border-amber-200 bg-amber-50 p-4">
           {warnings.map((warning) => (
             <p
               key={warning}
@@ -69,7 +72,7 @@ export function ReviewerPlanPreview({
       )}
 
       {underCovered.length > 0 && (
-        <div className="rounded-xl border border-gray-100 bg-white p-4">
+        <Card variant="flat">
           <h3 className="text-text-default text-sm font-semibold">
             Under-covered ({underCovered.length})
           </h3>
@@ -79,15 +82,15 @@ export function ReviewerPlanPreview({
           </p>
           <div className="flex flex-wrap gap-1.5">
             {underCovered.map((app) => (
-              <span
+              <Badge
                 key={app.application_id}
-                className="text-text-muted inline-flex rounded-md bg-gray-100 px-2 py-0.5 text-xs"
+                className="text-text-muted font-normal"
               >
                 {app.full_name}
-              </span>
+              </Badge>
             ))}
           </div>
-        </div>
+        </Card>
       )}
 
       {noDayMatch.length > 0 && (
@@ -118,7 +121,7 @@ function ReviewerQueue({ lead }: { lead: PlannedReviewer }) {
   const atCap = lead.total >= lead.cap
   const applications = lead.applications ?? []
   return (
-    <div className="flex flex-col gap-2 rounded-xl border border-gray-100 bg-white p-4">
+    <Card variant="flat" className="flex flex-col gap-2">
       <div className="flex flex-wrap items-baseline justify-between gap-x-2">
         <span className="text-text-default text-sm font-medium">
           {lead.full_name || lead.lead_nuid}
@@ -155,15 +158,6 @@ function ReviewerQueue({ lead }: { lead: PlannedReviewer }) {
           ))}
         </ol>
       )}
-    </div>
-  )
-}
-
-function Stat({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div className="flex flex-col">
-      <span className="text-text-faint text-xs">{label}</span>
-      <span className="text-text-default text-sm font-semibold">{value}</span>
-    </div>
+    </Card>
   )
 }

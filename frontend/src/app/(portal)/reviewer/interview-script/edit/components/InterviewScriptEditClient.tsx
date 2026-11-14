@@ -1,13 +1,16 @@
 'use client'
 
 import { useState } from 'react'
-import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { ArrowLeft, Check, Loader2, Plus, Trash2, X } from 'lucide-react'
+import { Check, Loader2, Plus, Trash2, X } from 'lucide-react'
 import { PageContainer } from '@/components/PageContainer'
+import { BackLink } from '@/components/ui/back-link'
 import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { LoadingText } from '@/components/ui/loading-text'
+import { PageHeader } from '@/components/ui/page-header'
 import {
   Select,
   SelectContent,
@@ -29,7 +32,7 @@ import {
 import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 
 const TEXTAREA_CLASS =
-  'border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 min-h-24 w-full rounded-lg border bg-transparent px-3.5 py-2.5 text-base transition-all outline-none focus-visible:ring-3 hover:border-gray-300 resize-none'
+  'border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 min-h-24 w-full border bg-transparent px-3.5 py-2.5 text-base transition-all outline-none focus-visible:ring-3 hover:border-gray-300 resize-none'
 
 function Field({
   label,
@@ -108,7 +111,7 @@ function QuestionEditor({
   onRemove: () => void
 }) {
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-4">
+    <Card variant="flat" className="flex flex-col gap-3">
       <div className="flex items-start justify-between gap-2">
         <textarea
           className={TEXTAREA_CLASS}
@@ -133,7 +136,7 @@ function QuestionEditor({
           placeholder="A deeper prompt for a thin answer…"
         />
       </Field>
-    </div>
+    </Card>
   )
 }
 
@@ -145,7 +148,7 @@ function ChallengeTrackEditor({
   onChange: (next: InterviewScriptChallengeTrack) => void
 }) {
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-4">
+    <Card variant="flat" className="flex flex-col gap-3">
       <Field label="Track label">
         <Input
           value={track.label}
@@ -159,7 +162,7 @@ function ChallengeTrackEditor({
           addLabel="Add follow-up"
         />
       </Field>
-    </div>
+    </Card>
   )
 }
 
@@ -182,57 +185,55 @@ export function InterviewScriptEditClient() {
 
   return (
     <PageContainer>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <Link
-            href="/reviewer/interview-script"
-            className="text-text-muted hover:text-text-default mb-2 inline-flex items-center gap-1 text-sm"
-          >
-            <ArrowLeft size={14} />
+      <PageHeader
+        size="md"
+        back={
+          <BackLink href="/reviewer/interview-script">
             Back to interview script
-          </Link>
-          <h1 className="text-text-default text-2xl font-semibold">
-            Edit interview script
-          </h1>
-          <p className="text-text-muted mt-1 text-sm">
+          </BackLink>
+        }
+        title="Edit interview script"
+        subtitle={
+          <>
             Editing the {ROLE_LABEL[role].toLowerCase()} script — pick a
             different cycle or role above to edit that one instead. Update the
             bracketed placeholders (like{' '}
-            <code className="text-text-default rounded bg-gray-100 px-1 py-0.5 text-xs">
+            <code className="text-text-default bg-gray-100 px-1 py-0.5 text-xs">
               [cycle start date]
             </code>
             ) for whichever cycle you&apos;re editing.
-          </p>
-        </div>
+          </>
+        }
+        actions={
+          <>
+            <Select value={role} onValueChange={(v) => setRole(v as Role)}>
+              <SelectTrigger className="w-48" aria-label="Role">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ROLE_COLUMNS.map((r) => (
+                  <SelectItem key={r} value={r}>
+                    {ROLE_LABEL[r]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <Select value={role} onValueChange={(v) => setRole(v as Role)}>
-            <SelectTrigger className="w-48" aria-label="Role">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {ROLE_COLUMNS.map((r) => (
-                <SelectItem key={r} value={r}>
-                  {ROLE_LABEL[r]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={cycleId} onValueChange={setCycleId}>
-            <SelectTrigger className="w-40" aria-label="Cycle">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {cycles.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+            <Select value={cycleId} onValueChange={setCycleId}>
+              <SelectTrigger className="w-40" aria-label="Cycle">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {cycles.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </>
+        }
+      />
 
       {cycleId ? (
         <InterviewScriptEditForm
@@ -291,7 +292,7 @@ function InterviewScriptEditForm({
   }
 
   if (isLoading || !form) {
-    return <p className="text-text-faint text-sm">Loading script…</p>
+    return <LoadingText label="Loading script…" />
   }
 
   return (

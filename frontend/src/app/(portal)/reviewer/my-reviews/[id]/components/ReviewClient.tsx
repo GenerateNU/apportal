@@ -4,7 +4,6 @@ import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
-  ArrowLeft,
   ArrowRight,
   Check,
   CheckCircle2,
@@ -13,6 +12,10 @@ import {
   Lock,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { BackLink } from '@/components/ui/back-link'
+import { Badge } from '@/components/ui/badge'
+import { Card } from '@/components/ui/card'
+import { SectionLabel } from '@/components/ui/section-label'
 import { CandidateTags } from '@/components/CandidateTags'
 import type { Role } from '@/lib/api/types'
 import { useAnswers } from '@/lib/queries/answers'
@@ -191,22 +194,12 @@ export function ReviewClient({
       {/* Top bar */}
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-gray-200 bg-white px-4 py-3 sm:px-8">
         <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2">
-          <Link
-            href="/reviewer/my-reviews"
-            className="text-text-muted hover:text-text-default inline-flex items-center gap-1 text-sm"
-          >
-            <ArrowLeft size={14} />
-            Back to Lead review
-          </Link>
+          <BackLink href="/reviewer/my-reviews">Back to Lead review</BackLink>
           <div className="flex min-w-0 items-center gap-3 border-l border-gray-200 pl-4">
             <h1 className="text-text-default min-w-0 truncate text-lg font-semibold">
               {applicant?.full_name ?? 'Applicant'}
             </h1>
-            <span
-              className={`w-fit shrink-0 rounded-md px-2 py-0.5 text-xs font-medium ${ROLE_CHIP_CLASS[role]}`}
-            >
-              {ROLE_LABEL[role]}
-            </span>
+            <Badge className={ROLE_CHIP_CLASS[role]}>{ROLE_LABEL[role]}</Badge>
             <CandidateTags
               compact
               applicationId={applicationId}
@@ -225,12 +218,10 @@ export function ReviewClient({
             </Link>
           )}
           {submitted && (
-            <span
-              className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium ${REVIEW_STATE_BADGE.submitted}`}
-            >
+            <Badge className={REVIEW_STATE_BADGE.submitted}>
               <CheckCircle2 size={12} />
               Review submitted
-            </span>
+            </Badge>
           )}
           {previousApplicationId && (
             <Button
@@ -263,9 +254,7 @@ export function ReviewClient({
       <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-2 lg:overflow-hidden">
         {/* Application */}
         <div className="border-b border-gray-200 px-4 py-4 sm:px-8 sm:py-6 lg:overflow-y-auto lg:border-r lg:border-b-0">
-          <h2 className="text-text-faint mb-4 text-xs font-semibold tracking-wide uppercase">
-            Application
-          </h2>
+          <SectionLabel className="mb-4">Application</SectionLabel>
           <div className="space-y-4">
             {questions.map((q) => (
               <ResponseField
@@ -281,11 +270,11 @@ export function ReviewClient({
         {/* Review */}
         <div className="lg:flex lg:min-h-0 lg:flex-col">
           <div className="px-4 py-4 sm:px-8 sm:py-6 lg:flex-1 lg:overflow-y-auto">
-            <h2
-              className={`text-text-faint text-xs font-semibold tracking-wide uppercase ${template?.review_closes_at ? 'mb-1' : 'mb-4'}`}
+            <SectionLabel
+              className={template?.review_closes_at ? 'mb-1' : 'mb-4'}
             >
               Your review
-            </h2>
+            </SectionLabel>
             {template?.review_closes_at && (
               <p className="text-text-muted mb-4 text-xs">
                 Reviews are due by{' '}
@@ -298,7 +287,7 @@ export function ReviewClient({
               </p>
             )}
             {submitted && (
-              <div className="border-border bg-muted/40 text-text-muted mb-4 flex items-center gap-2 rounded-lg border px-4 py-3 text-sm">
+              <div className="border-border bg-muted/40 text-text-muted mb-4 flex items-center gap-2 border px-4 py-3 text-sm">
                 <Lock size={14} />
                 You&apos;ve submitted this review. You can still make changes
                 below.
@@ -323,15 +312,12 @@ export function ReviewClient({
 
               {others.length > 0 && (
                 <div>
-                  <h3 className="text-text-faint mt-2 mb-3 text-xs font-semibold tracking-wide uppercase">
+                  <SectionLabel as="h3" className="mt-2 mb-3">
                     Other reviews
-                  </h3>
+                  </SectionLabel>
                   <div className="flex flex-col gap-3">
                     {others.map((r) => (
-                      <div
-                        key={r.id}
-                        className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm"
-                      >
+                      <Card key={r.id}>
                         <span className="text-text-muted text-xs">
                           Reviewer {r.reviewer_name || r.reviewer_nuid}
                         </span>
@@ -360,7 +346,7 @@ export function ReviewClient({
                             )
                           })}
                         </div>
-                      </div>
+                      </Card>
                     ))}
                   </div>
                 </div>

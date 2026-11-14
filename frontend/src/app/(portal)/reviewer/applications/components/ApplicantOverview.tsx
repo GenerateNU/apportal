@@ -3,6 +3,10 @@
 import Link from 'next/link'
 import { ExternalLink } from 'lucide-react'
 import { Avatar } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
+import { Card } from '@/components/ui/card'
+import { PageHeader } from '@/components/ui/page-header'
+import { SectionLabel } from '@/components/ui/section-label'
 import { ReturnerBadge } from '@/components/ReturnerBadge'
 import type { ApplicationStage, Role } from '@/lib/api/types'
 import { useAnswers } from '@/lib/queries/answers'
@@ -21,11 +25,7 @@ import { ChallengeCard } from './ChallengeCard'
 import { stageBadge, stageLabel } from './constants'
 import { ResponseField } from './ResponseField'
 
-const SECTION_CLASS =
-  'flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-5 shadow-sm'
-const SECTION_HEADER_CLASS =
-  'text-text-faint text-xs font-semibold tracking-wide uppercase'
-const SUBCARD_CLASS = 'rounded-xl border border-gray-100 bg-white p-4'
+const SECTION_CLASS = 'flex flex-col gap-3 p-5'
 
 // Mean of a review's scored answers, on the 0-10 scale score questions use.
 // Null when nothing in it was scored.
@@ -85,42 +85,34 @@ export function ApplicantOverview({
     <div className="flex flex-col gap-6">
       <div className="flex items-start gap-4">
         <Avatar name={applicant?.full_name ?? ''} size="lg" />
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-text-default text-2xl font-semibold">
-              {applicant?.full_name ?? 'Applicant'}
-            </h1>
-            <span
-              className={`w-fit rounded-md px-2 py-0.5 text-xs font-medium ${ROLE_CHIP_CLASS[role]}`}
-            >
-              {ROLE_LABEL[role]}
-            </span>
+        <div className="min-w-0">
+          <PageHeader
+            title={applicant?.full_name ?? 'Applicant'}
+            subtitle={applicant?.email}
+          />
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <Badge className={ROLE_CHIP_CLASS[role]}>{ROLE_LABEL[role]}</Badge>
             {stage && (
-              <span
-                className={`w-fit rounded-md px-2 py-0.5 text-xs font-medium ${stageBadge[stage]}`}
-              >
-                {stageLabel[stage]}
-              </span>
+              <Badge className={stageBadge[stage]}>{stageLabel[stage]}</Badge>
             )}
             {interview?.rating && (
-              <span
-                className={`w-fit rounded-md px-2 py-0.5 text-xs font-medium ${RATING_COLORS[interview.rating].bg} ${RATING_COLORS[interview.rating].text}`}
+              <Badge
+                className={`${RATING_COLORS[interview.rating].bg} ${RATING_COLORS[interview.rating].text}`}
               >
                 {RATING_LABEL[interview.rating]}
-              </span>
+              </Badge>
             )}
             {applicant?.returner && <ReturnerBadge showLabel />}
           </div>
-          <p className="text-text-muted mt-1 text-sm">{applicant?.email}</p>
         </div>
       </div>
 
       {/* Directly under the name: for a draft call this is what people open
           the drawer to read, and the write-ups run long enough that putting it
           after the application answers means scrolling past everything else. */}
-      <div className={SECTION_CLASS}>
+      <Card className={SECTION_CLASS}>
         <div className="flex items-center justify-between gap-2">
-          <h2 className={SECTION_HEADER_CLASS}>Interview review</h2>
+          <SectionLabel>Interview review</SectionLabel>
           <Link
             href={`/reviewer/my-interviews/${applicationId}`}
             className="text-brand-blue text-xs hover:underline"
@@ -134,11 +126,11 @@ export function ApplicantOverview({
           <div className="flex flex-col gap-4 text-sm">
             <div className="flex flex-wrap items-center gap-2">
               {interview.rating ? (
-                <span
-                  className={`rounded-md px-2 py-0.5 text-xs font-medium ${RATING_COLORS[interview.rating].bg} ${RATING_COLORS[interview.rating].text}`}
+                <Badge
+                  className={`${RATING_COLORS[interview.rating].bg} ${RATING_COLORS[interview.rating].text}`}
                 >
                   {RATING_LABEL[interview.rating]}
-                </span>
+                </Badge>
               ) : (
                 <span className="text-text-faint text-xs">Not rated yet</span>
               )}
@@ -230,7 +222,7 @@ export function ApplicantOverview({
               ) : (
                 <div className="mt-2 flex flex-col gap-3">
                   {recordingReviews.map((r) => (
-                    <div key={r.id} className={SUBCARD_CLASS}>
+                    <Card key={r.id} variant="flat">
                       <span className="text-text-muted text-xs">
                         {nameByNuid.get(r.reviewer_nuid) ?? r.reviewer_nuid}
                       </span>
@@ -243,14 +235,14 @@ export function ApplicantOverview({
                           </span>
                         )}
                       </p>
-                    </div>
+                    </Card>
                   ))}
                 </div>
               )}
             </div>
           </div>
         )}
-      </div>
+      </Card>
 
       <ChallengeCard
         applicantNuid={applicantNuid}
@@ -258,8 +250,8 @@ export function ApplicantOverview({
         role={role}
       />
 
-      <div className={SECTION_CLASS}>
-        <h2 className={SECTION_HEADER_CLASS}>Application</h2>
+      <Card className={SECTION_CLASS}>
+        <SectionLabel>Application</SectionLabel>
         <div className="space-y-4">
           {questions.map((q) => (
             <ResponseField
@@ -270,16 +262,16 @@ export function ApplicantOverview({
             />
           ))}
         </div>
-      </div>
+      </Card>
 
-      <div className={SECTION_CLASS}>
+      <Card className={SECTION_CLASS}>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <h2 className={SECTION_HEADER_CLASS}>Lead reviews</h2>
+            <SectionLabel>Lead reviews</SectionLabel>
             {leadAvg != null && (
-              <span className="text-text-default rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium">
+              <Badge className="text-text-default">
                 avg {leadAvg.toFixed(1)}/10
-              </span>
+              </Badge>
             )}
           </div>
           <Link
@@ -296,15 +288,15 @@ export function ApplicantOverview({
             {writtenReviews.map((r) => {
               const avg = scoreAverage(r.answers)
               return (
-                <div key={r.id} className={SUBCARD_CLASS}>
+                <Card key={r.id} variant="flat">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-text-muted text-xs">
                       {r.reviewer_name || r.reviewer_nuid}
                     </span>
                     {avg != null && (
-                      <span className="text-text-default rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium">
+                      <Badge className="text-text-default">
                         avg {avg.toFixed(1)}/10
-                      </span>
+                      </Badge>
                     )}
                   </div>
                   <div className="mt-2 flex flex-col gap-2">
@@ -332,21 +324,21 @@ export function ApplicantOverview({
                       )
                     })}
                   </div>
-                </div>
+                </Card>
               )
             })}
           </div>
         )}
-      </div>
+      </Card>
 
-      <div className={SECTION_CLASS}>
-        <h2 className={SECTION_HEADER_CLASS}>Comments</h2>
+      <Card className={SECTION_CLASS}>
+        <SectionLabel>Comments</SectionLabel>
         {comments.length === 0 ? (
           <p className="text-text-faint text-sm">No comments yet.</p>
         ) : (
           <div className="flex flex-col gap-3">
             {comments.map((c) => (
-              <div key={c.id} className={SUBCARD_CLASS}>
+              <Card key={c.id} variant="flat">
                 <p className="text-text-muted text-xs">
                   {c.author_name || c.author_nuid}
                 </p>
@@ -356,11 +348,11 @@ export function ApplicantOverview({
                 <p className="text-text-faint mt-1.5 text-xs">
                   {new Date(c.created_at).toLocaleString()}
                 </p>
-              </div>
+              </Card>
             ))}
           </div>
         )}
-      </div>
+      </Card>
     </div>
   )
 }

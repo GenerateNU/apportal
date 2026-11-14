@@ -1,10 +1,14 @@
 import type { Interview, Question, WrittenAnswer } from '@/lib/api/types'
 import type { ApplicantApplication } from './types'
-import { formatDate } from '@/lib/utils'
+import { cn, formatDate } from '@/lib/utils'
+import { TABLE_CELL } from '@/components/ui/table-styles'
 import { ReturnerBadge } from '@/components/ReturnerBadge'
 import { AnswerCell } from './AnswerCell'
 import { StageSelect } from './StageSelect'
 import { RATING_COLORS, RATING_LABEL } from '@/lib/interview-ratings'
+import { Badge } from '@/components/ui/badge'
+
+const CELL = cn(TABLE_CELL, 'py-2')
 
 export function ApplicantRow({
   applicant,
@@ -60,13 +64,14 @@ export function ApplicantRow({
     <tr
       onClick={handleClick}
       onAuxClick={handleAuxClick}
-      className={`h-12 cursor-pointer border-b border-gray-100 transition-colors ${
+      className={cn(
+        'h-12 cursor-pointer border-b border-gray-200 transition-colors',
         isSelected ? 'bg-blue-50' : 'bg-white hover:bg-gray-50'
-      }`}
+      )}
     >
       {selectable && (
         <td
-          className="border-r border-gray-100 px-3 py-2"
+          className={cn(CELL, 'border-r border-gray-100')}
           onClick={(e) => e.stopPropagation()}
         >
           <input
@@ -78,14 +83,19 @@ export function ApplicantRow({
           />
         </td>
       )}
-      <td className="min-w-36 border-r border-gray-100 px-3 py-2 whitespace-nowrap">
+      <td
+        className={cn(
+          CELL,
+          'min-w-36 border-r border-gray-100 whitespace-nowrap'
+        )}
+      >
         <div className="flex items-center gap-1.5">
           {interview?.rating ? (
-            <span
-              className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${RATING_COLORS[interview.rating].bg} ${RATING_COLORS[interview.rating].text}`}
+            <Badge
+              className={`${RATING_COLORS[interview.rating].bg} ${RATING_COLORS[interview.rating].text}`}
             >
               {RATING_LABEL[interview.rating]}
-            </span>
+            </Badge>
           ) : (
             <span className="text-text-faint text-sm">—</span>
           )}
@@ -101,7 +111,7 @@ export function ApplicantRow({
         return (
           <td
             key={q.id}
-            className="border-r border-gray-100 px-3 py-2 last:border-r-0"
+            className={cn(CELL, 'border-r border-gray-100 last:border-r-0')}
           >
             <AnswerCell
               answer={
@@ -116,17 +126,17 @@ export function ApplicantRow({
           </td>
         )
       })}
-      <td className="border-r border-gray-100 px-3 py-2 whitespace-nowrap">
+      <td className={cn(CELL, 'border-r border-gray-100 whitespace-nowrap')}>
         <StageSelect
           applicationId={applicant.id}
           stage={applicant.stage}
           editable={selectable}
         />
       </td>
-      <td className="text-text-muted px-3 py-2 text-sm whitespace-nowrap">
+      <td className={cn(CELL, 'text-text-muted text-sm whitespace-nowrap')}>
         {formatDate(applicant.submittedAt)}
       </td>
-      <td className="border-r border-gray-100 px-3 py-2 whitespace-nowrap">
+      <td className={cn(CELL, 'border-r border-gray-100 whitespace-nowrap')}>
         {availabilityDays.length > 0 ? (
           // Four day chips are wider than the "Availability" header, so
           // wrapping would put them on two lines and make this the tallest
@@ -134,12 +144,9 @@ export function ApplicantRow({
           // after everything else had settled.
           <div className="flex flex-nowrap gap-1">
             {availabilityDays.map((d) => (
-              <span
-                key={d}
-                className="text-text-secondary inline-flex items-center rounded bg-gray-100 px-1.5 py-0.5 text-xs font-medium"
-              >
+              <Badge key={d} size="sm" className="text-text-secondary">
                 {d}
-              </span>
+              </Badge>
             ))}
           </div>
         ) : (

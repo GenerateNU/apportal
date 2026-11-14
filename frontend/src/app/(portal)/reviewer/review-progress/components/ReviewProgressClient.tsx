@@ -3,8 +3,13 @@ import { PageContainer } from '@/components/PageContainer'
 
 import { useMemo, useState } from 'react'
 import { ChevronRight } from 'lucide-react'
-import { Avatar } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
+import { LoadingText } from '@/components/ui/loading-text'
+import { PageHeader } from '@/components/ui/page-header'
+import { PersonCell } from '@/components/ui/person-cell'
+import { SectionLabel } from '@/components/ui/section-label'
 import { ProgressBar } from '@/components/ProgressBar'
+import { TABLE_FRAME } from '@/components/ui/table-styles'
 import {
   Select,
   SelectContent,
@@ -34,46 +39,42 @@ export function ReviewProgressClient() {
 
   return (
     <PageContainer>
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-text-default text-2xl font-semibold">
-            Review progress
-          </h1>
-          <p className="text-text-muted mt-1 text-sm">
-            See which leads still have written reviews outstanding.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <Select
-            value={activeRole}
-            onValueChange={(val) => setActiveRole(val as Role | 'all')}
-          >
-            <SelectTrigger className="w-56" aria-label="Filter by role">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All roles</SelectItem>
-              {ROLE_COLUMNS.map((r) => (
-                <SelectItem key={r} value={r}>
-                  {ROLE_LABEL[r]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={cycleId} onValueChange={setCycleId}>
-            <SelectTrigger className="w-40" aria-label="Filter by cycle">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {cycles.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+      <PageHeader
+        title="Review progress"
+        subtitle="See which leads still have written reviews outstanding."
+        actions={
+          <div className="flex flex-wrap items-center gap-3">
+            <Select
+              value={activeRole}
+              onValueChange={(val) => setActiveRole(val as Role | 'all')}
+            >
+              <SelectTrigger className="w-56" aria-label="Filter by role">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All roles</SelectItem>
+                {ROLE_COLUMNS.map((r) => (
+                  <SelectItem key={r} value={r}>
+                    {ROLE_LABEL[r]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={cycleId} onValueChange={setCycleId}>
+              <SelectTrigger className="w-40" aria-label="Filter by cycle">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {cycles.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        }
+      />
 
       {roles.map((role) => (
         <RoleSection key={role} cycleId={cycleId} role={role} />
@@ -100,12 +101,10 @@ function RoleSection({ cycleId, role }: { cycleId: string; role: Role }) {
 
   return (
     <div className="flex flex-col gap-2">
-      <h2 className="text-text-faint text-xs font-semibold tracking-wide uppercase">
-        {ROLE_LABEL[role]}
-      </h2>
+      <SectionLabel>{ROLE_LABEL[role]}</SectionLabel>
 
       {isLoading ? (
-        <p className="text-text-faint px-1 text-sm">Loading…</p>
+        <LoadingText className="px-1" />
       ) : leads.length === 0 ? (
         <p className="text-text-faint px-1 text-sm">
           No leads have applications assigned for this role yet.
@@ -135,7 +134,7 @@ function LeadFolder({ lead }: { lead: ReviewerProgress }) {
   )
 
   return (
-    <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+    <div className={TABLE_FRAME}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -148,10 +147,7 @@ function LeadFolder({ lead }: { lead: ReviewerProgress }) {
             open ? 'rotate-90' : ''
           }`}
         />
-        <Avatar name={lead.full_name} size="sm" />
-        <span className="text-text-default min-w-0 flex-1 truncate text-sm font-medium">
-          {lead.full_name}
-        </span>
+        <PersonCell name={lead.full_name} className="flex-1" />
         <ProgressBar
           value={submitted}
           total={total}
@@ -160,19 +156,19 @@ function LeadFolder({ lead }: { lead: ReviewerProgress }) {
         <span className="text-text-muted hidden w-24 shrink-0 text-xs sm:block">
           {submitted} of {total} done
         </span>
-        <span
-          className={`shrink-0 rounded-md px-2 py-0.5 text-xs font-medium ${
+        <Badge
+          className={
             outstanding > 0
               ? REVIEW_STATE_BADGE.draft
               : REVIEW_STATE_BADGE.submitted
-          }`}
+          }
         >
           {outstanding > 0 ? `${outstanding} outstanding` : 'All submitted'}
-        </span>
+        </Badge>
       </button>
 
       {open && (
-        <div className="divide-y divide-gray-100 border-t border-gray-200">
+        <div className="border-t border-gray-200">
           {items.map((item) => (
             <ReviewRow
               key={item.application_id}

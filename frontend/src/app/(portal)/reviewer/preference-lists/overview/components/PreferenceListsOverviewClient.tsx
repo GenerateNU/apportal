@@ -4,6 +4,9 @@ import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { ArrowRight } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Card } from '@/components/ui/card'
+import { LoadingText } from '@/components/ui/loading-text'
 import {
   Select,
   SelectContent,
@@ -11,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { SegmentedTabs } from '@/components/ui/segmented-tabs'
 import { MEETING_DAY_LABEL } from '@/app/(portal)/reviewer/applications/components/meetingAvailability'
 import type { PreferenceListDetail, Role } from '@/lib/api/types'
 import { pickDefaultCycleId, useCycles } from '@/lib/queries/cycles'
@@ -60,30 +64,17 @@ export function PreferenceListsOverviewClient() {
           </SelectContent>
         </Select>
 
-        <div className="flex rounded-md border border-gray-200 bg-white">
-          {ROLE_COLUMNS.map((r, i) => (
-            <button
-              key={r}
-              type="button"
-              onClick={() => setRole(r)}
-              className={`px-3 py-1.5 text-sm transition-colors ${i === 0 ? 'rounded-l-md' : ''} ${
-                i === ROLE_COLUMNS.length - 1 ? 'rounded-r-md' : ''
-              } ${
-                role === r
-                  ? 'text-text-default bg-gray-100 font-medium'
-                  : 'text-text-subtle hover:text-text-secondary'
-              }`}
-            >
-              {ROLE_LABEL[r]}
-            </button>
-          ))}
-        </div>
+        <SegmentedTabs<Role>
+          tabs={ROLE_COLUMNS.map((r) => ({ id: r, label: ROLE_LABEL[r] }))}
+          value={role}
+          onChange={setRole}
+        />
       </div>
 
       {!cycleId ? (
         <p className="text-text-faint px-1 text-sm">No cycles yet.</p>
       ) : isLoading ? (
-        <p className="text-text-faint px-1 text-sm">Loading…</p>
+        <LoadingText className="px-1" />
       ) : lists.length === 0 ? (
         <p className="text-text-faint px-1 text-sm">
           No preference list groups yet for this cycle.
@@ -119,7 +110,7 @@ function GroupColumn({
   )
 
   return (
-    <div className="flex w-72 shrink-0 flex-col rounded-lg border border-gray-200 bg-white">
+    <Card variant="flat" padding="none" className="flex w-72 shrink-0 flex-col">
       <Link
         href={`/reviewer/preference-lists/${list.id}`}
         className="group flex flex-col gap-1.5 border-b border-gray-100 p-3"
@@ -134,18 +125,19 @@ function GroupColumn({
           />
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
-          <span
-            className={`rounded-md px-1.5 py-0.5 text-xs font-medium ${PREFERENCE_LIST_STATUS_BADGE[list.status]}`}
+          <Badge
+            size="sm"
+            className={PREFERENCE_LIST_STATUS_BADGE[list.status]}
           >
             {PREFERENCE_LIST_STATUS_LABEL[list.status]}
-          </span>
+          </Badge>
           <span className="text-text-subtle text-xs">
             {entries.length} entr{entries.length === 1 ? 'y' : 'ies'}
           </span>
           {list.meeting_day && (
-            <span className="bg-brand-blue/10 text-brand-blue rounded-md px-1.5 py-0.5 text-xs font-medium">
+            <Badge size="sm" className="bg-brand-blue/10 text-brand-blue">
               Meets {MEETING_DAY_LABEL[list.meeting_day]}
-            </span>
+            </Badge>
           )}
         </div>
         <p className="text-text-subtle truncate text-xs">
@@ -163,7 +155,7 @@ function GroupColumn({
             <Link
               key={entry.id}
               href={`/reviewer/applications/${entry.application_id}`}
-              className="flex items-start gap-2 rounded-md px-2 py-1.5 hover:bg-gray-50"
+              className="flex items-start gap-2 px-2 py-1.5 hover:bg-gray-50"
             >
               <span className="text-text-faint w-4 shrink-0 text-right text-xs font-medium">
                 {i + 1}
@@ -185,6 +177,6 @@ function GroupColumn({
           ))
         )}
       </div>
-    </div>
+    </Card>
   )
 }

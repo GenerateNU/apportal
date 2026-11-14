@@ -2,8 +2,10 @@
 
 import { useState } from 'react'
 import { ChevronDown } from 'lucide-react'
-import { Avatar } from '@/components/ui/avatar'
+import { PersonCell } from '@/components/ui/person-cell'
+import { TABLE_ROW } from '@/components/ui/table-styles'
 import type { User } from '@/lib/api/types'
+import { cn } from '@/lib/utils'
 import { getPrimaryRole, USER_ROLE_LABEL } from '../lib/role-meta'
 import { RoleEditDialog } from './RoleEditDialog'
 
@@ -29,16 +31,8 @@ export function MemberRow({
   ).length
 
   return (
-    <div className={`grid ${gridCols} items-center gap-4 px-4 py-3`}>
-      <div className="flex min-w-0 items-center gap-2.5">
-        <Avatar name={user.full_name} size="sm" />
-        <div className="min-w-0">
-          <p className="text-text-default truncate text-sm font-semibold">
-            {user.full_name}
-          </p>
-          <p className="text-text-subtle truncate text-xs">{user.email}</p>
-        </div>
-      </div>
+    <div className={cn('grid items-center gap-4', gridCols, TABLE_ROW)}>
+      <PersonCell name={user.full_name} secondary={user.email} />
 
       <span className="text-text-secondary hidden text-sm sm:block">
         {formatDate(user.created_at)}
@@ -48,7 +42,7 @@ export function MemberRow({
         type="button"
         onClick={() => setShowEdit(true)}
         aria-label="Edit roles"
-        className="text-text-secondary flex w-fit items-center gap-1.5 rounded-md border border-transparent px-2 py-1 text-sm hover:border-gray-300 hover:bg-gray-50"
+        className="text-text-secondary flex w-fit items-center gap-1.5 border border-transparent px-2 py-1 text-sm hover:border-gray-300 hover:bg-gray-50"
       >
         {USER_ROLE_LABEL[primaryRole]}
         {extraRoleCount > 0 && (
