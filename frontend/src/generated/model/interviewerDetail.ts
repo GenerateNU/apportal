@@ -16,6 +16,4 @@ export interface InterviewerDetail {
   interview_id: string;
   interviewer_name?: string;
   interviewer_nuid: string;
-  writeup?: string;
-  writeup_submitted_at?: string;
 }

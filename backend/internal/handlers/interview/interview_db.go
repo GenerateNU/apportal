@@ -25,32 +25,23 @@ func NewInterviewDB(db *gorm.DB) *InterviewDB {
 }
 
 func (i *InterviewDB) UpsertInterview(ctx context.Context, in InterviewUpsert) error {
-	return i.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		updates := map[string]any{}
-		utils.SetIf(updates, "scheduled_at", in.ScheduledAt)
-		utils.SetIf(updates, "conducted_at", in.ConductedAt)
-		utils.SetIf(updates, "recording_url", in.RecordingURL)
-		utils.SetIf(updates, "notes_url", in.NotesURL)
-		utils.SetIf(updates, "rating", in.Rating)
-		if len(updates) > 0 {
-			if err := tx.Model(&models.Interview{}).Where("application_id = ?", in.ApplicationID).UpdateColumns(updates).Error; err != nil {
-				return err
-			}
-		}
-
-		writeup := map[string]any{}
-		utils.SetIf(writeup, "writeup", in.Writeup)
-		if in.Submit {
-			writeup["writeup_submitted_at"] = gorm.Expr("COALESCE(writeup_submitted_at, NOW())")
-		}
-		if len(writeup) == 0 {
-			return nil
-		}
-		return tx.Model(&models.Interviewer{}).
-			Where("interviewer_nuid = ? AND interview_id IN (?)", in.InterviewerNUID,
-				tx.Model(&models.Interview{}).Select("id").Where("application_id = ?", in.ApplicationID)).
-			UpdateColumns(writeup).Error
-	})
+	updates := map[string]any{}
+	utils.SetIf(updates, "scheduled_at", in.ScheduledAt)
+	utils.SetIf(updates, "conducted_at", in.ConductedAt)
+	utils.SetIf(updates, "recording_url", in.RecordingURL)
+	utils.SetIf(updates, "notes_url", in.NotesURL)
+	utils.SetIf(updates, "rating", in.Rating)
+	utils.SetIf(updates, "writeup", in.Writeup)
+	if in.Submit {
+		updates["submitted_at"] = gorm.Expr("COALESCE(submitted_at, NOW())")
+	}
+	if len(updates) == 0 {
+		return nil
+	}
+	updates["updated_at"] = gorm.Expr("NOW()")
+	return i.db.WithContext(ctx).Model(&models.Interview{}).
+		Where("application_id = ?", in.ApplicationID).
+		UpdateColumns(updates).Error
 }
 
 func (i *InterviewDB) ListInterviewDetails(ctx context.Context, applicationIDs []string) ([]models.InterviewDetail, error) {

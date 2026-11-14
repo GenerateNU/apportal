@@ -25,6 +25,9 @@ func (s *recordingReviewService) upsert(ctx context.Context, in *UpsertRecording
 	}
 
 	actor := utils.CurrentActor(ctx)
+	if in.Body.Rating != nil && !actor.HasAnyRole(models.UserRoleChief, models.UserRoleAdmin) {
+		return nil, huma.Error403Forbidden("only a chief may override the interview rating")
+	}
 	assigned, err := s.interviewAssignmentDB.IsReviewer(ctx, in.ID, actor.NUID)
 	if err != nil {
 		return nil, utils.StoreErr(err)
@@ -33,12 +36,12 @@ func (s *recordingReviewService) upsert(ctx context.Context, in *UpsertRecording
 		return nil, huma.Error403Forbidden("only an assigned recording reviewer may submit this review")
 	}
 
-	submitted, err := s.interviewAssignmentDB.AllInterviewersSubmitted(ctx, in.ID)
+	submitted, err := s.interviewAssignmentDB.InterviewSubmitted(ctx, in.ID)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
 	if !submitted {
-		return nil, huma.Error409Conflict("not every interviewer has submitted their notes yet")
+		return nil, huma.Error409Conflict("the interview write-up hasn't been submitted yet")
 	}
 
 	err = s.recordingReviewDB.SaveRecordingReview(ctx, RecordingReviewUpsert{

@@ -789,7 +789,7 @@ function RatingCard({
 }) {
   const state: ReviewState = interviewSubmitted(interview)
     ? 'submitted'
-    : interview?.interviewers.some((iv) => !!iv.writeup)
+    : interview?.writeup
       ? 'draft'
       : 'none'
 

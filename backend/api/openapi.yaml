@@ -1825,8 +1825,13 @@ components:
         scheduled_at:
           format: date-time
           type: string
+        submitted_at:
+          format: date-time
+          type: string
         updated_at:
           format: date-time
+          type: string
+        writeup:
           type: string
       required:
         - interviewers
@@ -2065,11 +2070,6 @@ components:
         interviewer_name:
           type: string
         interviewer_nuid:
-          type: string
-        writeup:
-          type: string
-        writeup_submitted_at:
-          format: date-time
           type: string
       required:
         - application_id

@@ -127,17 +127,14 @@ export function MyInterviewsClient() {
     () =>
       applications.map((application) => {
         const interview = interviewByApplicationId?.[application.id]
-        const own = interview?.interviewers.find(
-          (iv) => iv.interviewer_nuid === interviewerNuid
-        )
-        const state: ReviewState = own?.writeup_submitted_at
+        const state: ReviewState = interview?.submitted_at
           ? 'submitted'
-          : own?.writeup
+          : interview?.writeup
             ? 'draft'
             : 'none'
         return { application, interview, state }
       }),
-    [applications, interviewByApplicationId, interviewerNuid]
+    [applications, interviewByApplicationId]
   )
 
   const interviewedCount = rows.filter((r) => r.state === 'submitted').length
