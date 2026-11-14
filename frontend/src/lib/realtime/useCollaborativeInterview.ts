@@ -24,6 +24,7 @@ type Me = { nuid: string; name: string }
 const LOCAL = Symbol('local')
 const REMOTE = Symbol('remote')
 const SYNC_WAIT_MS = 700
+const CONNECT_TIMEOUT_MS = 5000
 const FLUSH_MS = 40
 const TYPING_HOLD_MS = 2000
 const TYPING_PING_MS = 500
@@ -76,6 +77,7 @@ export function useCollaborativeInterview({
   })
   const [peers, setPeers] = useState<Peer[]>([])
   const [ready, setReady] = useState(false)
+  const [live, setLive] = useState(false)
   const [typingPeers, setTypingPeers] = useState<Peer[]>([])
 
   const docRef = useRef<Y.Doc | null>(null)
@@ -105,7 +107,11 @@ export function useCollaborativeInterview({
 
     const supabase = createClient()
     const channel = supabase.channel(`interview-writeup:${room}`, {
-      config: { broadcast: { self: false }, presence: { key: meNuid } },
+      config: {
+        private: true,
+        broadcast: { self: false },
+        presence: { key: meNuid },
+      },
     })
     channelRef.current = channel
 
@@ -209,26 +215,47 @@ export function useCollaborativeInterview({
       })
 
     let seedTimer: ReturnType<typeof setTimeout> | null = null
-    channel.subscribe((status) => {
-      if (status !== 'SUBSCRIBED') return
-      void channel.track({ nuid: meNuid, name: meName ?? meNuid })
-      void channel.send({
-        type: 'broadcast',
-        event: 'sync-request',
-        payload: { from: meNuid, sv: toBase64(Y.encodeStateVector(doc)) },
+    let cancelled = false
+    let settled = false
+    const settle = () => {
+      if (settled || cancelled) return
+      settled = true
+      clearTimeout(connectTimer)
+      const init = initialRef.current
+      if (!gotReply && init && ytext.length === 0 && ymap.size === 0) {
+        Y.applyUpdate(doc, seedUpdate(init.text, init.fields))
+      }
+      setTextState(ytext.toString())
+      setFieldsState(readFields(ymap))
+      setReady(true)
+    }
+    const connectTimer = setTimeout(settle, CONNECT_TIMEOUT_MS)
+
+    supabase.realtime
+      .setAuth()
+      .catch(() => undefined)
+      .then(() => {
+        if (cancelled) return
+        channel.subscribe((status) => {
+          if (status !== 'SUBSCRIBED') {
+            setLive(false)
+            settle()
+            return
+          }
+          setLive(true)
+          void channel.track({ nuid: meNuid, name: meName ?? meNuid })
+          void channel.send({
+            type: 'broadcast',
+            event: 'sync-request',
+            payload: { from: meNuid, sv: toBase64(Y.encodeStateVector(doc)) },
+          })
+          if (!settled) seedTimer = setTimeout(settle, SYNC_WAIT_MS)
+        })
       })
-      seedTimer = setTimeout(() => {
-        const init = initialRef.current
-        if (!gotReply && init && ytext.length === 0 && ymap.size === 0) {
-          Y.applyUpdate(doc, seedUpdate(init.text, init.fields))
-        }
-        setTextState(ytext.toString())
-        setFieldsState(readFields(ymap))
-        setReady(true)
-      }, SYNC_WAIT_MS)
-    })
 
     return () => {
+      cancelled = true
+      clearTimeout(connectTimer)
       if (seedTimer) clearTimeout(seedTimer)
       clearInterval(typingTimer)
       lockedRef.current = false
@@ -241,6 +268,7 @@ export function useCollaborativeInterview({
       doc.destroy()
       setPeers([])
       setReady(false)
+      setLive(false)
     }
   }, [room, hasInitial, meNuid, meName])
 
@@ -314,6 +342,7 @@ export function useCollaborativeInterview({
 
   return {
     ready,
+    live,
     text,
     fields,
     peers,

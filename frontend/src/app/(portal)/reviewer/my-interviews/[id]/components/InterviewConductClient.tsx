@@ -193,6 +193,7 @@ export function InterviewConductClient({
   const queryClient = useQueryClient()
   const {
     ready: collabReady,
+    live: collabLive,
     text: comments,
     fields: collabFields,
     peers,
@@ -629,6 +630,13 @@ export function InterviewConductClient({
                     </span>
                   )}
                 </div>
+                {collabReady && !collabLive && canEditInterview && (
+                  <p className="text-text-faint text-xs">
+                    Live editing is unavailable right now. You can still edit
+                    and save, but others won&apos;t see your changes until you
+                    save.
+                  </p>
+                )}
                 {typingPeers.length > 0 && (
                   <p className="text-text-muted inline-flex items-center gap-1.5 text-xs">
                     <Loader2 className="animate-spin" size={12} />
