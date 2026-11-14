@@ -18,10 +18,13 @@ export function CandidateTags({
   applicationId,
   cycleId,
   tagIds,
+  compact,
 }: {
   applicationId: string
   cycleId: string
   tagIds: string[] | null | undefined
+  // A tag icon with the count instead of the tags themselves.
+  compact?: boolean
 }) {
   const { data: tags = [] } = useCycleTags(cycleId)
   const createTag = useCreateTag(cycleId)
@@ -31,6 +34,7 @@ export function CandidateTags({
 
   return (
     <TagSelect
+      compact={compact}
       tags={tags}
       selectedIds={tagIds ?? []}
       max={MAX_TAGS}

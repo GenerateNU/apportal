@@ -886,20 +886,20 @@ function RatingCard({
             {RATING_LABEL[interview.rating]}
           </span>
         )}
-      </div>
-
-      {/* The card is a link, so stop clicks here from navigating. */}
-      <div
-        onClick={(e) => {
-          e.preventDefault()
-          e.stopPropagation()
-        }}
-      >
-        <CandidateTags
-          applicationId={application.id}
-          cycleId={application.cycle_id}
-          tagIds={application.tag_ids}
-        />
+        {/* The card is a link, so stop clicks here from navigating. */}
+        <span
+          onClick={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+          }}
+        >
+          <CandidateTags
+            compact
+            applicationId={application.id}
+            cycleId={application.cycle_id}
+            tagIds={application.tag_ids}
+          />
+        </span>
       </div>
 
       {showInterviewer && interviewerName && (

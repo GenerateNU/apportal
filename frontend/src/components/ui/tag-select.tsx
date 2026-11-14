@@ -1,7 +1,14 @@
 'use client'
 
 import { useState } from 'react'
-import { Check, ChevronLeft, MoreHorizontal, Plus, X } from 'lucide-react'
+import {
+  Check,
+  ChevronLeft,
+  MoreHorizontal,
+  Plus,
+  Tag as TagIcon,
+  X,
+} from 'lucide-react'
 import {
   Popover,
   PopoverContent,
@@ -77,7 +84,11 @@ export function TagSelect({
   onRecolor,
   onDelete,
   disabled,
+  compact,
 }: {
+  // Show a tag icon with the count instead of the tags themselves; the list
+  // opens on click. For tight spots like cards.
+  compact?: boolean
   tags: CycleTag[]
   selectedIds: string[]
   max: number
@@ -132,17 +143,18 @@ export function TagSelect({
 
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      {selected.map((t) => (
-        <TagPill
-          key={t.id}
-          tag={t}
-          onRemove={
-            disabled
-              ? undefined
-              : () => onChange(selectedIds.filter((s) => s !== t.id))
-          }
-        />
-      ))}
+      {!compact &&
+        selected.map((t) => (
+          <TagPill
+            key={t.id}
+            tag={t}
+            onRemove={
+              disabled
+                ? undefined
+                : () => onChange(selectedIds.filter((s) => s !== t.id))
+            }
+          />
+        ))}
       {!disabled && (
         <Popover
           open={open}
@@ -152,14 +164,35 @@ export function TagSelect({
           }}
         >
           <PopoverTrigger asChild>
-            <button
-              type="button"
-              aria-label="Edit tags"
-              className="text-text-subtle inline-flex items-center gap-1 rounded-md border border-dashed border-gray-300 px-2 py-0.5 text-xs hover:border-gray-400"
-            >
-              <Plus size={12} />
-              {selected.length === 0 ? 'Add tag' : null}
-            </button>
+            {compact ? (
+              <button
+                type="button"
+                aria-label={
+                  selected.length > 0
+                    ? `Edit tags (${selected.map((t) => t.name).join(', ')})`
+                    : 'Add tags'
+                }
+                title={selected.map((t) => t.name).join(', ') || 'Add tags'}
+                className={cn(
+                  'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs hover:bg-gray-100',
+                  selected.length > 0
+                    ? 'text-text-default font-medium'
+                    : 'text-text-faint'
+                )}
+              >
+                <TagIcon size={14} />
+                {selected.length > 0 && selected.length}
+              </button>
+            ) : (
+              <button
+                type="button"
+                aria-label="Edit tags"
+                className="text-text-subtle inline-flex items-center gap-1 rounded-md border border-dashed border-gray-300 px-2 py-0.5 text-xs hover:border-gray-400"
+              >
+                <Plus size={12} />
+                {selected.length === 0 ? 'Add tag' : null}
+              </button>
+            )}
           </PopoverTrigger>
           <PopoverContent className="w-64 p-0" align="start">
             {editing ? (
