@@ -21,4 +21,5 @@ export interface ReviewQuestion {
   question_text: string;
   question_type: ReviewQuestionQuestionType;
   role?: ReviewQuestionRole;
+  weight: number;
 }

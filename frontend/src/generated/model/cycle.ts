@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { CycleApplicationType } from './cycleApplicationType';
+import type { CycleReviewRubric } from './cycleReviewRubric';
 import type { CycleStatus } from './cycleStatus';
 
 export interface Cycle {
@@ -17,5 +18,8 @@ export interface Cycle {
   id: string;
   name: string;
   opens_at?: string;
+  review_rubric: CycleReviewRubric;
+  review_score_max: number;
+  review_score_min: number;
   status: CycleStatus;
 }

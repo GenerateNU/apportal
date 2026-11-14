@@ -31,6 +31,9 @@ type Cycle struct {
 	ApplicationType ApplicationType `json:"application_type" gorm:"type:application_type;not null;default:member"`
 	OpensAt         *time.Time      `json:"opens_at,omitempty"`
 	ClosesAt        *time.Time      `json:"closes_at,omitempty"`
+	ReviewRubric    ReviewRubric    `json:"review_rubric" gorm:"type:review_rubric;not null;default:score"`
+	ReviewScoreMin  int             `json:"review_score_min" gorm:"type:integer;not null;default:1;check:cycles_review_score_range_check,review_score_min < review_score_max"`
+	ReviewScoreMax  int             `json:"review_score_max" gorm:"type:integer;not null;default:5"`
 	CreatedAt       time.Time       `json:"created_at" gorm:"not null;default:now()"`
 }
 

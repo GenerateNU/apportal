@@ -47,22 +47,45 @@ type ReviewQuestion struct {
 	DisplayOrder int             `json:"display_order" gorm:"type:integer;not null;default:0"`
 	Options      json.RawMessage `json:"options,omitempty" gorm:"serializer:jsonb;type:jsonb"`
 	Description  *string         `json:"description,omitempty"`
+	Weight       float64         `json:"weight" gorm:"type:numeric;not null;default:1;check:review_questions_weight_check,weight > 0"`
 	CreatedAt    time.Time       `json:"created_at" gorm:"not null;default:now()"`
 	Cycle        Cycle           `json:"-" gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
+}
+
+type ReviewRubricCategory struct {
+	ID           string `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	CycleID      string `json:"cycle_id" gorm:"type:uuid;not null;uniqueIndex:review_rubric_categories_cycle_id_label_key,priority:1"`
+	Label        string `json:"label" gorm:"not null;uniqueIndex:review_rubric_categories_cycle_id_label_key,priority:2"`
+	Points       int    `json:"points" gorm:"type:integer;not null"`
+	DisplayOrder int    `json:"display_order" gorm:"type:integer;not null;default:0"`
+	Cycle        Cycle  `json:"-" gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
+}
+
+type ReviewScoringSetting struct {
+	CycleID   string    `json:"cycle_id" gorm:"primaryKey;type:uuid"`
+	Role      Role      `json:"role" gorm:"primaryKey;column:application_role;type:application_role"`
+	Normalize bool      `json:"normalize" gorm:"not null;default:false"`
+	Cutoff    *float64  `json:"cutoff,omitempty" gorm:"type:numeric"`
+	UpdatedBy *string   `json:"updated_by,omitempty"`
+	UpdatedAt time.Time `json:"updated_at" gorm:"not null;default:now()"`
+	Cycle     Cycle     `json:"-" gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
+	Updater   *User     `json:"-" gorm:"foreignKey:UpdatedBy;references:NUID"`
 }
 
 // WrittenReviewAnswer: a reviewer's answer to one ReviewQuestion within a
 // written review — replaces the old fixed overall_score/reasoning columns.
 type WrittenReviewAnswer struct {
-	ID               string          `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
-	ReviewID         string          `json:"review_id" gorm:"type:uuid;not null;uniqueIndex:written_review_answers_review_id_review_question_id_key,priority:1"`
-	ReviewQuestionID string          `json:"review_question_id" gorm:"type:uuid;not null;uniqueIndex:written_review_answers_review_id_review_question_id_key,priority:2"`
-	AnswerText       *string         `json:"answer_text,omitempty"`
-	AnswerOptions    json.RawMessage `json:"answer_options,omitempty" gorm:"serializer:jsonb;type:jsonb"`
-	Score            *int            `json:"score,omitempty" gorm:"type:integer;check:written_review_answers_score_check,score >= 1 AND score <= 10"`
-	SubmittedAt      time.Time       `json:"submitted_at" gorm:"not null;default:now()"`
-	Review           WrittenReview   `json:"-" gorm:"foreignKey:ReviewID;references:ID;constraint:OnDelete:CASCADE"`
-	ReviewQuestion   ReviewQuestion  `json:"-" gorm:"foreignKey:ReviewQuestionID;references:ID"`
+	ID               string                `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	ReviewID         string                `json:"review_id" gorm:"type:uuid;not null;uniqueIndex:written_review_answers_review_id_review_question_id_key,priority:1"`
+	ReviewQuestionID string                `json:"review_question_id" gorm:"type:uuid;not null;uniqueIndex:written_review_answers_review_id_review_question_id_key,priority:2"`
+	AnswerText       *string               `json:"answer_text,omitempty"`
+	AnswerOptions    json.RawMessage       `json:"answer_options,omitempty" gorm:"serializer:jsonb;type:jsonb"`
+	Score            *int                  `json:"score,omitempty" gorm:"type:integer"`
+	CategoryID       *string               `json:"category_id,omitempty" gorm:"type:uuid;index:idx_written_review_answers_category;check:written_review_answers_score_or_category_check,(score IS NULL) OR (category_id IS NULL)"`
+	SubmittedAt      time.Time             `json:"submitted_at" gorm:"not null;default:now()"`
+	Review           WrittenReview         `json:"-" gorm:"foreignKey:ReviewID;references:ID;constraint:OnDelete:CASCADE"`
+	ReviewQuestion   ReviewQuestion        `json:"-" gorm:"foreignKey:ReviewQuestionID;references:ID"`
+	Category         *ReviewRubricCategory `json:"-" gorm:"foreignKey:CategoryID;references:ID;constraint:OnDelete:RESTRICT"`
 }
 
 // WrittenReviewDetail bundles a review with its answers to the cycle/role's

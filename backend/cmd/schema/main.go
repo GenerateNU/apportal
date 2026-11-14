@@ -28,6 +28,7 @@ CREATE TYPE cycle_status AS ENUM ('draft', 'open', 'closed', 'archived');
 CREATE TYPE decision_kind AS ENUM ('rejection_post_interview', 'rejection_generic');
 CREATE TYPE interview_rating AS ENUM ('do_not_hire', 'good', 'great', 'must_hire', 'neutral');
 CREATE TYPE question_type AS ENUM ('short_answer', 'long_answer', 'multiple_choice', 'checkbox', 'url', 'dropdown', 'score');
+CREATE TYPE review_rubric AS ENUM ('score', 'category');
 CREATE TYPE user_role AS ENUM ('applicant', 'member', 'lead', 'chief', 'admin');
 `
 
@@ -36,7 +37,8 @@ func main() {
 		&models.User{}, &models.Cycle{}, &models.ApplicationTemplate{}, &models.CycleStage{},
 		&models.Question{}, &models.CodeChallenge{}, &models.Application{}, &models.WrittenAnswer{},
 		&models.CodeSubmission{}, &models.InterviewScript{}, &models.LeadAssignment{},
-		&models.WrittenReview{}, &models.ReviewQuestion{}, &models.WrittenReviewAnswer{},
+		&models.WrittenReview{}, &models.ReviewQuestion{}, &models.ReviewRubricCategory{},
+		&models.WrittenReviewAnswer{}, &models.ReviewScoringSetting{},
 		&models.ChiefReview{}, &models.ChiefReviewComment{},
 		&models.Interview{}, &models.Interviewer{}, &models.InterviewReviewer{},
 		&models.ApplicationComment{}, &models.LeadSelection{}, &models.PreferenceList{},

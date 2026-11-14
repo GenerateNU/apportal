@@ -99,6 +99,17 @@ func (r InterviewRating) Valid() bool {
 // advance to interview — each chief on an application casts their own; the
 // final advance/reject call is a separate step (changing the application's
 // stage) made after discussing the votes.
+type ReviewRubric string
+
+const (
+	RubricScore    ReviewRubric = "score"
+	RubricCategory ReviewRubric = "category"
+)
+
+func (r ReviewRubric) Valid() bool {
+	return r == RubricScore || r == RubricCategory
+}
+
 type ChiefVote string
 
 const (

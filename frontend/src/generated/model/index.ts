@@ -76,6 +76,7 @@ export * from './createUserInputBodyRoles';
 export * from './createUserInputBodyRolesAnyOfItem';
 export * from './cycle';
 export * from './cycleApplicationType';
+export * from './cycleReviewRubric';
 export * from './cycleRoleSummary';
 export * from './cycleRoleSummaryRole';
 export * from './cycleStage';

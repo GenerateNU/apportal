@@ -9,6 +9,7 @@
 export interface WrittenReviewAnswer {
   answer_options?: unknown;
   answer_text?: string;
+  category_id?: string;
   id: string;
   review_id: string;
   review_question_id: string;
