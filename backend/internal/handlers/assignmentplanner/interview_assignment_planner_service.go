@@ -68,7 +68,7 @@ func (s *interviewAssignmentPlannerService) interviewerPool(ctx context.Context,
 	if err := role.ParseRoleID(in.RoleID); err != nil {
 		return nil, err
 	}
-	if err := s.access.RequireCycle(ctx, in.ID, access.Manage); err != nil {
+	if err := s.access.CanCycle(ctx, access.ManageCycle, in.ID); err != nil {
 		return nil, err
 	}
 
@@ -95,7 +95,7 @@ func (s *interviewAssignmentPlannerService) interviewerCapacity(ctx context.Cont
 	if err := role.ParseRoleID(in.Body.RoleID); err != nil {
 		return nil, err
 	}
-	if err := s.access.RequireCycle(ctx, in.ID, access.Manage); err != nil {
+	if err := s.access.CanCycle(ctx, access.ManageCycle, in.ID); err != nil {
 		return nil, err
 	}
 
@@ -123,7 +123,7 @@ func (s *interviewAssignmentPlannerService) buildInterviewerPlan(ctx context.Con
 	if len(in.Body.Leads) == 0 {
 		return interviewerRun{}, huma.Error422UnprocessableEntity("at least one lead is required")
 	}
-	if err := s.access.RequireCycle(ctx, in.ID, access.Manage); err != nil {
+	if err := s.access.CanCycle(ctx, access.ManageCycle, in.ID); err != nil {
 		return interviewerRun{}, err
 	}
 
@@ -302,7 +302,7 @@ func (s *interviewAssignmentPlannerService) reviewerPool(ctx context.Context, in
 	if err := role.ParseRoleID(in.RoleID); err != nil {
 		return nil, err
 	}
-	if err := s.access.RequireCycle(ctx, in.ID, access.Manage); err != nil {
+	if err := s.access.CanCycle(ctx, access.ManageCycle, in.ID); err != nil {
 		return nil, err
 	}
 
@@ -352,7 +352,7 @@ func (s *interviewAssignmentPlannerService) reviewerCapacity(ctx context.Context
 	if err := role.ParseRoleID(in.Body.RoleID); err != nil {
 		return nil, err
 	}
-	if err := s.access.RequireCycle(ctx, in.ID, access.Manage); err != nil {
+	if err := s.access.CanCycle(ctx, access.ManageCycle, in.ID); err != nil {
 		return nil, err
 	}
 
@@ -380,7 +380,7 @@ func (s *interviewAssignmentPlannerService) buildReviewerPlan(ctx context.Contex
 	if len(in.Body.Leads) == 0 {
 		return reviewerRun{}, huma.Error422UnprocessableEntity("at least one lead is required")
 	}
-	if err := s.access.RequireCycle(ctx, in.ID, access.Manage); err != nil {
+	if err := s.access.CanCycle(ctx, access.ManageCycle, in.ID); err != nil {
 		return reviewerRun{}, err
 	}
 

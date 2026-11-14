@@ -18,7 +18,7 @@ type interviewScriptService struct {
 }
 
 func (s *interviewScriptService) get(ctx context.Context, in *GetInterviewScriptInput) (*InterviewScriptOutput, error) {
-	if err := s.access.RequireCycle(ctx, in.ID, access.Review); err != nil {
+	if err := s.access.CanCycle(ctx, access.ReviewCycle, in.ID); err != nil {
 		return nil, err
 	}
 	if err := role.RequireCycleRole(ctx, s.roleDB, in.ID, in.RoleID); err != nil {
@@ -35,7 +35,7 @@ func (s *interviewScriptService) update(ctx context.Context, in *UpdateInterview
 	if err := role.ParseRoleID(in.RoleID); err != nil {
 		return nil, err
 	}
-	if err := s.access.RequireCycle(ctx, in.ID, access.Manage); err != nil {
+	if err := s.access.CanCycle(ctx, access.ManageCycle, in.ID); err != nil {
 		return nil, err
 	}
 	if !json.Valid(in.Body.Questions) {

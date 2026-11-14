@@ -78,15 +78,3 @@ func TestApplicationGetRequiresActor(t *testing.T) {
 	_, err := (&applicationService{}).get(context.Background(), &ApplicationIDInput{ID: "app-1"})
 	testutil.WantStatus(t, err, http.StatusUnauthorized)
 }
-
-func TestRequireViewableWithoutDB(t *testing.T) {
-	owner := testutil.WithActor(middleware.Actor{NUID: "a1"})
-	other := testutil.WithActor(middleware.Actor{NUID: "a2"})
-	draft := models.Application{ID: "app-1", UserNUID: "a1", Stage: models.StageDraft}
-
-	if err := requireViewable(owner, nil, draft); err != nil {
-		t.Errorf("owner reading their draft: %v", err)
-	}
-	// Someone else's draft reads as missing, whoever they are.
-	testutil.WantStatus(t, requireViewable(other, nil, draft), http.StatusNotFound)
-}

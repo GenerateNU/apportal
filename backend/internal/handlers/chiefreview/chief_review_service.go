@@ -41,7 +41,7 @@ func (s *chiefReviewService) listBulk(ctx context.Context, in *ListChiefReviewsB
 }
 
 func (s *chiefReviewService) upsert(ctx context.Context, in *UpsertChiefReviewInput) (*ChiefReviewOutput, error) {
-	if err := s.access.RequireApplication(ctx, in.ID, access.Manage); err != nil {
+	if err := s.access.CanApplication(ctx, access.ManageApplication, in.ID); err != nil {
 		return nil, err
 	}
 	if in.Body.Vote != nil && !in.Body.Vote.Valid() {
@@ -59,7 +59,7 @@ func (s *chiefReviewService) upsert(ctx context.Context, in *UpsertChiefReviewIn
 }
 
 func (s *chiefReviewService) list(ctx context.Context, in *utils.ApplicationScopedInput) (*ChiefReviewsOutput, error) {
-	if err := s.access.RequireApplication(ctx, in.ID, access.Manage); err != nil {
+	if err := s.access.CanApplication(ctx, access.ManageApplication, in.ID); err != nil {
 		return nil, err
 	}
 	items, err := s.chiefReviewDB.ListChiefReviews(ctx, in.ID)

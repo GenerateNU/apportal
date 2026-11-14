@@ -18,7 +18,7 @@ type reviewQuestionService struct {
 }
 
 func (s *reviewQuestionService) list(ctx context.Context, in *ListReviewQuestionsInput) (*ReviewQuestionsOutput, error) {
-	if err := s.access.RequireCycle(ctx, in.ID, access.Review); err != nil {
+	if err := s.access.CanCycle(ctx, access.ReviewCycle, in.ID); err != nil {
 		return nil, err
 	}
 	var roleID *string
@@ -37,7 +37,7 @@ func (s *reviewQuestionService) list(ctx context.Context, in *ListReviewQuestion
 }
 
 func (s *reviewQuestionService) create(ctx context.Context, in *CreateReviewQuestionInput) (*ReviewQuestionOutput, error) {
-	if err := s.access.RequireCycle(ctx, in.ID, access.Manage); err != nil {
+	if err := s.access.CanCycle(ctx, access.ManageCycle, in.ID); err != nil {
 		return nil, err
 	}
 	qType := in.Body.QuestionType
@@ -74,7 +74,7 @@ func (s *reviewQuestionService) create(ctx context.Context, in *CreateReviewQues
 }
 
 func (s *reviewQuestionService) update(ctx context.Context, in *UpdateReviewQuestionInput) (*ReviewQuestionOutput, error) {
-	if err := s.access.RequireCycleOf(ctx, "review_questions", in.ID, access.Manage); err != nil {
+	if err := s.access.CanCycleOf(ctx, access.ManageCycle, "review_questions", in.ID); err != nil {
 		return nil, err
 	}
 	if in.Body.QuestionType != nil && !in.Body.QuestionType.Valid() {
@@ -97,7 +97,7 @@ func (s *reviewQuestionService) update(ctx context.Context, in *UpdateReviewQues
 }
 
 func (s *reviewQuestionService) delete(ctx context.Context, in *DeleteReviewQuestionInput) (*struct{}, error) {
-	if err := s.access.RequireCycleOf(ctx, "review_questions", in.ID, access.Manage); err != nil {
+	if err := s.access.CanCycleOf(ctx, access.ManageCycle, "review_questions", in.ID); err != nil {
 		return nil, err
 	}
 	if err := s.reviewQuestionDB.DeleteReviewQuestion(ctx, in.ID); err != nil {

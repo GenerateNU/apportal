@@ -54,7 +54,7 @@ func (s *assignmentPlannerService) capacity(ctx context.Context, in *CapacityInp
 	if err := role.ParseRoleID(in.Body.RoleID); err != nil {
 		return nil, err
 	}
-	if err := s.access.RequireCycle(ctx, in.ID, access.Manage); err != nil {
+	if err := s.access.CanCycle(ctx, access.ManageCycle, in.ID); err != nil {
 		return nil, err
 	}
 
@@ -102,7 +102,7 @@ func (s *assignmentPlannerService) buildPlan(ctx context.Context, in *PreviewPla
 	if len(in.Body.Teams) == 0 {
 		return plannedRun{}, huma.Error422UnprocessableEntity("at least one team is required")
 	}
-	if err := s.access.RequireCycle(ctx, in.ID, access.Manage); err != nil {
+	if err := s.access.CanCycle(ctx, access.ManageCycle, in.ID); err != nil {
 		return plannedRun{}, err
 	}
 
@@ -284,7 +284,7 @@ func (s *assignmentPlannerService) pool(ctx context.Context, in *PoolInput) (*Po
 	if err := role.ParseRoleID(in.RoleID); err != nil {
 		return nil, err
 	}
-	if err := s.access.RequireCycle(ctx, in.ID, access.Manage); err != nil {
+	if err := s.access.CanCycle(ctx, access.ManageCycle, in.ID); err != nil {
 		return nil, err
 	}
 

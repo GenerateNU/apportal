@@ -51,7 +51,7 @@ func (s *roleService) create(ctx context.Context, in *CreateRoleInput) (*RoleOut
 	if name == "" {
 		return nil, huma.Error422UnprocessableEntity("name is required")
 	}
-	if err := s.access.RequireCycle(ctx, in.Body.CycleID, access.Manage); err != nil {
+	if err := s.access.CanCycle(ctx, access.ManageCycle, in.Body.CycleID); err != nil {
 		return nil, err
 	}
 
@@ -120,5 +120,5 @@ func (s *roleService) requireManage(ctx context.Context, roleID string) error {
 	if err != nil {
 		return utils.StoreErr(err)
 	}
-	return s.access.RequireCycle(ctx, role.CycleID, access.Manage)
+	return s.access.CanCycle(ctx, access.ManageCycle, role.CycleID)
 }

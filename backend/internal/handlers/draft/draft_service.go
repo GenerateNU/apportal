@@ -30,7 +30,7 @@ func (s *draftService) board(ctx context.Context, in *DraftScopedInput) (*DraftB
 	if err := role.ParseRoleID(in.RoleID); err != nil {
 		return nil, err
 	}
-	if err := s.access.RequireCycle(ctx, in.ID, access.Review); err != nil {
+	if err := s.access.CanCycle(ctx, access.ReviewCycle, in.ID); err != nil {
 		return nil, err
 	}
 	draft, err := s.draftDB.GetDraft(ctx, in.ID, in.RoleID)
@@ -45,7 +45,7 @@ func (s *draftService) board(ctx context.Context, in *DraftScopedInput) (*DraftB
 }
 
 func (s *draftService) open(ctx context.Context, in *OpenDraftInput) (*DraftOutput, error) {
-	if err := s.access.RequireCycle(ctx, in.ID, access.Manage); err != nil {
+	if err := s.access.CanCycle(ctx, access.ManageCycle, in.ID); err != nil {
 		return nil, err
 	}
 	if err := role.ParseRoleID(in.Body.RoleID); err != nil {
@@ -69,7 +69,7 @@ func (s *draftService) open(ctx context.Context, in *OpenDraftInput) (*DraftOutp
 }
 
 func (s *draftService) update(ctx context.Context, in *UpdateDraftInput) (*DraftOutput, error) {
-	if err := s.access.RequireCycleOf(ctx, "drafts", in.ID, access.Manage); err != nil {
+	if err := s.access.CanCycleOf(ctx, access.ManageCycle, "drafts", in.ID); err != nil {
 		return nil, err
 	}
 	if in.Body.Status != nil && !in.Body.Status.Valid() {
@@ -116,7 +116,7 @@ func (s *draftService) update(ctx context.Context, in *UpdateDraftInput) (*Draft
 }
 
 func (s *draftService) setTeams(ctx context.Context, in *SetDraftTeamsInput) (*DraftBoardOutput, error) {
-	if err := s.access.RequireCycleOf(ctx, "drafts", in.ID, access.Manage); err != nil {
+	if err := s.access.CanCycleOf(ctx, access.ManageCycle, "drafts", in.ID); err != nil {
 		return nil, err
 	}
 	draft, err := s.draftDB.GetDraftByID(ctx, in.ID)
@@ -169,7 +169,7 @@ func sameTeams(existing []models.DraftTeamDetail, ids []string) bool {
 }
 
 func (s *draftService) pick(ctx context.Context, in *MakeDraftPickInput) (*DraftPickOutput, error) {
-	if err := s.access.RequireCycleOf(ctx, "drafts", in.ID, access.Manage); err != nil {
+	if err := s.access.CanCycleOf(ctx, access.ManageCycle, "drafts", in.ID); err != nil {
 		return nil, err
 	}
 	if in.Body.ApplicationID == "" {
@@ -193,7 +193,7 @@ func (s *draftService) pick(ctx context.Context, in *MakeDraftPickInput) (*Draft
 }
 
 func (s *draftService) replacePick(ctx context.Context, in *ReplaceDraftPickInput) (*DraftPickOutput, error) {
-	if err := s.access.RequireCycleOf(ctx, "drafts", in.ID, access.Manage); err != nil {
+	if err := s.access.CanCycleOf(ctx, access.ManageCycle, "drafts", in.ID); err != nil {
 		return nil, err
 	}
 	if in.Body.ApplicationID == "" {
@@ -231,7 +231,7 @@ func (s *draftService) replacePick(ctx context.Context, in *ReplaceDraftPickInpu
 }
 
 func (s *draftService) removePick(ctx context.Context, in *RemoveDraftPickInput) (*struct{}, error) {
-	if err := s.access.RequireCycleOf(ctx, "drafts", in.ID, access.Manage); err != nil {
+	if err := s.access.CanCycleOf(ctx, access.ManageCycle, "drafts", in.ID); err != nil {
 		return nil, err
 	}
 	if err := s.draftDB.RemoveDraftPick(ctx, in.ID, in.PickNumber); err != nil {
@@ -241,7 +241,7 @@ func (s *draftService) removePick(ctx context.Context, in *RemoveDraftPickInput)
 }
 
 func (s *draftService) reset(ctx context.Context, in *DraftIDInput) (*DraftBoardOutput, error) {
-	if err := s.access.RequireCycleOf(ctx, "drafts", in.ID, access.Manage); err != nil {
+	if err := s.access.CanCycleOf(ctx, access.ManageCycle, "drafts", in.ID); err != nil {
 		return nil, err
 	}
 	if err := s.draftDB.ResetDraft(ctx, in.ID); err != nil {
@@ -259,7 +259,7 @@ func (s *draftService) reset(ctx context.Context, in *DraftIDInput) (*DraftBoard
 }
 
 func (s *draftService) delete(ctx context.Context, in *DraftIDInput) (*struct{}, error) {
-	if err := s.access.RequireCycleOf(ctx, "drafts", in.ID, access.Manage); err != nil {
+	if err := s.access.CanCycleOf(ctx, access.ManageCycle, "drafts", in.ID); err != nil {
 		return nil, err
 	}
 	if err := s.draftDB.DeleteDraft(ctx, in.ID); err != nil {
@@ -269,7 +269,7 @@ func (s *draftService) delete(ctx context.Context, in *DraftIDInput) (*struct{},
 }
 
 func (s *draftService) drafted(ctx context.Context, in *utils.CycleScopedInput) (*DraftedApplicationsOutput, error) {
-	if err := s.access.RequireCycle(ctx, in.ID, access.Review); err != nil {
+	if err := s.access.CanCycle(ctx, access.ReviewCycle, in.ID); err != nil {
 		return nil, err
 	}
 	taken, err := s.draftDB.DraftedApplicationIDs(ctx, in.ID)

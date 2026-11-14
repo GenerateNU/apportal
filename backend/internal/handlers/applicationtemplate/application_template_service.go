@@ -45,7 +45,7 @@ func (s *applicationTemplateService) update(ctx context.Context, in *UpdateAppli
 	if err := role.ParseRoleID(in.RoleID); err != nil {
 		return nil, err
 	}
-	if err := s.access.RequireCycle(ctx, in.ID, access.Manage); err != nil {
+	if err := s.access.CanCycle(ctx, access.ManageCycle, in.ID); err != nil {
 		return nil, err
 	}
 	if in.Body.Status != nil && !in.Body.Status.Valid() {

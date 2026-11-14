@@ -14,7 +14,7 @@ type interviewCommentService struct {
 }
 
 func (s *interviewCommentService) list(ctx context.Context, in *utils.ApplicationScopedInput) (*InterviewCommentsOutput, error) {
-	if err := s.access.RequireApplication(ctx, in.ID, access.Review); err != nil {
+	if err := s.access.CanApplication(ctx, access.ReviewApplication, in.ID); err != nil {
 		return nil, err
 	}
 	items, err := s.interviewDB.ListInterviewComments(ctx, in.ID)
@@ -25,7 +25,7 @@ func (s *interviewCommentService) list(ctx context.Context, in *utils.Applicatio
 }
 
 func (s *interviewCommentService) create(ctx context.Context, in *CreateInterviewCommentInput) (*InterviewCommentOutput, error) {
-	if err := s.access.RequireApplication(ctx, in.ID, access.Review); err != nil {
+	if err := s.access.CanApplication(ctx, access.ReviewApplication, in.ID); err != nil {
 		return nil, err
 	}
 	comment, err := s.interviewDB.CreateInterviewComment(ctx, in.ID, utils.CurrentActor(ctx).NUID, in.Body.Body)
@@ -36,7 +36,7 @@ func (s *interviewCommentService) create(ctx context.Context, in *CreateIntervie
 }
 
 func (s *interviewCommentService) update(ctx context.Context, in *UpdateInterviewCommentInput) (*InterviewCommentOutput, error) {
-	if err := s.access.RequireApplication(ctx, in.ID, access.Review); err != nil {
+	if err := s.access.CanApplication(ctx, access.ReviewApplication, in.ID); err != nil {
 		return nil, err
 	}
 	comment, err := s.interviewDB.UpdateInterviewComment(ctx, in.CommentID, utils.CurrentActor(ctx).NUID, in.Body.Body)

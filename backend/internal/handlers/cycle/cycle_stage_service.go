@@ -41,7 +41,7 @@ func (s *cycleStageService) create(ctx context.Context, in *CreateCycleStageInpu
 }
 
 func (s *cycleStageService) list(ctx context.Context, in *ListCycleStagesInput) (*CycleStagesOutput, error) {
-	if err := s.access.RequireCycle(ctx, in.ID, access.Review); err != nil {
+	if err := s.access.CanCycle(ctx, access.ReviewCycle, in.ID); err != nil {
 		return nil, err
 	}
 	stages, err := s.cycleDB.ListCycleStages(ctx, in.ID)

@@ -9,6 +9,8 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 
 	"github.com/GenerateNU/apportal/backend/internal/access"
+
+	"github.com/GenerateNU/apportal/backend/internal/models"
 )
 
 type recordingReviewService struct {
@@ -19,25 +21,22 @@ type recordingReviewService struct {
 }
 
 func (s *recordingReviewService) upsert(ctx context.Context, in *UpsertRecordingReviewInput) (*RecordingReviewsOutput, error) {
-	level, err := s.access.ApplicationLevelAtLeast(ctx, in.ID, access.Review)
-	if err != nil {
-		return nil, err
-	}
 	if in.Body.Rating != nil && !in.Body.Rating.Valid() {
 		return nil, huma.Error422UnprocessableEntity("invalid rating")
 	}
-
-	actor := utils.CurrentActor(ctx)
-	if in.Body.Rating != nil && level < access.Manage {
-		return nil, huma.Error403Forbidden("only a chief may override the interview rating")
-	}
-	assigned, err := s.interviewAssignmentDB.IsReviewer(ctx, in.ID, actor.NUID)
+	app, err := s.access.Application(ctx, in.ID)
 	if err != nil {
-		return nil, utils.StoreErr(err)
+		return nil, err
 	}
-	if !assigned {
-		return nil, huma.Error403Forbidden("only an assigned recording reviewer may submit this review")
+	if err := app.Can(access.SubmitRecordingReview); err != nil {
+		return nil, err
 	}
+	if in.Body.Rating != nil {
+		if err := app.Can(access.OverrideInterviewRating); err != nil {
+			return nil, err
+		}
+	}
+	actor := utils.CurrentActor(ctx)
 
 	submitted, err := s.interviewAssignmentDB.InterviewSubmitted(ctx, in.ID)
 	if err != nil {
@@ -61,28 +60,17 @@ func (s *recordingReviewService) upsert(ctx context.Context, in *UpsertRecording
 }
 
 func (s *recordingReviewService) list(ctx context.Context, in *utils.ApplicationScopedInput) (*RecordingReviewsOutput, error) {
-	level, err := s.access.ApplicationLevelAtLeast(ctx, in.ID, access.Review)
-	if err != nil {
+	if err := s.access.CanApplication(ctx, access.ReviewApplication, in.ID); err != nil {
 		return nil, err
 	}
 	items, err := s.interviewAssignmentDB.ListReviewers(ctx, []string{in.ID})
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
-
-	actor := utils.CurrentActor(ctx)
-	if level < access.Manage {
-		released, err := s.reviewReleaseDB.RecordingReviewsReleased(ctx, in.ID)
-		if err != nil {
-			return nil, utils.StoreErr(err)
-		}
-		if !released {
-			for i := range items {
-				if items[i].ReviewerNUID != actor.NUID {
-					items[i].Writeup = nil
-				}
-			}
-		}
+	visible, err := s.reviewReleaseDB.PeerReviewsVisible(ctx, s.access, models.ReviewKindRecording, []string{in.ID})
+	if err != nil {
+		return nil, err
 	}
+	reviewrelease.HidePeerWriteups(items, utils.CurrentActor(ctx).NUID, visible)
 	return &RecordingReviewsOutput{Body: items}, nil
 }

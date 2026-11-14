@@ -21,7 +21,7 @@ type reviewReleaseService struct {
 }
 
 func (s *reviewReleaseService) list(ctx context.Context, in *utils.CycleScopedInput) (*ReviewGatesOutput, error) {
-	if err := s.access.RequireCycle(ctx, in.ID, access.Review); err != nil {
+	if err := s.access.CanCycle(ctx, access.ReviewCycle, in.ID); err != nil {
 		return nil, err
 	}
 	roles, err := s.roleDB.ListCycleRoles(ctx, in.ID)
@@ -43,7 +43,7 @@ func (s *reviewReleaseService) list(ctx context.Context, in *utils.CycleScopedIn
 }
 
 func (s *reviewReleaseService) set(ctx context.Context, in *SetReviewReleaseInput) (*ReviewGateOutput, error) {
-	if err := s.access.RequireCycle(ctx, in.ID, access.Manage); err != nil {
+	if err := s.access.CanCycle(ctx, access.ManageCycle, in.ID); err != nil {
 		return nil, err
 	}
 	if err := role.RequireCycleRole(ctx, s.roleDB, in.ID, in.Body.RoleID); err != nil {

@@ -35,25 +35,22 @@ func (s *interviewService) listBulk(ctx context.Context, in *ListInterviewsBulkI
 }
 
 func (s *interviewService) upsert(ctx context.Context, in *UpsertInterviewInput) (*InterviewOutput, error) {
-	level, err := s.access.ApplicationLevelAtLeast(ctx, in.ID, access.Review)
-	if err != nil {
-		return nil, err
-	}
 	if in.Body.Rating != nil && !in.Body.Rating.Valid() {
 		return nil, huma.Error422UnprocessableEntity("invalid rating")
 	}
-
-	actor := utils.CurrentActor(ctx)
-	assigned, err := s.interviewAssignmentDB.IsInterviewer(ctx, in.ID, actor.NUID)
+	app, err := s.access.Application(ctx, in.ID)
 	if err != nil {
-		return nil, utils.StoreErr(err)
+		return nil, err
 	}
-	if !assigned && level < access.Manage {
-		return nil, huma.Error403Forbidden("only an assigned interviewer may edit this interview")
+	if err := app.Can(access.EditInterview); err != nil {
+		return nil, err
 	}
-	if !assigned && (in.Body.Writeup != nil || in.Body.RecordingURL != nil || in.Body.NotesURL != nil || in.Body.Submit) {
-		return nil, huma.Error403Forbidden("only an assigned interviewer may edit the write-up or links, or submit")
+	if in.Body.Writeup != nil || in.Body.RecordingURL != nil || in.Body.NotesURL != nil || in.Body.Submit {
+		if err := app.Can(access.WriteInterviewNotes); err != nil {
+			return nil, err
+		}
 	}
+	actor := utils.CurrentActor(ctx)
 	current, err := s.interviewDB.GetInterviewDetail(ctx, in.ID)
 	if err != nil {
 		return nil, utils.StoreErr(err)
@@ -89,7 +86,7 @@ func (s *interviewService) upsert(ctx context.Context, in *UpsertInterviewInput)
 }
 
 func (s *interviewService) get(ctx context.Context, in *utils.ApplicationScopedInput) (*InterviewOutput, error) {
-	if err := s.access.RequireApplication(ctx, in.ID, access.Review); err != nil {
+	if err := s.access.CanApplication(ctx, access.ReviewApplication, in.ID); err != nil {
 		return nil, err
 	}
 	iv, err := s.interviewDB.GetInterviewDetail(ctx, in.ID)

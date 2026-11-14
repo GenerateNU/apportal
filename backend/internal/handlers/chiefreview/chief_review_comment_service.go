@@ -14,7 +14,7 @@ type chiefReviewCommentService struct {
 }
 
 func (s *chiefReviewCommentService) list(ctx context.Context, in *utils.ApplicationScopedInput) (*ChiefReviewCommentsOutput, error) {
-	if err := s.access.RequireApplication(ctx, in.ID, access.Manage); err != nil {
+	if err := s.access.CanApplication(ctx, access.ManageApplication, in.ID); err != nil {
 		return nil, err
 	}
 	items, err := s.chiefReviewDB.ListChiefReviewComments(ctx, in.ID)
@@ -25,7 +25,7 @@ func (s *chiefReviewCommentService) list(ctx context.Context, in *utils.Applicat
 }
 
 func (s *chiefReviewCommentService) create(ctx context.Context, in *CreateChiefReviewCommentInput) (*ChiefReviewCommentOutput, error) {
-	if err := s.access.RequireApplication(ctx, in.ID, access.Manage); err != nil {
+	if err := s.access.CanApplication(ctx, access.ManageApplication, in.ID); err != nil {
 		return nil, err
 	}
 	comment, err := s.chiefReviewDB.CreateChiefReviewComment(ctx, in.ID, utils.CurrentActor(ctx).NUID, in.Body.Body)
@@ -36,7 +36,7 @@ func (s *chiefReviewCommentService) create(ctx context.Context, in *CreateChiefR
 }
 
 func (s *chiefReviewCommentService) update(ctx context.Context, in *UpdateChiefReviewCommentInput) (*ChiefReviewCommentOutput, error) {
-	if err := s.access.RequireApplication(ctx, in.ID, access.Manage); err != nil {
+	if err := s.access.CanApplication(ctx, access.ManageApplication, in.ID); err != nil {
 		return nil, err
 	}
 	comment, err := s.chiefReviewDB.UpdateChiefReviewComment(ctx, in.CommentID, utils.CurrentActor(ctx).NUID, in.Body.Body)

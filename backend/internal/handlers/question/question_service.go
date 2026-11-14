@@ -18,7 +18,7 @@ type questionService struct {
 }
 
 func (s *questionService) create(ctx context.Context, in *CreateQuestionInput) (*QuestionOutput, error) {
-	if err := s.access.RequireCycle(ctx, in.ID, access.Manage); err != nil {
+	if err := s.access.CanCycle(ctx, access.ManageCycle, in.ID); err != nil {
 		return nil, err
 	}
 	qType := in.Body.QuestionType
@@ -77,7 +77,7 @@ func (s *questionService) list(ctx context.Context, in *ListQuestionsInput) (*Qu
 }
 
 func (s *questionService) update(ctx context.Context, in *UpdateQuestionInput) (*QuestionOutput, error) {
-	if err := s.access.RequireCycleOf(ctx, "questions", in.ID, access.Manage); err != nil {
+	if err := s.access.CanCycleOf(ctx, access.ManageCycle, "questions", in.ID); err != nil {
 		return nil, err
 	}
 	if in.Body.QuestionType != nil && !in.Body.QuestionType.Valid() {
@@ -100,7 +100,7 @@ func (s *questionService) update(ctx context.Context, in *UpdateQuestionInput) (
 }
 
 func (s *questionService) delete(ctx context.Context, in *DeleteQuestionInput) (*struct{}, error) {
-	if err := s.access.RequireCycleOf(ctx, "questions", in.ID, access.Manage); err != nil {
+	if err := s.access.CanCycleOf(ctx, access.ManageCycle, "questions", in.ID); err != nil {
 		return nil, err
 	}
 	if err := s.questionDB.DeleteQuestion(ctx, in.ID); err != nil {

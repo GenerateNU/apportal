@@ -71,7 +71,7 @@ func (s *cycleService) list(ctx context.Context, in *ListCyclesInput) (*CyclesOu
 }
 
 func (s *cycleService) templateSummary(ctx context.Context, in *CycleIDInput) (*CycleTemplateSummaryOutput, error) {
-	if err := s.access.RequireCycle(ctx, in.ID, access.Review); err != nil {
+	if err := s.access.CanCycle(ctx, access.ReviewCycle, in.ID); err != nil {
 		return nil, err
 	}
 	roles, err := s.roleDB.ListCycleRoles(ctx, in.ID)

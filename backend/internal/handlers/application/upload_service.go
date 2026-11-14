@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/GenerateNU/apportal/backend/internal/handlers/question"
-	"github.com/GenerateNU/apportal/backend/internal/middleware"
 	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/storage"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
@@ -27,17 +26,12 @@ type uploadService struct {
 }
 
 func (s *uploadService) createUploadURL(ctx context.Context, in *CreateUploadURLInput) (*CreateUploadURLOutput, error) {
-	actor, ok := middleware.ActorFrom(ctx)
-	if !ok || actor.NUID == "" {
-		return nil, huma.Error401Unauthorized("authentication required")
+	if err := s.access.CanApplication(ctx, access.EditOwnApplication, in.ID); err != nil {
+		return nil, err
 	}
-
 	app, err := s.applicationDB.GetApplication(ctx, in.ID)
 	if err != nil {
 		return nil, utils.StoreErr(err)
-	}
-	if actor.NUID != app.UserNUID {
-		return nil, huma.Error403Forbidden("cannot upload to another applicant's application")
 	}
 
 	question, err := s.questionDB.GetQuestion(ctx, in.QuestionID)
@@ -67,16 +61,7 @@ func (s *uploadService) createUploadURL(ctx context.Context, in *CreateUploadURL
 }
 
 func (s *uploadService) createFileURL(ctx context.Context, in *CreateFileURLInput) (*CreateFileURLOutput, error) {
-	actor, ok := middleware.ActorFrom(ctx)
-	if !ok || actor.NUID == "" {
-		return nil, huma.Error401Unauthorized("authentication required")
-	}
-
-	app, err := s.applicationDB.GetApplication(ctx, in.ID)
-	if err != nil {
-		return nil, utils.StoreErr(err)
-	}
-	if err := requireViewable(ctx, s.access, app); err != nil {
+	if err := s.access.CanApplication(ctx, access.ViewApplication, in.ID); err != nil {
 		return nil, err
 	}
 

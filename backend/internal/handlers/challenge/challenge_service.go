@@ -16,7 +16,7 @@ type challengeService struct {
 }
 
 func (s *challengeService) create(ctx context.Context, in *CreateChallengeInput) (*ChallengeOutput, error) {
-	if err := s.access.RequireCycle(ctx, in.ID, access.Manage); err != nil {
+	if err := s.access.CanCycle(ctx, access.ManageCycle, in.ID); err != nil {
 		return nil, err
 	}
 	if err := role.RequireCycleRole(ctx, s.roleDB, in.ID, in.Body.RoleID); err != nil {

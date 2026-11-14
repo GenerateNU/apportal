@@ -62,7 +62,7 @@ func TestUpsertDecisionRequiresReviewer(t *testing.T) {
 	testutil.WantStatus(t, err, http.StatusUnauthorized)
 }
 
-func TestChiefOnlyFields(t *testing.T) {
+func TestEditsLetter(t *testing.T) {
 	override := "rewritten by hand"
 	sent := true
 	kind := models.DecisionRejectionGeneric
@@ -71,25 +71,19 @@ func TestChiefOnlyFields(t *testing.T) {
 	cases := []struct {
 		name  string
 		apply func(in *UpsertDecisionInput)
+		want  bool
 	}{
-		{"body_override", func(in *UpsertDecisionInput) { in.Body.BodyOverride = &override }},
-		{"mark_sent", func(in *UpsertDecisionInput) { in.Body.MarkSent = &sent }},
-		{"kind", func(in *UpsertDecisionInput) { in.Body.Kind = &kind }},
+		{"body_override", func(in *UpsertDecisionInput) { in.Body.BodyOverride = &override }, true},
+		{"mark_sent", func(in *UpsertDecisionInput) { in.Body.MarkSent = &sent }, true},
+		{"kind", func(in *UpsertDecisionInput) { in.Body.Kind = &kind }, true},
+		{"feedback only", func(in *UpsertDecisionInput) { in.Body.Feedback = &feedback }, false},
 	}
 	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			in := &UpsertDecisionInput{ID: "app1"}
-			tc.apply(in)
-			testutil.WantStatus(t, requireChiefFields(false, in), http.StatusForbidden)
-			if err := requireChiefFields(true, in); err != nil {
-				t.Errorf("chief: %v", err)
-			}
-		})
-	}
-	in := &UpsertDecisionInput{ID: "app1"}
-	in.Body.Feedback = &feedback
-	if err := requireChiefFields(false, in); err != nil {
-		t.Errorf("a lead may write feedback: %v", err)
+		in := &UpsertDecisionInput{ID: "app1"}
+		tc.apply(in)
+		if got := editsLetter(in); got != tc.want {
+			t.Errorf("%s: editsLetter = %v, want %v", tc.name, got, tc.want)
+		}
 	}
 }
 
@@ -155,24 +149,5 @@ func TestOwnWrittenReviewsWithholdsPeers(t *testing.T) {
 	kept, blind = ownWrittenReviews(reviews[:1], "l1")
 	if len(kept) != 1 || blind {
 		t.Errorf("got %d kept, blind=%v; want 1, false", len(kept), blind)
-	}
-}
-
-func TestRedactPeerComments(t *testing.T) {
-	writeup := "solid answers"
-	reviews := []models.InterviewReviewerDetail{
-		{InterviewReviewer: models.InterviewReviewer{ReviewerNUID: "l1", Writeup: &writeup}},
-		{InterviewReviewer: models.InterviewReviewer{ReviewerNUID: "l2", Writeup: &writeup}},
-	}
-
-	got, redacted := redactPeerComments(reviews, "l1")
-	if !redacted {
-		t.Error("got redacted=false, want true")
-	}
-	if got[0].Writeup == nil {
-		t.Error("the caller's own write-up was redacted")
-	}
-	if got[1].Writeup != nil {
-		t.Error("a peer's write-up survived redaction")
 	}
 }

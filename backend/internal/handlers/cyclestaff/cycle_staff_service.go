@@ -22,7 +22,7 @@ func (s *cycleStaffService) list(ctx context.Context, in *CycleIDInput) (*StaffO
 		return nil, huma.Error401Unauthorized("authentication required")
 	}
 	if !access.IsAdmin(actor) {
-		if err := s.access.RequireCycle(ctx, in.ID, access.Manage); err != nil {
+		if err := s.access.CanCycle(ctx, access.ManageCycle, in.ID); err != nil {
 			return nil, err
 		}
 	}
