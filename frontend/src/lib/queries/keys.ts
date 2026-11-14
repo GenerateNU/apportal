@@ -241,6 +241,12 @@ export const queryKeys = {
       ] as const,
   },
 
+  interviewGroups: {
+    all: ['interview-groups'] as const,
+    list: (cycleId: string) =>
+      [...queryKeys.interviewGroups.all, cycleId] as const,
+  },
+
   reviewGates: {
     all: ['review-gates'] as const,
     lists: () => [...queryKeys.reviewGates.all, 'list'] as const,

@@ -30,6 +30,7 @@ import {
 } from '@/lib/queries/interview-assignment-plan'
 import { ROLE_LABEL } from '@/lib/roles'
 import type { DraftConflict } from './ConflictBuilder'
+import type { DraftGroupDay } from './GroupBuilder'
 import type { DraftLeadDay } from './MeetingDayPicker'
 import { InterviewerPlanPreview } from './InterviewerPlanPreview'
 
@@ -37,11 +38,13 @@ export function InterviewerPlanPanel({
   cycleId,
   role,
   meetingDays,
+  groupDays,
   conflicts,
 }: {
   cycleId: string
   role: Role
   meetingDays: DraftLeadDay[]
+  groupDays: DraftGroupDay[]
   conflicts: DraftConflict[]
 }) {
   const [cap, setCap] = useState(10)
@@ -66,7 +69,13 @@ export function InterviewerPlanPanel({
       })),
     [conflicts]
   )
-  const canPlan = apiLeads.length > 0 && !!cycleId
+  const apiGroups = useMemo(
+    () => groupDays.map((d) => ({ group_id: d.groupId, day: d.day })),
+    [groupDays]
+  )
+  const byGroup = apiGroups.length > 0
+  const units = byGroup ? { groups: apiGroups } : { leads: apiLeads }
+  const canPlan = (byGroup || apiLeads.length > 0) && !!cycleId
 
   const excludedApplicationIds = useMemo(() => [...excludedIds], [excludedIds])
   const poolAppliedSize = pool
@@ -96,7 +105,7 @@ export function InterviewerPlanPanel({
         cycleId,
         body: {
           role,
-          leads: apiLeads,
+          ...units,
           excluded_application_ids: excludedApplicationIds,
         },
       },
@@ -109,7 +118,7 @@ export function InterviewerPlanPanel({
       cycleId,
       body: {
         role,
-        leads: apiLeads,
+        ...units,
         conflicts: apiConflicts,
         cap,
         excluded_application_ids: excludedApplicationIds,
@@ -123,7 +132,7 @@ export function InterviewerPlanPanel({
         cycleId,
         body: {
           role,
-          leads: apiLeads,
+          ...units,
           conflicts: apiConflicts,
           cap,
           excluded_application_ids: excludedApplicationIds,
@@ -154,9 +163,11 @@ export function InterviewerPlanPanel({
           )}
         </div>
         <div className="flex flex-col">
-          <span className="text-text-faint text-xs">Leads with a day set</span>
+          <span className="text-text-faint text-xs">
+            {byGroup ? 'Groups with a day set' : 'Leads with a day set'}
+          </span>
           <span className="text-text-default text-sm font-semibold">
-            {meetingDays.length}
+            {byGroup ? groupDays.length : meetingDays.length}
           </span>
         </div>
       </div>
@@ -214,7 +225,7 @@ export function InterviewerPlanPanel({
         <div className="flex flex-wrap items-end gap-4">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="interviewer-cap" className="text-xs">
-              Max interviews per lead
+              Max interviews per {byGroup ? 'group' : 'lead'}
             </Label>
             <Input
               id="interviewer-cap"

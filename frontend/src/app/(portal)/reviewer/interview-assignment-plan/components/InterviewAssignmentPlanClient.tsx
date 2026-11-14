@@ -1,7 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { PageContainer } from '@/components/PageContainer'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
@@ -12,9 +14,11 @@ import {
 import type { Role } from '@/lib/api/types'
 import { pickDefaultCycleId, useCycles } from '@/lib/queries/cycles'
 import { useInterviewerPool } from '@/lib/queries/interview-assignment-plan'
+import { useInterviewGroups } from '@/lib/queries/interview-groups'
 import { useLeads } from '@/lib/queries/users'
 import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 import { ConflictBuilder, type DraftConflict } from './ConflictBuilder'
+import { GroupBuilder, type DraftGroupDay } from './GroupBuilder'
 import { InterviewerPlanPanel } from './InterviewerPlanPanel'
 import { MeetingDayPicker, type DraftLeadDay } from './MeetingDayPicker'
 import { ReviewerPlanPanel } from './ReviewerPlanPanel'
@@ -36,7 +40,33 @@ export function InterviewAssignmentPlanClient() {
     if (defaultId) setCycleId(defaultId)
   }
   const [role, setRole] = useState<Role>('software_engineer')
+  const [perApplicant, setPerApplicant] = useState(1)
   const [meetingDays, setMeetingDays] = useState<DraftLeadDay[]>([])
+  const [groupDays, setGroupDays] = useState<DraftGroupDay[]>([])
+  const { data: groups = [] } = useInterviewGroups(cycleId)
+  const useGroups = perApplicant > 1
+
+  const plannedGroupDays = useMemo(
+    () =>
+      groupDays.filter((d) =>
+        groups.some((g) => g.id === d.groupId && (g.members ?? []).length > 0)
+      ),
+    [groupDays, groups]
+  )
+
+  const leadDays = useMemo(() => {
+    if (!useGroups) return meetingDays
+    const out: DraftLeadDay[] = []
+    for (const d of plannedGroupDays) {
+      const group = groups.find((g) => g.id === d.groupId)
+      for (const m of group?.members ?? []) {
+        if (!out.some((o) => o.leadNuid === m.member_nuid)) {
+          out.push({ leadNuid: m.member_nuid, day: d.day })
+        }
+      }
+    }
+    return out
+  }, [useGroups, meetingDays, plannedGroupDays, groups])
   const [conflicts, setConflicts] = useState<DraftConflict[]>([])
   const [stage, setStage] = useState<Stage>('interviewer')
 
@@ -53,8 +83,9 @@ export function InterviewAssignmentPlanClient() {
             Plan interview assignments
           </h1>
           <p className="text-text-muted mt-1 text-sm">
-            Declare each lead&apos;s meeting day, then plan interviewers and
-            interview reviewers matched to applicant availability.
+            Set each lead&apos;s or group&apos;s meeting day, then plan
+            interviewers and interview reviewers matched to applicant
+            availability.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -85,11 +116,46 @@ export function InterviewAssignmentPlanClient() {
         </div>
       </div>
 
-      <MeetingDayPicker
-        leads={leads}
-        value={meetingDays}
-        onChange={setMeetingDays}
-      />
+      <section className="flex flex-wrap items-end gap-4 rounded-xl border border-gray-100 bg-white p-4">
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="interviewers-per-applicant" className="text-xs">
+            Interviewers per applicant
+          </Label>
+          <Input
+            id="interviewers-per-applicant"
+            type="number"
+            min={1}
+            max={Math.max(1, leads.length)}
+            value={perApplicant}
+            className="h-9 w-40"
+            onChange={(e) =>
+              setPerApplicant(Math.max(1, Number(e.target.value) || 1))
+            }
+          />
+        </div>
+        <p className="text-text-muted max-w-md text-xs">
+          {useGroups
+            ? `Leads interview in groups of ${perApplicant}. Each group shares one meeting day and is assigned as a unit.`
+            : 'Each applicant gets one lead. Set 2 or more to interview in groups.'}
+        </p>
+      </section>
+
+      {useGroups ? (
+        <GroupBuilder
+          cycleId={cycleId}
+          leads={leads}
+          groups={groups}
+          size={perApplicant}
+          days={groupDays}
+          onDaysChange={setGroupDays}
+        />
+      ) : (
+        <MeetingDayPicker
+          leads={leads}
+          value={meetingDays}
+          onChange={setMeetingDays}
+        />
+      )}
 
       <ConflictBuilder
         leads={leads}
@@ -117,14 +183,15 @@ export function InterviewAssignmentPlanClient() {
         <InterviewerPlanPanel
           cycleId={cycleId}
           role={role}
-          meetingDays={meetingDays}
+          meetingDays={useGroups ? [] : meetingDays}
+          groupDays={useGroups ? plannedGroupDays : []}
           conflicts={conflicts}
         />
       ) : (
         <ReviewerPlanPanel
           cycleId={cycleId}
           role={role}
-          meetingDays={meetingDays}
+          meetingDays={leadDays}
           conflicts={conflicts}
         />
       )}
