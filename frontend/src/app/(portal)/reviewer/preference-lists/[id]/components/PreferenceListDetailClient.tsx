@@ -761,6 +761,7 @@ export function PreferenceListDetailClient({
             stage: openApplicantSummary.stage,
             submittedAt: openApplicantSummary.submitted_at,
             returner: openApplicant.returner,
+            tagIds: openApplicantSummary.tag_ids ?? [],
           }}
           onClose={() => setOpenApplicant(null)}
         />

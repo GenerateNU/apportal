@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { CandidateTags } from '@/components/CandidateTags'
 import {
   ArrowRight,
   CheckCircle2,
@@ -850,6 +851,20 @@ function RatingCard({
             {RATING_LABEL[interview.rating]}
           </span>
         )}
+      </div>
+
+      {/* The card is a link, so stop clicks here from navigating. */}
+      <div
+        onClick={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+        }}
+      >
+        <CandidateTags
+          applicationId={application.id}
+          cycleId={application.cycle_id}
+          tagIds={application.tag_ids}
+        />
       </div>
 
       {showInterviewer && interviewerName && (
