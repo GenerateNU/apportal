@@ -68,6 +68,12 @@ export const queryKeys = {
     detail: (id: string) => [...queryKeys.applications.details(), id] as const,
   },
 
+  tags: {
+    all: ['tags'] as const,
+    cycle: (cycleId: string) =>
+      [...queryKeys.tags.all, 'cycle', cycleId] as const,
+  },
+
   cycles: {
     all: ['cycles'] as const,
     lists: () => [...queryKeys.cycles.all, 'list'] as const,

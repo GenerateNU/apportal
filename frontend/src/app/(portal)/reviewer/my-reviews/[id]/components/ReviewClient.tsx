@@ -13,11 +13,19 @@ import {
   Lock,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { TagSelect } from '@/components/ui/tag-select'
 import type { Role } from '@/lib/api/types'
 import { useAnswers } from '@/lib/queries/answers'
 import { useApplicant } from '@/lib/queries/applicants'
 import { useApplicationTemplate } from '@/lib/queries/application-templates'
-import { useApplications } from '@/lib/queries/applications'
+import { useApplication, useApplications } from '@/lib/queries/applications'
+import {
+  useCreateTag,
+  useCycleTags,
+  useDeleteTag,
+  useSetApplicationTags,
+  useUpdateTag,
+} from '@/lib/queries/tags'
 import { useQuestions } from '@/lib/queries/questions'
 import { useReviewQuestions } from '@/lib/queries/review-questions'
 import { useCurrentUser } from '@/lib/queries/users'
@@ -33,6 +41,8 @@ import {
   QuestionField,
   type AnswerValue,
 } from '@/app/(portal)/applicant/applications/components/QuestionField'
+
+const MAX_TAGS = 3
 
 export function ReviewClient({
   applicationId,
@@ -54,6 +64,12 @@ export function ReviewClient({
   const { data: template } = useApplicationTemplate(cycleId, role)
   const { data: reviews = [] } = useWrittenReviews(applicationId)
   const upsert = useUpsertWrittenReview()
+  const { data: application } = useApplication(applicationId)
+  const { data: cycleTags = [] } = useCycleTags(cycleId)
+  const createTag = useCreateTag(cycleId)
+  const updateTag = useUpdateTag(cycleId)
+  const deleteTag = useDeleteTag(cycleId)
+  const setTags = useSetApplicationTags(applicationId)
 
   // The rest of my review queue, so a "next" button can jump to the next
   // assigned application that still needs a review from me — same ordering
@@ -205,6 +221,16 @@ export function ReviewClient({
             >
               {ROLE_LABEL[role]}
             </span>
+            <TagSelect
+              tags={cycleTags}
+              selectedIds={application?.tag_ids ?? []}
+              max={MAX_TAGS}
+              onChange={(ids) => setTags.mutate(ids)}
+              onCreate={(name) => createTag.mutateAsync(name)}
+              onRename={(id, name) => updateTag.mutateAsync({ id, name })}
+              onRecolor={(id, color) => updateTag.mutateAsync({ id, color })}
+              onDelete={(id) => deleteTag.mutateAsync(id)}
+            />
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
