@@ -17,22 +17,22 @@ type ChallengesOutput struct {
 type CreateChallengeInput struct {
 	ID   string `path:"id" doc:"Cycle ID"`
 	Body struct {
-		Role         models.Role `json:"role"`
-		Name         string      `json:"name"`
-		ChallengeURL *string     `json:"challenge_url,omitempty"`
-		Instructions *string     `json:"instructions,omitempty"`
-		DueAt        *time.Time  `json:"due_at,omitempty"`
+		RoleID       string     `json:"role_id"`
+		Name         string     `json:"name"`
+		ChallengeURL *string    `json:"challenge_url,omitempty"`
+		Instructions *string    `json:"instructions,omitempty"`
+		DueAt        *time.Time `json:"due_at,omitempty"`
 	}
 }
 
 type ListChallengesInput struct {
-	ID   string `path:"id" doc:"Cycle ID"`
-	Role string `query:"role" doc:"Optional role filter"`
+	ID     string `path:"id" doc:"Cycle ID"`
+	RoleID string `query:"role_id" doc:"Optional role filter"`
 }
 
 type ChallengeCreate struct {
 	CycleID      string
-	Role         models.Role
+	RoleID       string
 	Name         string
 	ChallengeURL *string
 	Instructions *string

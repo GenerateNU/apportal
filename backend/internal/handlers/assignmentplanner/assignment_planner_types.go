@@ -15,9 +15,9 @@ type PlanTeam struct {
 type CapacityInput struct {
 	ID   string `path:"id" doc:"Cycle ID"`
 	Body struct {
-		Role     models.Role `json:"role" doc:"Applicant role whose pool is being planned"`
-		Teams    []PlanTeam  `json:"teams"`
-		Coverage int         `json:"coverage" minimum:"1" doc:"How many distinct leads should review each application"`
+		RoleID   string     `json:"role_id" doc:"Applicant role whose pool is being planned"`
+		Teams    []PlanTeam `json:"teams"`
+		Coverage int        `json:"coverage" minimum:"1" doc:"How many distinct leads should review each application"`
 		// ExcludedApplicationIDs are left out of the pool for this call only —
 		// supplied per request rather than stored, same as Teams.
 		ExcludedApplicationIDs []string `json:"excluded_application_ids,omitempty"`
@@ -32,7 +32,7 @@ type CapacityOutput struct {
 type PreviewPlanInput struct {
 	ID   string `path:"id" doc:"Cycle ID"`
 	Body struct {
-		Role         models.Role    `json:"role"`
+		RoleID       string         `json:"role_id"`
 		Teams        []PlanTeam     `json:"teams"`
 		Coverage     int            `json:"coverage" minimum:"1"`
 		Cap          int            `json:"cap" minimum:"1" doc:"Maximum applications per lead"`
@@ -92,6 +92,7 @@ type PreviewPlanOutput struct {
 // plannedRun bundles a computed plan with the context needed to describe or
 // persist it, so preview and commit can share one planning path.
 type plannedRun struct {
+	cycleID  string
 	plan     assign.Plan
 	prior    []assign.Pair
 	byID     map[string]models.ApplicationSummary
@@ -115,8 +116,8 @@ type CommitPlanOutput struct {
 
 // --- pool ---
 type PoolInput struct {
-	ID   string      `path:"id" doc:"Cycle ID"`
-	Role models.Role `query:"role" doc:"Applicant role"`
+	ID     string `path:"id" doc:"Cycle ID"`
+	RoleID string `query:"role_id" doc:"Applicant role"`
 }
 
 // PoolApplicant identifies one application in the pool, with enough detail to

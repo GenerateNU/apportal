@@ -16,11 +16,11 @@ import (
 // rest need a real database and are exercised by integration/manual testing.
 
 func chiefActor() middleware.Actor {
-	return middleware.Actor{NUID: "c1", Roles: []models.UserRole{models.UserRoleChief}}
+	return middleware.Actor{NUID: "c1"}
 }
 
 func leadActor() middleware.Actor {
-	return middleware.Actor{NUID: "l1", Roles: []models.UserRole{models.UserRoleLead}}
+	return middleware.Actor{NUID: "l1"}
 }
 
 func TestListDecisionsRequiresReviewer(t *testing.T) {
@@ -33,7 +33,7 @@ func TestListDecisionsValidatesFilters(t *testing.T) {
 	s := &decisionService{}
 	ctx := testutil.WithActor(leadActor())
 
-	_, err := s.list(ctx, &ListDecisionsInput{ID: "cycle1", Role: "not-a-role"})
+	_, err := s.list(ctx, &ListDecisionsInput{ID: "cycle1", RoleID: "not-a-role"})
 	testutil.WantStatus(t, err, http.StatusUnprocessableEntity)
 
 	_, err = s.list(ctx, &ListDecisionsInput{ID: "cycle1", Kind: "rejection_maybe"})
@@ -46,19 +46,9 @@ func TestListDecisionTemplatesRequiresRole(t *testing.T) {
 	testutil.WantStatus(t, err, http.StatusUnprocessableEntity)
 }
 
-func TestUpdateDecisionTemplateIsChiefOnly(t *testing.T) {
-	s := &decisionService{}
-	in := &UpdateDecisionTemplateInput{ID: "cycle1", Role: "software_engineer", Kind: "rejection_generic"}
-	in.Body.Subject = "s"
-	in.Body.Body = "b"
-
-	_, err := s.updateTemplate(testutil.WithActor(leadActor()), in)
-	testutil.WantStatus(t, err, http.StatusForbidden)
-}
-
 func TestUpdateDecisionTemplateValidatesKind(t *testing.T) {
 	s := &decisionService{}
-	in := &UpdateDecisionTemplateInput{ID: "cycle1", Role: "software_engineer", Kind: ""}
+	in := &UpdateDecisionTemplateInput{ID: "cycle1", RoleID: "6f1c2a52-6d2c-4a8e-9a57-2b8f3b1c9d10", Kind: ""}
 	in.Body.Subject = "s"
 	in.Body.Body = "b"
 
@@ -72,27 +62,28 @@ func TestUpsertDecisionRequiresReviewer(t *testing.T) {
 	testutil.WantStatus(t, err, http.StatusUnauthorized)
 }
 
-func TestUpsertDecisionRejectsChiefOnlyFieldsFromLead(t *testing.T) {
+func TestEditsLetter(t *testing.T) {
 	override := "rewritten by hand"
 	sent := true
 	kind := models.DecisionRejectionGeneric
+	feedback := "great energy"
 
 	cases := []struct {
 		name  string
 		apply func(in *UpsertDecisionInput)
+		want  bool
 	}{
-		{"body_override", func(in *UpsertDecisionInput) { in.Body.BodyOverride = &override }},
-		{"mark_sent", func(in *UpsertDecisionInput) { in.Body.MarkSent = &sent }},
-		{"kind", func(in *UpsertDecisionInput) { in.Body.Kind = &kind }},
+		{"body_override", func(in *UpsertDecisionInput) { in.Body.BodyOverride = &override }, true},
+		{"mark_sent", func(in *UpsertDecisionInput) { in.Body.MarkSent = &sent }, true},
+		{"kind", func(in *UpsertDecisionInput) { in.Body.Kind = &kind }, true},
+		{"feedback only", func(in *UpsertDecisionInput) { in.Body.Feedback = &feedback }, false},
 	}
 	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			s := &decisionService{}
-			in := &UpsertDecisionInput{ID: "app1"}
-			tc.apply(in)
-			_, err := s.upsert(testutil.WithActor(leadActor()), in)
-			testutil.WantStatus(t, err, http.StatusForbidden)
-		})
+		in := &UpsertDecisionInput{ID: "app1"}
+		tc.apply(in)
+		if got := editsLetter(in); got != tc.want {
+			t.Errorf("%s: editsLetter = %v, want %v", tc.name, got, tc.want)
+		}
 	}
 }
 
@@ -158,24 +149,5 @@ func TestOwnWrittenReviewsWithholdsPeers(t *testing.T) {
 	kept, blind = ownWrittenReviews(reviews[:1], "l1")
 	if len(kept) != 1 || blind {
 		t.Errorf("got %d kept, blind=%v; want 1, false", len(kept), blind)
-	}
-}
-
-func TestRedactPeerComments(t *testing.T) {
-	writeup := "solid answers"
-	reviews := []models.InterviewReviewerDetail{
-		{InterviewReviewer: models.InterviewReviewer{ReviewerNUID: "l1", Writeup: &writeup}},
-		{InterviewReviewer: models.InterviewReviewer{ReviewerNUID: "l2", Writeup: &writeup}},
-	}
-
-	got, redacted := redactPeerComments(reviews, "l1")
-	if !redacted {
-		t.Error("got redacted=false, want true")
-	}
-	if got[0].Writeup == nil {
-		t.Error("the caller's own write-up was redacted")
-	}
-	if got[1].Writeup != nil {
-		t.Error("a peer's write-up survived redaction")
 	}
 }

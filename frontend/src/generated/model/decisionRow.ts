@@ -5,7 +5,6 @@
  * Generate application portal — applications, reviews, and the hiring pipeline.
  * OpenAPI spec version: 0.1.0
  */
-import type { DecisionRowApplicationRole } from './decisionRowApplicationRole';
 import type { DecisionRowInterviewers } from './decisionRowInterviewers';
 import type { DecisionRowKind } from './decisionRowKind';
 import type { DecisionRowStage } from './decisionRowStage';
@@ -16,7 +15,6 @@ export interface DecisionRow {
   readonly $schema?: string;
   applicant_nuid: string;
   application_id: string;
-  application_role: DecisionRowApplicationRole;
   author_name?: string;
   author_nuid?: string;
   body_override?: string;
@@ -27,6 +25,7 @@ export interface DecisionRow {
   full_name: string;
   interviewers: DecisionRowInterviewers;
   kind: DecisionRowKind;
+  role_id: string;
   sent_at?: string;
   sent_by?: string;
   stage: DecisionRowStage;

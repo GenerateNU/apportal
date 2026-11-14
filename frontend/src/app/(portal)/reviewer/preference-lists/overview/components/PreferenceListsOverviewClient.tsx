@@ -16,15 +16,15 @@ import {
 } from '@/components/ui/select'
 import { SegmentedTabs } from '@/components/ui/segmented-tabs'
 import { MEETING_DAY_LABEL } from '@/app/(portal)/reviewer/applications/components/meetingAvailability'
-import type { PreferenceListDetail, Role } from '@/lib/api/types'
+import type { PreferenceListDetail } from '@/lib/api/types'
 import { pickDefaultCycleId, useCycles } from '@/lib/queries/cycles'
 import { usePreferenceListDetails } from '@/lib/queries/preference-lists'
+import { useCycleRolePicker } from '@/hooks/useRoleSelection'
 import { useChiefs, useLeads } from '@/lib/queries/users'
 import {
   PREFERENCE_LIST_STATUS_BADGE,
   PREFERENCE_LIST_STATUS_LABEL,
 } from '@/lib/preference-list-status'
-import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 
 export function PreferenceListsOverviewClient() {
   const searchParams = useSearchParams()
@@ -38,7 +38,7 @@ export function PreferenceListsOverviewClient() {
     if (defaultId) setCycleId(defaultId)
   }
 
-  const [role, setRole] = useState<Role>(ROLE_COLUMNS[0])
+  const { role, setRole, roleIds, roleLabel } = useCycleRolePicker(cycleId)
 
   const { data: lists = [], isLoading } = usePreferenceListDetails(cycleId)
 
@@ -64,8 +64,8 @@ export function PreferenceListsOverviewClient() {
           </SelectContent>
         </Select>
 
-        <SegmentedTabs<Role>
-          tabs={ROLE_COLUMNS.map((r) => ({ id: r, label: ROLE_LABEL[r] }))}
+        <SegmentedTabs
+          tabs={roleIds.map((r) => ({ id: r, label: roleLabel(r) }))}
           value={role}
           onChange={setRole}
         />
@@ -101,10 +101,10 @@ function GroupColumn({
   nameByNuid,
 }: {
   list: PreferenceListDetail
-  role: Role
+  role: string
   nameByNuid: Map<string, string>
 }) {
-  const entries = list.entries.filter((e) => e.application_role === role)
+  const entries = list.entries.filter((e) => e.role_id === role)
   const memberNames = list.members.map(
     (m) => nameByNuid.get(m.lead_nuid) ?? m.lead_nuid
   )

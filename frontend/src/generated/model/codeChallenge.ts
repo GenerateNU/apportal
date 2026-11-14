@@ -5,7 +5,6 @@
  * Generate application portal — applications, reviews, and the hiring pipeline.
  * OpenAPI spec version: 0.1.0
  */
-import type { CodeChallengeRole } from './codeChallengeRole';
 
 export interface CodeChallenge {
   /** A URL to the JSON Schema for this object. */
@@ -17,5 +16,5 @@ export interface CodeChallenge {
   id: string;
   instructions?: string;
   name: string;
-  role: CodeChallengeRole;
+  role_id: string;
 }

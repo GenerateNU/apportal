@@ -7,7 +7,6 @@
  */
 import type { ReviewerCapacityInputBodyExcludedApplicationIds } from './reviewerCapacityInputBodyExcludedApplicationIds';
 import type { ReviewerCapacityInputBodyLeads } from './reviewerCapacityInputBodyLeads';
-import type { ReviewerCapacityInputBodyRole } from './reviewerCapacityInputBodyRole';
 
 export interface ReviewerCapacityInputBody {
   /** A URL to the JSON Schema for this object. */
@@ -16,5 +15,5 @@ export interface ReviewerCapacityInputBody {
   coverage: number;
   excluded_application_ids?: ReviewerCapacityInputBodyExcludedApplicationIds;
   leads: ReviewerCapacityInputBodyLeads;
-  role: ReviewerCapacityInputBodyRole;
+  role_id: string;
 }

@@ -8,9 +8,6 @@ import (
 )
 
 func (s *preferenceListService) createComment(ctx context.Context, in *CreatePreferenceListCommentInput) (*PreferenceListCommentOutput, error) {
-	if err := utils.RequireReviewer(ctx); err != nil {
-		return nil, err
-	}
 	if err := s.requireAccess(ctx, in.ID); err != nil {
 		return nil, err
 	}
@@ -35,9 +32,6 @@ func (s *preferenceListService) createComment(ctx context.Context, in *CreatePre
 }
 
 func (s *preferenceListService) updateComment(ctx context.Context, in *UpdatePreferenceListCommentInput) (*PreferenceListCommentOutput, error) {
-	if err := utils.RequireReviewer(ctx); err != nil {
-		return nil, err
-	}
 	if err := s.requireAccess(ctx, in.ID); err != nil {
 		return nil, err
 	}

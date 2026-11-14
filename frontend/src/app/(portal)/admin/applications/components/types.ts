@@ -1,4 +1,4 @@
-import type { CycleStatus, Role } from '@/lib/api/types'
+import type { CycleStatus } from '@/lib/api/types'
 
 // One row per (cycle, role) pairing — the set of questions/challenges an
 // applicant fills out for that role in that cycle. Not to be confused with
@@ -8,7 +8,7 @@ export type ApplicationTemplateCard = {
   cycleName: string
   cycleStatus: CycleStatus
   cycleColorIndex: number
-  role: Role
+  role: string
   title: string
   status: CycleStatus
   questionCount: number

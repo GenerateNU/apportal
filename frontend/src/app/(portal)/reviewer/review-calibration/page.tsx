@@ -10,9 +10,9 @@ import { listReviewQuestionAverages } from '@/generated/review-releases/review-r
 import { getServerRequestOptions } from '@/lib/api/server-request-options'
 import { pickDefaultCycleId } from '@/lib/queries/cycles'
 import { queryKeys } from '@/lib/queries/keys'
-import { ROLE_COLUMNS } from '@/lib/roles'
 import { ReviewCalibrationClient } from './components/ReviewCalibrationClient'
 import { getServerCurrentUser } from '@/lib/auth/server-user'
+import { cycleRoleIds, prefetchRoles } from '@/lib/queries/server-prefetch'
 
 // Auth-gated, live data fetched per request from the backend — never prerender
 // this at build time (the backend isn't running then).
@@ -40,21 +40,24 @@ export default async function ReviewCalibrationPage() {
   const queryClient = new QueryClient()
   const requestOptions = await getServerRequestOptions()
 
-  const cycles = await queryClient.fetchQuery({
-    queryKey: queryKeys.cycles.list({}),
-    queryFn: async () => (await listCycles({}, requestOptions)) ?? [],
-  })
+  const [cycles, roles] = await Promise.all([
+    queryClient.fetchQuery({
+      queryKey: queryKeys.cycles.list({}),
+      queryFn: async () => (await listCycles({}, requestOptions)) ?? [],
+    }),
+    prefetchRoles(queryClient, requestOptions),
+  ])
   const cycleId = pickDefaultCycleId(cycles)
 
   await Promise.all(
     cycleId
-      ? ROLE_COLUMNS.flatMap((role) => [
+      ? cycleRoleIds(roles, cycleId).flatMap((role) => [
           queryClient.prefetchQuery({
             queryKey: queryKeys.reviewQuestions.list(cycleId, role),
             queryFn: async () =>
               (await listCycleReviewQuestions(
                 cycleId,
-                { role },
+                { role_id: role },
                 requestOptions
               )) ?? [],
           }),
@@ -63,7 +66,7 @@ export default async function ReviewCalibrationPage() {
             queryFn: async () =>
               (await listReviewQuestionAverages(
                 cycleId,
-                { role },
+                { role_id: role },
                 requestOptions
               )) ?? [],
           }),

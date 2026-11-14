@@ -20,7 +20,7 @@ func registerCycleStage(api huma.API, s *cycleStageService) {
 		Method:        http.MethodPost,
 		Path:          "/cycles/{id}/stages",
 		Summary:       "Add a stage to a cycle's flow template",
-		Description:   "Chief only.",
+		Description:   "Admin only.",
 		Tags:          []string{"Cycle stages"},
 		DefaultStatus: http.StatusCreated,
 		Errors:        []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusConflict},
@@ -31,7 +31,7 @@ func registerCycleStage(api huma.API, s *cycleStageService) {
 		Method:      http.MethodPatch,
 		Path:        "/cycle-stages/{id}",
 		Summary:     "Update a cycle stage",
-		Description: "Chief only.",
+		Description: "Admin only.",
 		Tags:        []string{"Cycle stages"},
 		Errors:      []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound},
 	}, s.update)

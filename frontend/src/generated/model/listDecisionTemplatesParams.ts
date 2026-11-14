@@ -10,5 +10,5 @@ export type ListDecisionTemplatesParams = {
 /**
  * Applicant role
  */
-role?: string;
+role_id?: string;
 };

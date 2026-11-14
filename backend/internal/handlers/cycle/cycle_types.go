@@ -4,6 +4,8 @@ import (
 	"time"
 
 	"github.com/GenerateNU/apportal/backend/internal/models"
+
+	"gorm.io/gorm"
 )
 
 // CycleOutput wraps a single cycle response body.
@@ -18,6 +20,7 @@ type CyclesOutput struct {
 
 type CreateCycleInput struct {
 	Body struct {
+		BranchID        string                 `json:"branch_id"`
 		Name            string                 `json:"name"`
 		Status          models.CycleStatus     `json:"status,omitempty"`
 		ApplicationType models.ApplicationType `json:"application_type,omitempty"`
@@ -27,7 +30,8 @@ type CreateCycleInput struct {
 }
 
 type ListCyclesInput struct {
-	Status string `query:"status" doc:"Optional status filter: draft, open, closed, archived"`
+	Status   string `query:"status" doc:"Optional status filter: draft, open, closed, archived"`
+	BranchID string `query:"branch_id" doc:"Optional branch filter"`
 }
 
 // CycleTemplateSummaryOutput wraps a cycle's per-role template counts.
@@ -51,6 +55,7 @@ type UpdateCycleInput struct {
 }
 
 type CycleCreate struct {
+	BranchID        string
 	Name            string
 	Status          models.CycleStatus
 	ApplicationType models.ApplicationType
@@ -69,7 +74,10 @@ type CycleUpdate struct {
 
 // CycleFilter holds optional list filters; empty fields are ignored.
 type CycleFilter struct {
-	Status models.CycleStatus
+	Status   models.CycleStatus
+	BranchID string
+	// Listable limits to cycles the caller may list; nil means every cycle.
+	Listable *gorm.DB
 }
 
 type CycleStageCreate struct {

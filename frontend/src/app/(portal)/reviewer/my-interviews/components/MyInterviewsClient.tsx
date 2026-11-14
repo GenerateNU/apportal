@@ -14,7 +14,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import type { Role } from '@/lib/api/types'
 import { useApplications } from '@/lib/queries/applications'
 import { DEFAULT_CYCLE_ID, useCycles } from '@/lib/queries/cycles'
 import { useChiefs, useCurrentUser, useLeads } from '@/lib/queries/users'
@@ -23,11 +22,11 @@ import {
   interviewSubmitted,
   useInterviewsByApplicationIds,
 } from '@/lib/queries/interviews'
-import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 import type { ReviewState } from '../../my-reviews/constants'
 import { ReviewRow } from '../../my-reviews/components/ReviewRow'
 import { REVIEWING_STATE, type ReviewingState } from '../constants'
 import { InterviewRow } from './InterviewRow'
+import { useCycleRoleFilter } from '@/hooks/useRoleSelection'
 
 // Sentinel for "my own queue" in the viewer-selector below, since Radix
 // Select can't use an empty string as a value.
@@ -56,7 +55,9 @@ export function MyInterviewsClient() {
     }
     setCycleDefaulted(true)
   }
-  const [activeRole, setActiveRole] = useState<Role | 'all'>('all')
+  // A role ID, or 'all'.
+  const { activeRole, setActiveRole, roleIds, roleLabel } =
+    useCycleRoleFilter(cycleId)
 
   // Chief-only: view any interviewer's queue read-only, same list/interview
   // data, just scoped to someone else's nuid instead of the caller's own.
@@ -92,7 +93,7 @@ export function MyInterviewsClient() {
     {
       ...(interviewerNuid && { interviewer_nuid: interviewerNuid }),
       ...(cycleId !== 'all' && { cycle_id: cycleId }),
-      ...(activeRole !== 'all' && { role: activeRole }),
+      ...(activeRole !== 'all' && { role_id: activeRole }),
       ...(debouncedSearch && { search: debouncedSearch }),
     },
     undefined,
@@ -108,7 +109,7 @@ export function MyInterviewsClient() {
     {
       ...(interviewerNuid && { recording_reviewer_nuid: interviewerNuid }),
       ...(cycleId !== 'all' && { cycle_id: cycleId }),
-      ...(activeRole !== 'all' && { role: activeRole }),
+      ...(activeRole !== 'all' && { role_id: activeRole }),
       ...(debouncedSearch && { search: debouncedSearch }),
     },
     undefined,
@@ -146,23 +147,25 @@ export function MyInterviewsClient() {
   // queue, so the top of it should be the next interview to run.
   const sections = useMemo(() => {
     const rank = { draft: 0, none: 1, submitted: 2 }
-    return ROLE_COLUMNS.map((role) => ({
-      role,
-      rows: rows
-        .filter((r) => r.application.role === role)
-        .sort((a, b) => {
-          const byState = rank[a.state] - rank[b.state]
-          if (byState !== 0) return byState
-          const aAt = a.interview?.scheduled_at
-          const bAt = b.interview?.scheduled_at
-          if (aAt && bAt && aAt !== bAt) return aAt.localeCompare(bAt)
-          if (aAt !== bAt) return aAt ? -1 : 1
-          return (
-            a.application.full_name || a.application.user_nuid
-          ).localeCompare(b.application.full_name || b.application.user_nuid)
-        }),
-    })).filter((s) => s.rows.length > 0)
-  }, [rows])
+    return roleIds
+      .map((role) => ({
+        role,
+        rows: rows
+          .filter((r) => r.application.role_id === role)
+          .sort((a, b) => {
+            const byState = rank[a.state] - rank[b.state]
+            if (byState !== 0) return byState
+            const aAt = a.interview?.scheduled_at
+            const bAt = b.interview?.scheduled_at
+            if (aAt && bAt && aAt !== bAt) return aAt.localeCompare(bAt)
+            if (aAt !== bAt) return aAt ? -1 : 1
+            return (
+              a.application.full_name || a.application.user_nuid
+            ).localeCompare(b.application.full_name || b.application.user_nuid)
+          }),
+      }))
+      .filter((s) => s.rows.length > 0)
+  }, [rows, roleIds])
 
   // Own review progress for the reviewing queue, in one request for the whole
   // list rather than one per row.
@@ -204,21 +207,23 @@ export function MyInterviewsClient() {
   ).length
 
   const reviewingSections = useMemo(() => {
-    return ROLE_COLUMNS.map((role) => ({
-      role,
-      rows: reviewingRows
-        .filter((r) => r.application.role === role)
-        // Actionable first — see REVIEWING_STATE's ranks.
-        .sort((a, b) => {
-          const byState =
-            REVIEWING_STATE[a.state].rank - REVIEWING_STATE[b.state].rank
-          if (byState !== 0) return byState
-          return (
-            a.application.full_name || a.application.user_nuid
-          ).localeCompare(b.application.full_name || b.application.user_nuid)
-        }),
-    })).filter((s) => s.rows.length > 0)
-  }, [reviewingRows])
+    return roleIds
+      .map((role) => ({
+        role,
+        rows: reviewingRows
+          .filter((r) => r.application.role_id === role)
+          // Actionable first — see REVIEWING_STATE's ranks.
+          .sort((a, b) => {
+            const byState =
+              REVIEWING_STATE[a.state].rank - REVIEWING_STATE[b.state].rank
+            if (byState !== 0) return byState
+            return (
+              a.application.full_name || a.application.user_nuid
+            ).localeCompare(b.application.full_name || b.application.user_nuid)
+          }),
+      }))
+      .filter((s) => s.rows.length > 0)
+  }, [reviewingRows, roleIds])
 
   return (
     <PageContainer>
@@ -255,7 +260,7 @@ export function MyInterviewsClient() {
 
             <Select
               value={activeRole}
-              onValueChange={(val) => setActiveRole(val as Role | 'all')}
+              onValueChange={(val) => setActiveRole(val)}
             >
               <SelectTrigger
                 className="min-w-40 flex-1 sm:w-48 sm:flex-none"
@@ -265,9 +270,9 @@ export function MyInterviewsClient() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All roles</SelectItem>
-                {ROLE_COLUMNS.map((r) => (
+                {roleIds.map((r) => (
                   <SelectItem key={r} value={r}>
-                    {ROLE_LABEL[r]}
+                    {roleLabel(r)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -329,7 +334,7 @@ export function MyInterviewsClient() {
           sections.map(({ role, rows: roleRows }) => (
             <div key={role} className="flex flex-col gap-2">
               <SectionLabel as="h3">
-                {ROLE_LABEL[role]} ({roleRows.length})
+                {roleLabel(role)} ({roleRows.length})
               </SectionLabel>
               <div className={TABLE_FRAME}>
                 {roleRows.map(({ application, interview, state }) => (
@@ -367,7 +372,7 @@ export function MyInterviewsClient() {
           {reviewingSections.map(({ role, rows: roleRows }) => (
             <div key={role} className="flex flex-col gap-2">
               <SectionLabel as="h3">
-                {ROLE_LABEL[role]} ({roleRows.length})
+                {roleLabel(role)} ({roleRows.length})
               </SectionLabel>
               <div className={TABLE_FRAME}>
                 {roleRows.map(({ application, state }) => (

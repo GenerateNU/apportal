@@ -3,10 +3,13 @@ package reviewquestion
 import (
 	"context"
 
-	"github.com/GenerateNU/apportal/backend/internal/handlers/user"
+	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
-	"github.com/danielgtaylor/huma/v2"
+
+	"github.com/GenerateNU/apportal/backend/internal/access"
+
+	"github.com/GenerateNU/apportal/backend/internal/handlers/cyclestaff"
 )
 
 // reviewQuestionAverageService exposes, per lead, their average score on each
@@ -14,25 +17,25 @@ import (
 // lead scores certain questions systematically higher or lower than their
 // peers (as opposed to reviewerProgressHandler's submission-status view).
 type reviewQuestionAverageService struct {
+	access           *access.Checker
 	reviewQuestionDB *ReviewQuestionDB
-	userDB           *user.UserDB
+	staffDB          *cyclestaff.CycleStaffDB
 }
 
 func (s *reviewQuestionAverageService) list(ctx context.Context, in *ReviewQuestionAverageInput) (*ReviewQuestionAverageOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := role.ParseRoleID(in.RoleID); err != nil {
 		return nil, err
 	}
-	if !in.Role.Valid() {
-		return nil, huma.Error422UnprocessableEntity("role is invalid")
+	if err := s.access.CanCycle(ctx, access.ManageCycle, in.ID); err != nil {
+		return nil, err
 	}
 
-	rows, err := s.reviewQuestionDB.ListReviewQuestionAverages(ctx, in.ID, in.Role)
+	rows, err := s.reviewQuestionDB.ListReviewQuestionAverages(ctx, in.ID, in.RoleID)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
 
-	leadRole := models.UserRoleLead
-	leads, _, err := s.userDB.ListUsers(ctx, &leadRole, nil, 0)
+	leads, err := s.staffDB.ListStaff(ctx, in.ID, models.CycleStaffLead)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
@@ -40,18 +43,18 @@ func (s *reviewQuestionAverageService) list(ctx context.Context, in *ReviewQuest
 	byLead := make(map[string]*models.ReviewQuestionAverage, len(leads))
 	order := make([]string, 0, len(leads))
 	for _, lead := range leads {
-		byLead[lead.NUID] = &models.ReviewQuestionAverage{
-			LeadNUID: lead.NUID,
+		byLead[lead.UserNUID] = &models.ReviewQuestionAverage{
+			LeadNUID: lead.UserNUID,
 			FullName: lead.FullName,
 			Scores:   []models.QuestionAverageScore{},
 		}
-		order = append(order, lead.NUID)
+		order = append(order, lead.UserNUID)
 	}
 
 	for _, r := range rows {
 		p, ok := byLead[r.LeadNUID]
 		if !ok {
-			// A scored review from a lead who no longer holds the lead role:
+			// A scored review from someone no longer a lead on this cycle:
 			// still surface it rather than silently dropping the data.
 			p = &models.ReviewQuestionAverage{LeadNUID: r.LeadNUID, Scores: []models.QuestionAverageScore{}}
 			byLead[r.LeadNUID] = p

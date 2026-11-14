@@ -1,7 +1,7 @@
 'use client'
 import { BackLink } from '@/components/ui/back-link'
 import { PageContainer } from '@/components/PageContainer'
-import type { ApplicationStage, Role } from '@/lib/api/types'
+import type { ApplicationStage } from '@/lib/api/types'
 import { ApplicantOverview } from '../../components/ApplicantOverview'
 
 export function ApplicationDetailClient({
@@ -13,7 +13,7 @@ export function ApplicationDetailClient({
 }: {
   applicationId: string
   cycleId: string
-  role: Role
+  role: string
   applicantNuid: string
   stage?: ApplicationStage
 }) {

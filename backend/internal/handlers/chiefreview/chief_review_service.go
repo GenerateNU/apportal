@@ -7,16 +7,16 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 	"github.com/danielgtaylor/huma/v2"
+
+	"github.com/GenerateNU/apportal/backend/internal/access"
 )
 
 type chiefReviewService struct {
+	access        *access.Checker
 	chiefReviewDB *ChiefReviewDB
 }
 
 func (s *chiefReviewService) listBulk(ctx context.Context, in *ListChiefReviewsBulkInput) (*ChiefReviewsOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
-		return nil, err
-	}
 	ids := make([]string, 0, 8)
 	for _, id := range strings.Split(in.ApplicationIDs, ",") {
 		if id = strings.TrimSpace(id); id != "" {
@@ -29,6 +29,10 @@ func (s *chiefReviewService) listBulk(ctx context.Context, in *ListChiefReviewsB
 	if len(ids) > utils.MaxBulkApplications {
 		return nil, huma.Error422UnprocessableEntity("too many application_ids")
 	}
+	ids, err := s.access.VisibleApplicationIDs(ctx, ids, access.Manage)
+	if err != nil {
+		return nil, err
+	}
 	items, err := s.chiefReviewDB.ListChiefReviewsForApplications(ctx, ids)
 	if err != nil {
 		return nil, utils.StoreErr(err)
@@ -37,7 +41,7 @@ func (s *chiefReviewService) listBulk(ctx context.Context, in *ListChiefReviewsB
 }
 
 func (s *chiefReviewService) upsert(ctx context.Context, in *UpsertChiefReviewInput) (*ChiefReviewOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := s.access.CanApplication(ctx, access.ManageApplication, in.ID); err != nil {
 		return nil, err
 	}
 	if in.Body.Vote != nil && !in.Body.Vote.Valid() {
@@ -55,7 +59,7 @@ func (s *chiefReviewService) upsert(ctx context.Context, in *UpsertChiefReviewIn
 }
 
 func (s *chiefReviewService) list(ctx context.Context, in *utils.ApplicationScopedInput) (*ChiefReviewsOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := s.access.CanApplication(ctx, access.ManageApplication, in.ID); err != nil {
 		return nil, err
 	}
 	items, err := s.chiefReviewDB.ListChiefReviews(ctx, in.ID)

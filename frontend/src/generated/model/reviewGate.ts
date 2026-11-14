@@ -5,7 +5,6 @@
  * Generate application portal — applications, reviews, and the hiring pipeline.
  * OpenAPI spec version: 0.1.0
  */
-import type { ReviewGateRole } from './reviewGateRole';
 
 export interface ReviewGate {
   /** A URL to the JSON Schema for this object. */
@@ -16,6 +15,6 @@ export interface ReviewGate {
   released: boolean;
   released_at?: string;
   released_by?: string;
-  role: ReviewGateRole;
+  role_id: string;
   submitted_count: number;
 }

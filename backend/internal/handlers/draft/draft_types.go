@@ -11,15 +11,15 @@ type DraftOutput struct {
 }
 
 type DraftScopedInput struct {
-	ID   string `path:"id" doc:"Cycle ID"`
-	Role string `query:"role" doc:"Applicant role: software_engineer or software_designer"`
+	ID     string `path:"id" doc:"Cycle ID"`
+	RoleID string `query:"role_id" doc:"Applicant role ID"`
 }
 
 type OpenDraftInput struct {
 	ID   string `path:"id" doc:"Cycle ID"`
 	Body struct {
-		Role   models.Role `json:"role" doc:"Applicant role: software_engineer or software_designer"`
-		Rounds int         `json:"rounds,omitempty" doc:"How many times around the board; defaults to 1" minimum:"0"`
+		RoleID string `json:"role_id" doc:"Applicant role ID"`
+		Rounds int    `json:"rounds,omitempty" doc:"How many times around the board; defaults to 1" minimum:"0"`
 	}
 }
 

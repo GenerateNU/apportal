@@ -19,8 +19,8 @@ import { useApplications } from '@/lib/queries/applications'
 import { useOpenApplicationTemplates } from '@/lib/queries/application-templates'
 import { useCycles, useCycleTemplateSummary } from '@/lib/queries/cycles'
 import { useCurrentUser } from '@/lib/queries/users'
-import { ROLE_CHIP_CLASS, ROLE_LABEL } from '@/lib/roles'
 import { APPLICANT_STATUS } from '../lib/status'
+import { useRoleLookup } from '@/lib/queries/roles'
 
 export function ApplicationsClient() {
   const { data: currentUser, isLoading } = useCurrentUser()
@@ -119,17 +119,17 @@ function CycleSection({
   const { data: summaries = [] } = useCycleTemplateSummary(cycle.id)
 
   const cycleApplications = applications.filter((a) => a.cycle_id === cycle.id)
-  const applicationsMap = new Map(cycleApplications.map((a) => [a.role, a]))
+  const applicationsMap = new Map(cycleApplications.map((a) => [a.role_id, a]))
 
   const submittedApplications = new Set(
-    cycleApplications.filter((a) => a.stage !== 'draft').map((a) => a.role)
+    cycleApplications.filter((a) => a.stage !== 'draft').map((a) => a.role_id)
   )
 
   const openRoleTemplates = templates.filter(
-    (t) => !submittedApplications.has(t.application_role)
+    (t) => !submittedApplications.has(t.role_id)
   )
   const submittedRoleTemplates = templates.filter((t) =>
-    submittedApplications.has(t.application_role)
+    submittedApplications.has(t.role_id)
   )
 
   return (
@@ -142,15 +142,15 @@ function CycleSection({
           <div className="grid gap-4 sm:grid-cols-2">
             {openRoleTemplates.map((template) => (
               <ApplicationRoleCard
-                key={template.application_role}
+                key={template.role_id}
                 cycle={cycle}
                 cycleColorIndex={cycleColorIndex}
                 template={template}
                 questionCount={
-                  summaries.find((s) => s.role === template.application_role)
+                  summaries.find((s) => s.role_id === template.role_id)
                     ?.question_count ?? 0
                 }
-                application={applicationsMap.get(template.application_role)}
+                application={applicationsMap.get(template.role_id)}
               />
             ))}
           </div>
@@ -165,15 +165,15 @@ function CycleSection({
           <div className="grid gap-4 sm:grid-cols-2">
             {submittedRoleTemplates.map((template) => (
               <ApplicationRoleCard
-                key={template.application_role}
+                key={template.role_id}
                 cycle={cycle}
                 cycleColorIndex={cycleColorIndex}
                 template={template}
                 questionCount={
-                  summaries.find((s) => s.role === template.application_role)
+                  summaries.find((s) => s.role_id === template.role_id)
                     ?.question_count ?? 0
                 }
-                application={applicationsMap.get(template.application_role)}
+                application={applicationsMap.get(template.role_id)}
               />
             ))}
           </div>
@@ -184,6 +184,7 @@ function CycleSection({
 }
 
 function NoOpenCycles({ applications }: { applications: Application[] }) {
+  const { roleLabel, roleChipClass } = useRoleLookup()
   if (applications.length === 0) {
     return (
       <EmptyState
@@ -207,8 +208,8 @@ function NoOpenCycles({ applications }: { applications: Application[] }) {
             variant="flat"
             className="flex flex-wrap items-center justify-between gap-2"
           >
-            <Badge className={ROLE_CHIP_CLASS[application.role]}>
-              {ROLE_LABEL[application.role]}
+            <Badge className={roleChipClass(application.role_id)}>
+              {roleLabel(application.role_id)}
             </Badge>
             <Badge className={status.className}>{status.label}</Badge>
           </Card>

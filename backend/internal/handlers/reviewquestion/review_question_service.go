@@ -3,29 +3,33 @@ package reviewquestion
 import (
 	"context"
 
+	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 	"github.com/danielgtaylor/huma/v2"
+
+	"github.com/GenerateNU/apportal/backend/internal/access"
 )
 
 type reviewQuestionService struct {
+	access           *access.Checker
 	reviewQuestionDB *ReviewQuestionDB
+	roleDB           *role.RoleDB
 }
 
 func (s *reviewQuestionService) list(ctx context.Context, in *ListReviewQuestionsInput) (*ReviewQuestionsOutput, error) {
-	if err := utils.RequireReviewer(ctx); err != nil {
+	if err := s.access.CanCycle(ctx, access.ReviewCycle, in.ID); err != nil {
 		return nil, err
 	}
-	var role *models.Role
-	if in.Role != "" {
-		parsed := models.Role(in.Role)
-		if !parsed.Valid() {
-			return nil, huma.Error422UnprocessableEntity("invalid role")
+	var roleID *string
+	if in.RoleID != "" {
+		if err := role.ParseRoleID(in.RoleID); err != nil {
+			return nil, err
 		}
-		role = &parsed
+		roleID = &in.RoleID
 	}
 
-	questions, err := s.reviewQuestionDB.ListReviewQuestions(ctx, in.ID, role)
+	questions, err := s.reviewQuestionDB.ListReviewQuestions(ctx, in.ID, roleID)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
@@ -33,7 +37,7 @@ func (s *reviewQuestionService) list(ctx context.Context, in *ListReviewQuestion
 }
 
 func (s *reviewQuestionService) create(ctx context.Context, in *CreateReviewQuestionInput) (*ReviewQuestionOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := s.access.CanCycle(ctx, access.ManageCycle, in.ID); err != nil {
 		return nil, err
 	}
 	qType := in.Body.QuestionType
@@ -43,8 +47,10 @@ func (s *reviewQuestionService) create(ctx context.Context, in *CreateReviewQues
 	if !qType.Valid() {
 		return nil, huma.Error422UnprocessableEntity("invalid question_type")
 	}
-	if in.Body.Role != nil && !in.Body.Role.Valid() {
-		return nil, huma.Error422UnprocessableEntity("invalid role")
+	if in.Body.RoleID != nil {
+		if err := role.RequireCycleRole(ctx, s.roleDB, in.ID, *in.Body.RoleID); err != nil {
+			return nil, err
+		}
 	}
 	required := true
 	if in.Body.IsRequired != nil {
@@ -53,7 +59,7 @@ func (s *reviewQuestionService) create(ctx context.Context, in *CreateReviewQues
 
 	q, err := s.reviewQuestionDB.CreateReviewQuestion(ctx, ReviewQuestionCreate{
 		CycleID:      in.ID,
-		Role:         in.Body.Role,
+		RoleID:       in.Body.RoleID,
 		QuestionText: in.Body.QuestionText,
 		QuestionType: qType,
 		IsRequired:   required,
@@ -68,7 +74,7 @@ func (s *reviewQuestionService) create(ctx context.Context, in *CreateReviewQues
 }
 
 func (s *reviewQuestionService) update(ctx context.Context, in *UpdateReviewQuestionInput) (*ReviewQuestionOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := s.access.CanCycleOf(ctx, access.ManageCycle, "review_questions", in.ID); err != nil {
 		return nil, err
 	}
 	if in.Body.QuestionType != nil && !in.Body.QuestionType.Valid() {
@@ -91,7 +97,7 @@ func (s *reviewQuestionService) update(ctx context.Context, in *UpdateReviewQues
 }
 
 func (s *reviewQuestionService) delete(ctx context.Context, in *DeleteReviewQuestionInput) (*struct{}, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := s.access.CanCycleOf(ctx, access.ManageCycle, "review_questions", in.ID); err != nil {
 		return nil, err
 	}
 	if err := s.reviewQuestionDB.DeleteReviewQuestion(ctx, in.ID); err != nil {

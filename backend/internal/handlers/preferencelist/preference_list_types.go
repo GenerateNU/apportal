@@ -91,14 +91,14 @@ type PreferenceListDeadlineOutput struct {
 }
 
 type PreferenceListDeadlineInput struct {
-	ID   string      `path:"id" doc:"Cycle ID"`
-	Role models.Role `query:"role" doc:"Applicant role"`
+	ID     string `path:"id" doc:"Cycle ID"`
+	RoleID string `query:"role_id" doc:"Applicant role"`
 }
 
 type SetPreferenceListDeadlineInput struct {
-	ID   string      `path:"id" doc:"Cycle ID"`
-	Role models.Role `query:"role" doc:"Applicant role"`
-	Body struct {
+	ID     string `path:"id" doc:"Cycle ID"`
+	RoleID string `query:"role_id" doc:"Applicant role"`
+	Body   struct {
 		ClosesAt *time.Time `json:"closes_at,omitempty"`
 	}
 }
@@ -130,7 +130,7 @@ type PreferenceListUpdate struct {
 type PreferenceListEntryUpsert struct {
 	PreferenceListID string
 	ApplicationID    string
-	Role             models.Role
+	RoleID           string
 	Reasoning        *string
 	UpdatedBy        string
 }
@@ -141,6 +141,6 @@ type PreferenceListPersonalEntryUpsert struct {
 	PreferenceListID string
 	OwnerNUID        string
 	ApplicationID    string
-	Role             models.Role
+	RoleID           string
 	Reasoning        *string
 }

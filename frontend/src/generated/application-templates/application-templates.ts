@@ -160,7 +160,7 @@ export function useListOpenApplicationTemplates<TData = Awaited<ReturnType<typeo
 
 
 /**
- * ?role= selects which role's template to fetch (required). Creates a default-titled row on first access.
+ * ?role_id= selects which role's template to fetch (required). Creates a default-titled row on first access.
  * @summary Get a cycle's per-role application template
  */
 export const getApplicationTemplate = (
@@ -260,7 +260,7 @@ export function useGetApplicationTemplate<TData = Awaited<ReturnType<typeof getA
 
 
 /**
- * Chief only. ?role= selects which role's template to update (required).
+ * Chief only. ?role_id= selects which role's template to update (required).
  * @summary Update a cycle's per-role application template
  */
 export const updateApplicationTemplate = (

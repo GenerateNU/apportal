@@ -8,14 +8,17 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 	"github.com/danielgtaylor/huma/v2"
+
+	"github.com/GenerateNU/apportal/backend/internal/access"
 )
 
 type userService struct {
+	access *access.Checker
 	userDB *UserDB
 }
 
 func (s *userService) create(ctx context.Context, in *CreateUserInput) (*UserOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := access.RequireAdmin(ctx); err != nil {
 		return nil, err
 	}
 	for _, role := range in.Body.Roles {
@@ -42,9 +45,12 @@ func (s *userService) create(ctx context.Context, in *CreateUserInput) (*UserOut
 	return &UserOutput{Body: user}, nil
 }
 
+// Admins, and anyone staffed on a cycle they can see (to put names to NUIDs).
 func (s *userService) list(ctx context.Context, in *ListUsersInput) (*UsersOutput, error) {
-	if err := utils.RequireReviewer(ctx); err != nil {
-		return nil, err
+	if access.RequireAdmin(ctx) != nil {
+		if err := s.access.RequireAnyCycle(ctx, access.Review); err != nil {
+			return nil, err
+		}
 	}
 	var role *models.UserRole
 	if in.Role != "" {
@@ -71,7 +77,7 @@ func (s *userService) list(ctx context.Context, in *ListUsersInput) (*UsersOutpu
 }
 
 func (s *userService) get(ctx context.Context, in *UserNUIDInput) (*UserOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := access.RequireAdmin(ctx); err != nil {
 		return nil, err
 	}
 	user, err := s.userDB.GetUser(ctx, in.NUID)
@@ -94,7 +100,7 @@ func (s *userService) me(ctx context.Context, _ *MeInput) (*UserOutput, error) {
 }
 
 func (s *userService) update(ctx context.Context, in *UpdateUserInput) (*UserOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := access.RequireAdmin(ctx); err != nil {
 		return nil, err
 	}
 	for _, role := range in.Body.Roles {

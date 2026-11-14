@@ -25,17 +25,16 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { Label } from '@/components/ui/label'
 import { StatStrip, StatTile } from '@/components/ui/stat-tile'
 import { apiErrorDetail } from '@/lib/api/client'
-import type { Role } from '@/lib/api/types'
 import {
   useCommitInterviewReviewerPlan,
   useInterviewReviewerPool,
   usePreviewInterviewReviewerPlan,
   useSuggestInterviewReviewerCapacity,
 } from '@/lib/queries/interview-assignment-plan'
-import { ROLE_LABEL } from '@/lib/roles'
 import type { DraftConflict } from './ConflictBuilder'
 import type { DraftLeadDay } from './MeetingDayPicker'
 import { ReviewerPlanPreview } from './ReviewerPlanPreview'
+import { useRoleLookup } from '@/lib/queries/roles'
 
 export function ReviewerPlanPanel({
   cycleId,
@@ -44,10 +43,11 @@ export function ReviewerPlanPanel({
   conflicts,
 }: {
   cycleId: string
-  role: Role
+  role: string
   meetingDays: DraftLeadDay[]
   conflicts: DraftConflict[]
 }) {
+  const { roleLabel } = useRoleLookup()
   const [coverage, setCoverage] = useState(2)
   const [cap, setCap] = useState(10)
   const [excludedIds, setExcludedIds] = useState<Set<string>>(new Set())
@@ -100,7 +100,7 @@ export function ReviewerPlanPanel({
       {
         cycleId,
         body: {
-          role,
+          role_id: role,
           leads: apiLeads,
           coverage,
           excluded_application_ids: excludedApplicationIds,
@@ -111,7 +111,7 @@ export function ReviewerPlanPanel({
   }
 
   const planBody = {
-    role,
+    role_id: role,
     leads: apiLeads,
     conflicts: apiConflicts,
     coverage,
@@ -156,8 +156,7 @@ export function ReviewerPlanPanel({
             label="Awaiting interview reviewers"
             value={
               <>
-                {poolAppliedSize ?? '—'} {ROLE_LABEL[role].toLowerCase()}{' '}
-                applicant
+                {poolAppliedSize ?? '—'} {roleLabel(role)} applicant
                 {poolAppliedSize === 1 ? '' : 's'}
               </>
             }
@@ -368,8 +367,8 @@ export function ReviewerPlanPanel({
             <DialogDescription>
               This writes up to {shownPlan?.total_added ?? 0} reviewer
               assignment{shownPlan?.total_added === 1 ? '' : 's'} for{' '}
-              {ROLE_LABEL[role].toLowerCase()} applicants. Existing assignments
-              are left untouched, and running this again later only fills gaps.
+              {roleLabel(role)} applicants. Existing assignments are left
+              untouched, and running this again later only fills gaps.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

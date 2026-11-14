@@ -12,10 +12,10 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useToast } from '@/components/ui/toast'
-import type { DecisionKind, DecisionTemplate, Role } from '@/lib/api/types'
+import type { DecisionKind, DecisionTemplate } from '@/lib/api/types'
 import { useUpdateDecisionTemplate } from '@/lib/queries/decisions'
-import { ROLE_LABEL } from '@/lib/roles'
 import { KIND_DESCRIPTION, KIND_LABEL } from './constants'
+import { useRoleLookup } from '@/lib/queries/roles'
 
 const KINDS: DecisionKind[] = ['rejection_post_interview', 'rejection_generic']
 
@@ -33,7 +33,7 @@ interface TemplateDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   cycleId: string
-  role: Role
+  role: string
   templates: DecisionTemplate[]
 }
 
@@ -44,6 +44,7 @@ export function TemplateDialog({
   role,
   templates,
 }: TemplateDialogProps) {
+  const { roleLabel } = useRoleLookup()
   const [kind, setKind] = useState<DecisionKind>('rejection_post_interview')
   const template = templates.find((t) => t.kind === kind)
 
@@ -51,7 +52,7 @@ export function TemplateDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle>Rejection letters — {ROLE_LABEL[role]}</DialogTitle>
+          <DialogTitle>Rejection letters — {roleLabel(role)}</DialogTitle>
           <DialogDescription>
             Edited once per cycle. Every unsent message renders from these, so a
             fix here fixes all of them. The signature at the bottom is part of
@@ -94,7 +95,7 @@ function TemplateForm({
   onSaved,
 }: {
   cycleId: string
-  role: Role
+  role: string
   template: DecisionTemplate
   onSaved: () => void
 }) {

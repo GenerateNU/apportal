@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import type { Application, Role } from '@/lib/api/types'
+import type { Application } from '@/lib/api/types'
 import { useApplications } from '@/lib/queries/applications'
 import { pickDefaultCycleId, useCycles } from '@/lib/queries/cycles'
 import {
@@ -30,7 +30,9 @@ import {
   useSetReviewRelease,
 } from '@/lib/queries/review-releases'
 import { useCurrentUser, useLeads } from '@/lib/queries/users'
-import { ROLE_CHIP_CLASS, ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
+import { useRoleLookup } from '@/lib/queries/roles'
+import {} from '@/hooks/useRoleSelection'
+import { useCycleRoleFilter } from '@/hooks/useRoleSelection'
 
 export function AssignmentsClient() {
   const { data: currentUser } = useCurrentUser()
@@ -49,7 +51,9 @@ export function AssignmentsClient() {
     const defaultId = pickDefaultCycleId(cycles)
     if (defaultId) setCycleId(defaultId)
   }
-  const [activeRole, setActiveRole] = useState<Role | 'all'>('all')
+  // A role ID, or 'all'.
+  const { activeRole, setActiveRole, roleIds, roleLabel } =
+    useCycleRoleFilter(cycleId)
   // Lead NUID to narrow to, or 'all' — lets a chief see everything one lead
   // is carrying without scanning every row's assignment chips.
   const [leadFilter, setLeadFilter] = useState<string>('all')
@@ -59,7 +63,7 @@ export function AssignmentsClient() {
       allApplications.filter(
         (a) =>
           a.cycle_id === cycleId &&
-          (activeRole === 'all' || a.role === activeRole)
+          (activeRole === 'all' || a.role_id === activeRole)
       ),
     [allApplications, cycleId, activeRole]
   )
@@ -100,7 +104,7 @@ export function AssignmentsClient() {
   const [leadNuid, setLeadNuid] = useState('')
   const [assigning, setAssigning] = useState(false)
   const [failed, setFailed] = useState(0)
-  const [confirmingRole, setConfirmingRole] = useState<Role | null>(null)
+  const [confirmingRole, setConfirmingRole] = useState<string | null>(null)
 
   function toggle(id: string) {
     setSelected((prev) => {
@@ -130,10 +134,10 @@ export function AssignmentsClient() {
     setAssigning(false)
   }
 
-  function releaseFor(role: Role, released: boolean) {
+  function releaseFor(role: string, released: boolean) {
     setRelease.mutate({
       cycleId,
-      body: { role, kind: 'written', released },
+      body: { role_id: role, kind: 'written', released },
     })
   }
 
@@ -151,16 +155,16 @@ export function AssignmentsClient() {
           <>
             <Select
               value={activeRole}
-              onValueChange={(val) => setActiveRole(val as Role | 'all')}
+              onValueChange={(val) => setActiveRole(val)}
             >
               <SelectTrigger className="w-56" aria-label="Filter by role">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All roles</SelectItem>
-                {ROLE_COLUMNS.map((r) => (
+                {roleIds.map((r) => (
                   <SelectItem key={r} value={r}>
-                    {ROLE_LABEL[r]}
+                    {roleLabel(r)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -243,16 +247,16 @@ export function AssignmentsClient() {
           title={`No applications assigned to ${leadName[leadFilter] ?? 'this lead'}`}
         />
       ) : (
-        ROLE_COLUMNS.map((role) => {
-          const roleApps = visibleApplications.filter((a) => a.role === role)
+        roleIds.map((role) => {
+          const roleApps = visibleApplications.filter((a) => a.role_id === role)
           const gate = gates.find(
-            (g) => g.role === role && g.kind === 'written'
+            (g) => g.role_id === role && g.kind === 'written'
           )
           return (
             <section key={role}>
               <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
                 <h2 className="text-text-default text-sm font-semibold">
-                  {ROLE_LABEL[role]}{' '}
+                  {roleLabel(role)}{' '}
                   <span className="text-text-faint font-normal">
                     ({roleApps.length})
                   </span>
@@ -300,7 +304,7 @@ export function AssignmentsClient() {
               {roleApps.length === 0 ? (
                 <EmptyState
                   size="sm"
-                  title={`No ${ROLE_LABEL[role].toLowerCase()} applications in this cycle.`}
+                  title={`No ${roleLabel(role)} applications in this cycle.`}
                 />
               ) : (
                 <div className="flex flex-col gap-2">
@@ -337,18 +341,19 @@ export function AssignmentsClient() {
             This removes all{' '}
             {confirmingRole &&
               (gates.find(
-                (g) => g.role === confirmingRole && g.kind === 'written'
+                (g) => g.role_id === confirmingRole && g.kind === 'written'
               )?.assigned_count ??
                 0)}{' '}
             lead assignment
             {confirmingRole &&
-            gates.find((g) => g.role === confirmingRole && g.kind === 'written')
-              ?.assigned_count === 1
+            gates.find(
+              (g) => g.role_id === confirmingRole && g.kind === 'written'
+            )?.assigned_count === 1
               ? ''
               : 's'}{' '}
-            for {confirmingRole && ROLE_LABEL[confirmingRole].toLowerCase()}{' '}
-            applicants in this cycle. Any written reviews already submitted are
-            kept, but their assignment link is removed. This cannot be undone.
+            for {confirmingRole && roleLabel(confirmingRole)} applicants in this
+            cycle. Any written reviews already submitted are kept, but their
+            assignment link is removed. This cannot be undone.
           </>
         }
         confirmLabel="Unassign all"
@@ -356,7 +361,7 @@ export function AssignmentsClient() {
         onConfirm={() => {
           if (!confirmingRole) return
           unassignAllLeads.mutate(
-            { cycleId, role: confirmingRole },
+            { cycleId, roleId: confirmingRole },
             { onSuccess: () => setConfirmingRole(null) }
           )
         }}
@@ -382,6 +387,7 @@ function AssignmentRow({
   onToggle: () => void
   onUnassign: (assignmentId: string) => void
 }) {
+  const { roleLabel, roleChipClass } = useRoleLookup()
   return (
     <Card
       variant="flat"
@@ -397,8 +403,8 @@ function AssignmentRow({
       <span className="text-text-default min-w-0 text-sm font-medium break-words">
         {name}
       </span>
-      <Badge className={ROLE_CHIP_CLASS[application.role]}>
-        {ROLE_LABEL[application.role]}
+      <Badge className={roleChipClass(application.role_id)}>
+        {roleLabel(application.role_id)}
       </Badge>
 
       <div className="ml-auto flex flex-wrap items-center justify-end gap-1.5">

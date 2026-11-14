@@ -11,7 +11,7 @@ import { listChiefReviews } from '@/generated/chief-reviews/chief-reviews'
 import { listCycleQuestions } from '@/generated/questions/questions'
 import { listCycleReviewQuestions } from '@/generated/review-questions/review-questions'
 import { listWrittenReviews } from '@/generated/written-reviews/written-reviews'
-import type { Application, Role } from '@/lib/api/types'
+import type { Application } from '@/lib/api/types'
 import { getServerRequestOptions } from '@/lib/api/server-request-options'
 import { queryKeys } from '@/lib/queries/keys'
 import { ChiefReviewClient } from './components/ChiefReviewClient'
@@ -58,7 +58,7 @@ export default async function ChiefReviewPage({
     notFound()
   }
 
-  const role = application.role as Role
+  const role = application.role_id as string
 
   await Promise.all([
     queryClient.prefetchQuery({
@@ -68,7 +68,11 @@ export default async function ChiefReviewPage({
     queryClient.prefetchQuery({
       queryKey: queryKeys.questions.list(application.cycle_id, role),
       queryFn: () =>
-        listCycleQuestions(application.cycle_id, { role }, requestOptions),
+        listCycleQuestions(
+          application.cycle_id,
+          { role_id: role },
+          requestOptions
+        ),
     }),
     queryClient.prefetchQuery({
       queryKey: queryKeys.writtenReviews.list(id),
@@ -79,7 +83,7 @@ export default async function ChiefReviewPage({
       queryFn: () =>
         listCycleReviewQuestions(
           application.cycle_id,
-          { role },
+          { role_id: role },
           requestOptions
         ),
     }),

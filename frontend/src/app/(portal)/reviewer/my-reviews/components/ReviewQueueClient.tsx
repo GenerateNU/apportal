@@ -18,14 +18,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import type { Role } from '@/lib/api/types'
 import { useApplications } from '@/lib/queries/applications'
 import { DEFAULT_CYCLE_ID, useCycles } from '@/lib/queries/cycles'
 import { useCurrentUser } from '@/lib/queries/users'
 import { useWrittenReviewsByApplicationIds } from '@/lib/queries/written-reviews'
-import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 import type { ReviewState } from '../constants'
 import { ReviewRow } from './ReviewRow'
+import { useCycleRoleFilter } from '@/hooks/useRoleSelection'
 
 type Scope = 'mine' | 'all'
 
@@ -50,7 +49,9 @@ export function ReviewQueueClient() {
     }
     setCycleDefaulted(true)
   }
-  const [activeRole, setActiveRole] = useState<Role | 'all'>('all')
+  // A role ID, or 'all'.
+  const { activeRole, setActiveRole, roleIds, roleLabel } =
+    useCycleRoleFilter(cycleId)
 
   // Matched server-side, so it narrows the whole queue rather than the rows
   // already in hand.
@@ -70,7 +71,7 @@ export function ReviewQueueClient() {
     {
       ...(assignedTo && { assigned_to: assignedTo }),
       ...(cycleId !== 'all' && { cycle_id: cycleId }),
-      ...(activeRole !== 'all' && { role: activeRole }),
+      ...(activeRole !== 'all' && { role_id: activeRole }),
       ...(debouncedSearch && { search: debouncedSearch }),
     },
     undefined,
@@ -109,21 +110,23 @@ export function ReviewQueueClient() {
   // queue, so the top of it should be the work.
   const sections = useMemo(() => {
     const rank = { draft: 0, none: 1, submitted: 2 }
-    return ROLE_COLUMNS.map((role) => ({
-      role,
-      applications: applications
-        .filter((a) => a.role === role)
-        .sort((a, b) => {
-          const byState =
-            rank[reviewByApplicationId[a.id]?.state ?? 'none'] -
-            rank[reviewByApplicationId[b.id]?.state ?? 'none']
-          if (byState !== 0) return byState
-          return (a.full_name || a.user_nuid).localeCompare(
-            b.full_name || b.user_nuid
-          )
-        }),
-    })).filter((s) => s.applications.length > 0)
-  }, [applications, reviewByApplicationId])
+    return roleIds
+      .map((role) => ({
+        role,
+        applications: applications
+          .filter((a) => a.role_id === role)
+          .sort((a, b) => {
+            const byState =
+              rank[reviewByApplicationId[a.id]?.state ?? 'none'] -
+              rank[reviewByApplicationId[b.id]?.state ?? 'none']
+            if (byState !== 0) return byState
+            return (a.full_name || a.user_nuid).localeCompare(
+              b.full_name || b.user_nuid
+            )
+          }),
+      }))
+      .filter((s) => s.applications.length > 0)
+  }, [applications, reviewByApplicationId, roleIds])
 
   // Reviewing 25–30 is sequential work, so the primary action is "pick up
   // where you left off" — the top of the list, given the sort above.
@@ -144,16 +147,16 @@ export function ReviewQueueClient() {
           <div className="flex flex-wrap items-center gap-3">
             <Select
               value={activeRole}
-              onValueChange={(val) => setActiveRole(val as Role | 'all')}
+              onValueChange={(val) => setActiveRole(val)}
             >
               <SelectTrigger className="w-48" aria-label="Filter by role">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All roles</SelectItem>
-                {ROLE_COLUMNS.map((r) => (
+                {roleIds.map((r) => (
                   <SelectItem key={r} value={r}>
-                    {ROLE_LABEL[r]}
+                    {roleLabel(r)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -227,7 +230,7 @@ export function ReviewQueueClient() {
         sections.map(({ role, applications: roleApplications }) => (
           <div key={role} className="flex flex-col gap-2">
             <SectionLabel>
-              {ROLE_LABEL[role]} ({roleApplications.length})
+              {roleLabel(role)} ({roleApplications.length})
             </SectionLabel>
             <div className={TABLE_FRAME}>
               {roleApplications.map((application) => (

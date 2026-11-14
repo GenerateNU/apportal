@@ -3,7 +3,6 @@
 import { Plus } from 'lucide-react'
 import { ReturnerBadge } from '@/components/ReturnerBadge'
 import { Badge } from '@/components/ui/badge'
-import type { Role } from '@/lib/api/types'
 import type { PreferenceEntry } from './EntryRow'
 
 // A second list shown beside the one being edited. Read-only by design —
@@ -23,7 +22,7 @@ export function ReferencePane({
   emptyText,
 }: {
   title: string
-  role: Role
+  role: string
   entries: PreferenceEntry[]
   // Application ids already on the list being edited — the rest get an Add.
   presentIds: Set<string>
@@ -32,7 +31,7 @@ export function ReferencePane({
   onOpenApplicant: (entry: PreferenceEntry) => void
   availabilityBadgeFor: (
     applicationId: string,
-    role: Role
+    role: string
   ) => { label: string; className: string } | undefined
   draftedByApplicationId: Record<string, string | undefined>
   emptyText: string

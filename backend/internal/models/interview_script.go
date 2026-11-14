@@ -13,8 +13,8 @@ import (
 // the frontend pins their real shape.
 type InterviewScript struct {
 	ID                     string          `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
-	CycleID                string          `json:"cycle_id" gorm:"type:uuid;not null;uniqueIndex:interview_script_cycle_id_application_role_key,priority:1"`
-	ApplicationRole        Role            `json:"application_role" gorm:"type:application_role;not null;uniqueIndex:interview_script_cycle_id_application_role_key,priority:2"`
+	CycleID                string          `json:"cycle_id" gorm:"type:uuid;not null;uniqueIndex:interview_script_cycle_id_role_id_key,priority:1"`
+	RoleID                 string          `json:"role_id" gorm:"type:uuid;not null;uniqueIndex:interview_script_cycle_id_role_id_key,priority:2"`
 	IntroSpeech            string          `json:"intro_speech" gorm:"not null"`
 	RecordingReminder      string          `json:"recording_reminder" gorm:"not null"`
 	Questions              json.RawMessage `json:"questions" gorm:"serializer:jsonb;type:jsonb;not null"`
@@ -27,6 +27,7 @@ type InterviewScript struct {
 	UpdatedBy              *string         `json:"updated_by,omitempty"`
 	Cycle                  Cycle           `json:"-" gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
 	UpdatedByUser          *User           `json:"-" gorm:"foreignKey:UpdatedBy;references:NUID"`
+	Role                   Role            `json:"-" gorm:"foreignKey:RoleID;references:ID;constraint:OnDelete:RESTRICT"`
 }
 
 func (InterviewScript) TableName() string { return "interview_script" }

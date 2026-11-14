@@ -7,7 +7,6 @@
  */
 import type { PreviewPlanInputBodyCapOverrides } from './previewPlanInputBodyCapOverrides';
 import type { PreviewPlanInputBodyExcludedApplicationIds } from './previewPlanInputBodyExcludedApplicationIds';
-import type { PreviewPlanInputBodyRole } from './previewPlanInputBodyRole';
 import type { PreviewPlanInputBodyTeams } from './previewPlanInputBodyTeams';
 
 export interface PreviewPlanInputBody {
@@ -23,6 +22,6 @@ export interface PreviewPlanInputBody {
   /** @minimum 1 */
   coverage: number;
   excluded_application_ids?: PreviewPlanInputBodyExcludedApplicationIds;
-  role: PreviewPlanInputBodyRole;
+  role_id: string;
   teams: PreviewPlanInputBodyTeams;
 }

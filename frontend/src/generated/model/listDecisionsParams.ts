@@ -9,9 +9,9 @@ import type { ListDecisionsKind } from './listDecisionsKind';
 
 export type ListDecisionsParams = {
 /**
- * Applicant role; omit for both
+ * Applicant role ID; omit for all
  */
-role?: string;
+role_id?: string;
 /**
  * Which letter applies
  */

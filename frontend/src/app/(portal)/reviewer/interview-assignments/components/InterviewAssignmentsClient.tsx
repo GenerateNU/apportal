@@ -22,7 +22,6 @@ import type {
   Application,
   Interviewer,
   InterviewReviewer,
-  Role,
   User,
 } from '@/lib/api/types'
 import { useApplications } from '@/lib/queries/applications'
@@ -41,10 +40,15 @@ import { splitByGroup } from '@/lib/interview-groups'
 import { useInterviewGroups } from '@/lib/queries/interview-groups'
 import { useInterviewsByApplicationIds } from '@/lib/queries/interviews'
 import { useChiefs, useLeads } from '@/lib/queries/users'
-import { ROLE_CHIP_CLASS, ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
+import { useRoleLookup } from '@/lib/queries/roles'
+import {} from '@/hooks/useRoleSelection'
+import { useCycleRoleFilter } from '@/hooks/useRoleSelection'
 
 // Which "unassign all" confirmation dialog is open, if any.
-type ConfirmingUnassignAll = { role: Role; kind: 'interviewers' | 'reviewers' }
+type ConfirmingUnassignAll = {
+  role: string
+  kind: 'interviewers' | 'reviewers'
+}
 
 export function InterviewAssignmentsClient() {
   const { data: cycles = [] } = useCycles({})
@@ -58,14 +62,16 @@ export function InterviewAssignmentsClient() {
     const defaultId = pickDefaultCycleId(cycles)
     if (defaultId) setCycleId(defaultId)
   }
-  const [activeRole, setActiveRole] = useState<Role | 'all'>('all')
+  // A role ID, or 'all'.
+  const { activeRole, setActiveRole, roleIds, roleLabel } =
+    useCycleRoleFilter(cycleId)
 
   const cycleApplications = useMemo(
     () =>
       allApplications.filter(
         (a) =>
           a.cycle_id === cycleId &&
-          (activeRole === 'all' || a.role === activeRole)
+          (activeRole === 'all' || a.role_id === activeRole)
       ),
     [allApplications, cycleId, activeRole]
   )
@@ -230,7 +236,7 @@ export function InterviewAssignmentsClient() {
     const mutation =
       kind === 'interviewers' ? unassignAllInterviewers : unassignAllReviewers
     mutation.mutate(
-      { cycleId, role },
+      { cycleId, roleId: role },
       { onSuccess: () => setConfirmingUnassignAll(null) }
     )
   }
@@ -244,16 +250,16 @@ export function InterviewAssignmentsClient() {
           <>
             <Select
               value={activeRole}
-              onValueChange={(val) => setActiveRole(val as Role | 'all')}
+              onValueChange={(val) => setActiveRole(val)}
             >
               <SelectTrigger className="w-56" aria-label="Filter by role">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All roles</SelectItem>
-                {ROLE_COLUMNS.map((r) => (
+                {roleIds.map((r) => (
                   <SelectItem key={r} value={r}>
-                    {ROLE_LABEL[r]}
+                    {roleLabel(r)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -365,8 +371,8 @@ export function InterviewAssignmentsClient() {
           description="Applicants show up here once a chief advances them to interview."
         />
       ) : (
-        ROLE_COLUMNS.map((role) => {
-          const roleApps = applications.filter((a) => a.role === role)
+        roleIds.map((role) => {
+          const roleApps = applications.filter((a) => a.role_id === role)
           if (roleApps.length === 0) return null
           const roleHasInterviewers = roleApps.some(
             (a) => (interviewersByApp[a.id] ?? []).length > 0
@@ -378,7 +384,7 @@ export function InterviewAssignmentsClient() {
             <section key={role}>
               <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
                 <h2 className="text-text-default text-sm font-semibold">
-                  {ROLE_LABEL[role]}{' '}
+                  {roleLabel(role)}{' '}
                   <span className="text-text-faint font-normal">
                     ({roleApps.length})
                   </span>
@@ -513,8 +519,7 @@ export function InterviewAssignmentsClient() {
               ? 'interviewer'
               : 'recording-review'}{' '}
             assignment for{' '}
-            {confirmingUnassignAll &&
-              ROLE_LABEL[confirmingUnassignAll.role].toLowerCase()}{' '}
+            {confirmingUnassignAll && roleLabel(confirmingUnassignAll.role)}{' '}
             applicants in this cycle, except{' '}
             {confirmingUnassignAll?.kind === 'interviewers'
               ? 'on interviews already conducted'
@@ -572,6 +577,7 @@ function InterviewAssignmentRow({
   onAddReviewer: (reviewerNuid: string) => void
   onRemoveReviewer: (id: string) => void
 }) {
+  const { roleLabel, roleChipClass } = useRoleLookup()
   const interviewerNuids = new Set(
     assignedInterviewers.map((x) => x.interviewer_nuid)
   )
@@ -615,8 +621,8 @@ function InterviewAssignmentRow({
         <span className="text-text-default truncate text-sm font-medium">
           {name}
         </span>
-        <Badge className={ROLE_CHIP_CLASS[application.role]}>
-          {ROLE_LABEL[application.role]}
+        <Badge className={`shrink-0 ${roleChipClass(application.role_id)}`}>
+          {roleLabel(application.role_id)}
         </Badge>
       </div>
 

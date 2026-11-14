@@ -6,17 +6,21 @@ import (
 	"time"
 
 	"github.com/GenerateNU/apportal/backend/internal/handlers/application"
+	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/user"
-	"github.com/GenerateNU/apportal/backend/internal/middleware"
 	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 	"github.com/danielgtaylor/huma/v2"
+
+	"github.com/GenerateNU/apportal/backend/internal/access"
 )
 
 type preferenceListService struct {
+	access           *access.Checker
 	applicationDB    *application.ApplicationDB
 	preferenceListDB *PreferenceListDB
 	userDB           *user.UserDB
+	roleDB           *role.RoleDB
 }
 
 var validMeetingDays = map[string]bool{
@@ -30,14 +34,20 @@ var validMeetingDays = map[string]bool{
 // — a small, fixed team size, not a DB constraint, so it's easy to change.
 const maxPreferenceListMembers = 4
 
-// requireAccess rejects callers who aren't a member of the list and aren't a
-// chief/admin. Returns 404 (not 403) for a non-member so a list's existence
-// isn't leaked to leads who aren't on it.
+// requireAccess lets managers of the list's cycle in, and reviewers only when
+// they're on the list. Non-members get 404 so the list's existence doesn't leak.
 func (s *preferenceListService) requireAccess(ctx context.Context, listID string) error {
-	actor := utils.CurrentActor(ctx)
-	if actor.HasAnyRole(models.UserRoleChief, models.UserRoleAdmin) {
+	cycle, err := s.access.CycleOf(ctx, "preference_lists", listID)
+	if err != nil {
+		return err
+	}
+	if err := cycle.Can(access.ReviewCycle); err != nil {
+		return err
+	}
+	if cycle.Allows(access.ManageCycle) {
 		return nil
 	}
+	actor := utils.CurrentActor(ctx)
 	isMember, err := s.preferenceListDB.IsPreferenceListMember(ctx, listID, actor.NUID)
 	if err != nil {
 		return utils.StoreErr(err)
@@ -57,8 +67,8 @@ func preferenceListDeadlinePassed(d models.PreferenceListDeadline) bool {
 // applications.go guards against writes after the application deadline.
 // Entry-level mutations (add/remove/reorder/reasoning-edit) are scoped to
 // whichever role the target application has, not the whole group.
-func (s *preferenceListService) checkEntryNotLocked(ctx context.Context, cycleID string, role models.Role) error {
-	deadline, err := s.preferenceListDB.GetOrCreatePreferenceListDeadline(ctx, cycleID, role)
+func (s *preferenceListService) checkEntryNotLocked(ctx context.Context, cycleID, roleID string) error {
+	deadline, err := s.preferenceListDB.GetOrCreatePreferenceListDeadline(ctx, cycleID, roleID)
 	if err != nil {
 		return utils.StoreErr(err)
 	}
@@ -74,8 +84,15 @@ func (s *preferenceListService) checkEntryNotLocked(ctx context.Context, cycleID
 // deadline should be able to lock it while another role's window is still
 // open.
 func (s *preferenceListService) checkGroupNotLocked(ctx context.Context, cycleID string) error {
-	for _, role := range models.AllRoles() {
-		deadline, err := s.preferenceListDB.GetOrCreatePreferenceListDeadline(ctx, cycleID, role)
+	roles, err := s.roleDB.ListCycleRoles(ctx, cycleID)
+	if err != nil {
+		return utils.StoreErr(err)
+	}
+	if len(roles) == 0 {
+		return nil
+	}
+	for _, r := range roles {
+		deadline, err := s.preferenceListDB.GetOrCreatePreferenceListDeadline(ctx, cycleID, r.ID)
 		if err != nil {
 			return utils.StoreErr(err)
 		}
@@ -86,12 +103,24 @@ func (s *preferenceListService) checkGroupNotLocked(ctx context.Context, cycleID
 	return huma.Error403Forbidden("every role's preference list deadline has passed")
 }
 
-func (s *preferenceListService) create(ctx context.Context, in *CreatePreferenceListInput) (*PreferenceListOutput, error) {
-	if err := utils.RequireReviewer(ctx); err != nil {
-		return nil, err
+// reviewableCycle is the caller's access to a cycle they must at least review.
+func (s *preferenceListService) reviewableCycle(ctx context.Context, cycleID string) (access.CycleAccess, error) {
+	if cycleID == "" {
+		return access.CycleAccess{}, huma.Error422UnprocessableEntity("cycle_id is required")
 	}
+	cycle, err := s.access.Cycle(ctx, cycleID)
+	if err != nil {
+		return access.CycleAccess{}, err
+	}
+	return cycle, cycle.Can(access.ReviewCycle)
+}
+
+func (s *preferenceListService) create(ctx context.Context, in *CreatePreferenceListInput) (*PreferenceListOutput, error) {
 	if in.Body.CycleID == "" || strings.TrimSpace(in.Body.Name) == "" {
 		return nil, huma.Error422UnprocessableEntity("cycle_id and name are required")
+	}
+	if err := s.access.CanCycle(ctx, access.ReviewCycle, in.Body.CycleID); err != nil {
+		return nil, err
 	}
 	if err := s.checkGroupNotLocked(ctx, in.Body.CycleID); err != nil {
 		return nil, err
@@ -108,14 +137,12 @@ func (s *preferenceListService) create(ctx context.Context, in *CreatePreference
 }
 
 func (s *preferenceListService) list(ctx context.Context, in *ListPreferenceListsInput) (*PreferenceListsOutput, error) {
-	if err := utils.RequireReviewer(ctx); err != nil {
+	cycle, err := s.reviewableCycle(ctx, in.CycleID)
+	if err != nil {
 		return nil, err
 	}
-	if in.CycleID == "" {
-		return nil, huma.Error422UnprocessableEntity("cycle_id is required")
-	}
 	actor := utils.CurrentActor(ctx)
-	includeAll := actor.HasAnyRole(models.UserRoleChief, models.UserRoleAdmin)
+	includeAll := cycle.Allows(access.ManageCycle)
 	items, err := s.preferenceListDB.ListPreferenceLists(ctx, in.CycleID, actor.NUID, includeAll)
 	if err != nil {
 		return nil, utils.StoreErr(err)
@@ -124,11 +151,9 @@ func (s *preferenceListService) list(ctx context.Context, in *ListPreferenceList
 }
 
 func (s *preferenceListService) listDetails(ctx context.Context, in *ListPreferenceListsInput) (*PreferenceListDetailsOutput, error) {
-	if err := utils.RequireReviewer(ctx); err != nil {
+	cycle, err := s.reviewableCycle(ctx, in.CycleID)
+	if err != nil {
 		return nil, err
-	}
-	if in.CycleID == "" {
-		return nil, huma.Error422UnprocessableEntity("cycle_id is required")
 	}
 	items, err := s.preferenceListDB.ListPreferenceListDetails(ctx, in.CycleID)
 	if err != nil {
@@ -138,7 +163,7 @@ func (s *preferenceListService) listDetails(ctx context.Context, in *ListPrefere
 	// open this for, and a ranked list is the shared artifact. Personal
 	// lists and in-group comments are private working notes, so they stay
 	// chief/admin only — the side-by-side board never rendered them anyway.
-	if !utils.CurrentActor(ctx).HasAnyRole(models.UserRoleChief, models.UserRoleAdmin) {
+	if !cycle.Allows(access.ManageCycle) {
 		for i := range items {
 			items[i].PersonalEntries = nil
 			items[i].Comments = nil
@@ -148,9 +173,6 @@ func (s *preferenceListService) listDetails(ctx context.Context, in *ListPrefere
 }
 
 func (s *preferenceListService) get(ctx context.Context, in *utils.IDInput) (*PreferenceListDetailOutput, error) {
-	if err := utils.RequireReviewer(ctx); err != nil {
-		return nil, err
-	}
 	if err := s.requireAccess(ctx, in.ID); err != nil {
 		return nil, err
 	}
@@ -162,9 +184,6 @@ func (s *preferenceListService) get(ctx context.Context, in *utils.IDInput) (*Pr
 }
 
 func (s *preferenceListService) update(ctx context.Context, in *UpdatePreferenceListInput) (*PreferenceListOutput, error) {
-	if err := utils.RequireReviewer(ctx); err != nil {
-		return nil, err
-	}
 	if err := s.requireAccess(ctx, in.ID); err != nil {
 		return nil, err
 	}
@@ -189,7 +208,7 @@ func (s *preferenceListService) update(ctx context.Context, in *UpdatePreference
 }
 
 func (s *preferenceListService) delete(ctx context.Context, in *utils.IDInput) (*struct{}, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := s.access.CanCycleOf(ctx, access.ManageCycle, "preference_lists", in.ID); err != nil {
 		return nil, err
 	}
 	if err := s.preferenceListDB.DeletePreferenceList(ctx, in.ID); err != nil {
@@ -199,9 +218,6 @@ func (s *preferenceListService) delete(ctx context.Context, in *utils.IDInput) (
 }
 
 func (s *preferenceListService) addMember(ctx context.Context, in *AddPreferenceListMemberInput) (*PreferenceListMemberOutput, error) {
-	if err := utils.RequireReviewer(ctx); err != nil {
-		return nil, err
-	}
 	if err := s.requireAccess(ctx, in.ID); err != nil {
 		return nil, err
 	}
@@ -226,9 +242,12 @@ func (s *preferenceListService) addMember(ctx context.Context, in *AddPreference
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
-	targetActor := middleware.Actor{Roles: target.Roles}
-	if !targetActor.HasAnyRole(models.UserRoleLead, models.UserRoleChief, models.UserRoleAdmin) {
-		return nil, huma.Error422UnprocessableEntity("target user is not a lead, chief, or admin")
+	targetCycle, err := s.access.UserCycle(ctx, target, list.CycleID)
+	if err != nil {
+		return nil, err
+	}
+	if !targetCycle.Allows(access.ReviewCycle) {
+		return nil, huma.Error422UnprocessableEntity("target user can't review this cycle")
 	}
 	member, err := s.preferenceListDB.AddPreferenceListMember(ctx, in.ID, in.Body.LeadNUID, utils.CurrentActor(ctx).NUID)
 	if err != nil {
@@ -238,9 +257,6 @@ func (s *preferenceListService) addMember(ctx context.Context, in *AddPreference
 }
 
 func (s *preferenceListService) removeMember(ctx context.Context, in *PreferenceListMemberScopedInput) (*struct{}, error) {
-	if err := utils.RequireReviewer(ctx); err != nil {
-		return nil, err
-	}
 	if err := s.requireAccess(ctx, in.ID); err != nil {
 		return nil, err
 	}
@@ -258,9 +274,6 @@ func (s *preferenceListService) removeMember(ctx context.Context, in *Preference
 }
 
 func (s *preferenceListService) upsertEntry(ctx context.Context, in *UpsertPreferenceListEntryInput) (*PreferenceListEntryOutput, error) {
-	if err := utils.RequireReviewer(ctx); err != nil {
-		return nil, err
-	}
 	if err := s.requireAccess(ctx, in.ID); err != nil {
 		return nil, err
 	}
@@ -275,13 +288,13 @@ func (s *preferenceListService) upsertEntry(ctx context.Context, in *UpsertPrefe
 	if app.CycleID != list.CycleID {
 		return nil, huma.Error422UnprocessableEntity("application is not in this list's cycle")
 	}
-	if err := s.checkEntryNotLocked(ctx, list.CycleID, app.Role); err != nil {
+	if err := s.checkEntryNotLocked(ctx, list.CycleID, app.RoleID); err != nil {
 		return nil, err
 	}
 	entry, err := s.preferenceListDB.UpsertPreferenceListEntry(ctx, PreferenceListEntryUpsert{
 		PreferenceListID: in.ID,
 		ApplicationID:    in.ApplicationID,
-		Role:             app.Role,
+		RoleID:           app.RoleID,
 		Reasoning:        in.Body.Reasoning,
 		UpdatedBy:        utils.CurrentActor(ctx).NUID,
 	})
@@ -292,9 +305,6 @@ func (s *preferenceListService) upsertEntry(ctx context.Context, in *UpsertPrefe
 }
 
 func (s *preferenceListService) deleteEntry(ctx context.Context, in *PreferenceListEntryScopedInput) (*struct{}, error) {
-	if err := utils.RequireReviewer(ctx); err != nil {
-		return nil, err
-	}
 	if err := s.requireAccess(ctx, in.ID); err != nil {
 		return nil, err
 	}
@@ -309,7 +319,7 @@ func (s *preferenceListService) deleteEntry(ctx context.Context, in *PreferenceL
 	if app.CycleID != list.CycleID {
 		return nil, huma.Error422UnprocessableEntity("application is not in this list's cycle")
 	}
-	if err := s.checkEntryNotLocked(ctx, list.CycleID, app.Role); err != nil {
+	if err := s.checkEntryNotLocked(ctx, list.CycleID, app.RoleID); err != nil {
 		return nil, err
 	}
 	if err := s.preferenceListDB.DeletePreferenceListEntry(ctx, in.ID, in.ApplicationID); err != nil {
@@ -319,9 +329,6 @@ func (s *preferenceListService) deleteEntry(ctx context.Context, in *PreferenceL
 }
 
 func (s *preferenceListService) reorderEntries(ctx context.Context, in *ReorderPreferenceListEntriesInput) (*PreferenceListEntriesDetailOutput, error) {
-	if err := utils.RequireReviewer(ctx); err != nil {
-		return nil, err
-	}
 	if err := s.requireAccess(ctx, in.ID); err != nil {
 		return nil, err
 	}
@@ -377,13 +384,16 @@ func samePermutation(a, b []string) bool {
 }
 
 func (s *preferenceListService) getDeadline(ctx context.Context, in *PreferenceListDeadlineInput) (*PreferenceListDeadlineOutput, error) {
-	if err := utils.RequireReviewer(ctx); err != nil {
+	if err := role.ParseRoleID(in.RoleID); err != nil {
 		return nil, err
 	}
-	if !in.Role.Valid() {
-		return nil, huma.Error422UnprocessableEntity("role is invalid")
+	if err := s.access.CanCycle(ctx, access.ReviewCycle, in.ID); err != nil {
+		return nil, err
 	}
-	d, err := s.preferenceListDB.GetOrCreatePreferenceListDeadline(ctx, in.ID, in.Role)
+	if err := role.RequireCycleRole(ctx, s.roleDB, in.ID, in.RoleID); err != nil {
+		return nil, err
+	}
+	d, err := s.preferenceListDB.GetOrCreatePreferenceListDeadline(ctx, in.ID, in.RoleID)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
@@ -391,13 +401,16 @@ func (s *preferenceListService) getDeadline(ctx context.Context, in *PreferenceL
 }
 
 func (s *preferenceListService) setDeadline(ctx context.Context, in *SetPreferenceListDeadlineInput) (*PreferenceListDeadlineOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := role.ParseRoleID(in.RoleID); err != nil {
 		return nil, err
 	}
-	if !in.Role.Valid() {
-		return nil, huma.Error422UnprocessableEntity("role is invalid")
+	if err := s.access.CanCycle(ctx, access.ManageCycle, in.ID); err != nil {
+		return nil, err
 	}
-	d, err := s.preferenceListDB.UpsertPreferenceListDeadline(ctx, in.ID, in.Role, in.Body.ClosesAt, utils.CurrentActor(ctx).NUID)
+	if err := role.RequireCycleRole(ctx, s.roleDB, in.ID, in.RoleID); err != nil {
+		return nil, err
+	}
+	d, err := s.preferenceListDB.UpsertPreferenceListDeadline(ctx, in.ID, in.RoleID, in.Body.ClosesAt, utils.CurrentActor(ctx).NUID)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
@@ -405,9 +418,6 @@ func (s *preferenceListService) setDeadline(ctx context.Context, in *SetPreferen
 }
 
 func (s *preferenceListService) setMeetingDay(ctx context.Context, in *SetPreferenceListMeetingDayInput) (*PreferenceListOutput, error) {
-	if err := utils.RequireReviewer(ctx); err != nil {
-		return nil, err
-	}
 	if err := s.requireAccess(ctx, in.ID); err != nil {
 		return nil, err
 	}

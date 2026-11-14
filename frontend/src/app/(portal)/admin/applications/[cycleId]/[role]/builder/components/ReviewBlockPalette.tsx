@@ -1,6 +1,6 @@
 'use client'
 
-import type { QuestionType, Role } from '@/lib/api/types'
+import type { QuestionType } from '@/lib/api/types'
 import { useCreateReviewQuestion } from '@/lib/queries/review-questions'
 import {
   DEFAULT_OPTIONS,
@@ -15,7 +15,7 @@ export function ReviewBlockPalette({
   nextOrder,
 }: {
   cycleId: string
-  role: Role
+  role: string
   nextOrder: number
 }) {
   const createReviewQuestion = useCreateReviewQuestion()
@@ -25,7 +25,7 @@ export function ReviewBlockPalette({
     createReviewQuestion.mutate({
       cycleId,
       body: {
-        role,
+        role_id: role,
         question_text: 'Untitled question',
         question_type: type,
         is_required: true,

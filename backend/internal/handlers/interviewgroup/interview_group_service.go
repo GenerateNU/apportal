@@ -9,11 +9,13 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/GenerateNU/apportal/backend/internal/access"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/interviewassignment"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 )
 
 type interviewGroupService struct {
+	access                *access.Checker
 	groupDB               *InterviewGroupDB
 	interviewAssignmentDB *interviewassignment.InterviewAssignmentDB
 }
@@ -35,7 +37,7 @@ func toWrite(b GroupBody) (GroupWrite, error) {
 }
 
 func (s *interviewGroupService) list(ctx context.Context, in *utils.CycleScopedInput) (*GroupsOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := s.access.CanCycle(ctx, access.ManageCycle, in.ID); err != nil {
 		return nil, err
 	}
 	groups, err := s.groupDB.ListForCycle(ctx, in.ID)
@@ -46,7 +48,7 @@ func (s *interviewGroupService) list(ctx context.Context, in *utils.CycleScopedI
 }
 
 func (s *interviewGroupService) create(ctx context.Context, in *CreateGroupInput) (*GroupOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := s.access.CanCycle(ctx, access.ManageCycle, in.ID); err != nil {
 		return nil, err
 	}
 	w, err := toWrite(in.Body)
@@ -61,7 +63,7 @@ func (s *interviewGroupService) create(ctx context.Context, in *CreateGroupInput
 }
 
 func (s *interviewGroupService) createMany(ctx context.Context, in *CreateGroupsInput) (*GroupsOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := s.access.CanCycle(ctx, access.ManageCycle, in.ID); err != nil {
 		return nil, err
 	}
 	writes := make([]GroupWrite, len(in.Body.Groups))
@@ -80,7 +82,7 @@ func (s *interviewGroupService) createMany(ctx context.Context, in *CreateGroups
 }
 
 func (s *interviewGroupService) update(ctx context.Context, in *UpdateGroupInput) (*GroupOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := s.access.CanCycleOf(ctx, access.ManageCycle, "interview_groups", in.ID); err != nil {
 		return nil, err
 	}
 	w, err := toWrite(in.Body)
@@ -95,7 +97,7 @@ func (s *interviewGroupService) update(ctx context.Context, in *UpdateGroupInput
 }
 
 func (s *interviewGroupService) delete(ctx context.Context, in *utils.IDInput) (*struct{}, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := s.access.CanCycleOf(ctx, access.ManageCycle, "interview_groups", in.ID); err != nil {
 		return nil, err
 	}
 	if err := s.groupDB.Delete(ctx, in.ID); err != nil {
@@ -105,7 +107,7 @@ func (s *interviewGroupService) delete(ctx context.Context, in *utils.IDInput) (
 }
 
 func (s *interviewGroupService) assign(ctx context.Context, in *AssignGroupInput) (*AssignGroupOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := s.access.CanCycleOf(ctx, access.ManageCycle, "interview_groups", in.ID); err != nil {
 		return nil, err
 	}
 	seen := map[string]bool{}

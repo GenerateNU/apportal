@@ -5,10 +5,9 @@ import { Avatar } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import type { DecisionRow, DecisionTemplate } from '@/lib/api/types'
-import { ROLE_CHIP_CLASS } from '@/lib/roles'
-import { ROLE_LABEL } from '@/lib/roles'
 import { KIND_LABEL, STATUS_BADGE, STATUS_LABEL, isDecided } from './constants'
 import { DecisionEditor } from './DecisionEditor'
+import { useRoleLookup } from '@/lib/queries/roles'
 
 interface DecisionListRowProps {
   row: DecisionRow
@@ -31,6 +30,7 @@ export function DecisionListRow({
   onToggle,
   onSent,
 }: DecisionListRowProps) {
+  const { roleLabel, roleChipClass } = useRoleLookup()
   return (
     <Card variant="flat" padding="none" className="overflow-hidden">
       <button
@@ -70,9 +70,9 @@ export function DecisionListRow({
         </div>
 
         <Badge
-          className={`hidden sm:inline-flex ${ROLE_CHIP_CLASS[row.application_role]}`}
+          className={`hidden shrink-0 sm:inline-flex ${roleChipClass(row.role_id)}`}
         >
-          {ROLE_LABEL[row.application_role]}
+          {roleLabel(row.role_id)}
         </Badge>
         <span className="text-text-muted hidden w-28 shrink-0 text-xs md:block">
           {KIND_LABEL[row.kind]}

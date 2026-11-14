@@ -8,11 +8,14 @@ import (
 
 	"github.com/GenerateNU/apportal/backend/internal/assign"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/application"
+	"github.com/GenerateNU/apportal/backend/internal/handlers/cyclestaff"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/leadassignment"
-	"github.com/GenerateNU/apportal/backend/internal/handlers/user"
+	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 	"github.com/danielgtaylor/huma/v2"
+
+	"github.com/GenerateNU/apportal/backend/internal/access"
 )
 
 // Assignment planning: a chief groups leads into teams, sizes the per-lead cap,
@@ -23,9 +26,10 @@ import (
 // existing assignments are interpreted through whatever teams the current
 // request declares.
 type assignmentPlannerService struct {
+	access           *access.Checker
 	applicationDB    *application.ApplicationDB
 	leadAssignmentDB *leadassignment.LeadAssignmentDB
-	userDB           *user.UserDB
+	staffDB          *cyclestaff.CycleStaffDB
 }
 
 // reviewPoolStages are the stages an application can be in and still need lead
@@ -44,14 +48,17 @@ func toAssignTeams(in []PlanTeam) []assign.Team {
 }
 
 func (s *assignmentPlannerService) capacity(ctx context.Context, in *CapacityInput) (*CapacityOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := access.RequireActor(ctx); err != nil {
 		return nil, err
 	}
-	if !in.Body.Role.Valid() {
-		return nil, huma.Error422UnprocessableEntity("role is invalid")
+	if err := role.ParseRoleID(in.Body.RoleID); err != nil {
+		return nil, err
+	}
+	if err := s.access.CanCycle(ctx, access.ManageCycle, in.ID); err != nil {
+		return nil, err
 	}
 
-	pool, err := s.reviewPool(ctx, in.ID, in.Body.Role)
+	pool, err := s.reviewPool(ctx, in.ID, in.Body.RoleID)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
@@ -69,7 +76,7 @@ func (s *assignmentPlannerService) capacity(ctx context.Context, in *CapacityInp
 }
 
 func (s *assignmentPlannerService) preview(ctx context.Context, in *PreviewPlanInput) (*PreviewPlanOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := access.RequireActor(ctx); err != nil {
 		return nil, err
 	}
 	planned, err := s.buildPlan(ctx, in)
@@ -89,19 +96,22 @@ func (s *assignmentPlannerService) preview(ctx context.Context, in *PreviewPlanI
 // pairs: the server stays the authority on who may review what, and the plan
 // is recomputed against the pool as it stands at write time.
 func (s *assignmentPlannerService) buildPlan(ctx context.Context, in *PreviewPlanInput) (plannedRun, error) {
-	if !in.Body.Role.Valid() {
-		return plannedRun{}, huma.Error422UnprocessableEntity("role is invalid")
+	if err := role.ParseRoleID(in.Body.RoleID); err != nil {
+		return plannedRun{}, err
 	}
 	if len(in.Body.Teams) == 0 {
 		return plannedRun{}, huma.Error422UnprocessableEntity("at least one team is required")
 	}
+	if err := s.access.CanCycle(ctx, access.ManageCycle, in.ID); err != nil {
+		return plannedRun{}, err
+	}
 
-	pool, err := s.reviewPool(ctx, in.ID, in.Body.Role)
+	pool, err := s.reviewPool(ctx, in.ID, in.Body.RoleID)
 	if err != nil {
 		return plannedRun{}, utils.StoreErr(err)
 	}
 	pool = excludeApplications(pool, in.Body.ExcludedApplicationIDs)
-	existing, err := s.leadAssignmentDB.ListLeadAssignmentsForCycle(ctx, in.ID, in.Body.Role)
+	existing, err := s.leadAssignmentDB.ListLeadAssignmentsForCycle(ctx, in.ID, in.Body.RoleID)
 	if err != nil {
 		return plannedRun{}, utils.StoreErr(err)
 	}
@@ -129,13 +139,14 @@ func (s *assignmentPlannerService) buildPlan(ctx context.Context, in *PreviewPla
 		Cap:            in.Body.Cap,
 		CapOverrides:   in.Body.CapOverrides,
 		Coverage:       in.Body.Coverage,
-		Seed:           assign.SeedFrom(in.ID, string(in.Body.Role)),
+		Seed:           assign.SeedFrom(in.ID, in.Body.RoleID),
 	})
 	if err != nil {
 		return plannedRun{}, huma.Error422UnprocessableEntity(err.Error())
 	}
 
 	return plannedRun{
+		cycleID:  in.ID,
 		plan:     plan,
 		prior:    prior,
 		byID:     byID,
@@ -145,7 +156,7 @@ func (s *assignmentPlannerService) buildPlan(ctx context.Context, in *PreviewPla
 }
 
 func (s *assignmentPlannerService) commit(ctx context.Context, in *PreviewPlanInput) (*CommitPlanOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := access.RequireActor(ctx); err != nil {
 		return nil, err
 	}
 	planned, err := s.buildPlan(ctx, in)
@@ -194,7 +205,7 @@ func (s *assignmentPlannerService) decoratePlan(
 ) (AssignmentPlanPreview, error) {
 	plan, prior, byID := run.plan, run.prior, run.byID
 
-	leadNames, err := s.leadNames(ctx)
+	leadNames, err := s.leadNames(ctx, run.cycleID)
 	if err != nil {
 		return AssignmentPlanPreview{}, err
 	}
@@ -267,18 +278,21 @@ func (s *assignmentPlannerService) decoratePlan(
 }
 
 func (s *assignmentPlannerService) pool(ctx context.Context, in *PoolInput) (*PoolOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := access.RequireActor(ctx); err != nil {
 		return nil, err
 	}
-	if !in.Role.Valid() {
-		return nil, huma.Error422UnprocessableEntity("role is invalid")
+	if err := role.ParseRoleID(in.RoleID); err != nil {
+		return nil, err
+	}
+	if err := s.access.CanCycle(ctx, access.ManageCycle, in.ID); err != nil {
+		return nil, err
 	}
 
-	pool, err := s.reviewPool(ctx, in.ID, in.Role)
+	pool, err := s.reviewPool(ctx, in.ID, in.RoleID)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
-	names, err := s.leadNames(ctx)
+	names, err := s.leadNames(ctx, in.ID)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
@@ -299,10 +313,10 @@ func (s *assignmentPlannerService) pool(ctx context.Context, in *PoolInput) (*Po
 
 // reviewPool is the set of applications a plan would cover: submitted or
 // mid-lead-review, for one role in one cycle.
-func (s *assignmentPlannerService) reviewPool(ctx context.Context, cycleID string, role models.Role) ([]models.ApplicationSummary, error) {
+func (s *assignmentPlannerService) reviewPool(ctx context.Context, cycleID string, role string) ([]models.ApplicationSummary, error) {
 	return s.applicationDB.ListApplications(ctx, application.ApplicationFilter{
 		CycleID: cycleID,
-		Role:    &role,
+		RoleID:  &role,
 		Stages:  reviewPoolStages,
 	})
 }
@@ -327,15 +341,14 @@ func excludeApplications(pool []models.ApplicationSummary, excludeIDs []string) 
 	return out
 }
 
-func (s *assignmentPlannerService) leadNames(ctx context.Context) (map[string]string, error) {
-	role := models.UserRoleLead
-	users, _, err := s.userDB.ListUsers(ctx, &role, nil, 0)
+func (s *assignmentPlannerService) leadNames(ctx context.Context, cycleID string) (map[string]string, error) {
+	leads, err := s.staffDB.ListStaff(ctx, cycleID, models.CycleStaffLead)
 	if err != nil {
 		return nil, err
 	}
-	out := make(map[string]string, len(users))
-	for _, u := range users {
-		out[u.NUID] = u.FullName
+	out := make(map[string]string, len(leads))
+	for _, l := range leads {
+		out[l.UserNUID] = l.FullName
 	}
 	return out, nil
 }

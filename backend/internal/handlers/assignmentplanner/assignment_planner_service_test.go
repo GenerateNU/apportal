@@ -6,14 +6,12 @@ import (
 	"testing"
 
 	"github.com/GenerateNU/apportal/backend/internal/middleware"
-	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/testutil"
 )
 
 func chiefContext() context.Context {
 	return testutil.WithActor(middleware.Actor{
-		NUID:  "chief1",
-		Roles: []models.UserRole{models.UserRoleChief},
+		NUID: "chief1",
 	})
 }
 
@@ -35,7 +33,7 @@ func TestAssignmentPlanPreviewRequiresChief(t *testing.T) {
 
 func TestAssignmentPoolRequiresChief(t *testing.T) {
 	s := &assignmentPlannerService{}
-	_, err := s.pool(context.Background(), &PoolInput{ID: "cycle", Role: models.RoleSoftwareEngineer})
+	_, err := s.pool(context.Background(), &PoolInput{ID: "cycle", RoleID: "6f1c2a52-6d2c-4a8e-9a57-2b8f3b1c9d10"})
 	testutil.WantStatus(t, err, http.StatusUnauthorized)
 }
 
@@ -44,7 +42,7 @@ func TestAssignmentPlanRejectsInvalidRole(t *testing.T) {
 	ctx := chiefContext()
 
 	in := &CapacityInput{ID: "cycle"}
-	in.Body.Role = models.Role("not_a_role")
+	in.Body.RoleID = "not_a_role"
 	in.Body.Coverage = 2
 	_, err := s.capacity(ctx, in)
 	testutil.WantStatus(t, err, http.StatusUnprocessableEntity)
@@ -55,7 +53,7 @@ func TestAssignmentPlanRejectsInvalidRole(t *testing.T) {
 func TestAssignmentPlanPreviewRejectsEmptyTeams(t *testing.T) {
 	s := &assignmentPlannerService{}
 	in := &PreviewPlanInput{ID: "cycle"}
-	in.Body.Role = models.RoleSoftwareEngineer
+	in.Body.RoleID = "6f1c2a52-6d2c-4a8e-9a57-2b8f3b1c9d10"
 	in.Body.Coverage = 2
 	in.Body.Cap = 20
 
@@ -69,24 +67,12 @@ func TestAssignmentPlanCommitRequiresChief(t *testing.T) {
 	testutil.WantStatus(t, err, http.StatusUnauthorized)
 }
 
-// A lead must not be able to write assignments, even though they can read
-// plenty of the review surface.
-func TestAssignmentPlanCommitRejectsLead(t *testing.T) {
-	s := &assignmentPlannerService{}
-	ctx := testutil.WithActor(middleware.Actor{
-		NUID:  "lead1",
-		Roles: []models.UserRole{models.UserRoleLead},
-	})
-	_, err := s.commit(ctx, &PreviewPlanInput{ID: "cycle"})
-	testutil.WantStatus(t, err, http.StatusForbidden)
-}
-
 // Validation must reject before the handler reaches the database, so a malformed
 // commit cannot write anything.
 func TestAssignmentPlanCommitRejectsEmptyTeams(t *testing.T) {
 	s := &assignmentPlannerService{}
 	in := &PreviewPlanInput{ID: "cycle"}
-	in.Body.Role = models.RoleSoftwareEngineer
+	in.Body.RoleID = "6f1c2a52-6d2c-4a8e-9a57-2b8f3b1c9d10"
 	in.Body.Coverage = 2
 	in.Body.Cap = 20
 

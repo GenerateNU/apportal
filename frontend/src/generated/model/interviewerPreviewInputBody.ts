@@ -10,7 +10,6 @@ import type { InterviewerPreviewInputBodyConflicts } from './interviewerPreviewI
 import type { InterviewerPreviewInputBodyExcludedApplicationIds } from './interviewerPreviewInputBodyExcludedApplicationIds';
 import type { InterviewerPreviewInputBodyGroups } from './interviewerPreviewInputBodyGroups';
 import type { InterviewerPreviewInputBodyLeads } from './interviewerPreviewInputBodyLeads';
-import type { InterviewerPreviewInputBodyRole } from './interviewerPreviewInputBodyRole';
 
 export interface InterviewerPreviewInputBody {
   /** A URL to the JSON Schema for this object. */
@@ -24,5 +23,5 @@ export interface InterviewerPreviewInputBody {
   excluded_application_ids?: InterviewerPreviewInputBodyExcludedApplicationIds;
   groups?: InterviewerPreviewInputBodyGroups;
   leads?: InterviewerPreviewInputBodyLeads;
-  role: InterviewerPreviewInputBodyRole;
+  role_id: string;
 }

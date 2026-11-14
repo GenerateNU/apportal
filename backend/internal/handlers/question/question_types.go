@@ -17,7 +17,7 @@ type QuestionsOutput struct {
 type CreateQuestionInput struct {
 	ID   string `path:"id" doc:"Cycle ID"`
 	Body struct {
-		Role         *models.Role        `json:"role,omitempty" doc:"Omit for a global question shown to all roles"`
+		RoleID       *string             `json:"role_id,omitempty" doc:"Omit for a global question shown to all roles"`
 		QuestionText string              `json:"question_text"`
 		QuestionType models.QuestionType `json:"question_type,omitempty"`
 		IsRequired   *bool               `json:"is_required,omitempty"`
@@ -28,8 +28,8 @@ type CreateQuestionInput struct {
 }
 
 type ListQuestionsInput struct {
-	ID   string `path:"id" doc:"Cycle ID"`
-	Role string `query:"role" doc:"Optional role filter"`
+	ID     string `path:"id" doc:"Cycle ID"`
+	RoleID string `query:"role_id" doc:"Optional role filter"`
 }
 
 type UpdateQuestionInput struct {
@@ -51,7 +51,7 @@ type DeleteQuestionInput struct {
 
 type QuestionCreate struct {
 	CycleID      string
-	Role         *models.Role // nil = global (shown to all roles)
+	RoleID       *string // nil = global (shown to all roles)
 	QuestionText string
 	QuestionType models.QuestionType
 	IsRequired   bool

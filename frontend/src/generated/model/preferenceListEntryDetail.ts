@@ -5,11 +5,9 @@
  * Generate application portal — applications, reviews, and the hiring pipeline.
  * OpenAPI spec version: 0.1.0
  */
-import type { PreferenceListEntryDetailApplicationRole } from './preferenceListEntryDetailApplicationRole';
 
 export interface PreferenceListEntryDetail {
   application_id: string;
-  application_role: PreferenceListEntryDetailApplicationRole;
   created_at: string;
   email: string;
   full_name: string;
@@ -18,6 +16,7 @@ export interface PreferenceListEntryDetail {
   rank: number;
   reasoning?: string;
   returner: boolean;
+  role_id: string;
   updated_at: string;
   updated_by: string;
 }

@@ -114,9 +114,9 @@ func ownerOf(owners []models.DraftSlot, slot int) string {
 	return ""
 }
 
-func (d *DraftDB) GetDraft(ctx context.Context, cycleID string, role models.Role) (models.Draft, error) {
+func (d *DraftDB) GetDraft(ctx context.Context, cycleID string, role string) (models.Draft, error) {
 	var draft models.Draft
-	err := d.db.WithContext(ctx).Where("cycle_id = ? AND application_role = ?", cycleID, role).Take(&draft).Error
+	err := d.db.WithContext(ctx).Where("cycle_id = ? AND role_id = ?", cycleID, role).Take(&draft).Error
 	return draft, utils.DBErr(err)
 }
 
@@ -128,9 +128,9 @@ func (d *DraftDB) GetDraftByID(ctx context.Context, id string) (models.Draft, er
 
 // CreateDraft opens the board for a (cycle, role). A second call returns the
 // existing board, so two chiefs opening the page at once don't race.
-func (d *DraftDB) CreateDraft(ctx context.Context, cycleID string, role models.Role, rounds int, createdBy string) (models.Draft, error) {
-	draft := models.Draft{CycleID: cycleID, ApplicationRole: role, Rounds: rounds, CreatedBy: createdBy}
-	res := d.db.WithContext(ctx).Select("cycle_id", "application_role", "rounds", "created_by").
+func (d *DraftDB) CreateDraft(ctx context.Context, cycleID string, role string, rounds int, createdBy string) (models.Draft, error) {
+	draft := models.Draft{CycleID: cycleID, RoleID: role, Rounds: rounds, CreatedBy: createdBy}
+	res := d.db.WithContext(ctx).Select("cycle_id", "role_id", "rounds", "created_by").
 		Clauses(clause.OnConflict{DoNothing: true}, clause.Returning{}).Create(&draft)
 	if res.Error != nil {
 		return models.Draft{}, res.Error
@@ -148,6 +148,13 @@ func (d *DraftDB) UpdateDraft(ctx context.Context, id string, in DraftUpdate) (m
 	return utils.UpdateReturning[models.Draft](d.db.WithContext(ctx), updates, "id = ?", id)
 }
 
+// teamsInDraftCycle counts the lists that belong to the draft's own cycle, so
+// a team can't be seated from another cycle.
+func teamsInDraftCycle(db *gorm.DB, draftID string, preferenceListIDs []string) *gorm.DB {
+	return db.Model(&models.PreferenceList{}).
+		Where("id IN ? AND cycle_id = (SELECT cycle_id FROM drafts WHERE id = ?)", preferenceListIDs, draftID)
+}
+
 // SetDraftTeams replaces the order with the given preference lists. Teams
 // that drop out take their picks with them (cascade), which is why the
 // handler fixes the team set once picking starts.
@@ -162,6 +169,13 @@ func (d *DraftDB) SetDraftTeams(ctx context.Context, draftID string, preferenceL
 		}
 		if len(preferenceListIDs) == 0 {
 			return nil
+		}
+		var inCycle int64
+		if err := teamsInDraftCycle(tx, draftID, preferenceListIDs).Count(&inCycle).Error; err != nil {
+			return err
+		}
+		if int(inCycle) != len(preferenceListIDs) {
+			return utils.ErrNotFound
 		}
 		teams := make([]models.DraftTeam, len(preferenceListIDs))
 		for i, id := range preferenceListIDs {
@@ -263,7 +277,7 @@ func lockDraft(tx *gorm.DB, draftID string) error {
 func boardStage(tx *gorm.DB, draft models.Draft, applicationID string) (string, error) {
 	var app models.Application
 	err := tx.Select("stage").
-		Where("id = ? AND cycle_id = ? AND application_role = ?", applicationID, draft.CycleID, draft.ApplicationRole).
+		Where("id = ? AND cycle_id = ? AND role_id = ?", applicationID, draft.CycleID, draft.RoleID).
 		Take(&app).Error
 	return string(app.Stage), utils.DBErr(err)
 }

@@ -8,7 +8,7 @@ import { Card } from '@/components/ui/card'
 import { PageHeader } from '@/components/ui/page-header'
 import { SectionLabel } from '@/components/ui/section-label'
 import { ReturnerBadge } from '@/components/ReturnerBadge'
-import type { ApplicationStage, Role } from '@/lib/api/types'
+import type { ApplicationStage } from '@/lib/api/types'
 import { useAnswers } from '@/lib/queries/answers'
 import { useApplicant } from '@/lib/queries/applicants'
 import { useInterviewComments } from '@/lib/queries/interview-comments'
@@ -20,10 +20,10 @@ import { useChiefs, useLeads } from '@/lib/queries/users'
 import { useWrittenReviews } from '@/lib/queries/written-reviews'
 import { formatDate } from '@/lib/utils'
 import { RATING_COLORS, RATING_LABEL } from '@/lib/interview-ratings'
-import { ROLE_CHIP_CLASS, ROLE_LABEL } from '@/lib/roles'
 import { ChallengeCard } from './ChallengeCard'
 import { stageBadge, stageLabel } from './constants'
 import { ResponseField } from './ResponseField'
+import { useRoleLookup } from '@/lib/queries/roles'
 
 const SECTION_CLASS = 'flex flex-col gap-3 p-5'
 
@@ -54,10 +54,11 @@ export function ApplicantOverview({
 }: {
   applicationId: string
   cycleId: string
-  role: Role
+  role: string
   applicantNuid: string
   stage?: ApplicationStage
 }) {
+  const { roleLabel, roleChipClass } = useRoleLookup()
   const { data: applicant } = useApplicant(applicantNuid)
   const { data: answers = [] } = useAnswers(applicationId)
   const { data: questions = [] } = useQuestions(cycleId, role)
@@ -91,7 +92,7 @@ export function ApplicantOverview({
             subtitle={applicant?.email}
           />
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <Badge className={ROLE_CHIP_CLASS[role]}>{ROLE_LABEL[role]}</Badge>
+            <Badge className={roleChipClass(role)}>{roleLabel(role)}</Badge>
             {stage && (
               <Badge className={stageBadge[stage]}>{stageLabel[stage]}</Badge>
             )}
@@ -247,6 +248,7 @@ export function ApplicantOverview({
       <ChallengeCard
         applicantNuid={applicantNuid}
         applicationId={applicationId}
+        cycleId={cycleId}
         role={role}
       />
 

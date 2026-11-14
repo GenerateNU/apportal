@@ -1,6 +1,6 @@
 'use client'
 
-import type { QuestionType, Role } from '@/lib/api/types'
+import type { QuestionType } from '@/lib/api/types'
 import { useCreateQuestion } from '@/lib/queries/questions'
 import {
   DEFAULT_OPTIONS,
@@ -15,7 +15,7 @@ export function BlockPalette({
   nextOrder,
 }: {
   cycleId: string
-  role: Role
+  role: string
   nextOrder: number
 }) {
   const createQuestion = useCreateQuestion()
@@ -25,7 +25,7 @@ export function BlockPalette({
     createQuestion.mutate({
       cycleId,
       body: {
-        role,
+        role_id: role,
         question_text: 'Untitled question',
         question_type: type,
         is_required: true,

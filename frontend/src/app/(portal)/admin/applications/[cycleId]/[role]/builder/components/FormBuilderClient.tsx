@@ -30,7 +30,7 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
-import type { CycleStatus, Question, Role } from '@/lib/api/types'
+import type { CycleStatus, Question } from '@/lib/api/types'
 import {
   useApplicationTemplate,
   useUpdateApplicationTemplate,
@@ -42,7 +42,6 @@ import {
   useUpdateQuestion,
 } from '@/lib/queries/questions'
 import { useReviewQuestions } from '@/lib/queries/review-questions'
-import { ROLE_CHIP_CLASS, ROLE_LABEL } from '@/lib/roles'
 import { BlockPalette } from './BlockPalette'
 import { QuestionCard } from './QuestionCard'
 import { QuestionOutline } from './QuestionOutline'
@@ -50,6 +49,7 @@ import { LivePreview } from './LivePreview'
 import { ReviewQuestionsBuilderClient } from './ReviewQuestionsBuilderClient'
 import { TemplateTextBlock } from './TemplateTextBlock'
 import { TEMPLATE_STATUS_LABEL, TEMPLATE_STATUS_ORDER } from './constants'
+import { useRoleLookup } from '@/lib/queries/roles'
 
 export function FormBuilderClient({
   cycleId,
@@ -58,8 +58,9 @@ export function FormBuilderClient({
 }: {
   cycleId: string
   cycleName: string
-  role: Role
+  role: string
 }) {
+  const { roleLabel, roleChipClass } = useRoleLookup()
   const { data: questions = [] } = useQuestions(cycleId, role)
   const reorderQuestions = useReorderQuestions(cycleId, role)
   const updateQuestion = useUpdateQuestion()
@@ -84,7 +85,7 @@ export function FormBuilderClient({
     if (!template || next === status) return
     updateTemplate.mutate({
       cycleId,
-      role,
+      roleId: role,
       body: mode === 'application' ? { status: next } : { review_status: next },
     })
   }
@@ -93,7 +94,7 @@ export function FormBuilderClient({
     if (!template) return
     updateTemplate.mutate({
       cycleId,
-      role,
+      roleId: role,
       body:
         mode === 'application'
           ? { closes_at: date.toISOString() }
@@ -156,10 +157,10 @@ export function FormBuilderClient({
           <span
             className={cn(
               'mt-1 inline-block w-fit px-3 py-1.5 text-sm font-medium',
-              ROLE_CHIP_CLASS[role]
+              roleChipClass(role)
             )}
           >
-            {ROLE_LABEL[role]}
+            {roleLabel(role)}
           </span>
         }
         actions={

@@ -19,15 +19,15 @@ type DecisionOutput struct {
 }
 
 type ListDecisionTemplatesInput struct {
-	ID   string `path:"id" doc:"Cycle ID"`
-	Role string `query:"role" doc:"Applicant role"`
+	ID     string `path:"id" doc:"Cycle ID"`
+	RoleID string `query:"role_id" doc:"Applicant role"`
 }
 
 type UpdateDecisionTemplateInput struct {
-	ID   string `path:"id" doc:"Cycle ID"`
-	Role string `query:"role" doc:"Applicant role"`
-	Kind string `query:"kind" doc:"Which letter" enum:"rejection_post_interview,rejection_generic"`
-	Body struct {
+	ID     string `path:"id" doc:"Cycle ID"`
+	RoleID string `query:"role_id" doc:"Applicant role"`
+	Kind   string `query:"kind" doc:"Which letter" enum:"rejection_post_interview,rejection_generic"`
+	Body   struct {
 		Subject string `json:"subject" minLength:"1"`
 		Body    string `json:"body" minLength:"1"`
 	}
@@ -35,7 +35,7 @@ type UpdateDecisionTemplateInput struct {
 
 type ListDecisionsInput struct {
 	ID              string `path:"id" doc:"Cycle ID"`
-	Role            string `query:"role" doc:"Applicant role; omit for both"`
+	RoleID          string `query:"role_id" doc:"Applicant role ID; omit for all"`
 	Kind            string `query:"kind" doc:"Which letter applies" enum:"rejection_post_interview,rejection_generic"`
 	InterviewerNUID string `query:"interviewer_nuid" doc:"Limit to applicants this reviewer interviewed — a lead's own feedback queue"`
 	Search          string `query:"search" doc:"Case-insensitive substring match on the applicant's name, NUID, or email"`
@@ -76,7 +76,7 @@ type DecisionTemplateUpdate struct {
 // come from the page's filter row.
 type DecisionFilter struct {
 	CycleID string
-	Role    *models.Role
+	RoleID  *string
 	Kind    *models.DecisionKind
 	// InterviewerNUID scopes a lead's queue to applicants they interviewed.
 	InterviewerNUID string

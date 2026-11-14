@@ -14,10 +14,6 @@ func enumSchema(values ...string) *huma.Schema {
 	return &huma.Schema{Type: huma.TypeString, Enum: enum}
 }
 
-func (Role) Schema(huma.Registry) *huma.Schema {
-	return enumSchema(string(RoleSoftwareEngineer), string(RoleSoftwareDesigner))
-}
-
 func (ApplicationStage) Schema(huma.Registry) *huma.Schema {
 	return enumSchema(
 		string(StageDraft), string(StageSubmitted), string(StageLeadReview), string(StageChiefReview),
@@ -28,10 +24,11 @@ func (ApplicationStage) Schema(huma.Registry) *huma.Schema {
 }
 
 func (UserRole) Schema(huma.Registry) *huma.Schema {
-	return enumSchema(
-		string(UserRoleApplicant), string(UserRoleMember), string(UserRoleLead),
-		string(UserRoleChief), string(UserRoleAdmin),
-	)
+	return enumSchema(string(UserRoleApplicant), string(UserRoleAdmin))
+}
+
+func (CycleStaffRole) Schema(huma.Registry) *huma.Schema {
+	return enumSchema(string(CycleStaffLead), string(CycleStaffChief))
 }
 
 func (ApplicationType) Schema(huma.Registry) *huma.Schema {

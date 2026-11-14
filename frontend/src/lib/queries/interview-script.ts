@@ -4,19 +4,23 @@ import {
   updateInterviewScript,
 } from '@/generated/interview-script/interview-script'
 import type { RequestOptions } from '@/lib/api/orval-mutator'
-import type { InterviewScript, Role } from '@/lib/api/types'
+import type { InterviewScript } from '@/lib/api/types'
 import { queryKeys } from './keys'
 
 export function useInterviewScript(
   cycleId: string,
-  role: Role,
+  roleId: string,
   opts?: RequestOptions
 ) {
   return useQuery({
-    queryKey: queryKeys.interviewScript.detail(cycleId, role),
+    queryKey: queryKeys.interviewScript.detail(cycleId, roleId),
     queryFn: () =>
-      getInterviewScript(cycleId, { role }, opts) as Promise<InterviewScript>,
-    enabled: !!cycleId,
+      getInterviewScript(
+        cycleId,
+        { role_id: roleId },
+        opts
+      ) as Promise<InterviewScript>,
+    enabled: !!cycleId && !!roleId,
   })
 }
 
@@ -25,19 +29,19 @@ export function useUpdateInterviewScript() {
   return useMutation({
     mutationFn: (vars: {
       cycleId: string
-      role: Role
+      roleId: string
       body: Parameters<typeof updateInterviewScript>[1]
       opts?: RequestOptions
     }) =>
       updateInterviewScript(
         vars.cycleId,
         vars.body,
-        { role: vars.role },
+        { role_id: vars.roleId },
         vars.opts
       ),
     onSuccess: (data, vars) => {
       queryClient.setQueryData(
-        queryKeys.interviewScript.detail(vars.cycleId, vars.role),
+        queryKeys.interviewScript.detail(vars.cycleId, vars.roleId),
         data
       )
     },

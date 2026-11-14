@@ -23,14 +23,17 @@ import type { Cycle } from '@/lib/api/types'
 import { useCreateCycle, useUpdateCycle } from '@/lib/queries/cycles'
 import { APPLICATION_TYPES, type ApplicationType } from '../lib/cycle-meta'
 
+// Pass `cycle` to edit, or `branchId` to create a cycle in that branch.
 export function CycleDialog({
   open,
   onOpenChange,
   cycle,
+  branchId,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   cycle?: Cycle
+  branchId?: string
 }) {
   const isEdit = !!cycle
   const createCycle = useCreateCycle()
@@ -55,8 +58,11 @@ export function CycleDialog({
 
     if (isEdit) {
       updateCycle.mutate({ id: cycle.id, body }, { onSuccess })
-    } else {
-      createCycle.mutate({ body }, { onSuccess })
+    } else if (branchId) {
+      createCycle.mutate(
+        { body: { ...body, branch_id: branchId } },
+        { onSuccess }
+      )
     }
   }
 
@@ -69,7 +75,7 @@ export function CycleDialog({
             <DialogDescription>
               {isEdit
                 ? 'Update this recruiting cycle.'
-                : 'Create a recruiting cycle. It starts as a draft — open it when applications should go live.'}
+                : 'Create a recruiting cycle. It starts as a draft with the roles of this branch’s latest cycle of the same type — edit them on the cycle, and open it when applications should go live.'}
             </DialogDescription>
           </DialogHeader>
 

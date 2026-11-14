@@ -16,10 +16,12 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/handlers/application"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/applicationtemplate"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/assignmentplanner"
+	"github.com/GenerateNU/apportal/backend/internal/handlers/branch"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/challenge"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/chiefreview"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/codesubmission"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/cycle"
+	"github.com/GenerateNU/apportal/backend/internal/handlers/cyclestaff"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/decision"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/draft"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/interview"
@@ -31,6 +33,7 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/handlers/recordingreview"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/reviewquestion"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/reviewrelease"
+	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/selection"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/tag"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/user"
@@ -98,7 +101,10 @@ func humaConfig() huma.Config {
 }
 
 func CreateRoutes(api huma.API, db *gorm.DB, storageClient *storage.Client, challengeClient *applicant.ChallengeClient) {
+	branch.Route(api, db)
+	role.Route(api, db)
 	cycle.Route(api, db)
+	cyclestaff.Route(api, db)
 	applicationtemplate.Route(api, db)
 	question.Route(api, db)
 	challenge.Route(api, db)

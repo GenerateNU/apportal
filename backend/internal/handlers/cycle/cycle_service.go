@@ -3,18 +3,26 @@ package cycle
 import (
 	"context"
 
+	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 	"github.com/danielgtaylor/huma/v2"
+
+	"github.com/GenerateNU/apportal/backend/internal/access"
 )
 
 type cycleService struct {
+	access  *access.Checker
 	cycleDB *CycleDB
+	roleDB  *role.RoleDB
 }
 
 func (s *cycleService) create(ctx context.Context, in *CreateCycleInput) (*CycleOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := access.RequireAdmin(ctx); err != nil {
 		return nil, err
+	}
+	if in.Body.BranchID == "" {
+		return nil, huma.Error422UnprocessableEntity("branch_id is required")
 	}
 	status := in.Body.Status
 	if status == "" {
@@ -32,6 +40,7 @@ func (s *cycleService) create(ctx context.Context, in *CreateCycleInput) (*Cycle
 	}
 
 	cycle, err := s.cycleDB.CreateCycle(ctx, CycleCreate{
+		BranchID:        in.Body.BranchID,
 		Name:            in.Body.Name,
 		Status:          status,
 		ApplicationType: appType,
@@ -45,7 +54,7 @@ func (s *cycleService) create(ctx context.Context, in *CreateCycleInput) (*Cycle
 }
 
 func (s *cycleService) list(ctx context.Context, in *ListCyclesInput) (*CyclesOutput, error) {
-	filter := CycleFilter{}
+	filter := CycleFilter{BranchID: in.BranchID, Listable: s.access.ListableCycles(ctx)}
 	if in.Status != "" {
 		parsed := models.CycleStatus(in.Status)
 		if !parsed.Valid() {
@@ -62,10 +71,16 @@ func (s *cycleService) list(ctx context.Context, in *ListCyclesInput) (*CyclesOu
 }
 
 func (s *cycleService) templateSummary(ctx context.Context, in *CycleIDInput) (*CycleTemplateSummaryOutput, error) {
-	roles := []models.Role{models.RoleSoftwareEngineer, models.RoleSoftwareDesigner}
+	if err := s.access.CanCycle(ctx, access.ReviewCycle, in.ID); err != nil {
+		return nil, err
+	}
+	roles, err := s.roleDB.ListCycleRoles(ctx, in.ID)
+	if err != nil {
+		return nil, utils.StoreErr(err)
+	}
 	summaries := make([]models.CycleRoleSummary, 0, len(roles))
-	for _, role := range roles {
-		summary, err := s.cycleDB.CycleRoleSummary(ctx, in.ID, role)
+	for _, r := range roles {
+		summary, err := s.cycleDB.CycleRoleSummary(ctx, in.ID, r.ID)
 		if err != nil {
 			return nil, utils.StoreErr(err)
 		}
@@ -75,7 +90,7 @@ func (s *cycleService) templateSummary(ctx context.Context, in *CycleIDInput) (*
 }
 
 func (s *cycleService) get(ctx context.Context, in *CycleIDInput) (*CycleOutput, error) {
-	cycle, err := s.cycleDB.GetCycle(ctx, in.ID)
+	cycle, err := s.cycleDB.GetCycle(ctx, in.ID, CycleFilter{Listable: s.access.ListableCycles(ctx)})
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
@@ -83,7 +98,7 @@ func (s *cycleService) get(ctx context.Context, in *CycleIDInput) (*CycleOutput,
 }
 
 func (s *cycleService) update(ctx context.Context, in *UpdateCycleInput) (*CycleOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := access.RequireAdmin(ctx); err != nil {
 		return nil, err
 	}
 	if in.Body.Status != nil && !in.Body.Status.Valid() {

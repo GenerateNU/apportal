@@ -6,17 +6,16 @@ import { MarkdownContent } from '@/components/MarkdownContent'
 import { Badge, StatusDot } from '@/components/ui/badge'
 import { BackLink } from '@/components/ui/back-link'
 import { PageHeader } from '@/components/ui/page-header'
-import type { Role } from '@/lib/api/types'
 import { useApplicationTemplate } from '@/lib/queries/application-templates'
 import { useApplication } from '@/lib/queries/applications'
 import { useAnswers } from '@/lib/queries/answers'
 import { useChallenges } from '@/lib/queries/challenges'
 import { useQuestions } from '@/lib/queries/questions'
 import { useSubmission } from '@/lib/queries/submissions'
-import { ROLE_LABEL } from '@/lib/roles'
 import { APPLICANT_STATUS } from '../../lib/status'
 import { ApplicationFields } from '../../components/ApplicationFields'
 import type { AnswerValue } from '../../components/QuestionField'
+import { useRoleLookup } from '@/lib/queries/roles'
 
 const noop = () => {}
 
@@ -31,8 +30,9 @@ export function ApplicationView({
   applicationId: string
   cycleId: string
   cycleName: string
-  role: Role
+  role: string
 }) {
+  const { roleLabel } = useRoleLookup()
   const { data: application } = useApplication(applicationId)
   const { data: questions = [] } = useQuestions(cycleId, role)
   const { data: challenges = [] } = useChallenges(cycleId, role)
@@ -67,7 +67,7 @@ export function ApplicationView({
         back={
           <BackLink href="/applicant/applications">My Applications</BackLink>
         }
-        title={ROLE_LABEL[role]}
+        title={roleLabel(role)}
         subtitle={cycleName}
         actions={
           status && (

@@ -7,6 +7,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
+	"github.com/GenerateNU/apportal/backend/internal/access"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/application"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 )
@@ -15,12 +16,13 @@ import (
 var Palette = []string{"gray", "brown", "orange", "yellow", "green", "blue", "purple", "pink", "red"}
 
 type tagService struct {
+	access        *access.Checker
 	tagDB         *TagDB
 	applicationDB *application.ApplicationDB
 }
 
 func (s *tagService) list(ctx context.Context, in *utils.CycleScopedInput) (*TagsOutput, error) {
-	if err := utils.RequireReviewer(ctx); err != nil {
+	if err := s.access.CanCycle(ctx, access.ReviewCycle, in.ID); err != nil {
 		return nil, err
 	}
 	tags, err := s.tagDB.ListTags(ctx, in.ID)
@@ -31,11 +33,11 @@ func (s *tagService) list(ctx context.Context, in *utils.CycleScopedInput) (*Tag
 }
 
 func (s *tagService) create(ctx context.Context, in *CreateTagInput) (*TagOutput, error) {
-	if err := utils.RequireReviewer(ctx); err != nil {
-		return nil, err
-	}
 	name, err := cleanName(in.Body.Name)
 	if err != nil {
+		return nil, err
+	}
+	if err := s.access.CanCycle(ctx, access.ReviewCycle, in.ID); err != nil {
 		return nil, err
 	}
 	taken, err := s.tagDB.TagNameTaken(ctx, in.ID, name, "")
@@ -57,9 +59,6 @@ func (s *tagService) create(ctx context.Context, in *CreateTagInput) (*TagOutput
 }
 
 func (s *tagService) update(ctx context.Context, in *UpdateTagInput) (*TagOutput, error) {
-	if err := utils.RequireReviewer(ctx); err != nil {
-		return nil, err
-	}
 	if in.Body.Color != nil && !slices.Contains(Palette, *in.Body.Color) {
 		return nil, huma.Error422UnprocessableEntity("color is not in the palette")
 	}
@@ -69,6 +68,12 @@ func (s *tagService) update(ctx context.Context, in *UpdateTagInput) (*TagOutput
 			return nil, err
 		}
 		in.Body.Name = &name
+	}
+	if err := s.access.CanCycleOf(ctx, access.ReviewCycle, "cycle_tags", in.ID); err != nil {
+		return nil, err
+	}
+	if in.Body.Name != nil {
+		name := *in.Body.Name
 		current, err := s.tagDB.GetTag(ctx, in.ID)
 		if err != nil {
 			return nil, utils.StoreErr(err)
@@ -89,7 +94,7 @@ func (s *tagService) update(ctx context.Context, in *UpdateTagInput) (*TagOutput
 }
 
 func (s *tagService) delete(ctx context.Context, in *utils.IDInput) (*struct{}, error) {
-	if err := utils.RequireReviewer(ctx); err != nil {
+	if err := s.access.CanCycleOf(ctx, access.ReviewCycle, "cycle_tags", in.ID); err != nil {
 		return nil, err
 	}
 	tag, err := s.tagDB.GetTag(ctx, in.ID)
@@ -103,9 +108,6 @@ func (s *tagService) delete(ctx context.Context, in *utils.IDInput) (*struct{}, 
 }
 
 func (s *tagService) setApplicationTags(ctx context.Context, in *SetApplicationTagsInput) (*ApplicationTagsOutput, error) {
-	if err := utils.RequireReviewer(ctx); err != nil {
-		return nil, err
-	}
 	ids := in.Body.TagIDs
 	if ids == nil {
 		ids = []string{}
@@ -115,6 +117,9 @@ func (s *tagService) setApplicationTags(ctx context.Context, in *SetApplicationT
 	}
 	if len(slices.Compact(slices.Sorted(slices.Values(ids)))) != len(ids) {
 		return nil, huma.Error422UnprocessableEntity("tag_ids contains duplicates")
+	}
+	if err := s.access.CanApplication(ctx, access.ReviewApplication, in.ID); err != nil {
+		return nil, err
 	}
 	app, err := s.applicationDB.GetApplication(ctx, in.ID)
 	if err != nil {

@@ -19,14 +19,14 @@ type ApplicationTemplatesOutput struct {
 type ListOpenApplicationTemplatesInput struct{}
 
 type GetApplicationTemplateInput struct {
-	ID   string `path:"id" doc:"Cycle ID"`
-	Role string `query:"role" doc:"Applicant role"`
+	ID     string `path:"id" doc:"Cycle ID"`
+	RoleID string `query:"role_id" doc:"Applicant role"`
 }
 
 type UpdateApplicationTemplateInput struct {
-	ID   string `path:"id" doc:"Cycle ID"`
-	Role string `query:"role" doc:"Applicant role"`
-	Body struct {
+	ID     string `path:"id" doc:"Cycle ID"`
+	RoleID string `query:"role_id" doc:"Applicant role"`
+	Body   struct {
 		Title          *string             `json:"title,omitempty"`
 		Description    *string             `json:"description,omitempty"`
 		Instructions   *string             `json:"instructions,omitempty"`

@@ -5,10 +5,14 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"gorm.io/gorm"
+
+	"github.com/GenerateNU/apportal/backend/internal/access"
+
+	"github.com/GenerateNU/apportal/backend/internal/handlers/reviewrelease"
 )
 
 func Route(api huma.API, db *gorm.DB) {
-	s := &interviewAssignmentService{interviewAssignmentDB: NewInterviewAssignmentDB(db)}
+	s := &interviewAssignmentService{access: access.NewChecker(db), interviewAssignmentDB: NewInterviewAssignmentDB(db), reviewReleaseDB: reviewrelease.NewReviewReleaseDB(db)}
 
 	huma.Register(api, huma.Operation{
 		OperationID:   "add-interviewer",
@@ -69,7 +73,7 @@ func Route(api huma.API, db *gorm.DB) {
 		Method:      http.MethodGet,
 		Path:        "/interview-reviewers",
 		Summary:     "List recording reviewers for several applications",
-		Description: "Reviewer only. Write-ups are omitted except the caller's own; read them from list-interview-reviewers.",
+		Description: "Reviewer only. Blind review applies: other reviewers' write-ups are omitted until a chief releases the cycle's recording reviews; chiefs always see them.",
 		Tags:        []string{"Interview assignments"},
 		Errors:      []int{http.StatusUnauthorized, http.StatusUnprocessableEntity},
 	}, s.listReviewersBulk)

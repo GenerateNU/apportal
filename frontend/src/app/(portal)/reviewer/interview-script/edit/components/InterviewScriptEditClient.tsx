@@ -22,14 +22,13 @@ import type {
   InterviewScript,
   InterviewScriptChallengeTrack,
   InterviewScriptQuestion,
-  Role,
 } from '@/lib/api/types'
 import { pickDefaultCycleId, useCycles } from '@/lib/queries/cycles'
 import {
   useInterviewScript,
   useUpdateInterviewScript,
 } from '@/lib/queries/interview-script'
-import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
+import { useCycleRolePicker } from '@/hooks/useRoleSelection'
 
 const TEXTAREA_CLASS =
   'border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 min-h-24 w-full border bg-transparent px-3.5 py-2.5 text-base transition-all outline-none focus-visible:ring-3 hover:border-gray-300 resize-none'
@@ -176,11 +175,9 @@ export function InterviewScriptEditClient() {
     if (defaultId) setCycleId(defaultId)
   }
 
-  const roleParam = searchParams.get('role')
-  const [role, setRole] = useState<Role>(
-    roleParam === 'software_designer'
-      ? 'software_designer'
-      : 'software_engineer'
+  const { role, setRole, roleIds, roleLabel } = useCycleRolePicker(
+    cycleId,
+    searchParams.get('role')
   )
 
   return (
@@ -195,9 +192,9 @@ export function InterviewScriptEditClient() {
         title="Edit interview script"
         subtitle={
           <>
-            Editing the {ROLE_LABEL[role].toLowerCase()} script — pick a
-            different cycle or role above to edit that one instead. Update the
-            bracketed placeholders (like{' '}
+            Editing the {roleLabel(role)} script — pick a different cycle or
+            role above to edit that one instead. Update the bracketed
+            placeholders (like{' '}
             <code className="text-text-default bg-gray-100 px-1 py-0.5 text-xs">
               [cycle start date]
             </code>
@@ -206,14 +203,14 @@ export function InterviewScriptEditClient() {
         }
         actions={
           <>
-            <Select value={role} onValueChange={(v) => setRole(v as Role)}>
+            <Select value={role} onValueChange={setRole}>
               <SelectTrigger className="w-48" aria-label="Role">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {ROLE_COLUMNS.map((r) => (
+                {roleIds.map((r) => (
                   <SelectItem key={r} value={r}>
-                    {ROLE_LABEL[r]}
+                    {roleLabel(r)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -256,7 +253,7 @@ function InterviewScriptEditForm({
   role,
 }: {
   cycleId: string
-  role: Role
+  role: string
 }) {
   const { data: script, isLoading } = useInterviewScript(cycleId, role)
   const update = useUpdateInterviewScript()
@@ -277,7 +274,7 @@ function InterviewScriptEditForm({
     if (!form) return
     await update.mutateAsync({
       cycleId,
-      role,
+      roleId: role,
       body: {
         intro_speech: form.intro_speech,
         recording_reminder: form.recording_reminder,

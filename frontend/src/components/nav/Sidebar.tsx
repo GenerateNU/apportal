@@ -165,7 +165,7 @@ const sectionsByRole: Record<Role, NavSection[]> = {
       id: 'admin',
       label: 'Admin',
       items: [
-        { href: '/admin/cycles', label: 'Cycles', icon: Calendar },
+        { href: '/admin/cycles', label: 'Branches & cycles', icon: Calendar },
         {
           href: '/admin/applications',
           label: 'Application Forms',

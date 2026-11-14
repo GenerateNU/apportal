@@ -3,17 +3,20 @@ package reviewquestion
 import (
 	"net/http"
 
-	"github.com/GenerateNU/apportal/backend/internal/handlers/user"
+	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/danielgtaylor/huma/v2"
 	"gorm.io/gorm"
+
+	"github.com/GenerateNU/apportal/backend/internal/access"
+
+	"github.com/GenerateNU/apportal/backend/internal/handlers/cyclestaff"
 )
 
 func Route(api huma.API, db *gorm.DB) {
 	reviewQuestionDB := NewReviewQuestionDB(db)
-	userDB := user.NewUserDB(db)
 
-	registerReviewQuestionAverage(api, &reviewQuestionAverageService{reviewQuestionDB: reviewQuestionDB, userDB: userDB})
-	registerReviewQuestion(api, &reviewQuestionService{reviewQuestionDB: reviewQuestionDB})
+	registerReviewQuestionAverage(api, &reviewQuestionAverageService{access: access.NewChecker(db), reviewQuestionDB: reviewQuestionDB, staffDB: cyclestaff.NewCycleStaffDB(db)})
+	registerReviewQuestion(api, &reviewQuestionService{access: access.NewChecker(db), reviewQuestionDB: reviewQuestionDB, roleDB: role.NewRoleDB(db)})
 }
 
 func registerReviewQuestion(api huma.API, s *reviewQuestionService) {
@@ -22,7 +25,7 @@ func registerReviewQuestion(api huma.API, s *reviewQuestionService) {
 		Method:      http.MethodGet,
 		Path:        "/cycles/{id}/review-questions",
 		Summary:     "List a cycle's review questions",
-		Description: "Reviewer only. Optional ?role= returns that role's questions plus global ones.",
+		Description: "Reviewer only. Optional ?role_id= returns that role's questions plus global ones.",
 		Tags:        []string{"Review questions"},
 		Errors:      []int{http.StatusUnauthorized},
 	}, s.list)

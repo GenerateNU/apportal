@@ -4,43 +4,36 @@ import (
 	"context"
 	"errors"
 
+	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 	"github.com/danielgtaylor/huma/v2"
+
+	"github.com/GenerateNU/apportal/backend/internal/access"
 )
 
 // draftService runs the snake draft: one board per (cycle, applicant role),
 // teams are preference_lists groups, and a single operator drives it. Reads
-// are open to any reviewer so the room can follow along; every write is
-// chief-only.
+// are open to the cycle's reviewers so the room can follow along; writes need
+// Manage on the cycle.
 type draftService struct {
+	access  *access.Checker
 	draftDB *DraftDB
+	roleDB  *role.RoleDB
 }
 
 // maxDraftRounds bounds the board so one bad number can't render thousands of
 // empty slots.
 const maxDraftRounds = 50
 
-// parseDraftRole rejects a missing or unknown role rather than silently
-// picking one — the two boards are independent and a wrong guess would show
-// the other role's picks.
-func parseDraftRole(raw string) (models.Role, error) {
-	role := models.Role(raw)
-	if !role.Valid() {
-		return "", huma.Error422UnprocessableEntity("role must be 'software_engineer' or 'software_designer'")
-	}
-	return role, nil
-}
-
 func (s *draftService) board(ctx context.Context, in *DraftScopedInput) (*DraftBoardOutput, error) {
-	if err := utils.RequireReviewer(ctx); err != nil {
+	if err := role.ParseRoleID(in.RoleID); err != nil {
 		return nil, err
 	}
-	role, err := parseDraftRole(in.Role)
-	if err != nil {
+	if err := s.access.CanCycle(ctx, access.ReviewCycle, in.ID); err != nil {
 		return nil, err
 	}
-	draft, err := s.draftDB.GetDraft(ctx, in.ID, role)
+	draft, err := s.draftDB.GetDraft(ctx, in.ID, in.RoleID)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
@@ -52,11 +45,11 @@ func (s *draftService) board(ctx context.Context, in *DraftScopedInput) (*DraftB
 }
 
 func (s *draftService) open(ctx context.Context, in *OpenDraftInput) (*DraftOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := s.access.CanCycle(ctx, access.ManageCycle, in.ID); err != nil {
 		return nil, err
 	}
-	if !in.Body.Role.Valid() {
-		return nil, huma.Error422UnprocessableEntity("role must be 'software_engineer' or 'software_designer'")
+	if err := role.ParseRoleID(in.Body.RoleID); err != nil {
+		return nil, err
 	}
 	rounds := in.Body.Rounds
 	if rounds == 0 {
@@ -65,7 +58,10 @@ func (s *draftService) open(ctx context.Context, in *OpenDraftInput) (*DraftOutp
 	if rounds > maxDraftRounds {
 		return nil, huma.Error422UnprocessableEntity("rounds is too large")
 	}
-	draft, err := s.draftDB.CreateDraft(ctx, in.ID, in.Body.Role, rounds, utils.CurrentActor(ctx).NUID)
+	if err := role.RequireCycleRole(ctx, s.roleDB, in.ID, in.Body.RoleID); err != nil {
+		return nil, err
+	}
+	draft, err := s.draftDB.CreateDraft(ctx, in.ID, in.Body.RoleID, rounds, utils.CurrentActor(ctx).NUID)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
@@ -73,7 +69,7 @@ func (s *draftService) open(ctx context.Context, in *OpenDraftInput) (*DraftOutp
 }
 
 func (s *draftService) update(ctx context.Context, in *UpdateDraftInput) (*DraftOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := s.access.CanCycleOf(ctx, access.ManageCycle, "drafts", in.ID); err != nil {
 		return nil, err
 	}
 	if in.Body.Status != nil && !in.Body.Status.Valid() {
@@ -120,7 +116,7 @@ func (s *draftService) update(ctx context.Context, in *UpdateDraftInput) (*Draft
 }
 
 func (s *draftService) setTeams(ctx context.Context, in *SetDraftTeamsInput) (*DraftBoardOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := s.access.CanCycleOf(ctx, access.ManageCycle, "drafts", in.ID); err != nil {
 		return nil, err
 	}
 	draft, err := s.draftDB.GetDraftByID(ctx, in.ID)
@@ -173,7 +169,7 @@ func sameTeams(existing []models.DraftTeamDetail, ids []string) bool {
 }
 
 func (s *draftService) pick(ctx context.Context, in *MakeDraftPickInput) (*DraftPickOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := s.access.CanCycleOf(ctx, access.ManageCycle, "drafts", in.ID); err != nil {
 		return nil, err
 	}
 	if in.Body.ApplicationID == "" {
@@ -197,7 +193,7 @@ func (s *draftService) pick(ctx context.Context, in *MakeDraftPickInput) (*Draft
 }
 
 func (s *draftService) replacePick(ctx context.Context, in *ReplaceDraftPickInput) (*DraftPickOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := s.access.CanCycleOf(ctx, access.ManageCycle, "drafts", in.ID); err != nil {
 		return nil, err
 	}
 	if in.Body.ApplicationID == "" {
@@ -235,7 +231,7 @@ func (s *draftService) replacePick(ctx context.Context, in *ReplaceDraftPickInpu
 }
 
 func (s *draftService) removePick(ctx context.Context, in *RemoveDraftPickInput) (*struct{}, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := s.access.CanCycleOf(ctx, access.ManageCycle, "drafts", in.ID); err != nil {
 		return nil, err
 	}
 	if err := s.draftDB.RemoveDraftPick(ctx, in.ID, in.PickNumber); err != nil {
@@ -245,7 +241,7 @@ func (s *draftService) removePick(ctx context.Context, in *RemoveDraftPickInput)
 }
 
 func (s *draftService) reset(ctx context.Context, in *DraftIDInput) (*DraftBoardOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := s.access.CanCycleOf(ctx, access.ManageCycle, "drafts", in.ID); err != nil {
 		return nil, err
 	}
 	if err := s.draftDB.ResetDraft(ctx, in.ID); err != nil {
@@ -263,7 +259,7 @@ func (s *draftService) reset(ctx context.Context, in *DraftIDInput) (*DraftBoard
 }
 
 func (s *draftService) delete(ctx context.Context, in *DraftIDInput) (*struct{}, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := s.access.CanCycleOf(ctx, access.ManageCycle, "drafts", in.ID); err != nil {
 		return nil, err
 	}
 	if err := s.draftDB.DeleteDraft(ctx, in.ID); err != nil {
@@ -273,7 +269,7 @@ func (s *draftService) delete(ctx context.Context, in *DraftIDInput) (*struct{},
 }
 
 func (s *draftService) drafted(ctx context.Context, in *utils.CycleScopedInput) (*DraftedApplicationsOutput, error) {
-	if err := utils.RequireReviewer(ctx); err != nil {
+	if err := s.access.CanCycle(ctx, access.ReviewCycle, in.ID); err != nil {
 		return nil, err
 	}
 	taken, err := s.draftDB.DraftedApplicationIDs(ctx, in.ID)

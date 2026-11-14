@@ -5,14 +5,12 @@
  * Generate application portal — applications, reviews, and the hiring pipeline.
  * OpenAPI spec version: 0.1.0
  */
-import type { ApplicationTemplateApplicationRole } from './applicationTemplateApplicationRole';
 import type { ApplicationTemplateReviewStatus } from './applicationTemplateReviewStatus';
 import type { ApplicationTemplateStatus } from './applicationTemplateStatus';
 
 export interface ApplicationTemplate {
   /** A URL to the JSON Schema for this object. */
   readonly $schema?: string;
-  application_role: ApplicationTemplateApplicationRole;
   closes_at?: string;
   created_at: string;
   cycle_id: string;
@@ -22,6 +20,7 @@ export interface ApplicationTemplate {
   opens_at?: string;
   review_closes_at?: string;
   review_status: ApplicationTemplateReviewStatus;
+  role_id: string;
   status: ApplicationTemplateStatus;
   title: string;
   updated_at: string;

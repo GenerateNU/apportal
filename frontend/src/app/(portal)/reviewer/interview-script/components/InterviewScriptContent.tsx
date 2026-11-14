@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { LoadingText } from '@/components/ui/loading-text'
 import { SectionLabel } from '@/components/ui/section-label'
-import type { InterviewScriptQuestion, Role } from '@/lib/api/types'
+import type { InterviewScriptQuestion } from '@/lib/api/types'
 import { useInterviewScript } from '@/lib/queries/interview-script'
 
 function QuestionItem({
@@ -54,7 +54,7 @@ export function InterviewScriptContent({
   role,
 }: {
   cycleId: string
-  role: Role
+  role: string
 }) {
   const { data: script, isLoading } = useInterviewScript(cycleId, role)
 

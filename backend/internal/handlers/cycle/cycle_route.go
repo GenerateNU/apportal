@@ -5,13 +5,17 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"gorm.io/gorm"
+
+	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
+
+	"github.com/GenerateNU/apportal/backend/internal/access"
 )
 
 func Route(api huma.API, db *gorm.DB) {
 	cycleDB := NewCycleDB(db)
 
-	registerCycle(api, &cycleService{cycleDB: cycleDB})
-	registerCycleStage(api, &cycleStageService{cycleDB: cycleDB})
+	registerCycle(api, &cycleService{access: access.NewChecker(db), cycleDB: cycleDB, roleDB: role.NewRoleDB(db)})
+	registerCycleStage(api, &cycleStageService{access: access.NewChecker(db), cycleDB: cycleDB})
 }
 
 func registerCycle(api huma.API, s *cycleService) {
@@ -20,7 +24,7 @@ func registerCycle(api huma.API, s *cycleService) {
 		Method:      http.MethodGet,
 		Path:        "/cycles",
 		Summary:     "List cycles",
-		Description: "Optional ?status= filters to one status (draft, open, closed, archived).",
+		Description: "Admins see every cycle; others see open cycles, ones they applied to, and ones they staff. Optional ?status= filters to one status (draft, open, closed, archived); ?branch_id= to one branch.",
 		Tags:        []string{"Cycles"},
 	}, s.list)
 
@@ -38,7 +42,7 @@ func registerCycle(api huma.API, s *cycleService) {
 		Method:      http.MethodGet,
 		Path:        "/cycles/{id}/template-summary",
 		Summary:     "Per-role template counts for a cycle",
-		Description: "One entry per applicant role: question count (role-specific plus global), code challenge count, and submitted application count — computed via COUNT queries instead of requiring the full row sets.",
+		Description: "One entry per role of the cycle: question count (role-specific plus global), code challenge count, and submitted application count — computed via COUNT queries instead of requiring the full row sets.",
 		Tags:        []string{"Cycles"},
 	}, s.templateSummary)
 
@@ -47,7 +51,7 @@ func registerCycle(api huma.API, s *cycleService) {
 		Method:        http.MethodPost,
 		Path:          "/cycles",
 		Summary:       "Create a cycle",
-		Description:   "Chief only.",
+		Description:   "Admin only. Starts with a copy of the roles and staff of the branch's latest cycle of the same application type.",
 		Tags:          []string{"Cycles"},
 		DefaultStatus: http.StatusCreated,
 		Errors:        []int{http.StatusUnauthorized, http.StatusForbidden},
@@ -58,7 +62,7 @@ func registerCycle(api huma.API, s *cycleService) {
 		Method:      http.MethodPatch,
 		Path:        "/cycles/{id}",
 		Summary:     "Update a cycle",
-		Description: "Chief only.",
+		Description: "Admin only.",
 		Tags:        []string{"Cycles"},
 		Errors:      []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound},
 	}, s.update)
