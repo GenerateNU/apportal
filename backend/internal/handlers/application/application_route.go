@@ -20,6 +20,7 @@ func Route(api huma.API, db *gorm.DB, storageClient *storage.Client) {
 	questionDB := question.NewQuestionDB(db)
 
 	registerAnswer(api, &answerService{applicationDB: applicationDB})
+	registerComment(api, &commentService{commentDB: NewCommentDB(db)})
 	registerApplication(api, &applicationService{applicationDB: applicationDB, applicationTemplateDB: applicationTemplateDB, challengeDB: challengeDB, codeSubmissionDB: codeSubmissionDB, questionDB: questionDB})
 	registerUpload(api, &uploadService{applicationDB: applicationDB, questionDB: questionDB, storage: storageClient})
 }

@@ -1,15 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  createInterviewComment,
-  listInterviewComments,
-  updateInterviewComment,
-} from '@/generated/interviews/interviews'
+  createApplicationComment,
+  listApplicationComments,
+  updateApplicationComment,
+} from '@/generated/application-comments/application-comments'
 import type { RequestOptions } from '@/lib/api/orval-mutator'
 import type { InterviewComment } from '@/lib/api/types'
 import { queryKeys } from './keys'
 
-// An open calibration comment thread on an application's interview — unlike
-// chief review comments, any reviewer may post here, not just chiefs.
 export function useInterviewComments(
   applicationId: string,
   opts?: RequestOptions
@@ -17,7 +15,7 @@ export function useInterviewComments(
   return useQuery({
     queryKey: queryKeys.interviewComments.list(applicationId),
     queryFn: async () =>
-      ((await listInterviewComments(applicationId, opts)) ??
+      ((await listApplicationComments(applicationId, opts)) ??
         []) as InterviewComment[],
     enabled: !!applicationId,
   })
@@ -28,9 +26,9 @@ export function useCreateInterviewComment() {
   return useMutation({
     mutationFn: (vars: {
       applicationId: string
-      body: Parameters<typeof createInterviewComment>[1]
+      body: Parameters<typeof createApplicationComment>[1]
       opts?: RequestOptions
-    }) => createInterviewComment(vars.applicationId, vars.body, vars.opts),
+    }) => createApplicationComment(vars.applicationId, vars.body, vars.opts),
     onSuccess: (_data, vars) => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.interviewComments.list(vars.applicationId),
@@ -45,10 +43,10 @@ export function useUpdateInterviewComment() {
     mutationFn: (vars: {
       applicationId: string
       commentId: string
-      body: Parameters<typeof updateInterviewComment>[2]
+      body: Parameters<typeof updateApplicationComment>[2]
       opts?: RequestOptions
     }) =>
-      updateInterviewComment(
+      updateApplicationComment(
         vars.applicationId,
         vars.commentId,
         vars.body,

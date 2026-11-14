@@ -231,12 +231,9 @@ type InterviewDetail struct {
 	Interviewers []InterviewerDetail `json:"interviewers" gorm:"-"`
 }
 
-// InterviewComment is an open comment on an application's interview, visible
-// to and postable by any reviewer — unlike ChiefReviewComment, not restricted
-// to chiefs, since interview calibration is meant to be a shared discussion.
-type InterviewComment struct {
+type ApplicationComment struct {
 	ID            string      `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
-	ApplicationID string      `json:"application_id" gorm:"type:uuid;not null;index:idx_interview_comments_app"`
+	ApplicationID string      `json:"application_id" gorm:"type:uuid;not null;index:idx_application_comments_app"`
 	AuthorNUID    string      `json:"author_nuid" gorm:"not null"`
 	Body          string      `json:"body" gorm:"not null"`
 	CreatedAt     time.Time   `json:"created_at" gorm:"not null;default:now()"`
@@ -245,10 +242,8 @@ type InterviewComment struct {
 	Author        User        `json:"-" gorm:"foreignKey:AuthorNUID;references:NUID"`
 }
 
-// InterviewCommentDetail bundles a comment with the author's resolved display
-// name (not a table column).
-type InterviewCommentDetail struct {
-	InterviewComment
+type ApplicationCommentDetail struct {
+	ApplicationComment
 	AuthorName string `json:"author_name,omitempty"`
 }
 
