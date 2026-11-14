@@ -31,7 +31,8 @@ import type { InterviewComment, InterviewRating, Role } from '@/lib/api/types'
 import { ChallengeCard } from '@/app/(portal)/reviewer/applications/components/ChallengeCard'
 import { useAnswers } from '@/lib/queries/answers'
 import { useApplicant } from '@/lib/queries/applicants'
-import { useApplications } from '@/lib/queries/applications'
+import { CandidateTags } from '@/components/CandidateTags'
+import { useApplication, useApplications } from '@/lib/queries/applications'
 import {
   useCreateInterviewComment,
   useInterviewComments,
@@ -100,6 +101,7 @@ export function InterviewConductClient({
   const [scriptOpen, setScriptOpen] = useState(true)
   const { data: currentUser } = useCurrentUser()
   const { data: applicant } = useApplicant(applicantNuid)
+  const { data: application } = useApplication(applicationId)
   const { data: answers = [] } = useAnswers(applicationId)
   const { data: questions = [] } = useQuestions(cycleId, role)
   // What other leads said about this applicant's written application during
@@ -307,6 +309,11 @@ export function InterviewConductClient({
             >
               {ROLE_LABEL[role]}
             </span>
+            <CandidateTags
+              applicationId={applicationId}
+              cycleId={cycleId}
+              tagIds={application?.tag_ids}
+            />
             {interview?.rating && (
               <span
                 className={`w-fit rounded-md px-2 py-0.5 text-xs font-medium ${RATING_COLORS[interview.rating].bg} ${RATING_COLORS[interview.rating].text}`}

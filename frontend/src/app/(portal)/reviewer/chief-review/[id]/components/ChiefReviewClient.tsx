@@ -14,6 +14,7 @@ import {
   Pencil,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { CandidateTags } from '@/components/CandidateTags'
 import type { ChiefReviewComment, ChiefVote, Role } from '@/lib/api/types'
 import { useAnswers } from '@/lib/queries/answers'
 import { useApplicant } from '@/lib/queries/applicants'
@@ -220,6 +221,11 @@ export function ChiefReviewClient({
             </h1>
             <p className="text-text-muted text-xs">{ROLE_LABEL[role]}</p>
           </div>
+          <CandidateTags
+            applicationId={applicationId}
+            cycleId={cycleId}
+            tagIds={application?.tag_ids}
+          />
         </div>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <Link

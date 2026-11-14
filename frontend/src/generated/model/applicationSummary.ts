@@ -7,6 +7,7 @@
  */
 import type { ApplicationSummaryRole } from './applicationSummaryRole';
 import type { ApplicationSummaryStage } from './applicationSummaryStage';
+import type { ApplicationSummaryTagIds } from './applicationSummaryTagIds';
 
 export interface ApplicationSummary {
   availability?: unknown;
@@ -19,6 +20,7 @@ export interface ApplicationSummary {
   role: ApplicationSummaryRole;
   stage: ApplicationSummaryStage;
   submitted_at?: string;
+  tag_ids: ApplicationSummaryTagIds;
   updated_at: string;
   user_nuid: string;
 }

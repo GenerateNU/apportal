@@ -46,6 +46,8 @@ export interface ApplicationListParams {
   // Narrow to applicants who have (true) or haven't (false) worked on a
   // Generate project before. Omit for both.
   returner?: boolean
+  // Comma-separated cycle tag ids; matches applications with any of them.
+  tag_ids?: string
   // Substring match on the applicant's name, NUID, or email. Server-side
   // because it has to narrow the whole match, not just the fetched page.
   search?: string

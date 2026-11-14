@@ -10,6 +10,7 @@ import { getApplication } from '@/generated/applications/applications'
 import { listCycleChallenges } from '@/generated/code-challenges/code-challenges'
 import { listCodeSubmissions } from '@/generated/code-submissions/code-submissions'
 import { listCycleQuestions } from '@/generated/questions/questions'
+import { listCycleTags } from '@/generated/tags/tags'
 import { listWrittenReviews } from '@/generated/written-reviews/written-reviews'
 import type { Application, Role } from '@/lib/api/types'
 import { getServerRequestOptions } from '@/lib/api/server-request-options'
@@ -50,6 +51,11 @@ export default async function ReviewPage({
       queryKey: queryKeys.questions.list(application.cycle_id, role),
       queryFn: () =>
         listCycleQuestions(application.cycle_id, { role }, requestOptions),
+    }),
+    queryClient.prefetchQuery({
+      queryKey: queryKeys.tags.cycle(application.cycle_id),
+      queryFn: async () =>
+        (await listCycleTags(application.cycle_id, requestOptions)) ?? [],
     }),
     queryClient.prefetchQuery({
       queryKey: queryKeys.writtenReviews.list(id),

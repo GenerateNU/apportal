@@ -4,6 +4,7 @@ import { useEffect, useMemo } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
 import type { Question, Role } from '@/lib/api/types'
 import { useQuestionsByCycleRoles } from '@/lib/queries/questions'
+import { useCycleTags } from '@/lib/queries/tags'
 import { RATING_OPTIONS } from '@/lib/interview-ratings'
 import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 import { ORDERED_STAGES, stageLabel } from './constants'
@@ -83,6 +84,10 @@ export function useApplicationFilters({
     [cycleId, roles]
   )
   const questionQueries = useQuestionsByCycleRoles(pairs)
+
+  // The Tag chip lists names; the API takes ids.
+  const { data: cycleTags = [] } = useCycleTags(cycleId)
+  const tagNames = useMemo(() => cycleTags.map((t) => t.name), [cycleTags])
   const questionsByCycleRole = useMemo(() => {
     const map: Record<string, Question[]> = {}
     pairs.forEach((pair, i) => {
@@ -236,6 +241,14 @@ export function useApplicationFilters({
     const returner =
       wantsReturner === wantsFirstTime ? undefined : wantsReturner
 
+    // Any-of, like the server. A name no longer in the catalog (deleted since
+    // the chip was made) maps to nothing and is dropped.
+    const tagIds = filters
+      .filter((f) => f.special === 'tag')
+      .flatMap((f) => (Array.isArray(f.values) ? f.values : [f.values]))
+      .map((name) => cycleTags.find((t) => t.name === name)?.id)
+      .filter(Boolean)
+
     return {
       // Single role travels as `role`, which is what every caller sent before
       // the Role chip existed — same key, same warm cache.
@@ -246,8 +259,9 @@ export function useApplicationFilters({
       }),
       ...(stageValues.length > 0 && { stages: stageValues.join(',') }),
       ...(returner === undefined ? {} : { returner }),
+      ...(tagIds.length > 0 && { tag_ids: tagIds.join(',') }),
     }
-  }, [filters, availabilityFilter, questionIdsByText, roles])
+  }, [filters, availabilityFilter, questionIdsByText, roles, cycleTags])
 
   return {
     roles,
@@ -255,6 +269,7 @@ export function useApplicationFilters({
     questionsByCycleRole,
     availabilityQuestionIdByRole,
     hasAvailability,
+    tagNames,
     filterParams,
   }
 }
