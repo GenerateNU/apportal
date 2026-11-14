@@ -25,6 +25,9 @@ func (s *recordingReviewService) upsert(ctx context.Context, in *UpsertRecording
 	}
 
 	actor := utils.CurrentActor(ctx)
+	if in.Body.Rating != nil && !actor.HasAnyRole(models.UserRoleChief, models.UserRoleAdmin) {
+		return nil, huma.Error403Forbidden("only a chief may override the interview rating")
+	}
 	assigned, err := s.interviewAssignmentDB.IsReviewer(ctx, in.ID, actor.NUID)
 	if err != nil {
 		return nil, utils.StoreErr(err)

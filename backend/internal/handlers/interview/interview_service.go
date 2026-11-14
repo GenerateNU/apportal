@@ -47,6 +47,9 @@ func (s *interviewService) upsert(ctx context.Context, in *UpsertInterviewInput)
 	if !assigned && !actor.HasAnyRole(models.UserRoleChief, models.UserRoleAdmin) {
 		return nil, huma.Error403Forbidden("only an assigned interviewer may edit this interview")
 	}
+	if !assigned && (in.Body.Writeup != nil || in.Body.RecordingURL != nil || in.Body.NotesURL != nil || in.Body.Submit) {
+		return nil, huma.Error403Forbidden("only an assigned interviewer may edit the write-up or links, or submit")
+	}
 	current, err := s.interviewDB.GetInterviewDetail(ctx, in.ID)
 	if err != nil {
 		return nil, utils.StoreErr(err)

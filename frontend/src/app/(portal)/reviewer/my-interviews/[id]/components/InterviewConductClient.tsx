@@ -238,9 +238,9 @@ export function InterviewConductClient({
       await upsertInterview.mutateAsync({
         applicationId,
         body: {
-          recording_url: recordingUrl || undefined,
-          notes_url: notesUrl || undefined,
-          writeup: comments,
+          recording_url: isInterviewer ? recordingUrl || undefined : undefined,
+          notes_url: isInterviewer ? notesUrl || undefined : undefined,
+          writeup: isInterviewer ? comments : undefined,
           rating: rating || undefined,
           submit,
         },
@@ -275,7 +275,7 @@ export function InterviewConductClient({
       body: {
         writeup: reviewComment || undefined,
         rating:
-          reviewRating && reviewRating !== interview?.rating
+          isChief && reviewRating && reviewRating !== interview?.rating
             ? reviewRating
             : undefined,
         submit,
@@ -537,16 +537,18 @@ export function InterviewConductClient({
                 This interview hasn&apos;t started yet.
               </p>
             )}
-            {!canEditInterview && !!interview && (
+            {!isInterviewer && !!interview && (
               <p className="text-text-faint text-sm">
-                You&apos;re not an assigned interviewer, so this is read-only.
+                {canEditInterview
+                  ? 'You’re not an assigned interviewer. As a chief, you can override the rating.'
+                  : 'You’re not an assigned interviewer, so this is read-only.'}
               </p>
             )}
 
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-1.5">
                 <Label>Recording link</Label>
-                {canEditInterview ? (
+                {isInterviewer ? (
                   <div className="flex items-center gap-2">
                     <Input
                       value={recordingUrl}
@@ -585,7 +587,7 @@ export function InterviewConductClient({
 
               <div className="flex flex-col gap-1.5">
                 <Label>Notes link (e.g. Granola)</Label>
-                {canEditInterview ? (
+                {isInterviewer ? (
                   <div className="flex items-center gap-2">
                     <Input
                       value={notesUrl}
@@ -630,7 +632,7 @@ export function InterviewConductClient({
                     </span>
                   )}
                 </div>
-                {collabReady && !collabLive && canEditInterview && (
+                {collabReady && !collabLive && isInterviewer && (
                   <p className="text-text-faint text-xs">
                     Live editing is unavailable right now. You can still edit
                     and save, but others won&apos;t see your changes until you
@@ -645,17 +647,13 @@ export function InterviewConductClient({
                     edit once they pause.
                   </p>
                 )}
-                {canEditInterview ? (
+                {isInterviewer ? (
                   <textarea
                     ref={textareaRef}
                     className={`${TEXTAREA_CLASS} ${typingPeers.length > 0 ? 'bg-muted/40 cursor-not-allowed' : ''}`}
                     value={comments}
                     onChange={onTextChange}
-                    placeholder={
-                      collabReady
-                        ? 'Summarize how the interview went…'
-                        : 'Connecting…'
-                    }
+                    placeholder="Summarize how the interview went…"
                     disabled={!collabReady}
                     readOnly={typingPeers.length > 0}
                     aria-readonly={typingPeers.length > 0}
@@ -716,7 +714,7 @@ export function InterviewConductClient({
                     finish typing…
                   </span>
                 )}
-                {!writeupSubmitted && (
+                {!writeupSubmitted && isInterviewer && (
                   <Button
                     variant="outline"
                     onClick={() => saveInterview(false)}
@@ -727,10 +725,12 @@ export function InterviewConductClient({
                   </Button>
                 )}
                 <Button
-                  onClick={() => saveInterview(writeupSubmitted ? false : true)}
+                  onClick={() =>
+                    saveInterview(!writeupSubmitted && isInterviewer)
+                  }
                   disabled={
                     upsertInterview.isPending ||
-                    missingInterviewRequired ||
+                    (isInterviewer && missingInterviewRequired) ||
                     someoneTyping
                   }
                   className="w-full sm:w-auto"
@@ -740,7 +740,7 @@ export function InterviewConductClient({
                       <Loader2 className="animate-spin" size={14} />
                       Saving…
                     </>
-                  ) : writeupSubmitted ? (
+                  ) : writeupSubmitted || !isInterviewer ? (
                     'Save changes'
                   ) : (
                     'Submit write-up'
@@ -782,26 +782,28 @@ export function InterviewConductClient({
                         disabled={upsertRecordingReview.isPending}
                       />
                     </div>
-                    <div className="flex flex-col gap-1.5">
-                      <Label>Rating</Label>
-                      <Select
-                        value={reviewRating}
-                        onValueChange={(v) =>
-                          setReviewRating(v as InterviewRating)
-                        }
-                      >
-                        <SelectTrigger aria-label="Rating">
-                          <SelectValue placeholder="Choose a rating" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {RATING_OPTIONS.map((o) => (
-                            <SelectItem key={o.value} value={o.value}>
-                              {o.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    {isChief && (
+                      <div className="flex flex-col gap-1.5">
+                        <Label>Rating</Label>
+                        <Select
+                          value={reviewRating}
+                          onValueChange={(v) =>
+                            setReviewRating(v as InterviewRating)
+                          }
+                        >
+                          <SelectTrigger aria-label="Rating">
+                            <SelectValue placeholder="Choose a rating" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {RATING_OPTIONS.map((o) => (
+                              <SelectItem key={o.value} value={o.value}>
+                                {o.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                     <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-end">
                       {savedReview && !upsertRecordingReview.isPending && (
                         <span
