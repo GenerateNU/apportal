@@ -7,6 +7,7 @@
  */
 import type { ApplicationRole } from './applicationRole';
 import type { ApplicationStage } from './applicationStage';
+import type { ApplicationTagIds } from './applicationTagIds';
 
 export interface Application {
   /** A URL to the JSON Schema for this object. */
@@ -18,6 +19,7 @@ export interface Application {
   role: ApplicationRole;
   stage: ApplicationStage;
   submitted_at?: string;
+  tag_ids: ApplicationTagIds;
   updated_at: string;
   user_nuid: string;
 }

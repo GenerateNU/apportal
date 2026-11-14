@@ -12,3 +12,11 @@ export const AVAILABILITY_OPTIONS = [
   { key: 'wednesday_1800_1930', label: 'Wednesday 6:00–7:30 PM' },
   { key: 'thursday_1930_2100', label: 'Thursday 7:30–9:00 PM' },
 ] as const
+
+export const ANY_DAY = 'any'
+export const SKIP_DAY = 'skip'
+
+export function dayLabel(day: string): string {
+  if (!day) return 'Any day'
+  return AVAILABILITY_OPTIONS.find((o) => o.key === day)?.label ?? day
+}

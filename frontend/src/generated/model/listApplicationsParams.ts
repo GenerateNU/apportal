@@ -45,6 +45,10 @@ rating_filters?: string;
  */
 returner?: ListApplicationsReturner;
 /**
+ * Comma-separated cycle tag ids; an application matches any of them
+ */
+tag_ids?: string;
+/**
  * Case-insensitive substring match on the applicant's name, NUID, or email
  */
 search?: string;

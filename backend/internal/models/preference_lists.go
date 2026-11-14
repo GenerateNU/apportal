@@ -127,11 +127,6 @@ type PreferenceListPersonalEntryDetail struct {
 	Returner        bool   `json:"returner"`
 }
 
-// PreferenceListComment is an open comment within a group's shared list —
-// mirrors InterviewComment's shape (any member may post, edit only their
-// own). ApplicationID nil means a comment on the group as a whole; set means
-// a comment on that one applicant/entry. Scoped to the shared list only, not
-// personal lists.
 type PreferenceListComment struct {
 	ID               string         `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
 	PreferenceListID string         `json:"preference_list_id" gorm:"type:uuid;not null;index:idx_preference_list_comments_list"`

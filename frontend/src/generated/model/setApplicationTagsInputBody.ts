@@ -5,15 +5,11 @@
  * Generate application portal — applications, reviews, and the hiring pipeline.
  * OpenAPI spec version: 0.1.0
  */
+import type { SetApplicationTagsInputBodyTagIds } from './setApplicationTagsInputBodyTagIds';
 
-export interface InterviewCommentDetail {
+export interface SetApplicationTagsInputBody {
   /** A URL to the JSON Schema for this object. */
   readonly $schema?: string;
-  application_id: string;
-  author_name?: string;
-  author_nuid: string;
-  body: string;
-  created_at: string;
-  id: string;
-  updated_at: string;
+  /** Replaces the application's tags; at most 3, all from its cycle */
+  tag_ids: SetApplicationTagsInputBodyTagIds;
 }

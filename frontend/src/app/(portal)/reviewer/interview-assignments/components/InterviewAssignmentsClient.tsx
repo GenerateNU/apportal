@@ -2,7 +2,7 @@
 import { PageContainer } from '@/components/PageContainer'
 
 import { useMemo, useState } from 'react'
-import { Loader2, Trash2, X } from 'lucide-react'
+import { Loader2, Trash2, Users, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import type { InterviewGroupDetail } from '@/generated/model'
 import { APIError } from '@/lib/api/client'
 import type {
   Application,
@@ -32,12 +33,15 @@ import { pickDefaultCycleId, useCycles } from '@/lib/queries/cycles'
 import {
   useAddInterviewReviewer,
   useAddInterviewer,
+  useAssignInterviewGroup,
   useInterviewReviewersBulk,
   useRemoveInterviewReviewer,
   useRemoveInterviewer,
   useUnassignAllInterviewReviewers,
   useUnassignAllInterviewers,
 } from '@/lib/queries/interview-assignments'
+import { splitByGroup } from '@/lib/interview-groups'
+import { useInterviewGroups } from '@/lib/queries/interview-groups'
 import { useInterviewsByApplicationIds } from '@/lib/queries/interviews'
 import { useChiefs, useLeads } from '@/lib/queries/users'
 import { ROLE_CHIP_CLASS, ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
@@ -100,6 +104,13 @@ export function InterviewAssignmentsClient() {
   }, [interviewsByApp])
 
   const { data: reviewersByApp = {} } = useInterviewReviewersBulk(appIds)
+  const { data: groups = [] } = useInterviewGroups(cycleId)
+  const interviewGroups = useMemo(
+    () => groups.filter((g) => (g.members ?? []).length > 0),
+    [groups]
+  )
+  const byGroup = interviewGroups.length > 0
+  const assignGroup = useAssignInterviewGroup()
 
   const addInterviewer = useAddInterviewer()
   const removeInterviewer = useRemoveInterviewer()
@@ -117,6 +128,30 @@ export function InterviewAssignmentsClient() {
   const [reviewerFailures, setReviewerFailures] = useState(0)
   const [confirmingUnassignAll, setConfirmingUnassignAll] =
     useState<ConfirmingUnassignAll | null>(null)
+  const [removingGroup, setRemovingGroup] = useState<{
+    applicantName: string
+    groupName: string
+    members: { id: string; name: string }[]
+  } | null>(null)
+  const [removingGroupPending, setRemovingGroupPending] = useState(false)
+  const [removeGroupFailed, setRemoveGroupFailed] = useState(false)
+
+  async function confirmRemoveGroup() {
+    if (!removingGroup) return
+    setRemovingGroupPending(true)
+    setRemoveGroupFailed(false)
+    const results = await Promise.allSettled(
+      removingGroup.members.map((m) =>
+        removeInterviewer.mutateAsync({ id: m.id })
+      )
+    )
+    setRemovingGroupPending(false)
+    if (results.some((r) => r.status === 'rejected')) {
+      setRemoveGroupFailed(true)
+      return
+    }
+    setRemovingGroup(null)
+  }
 
   function toggleSelected(id: string) {
     setSelected((prev) => {
@@ -127,15 +162,37 @@ export function InterviewAssignmentsClient() {
     })
   }
 
+  const bulkInterviewerOptions = byGroup
+    ? interviewGroups.map((g) => ({ value: g.id, label: g.name }))
+    : interviewers.map((u) => ({ value: u.nuid, label: u.full_name }))
+  const bulkInterviewerValue = bulkInterviewerOptions.some(
+    (o) => o.value === bulkInterviewerNuid
+  )
+    ? bulkInterviewerNuid
+    : ''
+
   async function assignInterviewerToSelected() {
-    if (!bulkInterviewerNuid || selected.size === 0) return
+    if (!bulkInterviewerValue || selected.size === 0) return
     setAssigningInterviewers(true)
     setInterviewerFailures(0)
+    if (byGroup) {
+      try {
+        await assignGroup.mutateAsync({
+          groupId: bulkInterviewerValue,
+          applicationIds: [...selected],
+        })
+        setSelected(new Set())
+      } catch {
+        setInterviewerFailures(selected.size)
+      }
+      setAssigningInterviewers(false)
+      return
+    }
     const results = await Promise.allSettled(
       [...selected].map((applicationId) =>
         addInterviewer.mutateAsync({
           applicationId,
-          interviewerNuid: bulkInterviewerNuid,
+          interviewerNuid: bulkInterviewerValue,
         })
       )
     )
@@ -244,16 +301,20 @@ export function InterviewAssignmentsClient() {
         )}
         <div className="flex w-full flex-wrap items-center gap-2 sm:ml-auto sm:w-auto">
           <Select
-            value={bulkInterviewerNuid}
+            value={bulkInterviewerValue}
             onValueChange={setBulkInterviewerNuid}
           >
             <SelectTrigger className="w-full sm:w-48">
-              <SelectValue placeholder="Select an interviewer…" />
+              <SelectValue
+                placeholder={
+                  byGroup ? 'Select a group…' : 'Select an interviewer…'
+                }
+              />
             </SelectTrigger>
             <SelectContent>
-              {interviewers.map((u) => (
-                <SelectItem key={u.nuid} value={u.nuid}>
-                  {u.full_name}
+              {bulkInterviewerOptions.map((o) => (
+                <SelectItem key={o.value} value={o.value}>
+                  {o.label}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -262,7 +323,7 @@ export function InterviewAssignmentsClient() {
             variant="outline"
             onClick={assignInterviewerToSelected}
             disabled={
-              !bulkInterviewerNuid ||
+              !bulkInterviewerValue ||
               selected.size === 0 ||
               assigningInterviewers
             }
@@ -273,7 +334,7 @@ export function InterviewAssignmentsClient() {
                 Assigning…
               </>
             ) : (
-              `Add interviewer to ${selected.size || ''} selected`
+              `Add ${byGroup ? 'group' : 'interviewer'} to ${selected.size || ''} selected`
             )}
           </Button>
           <Select value={bulkReviewerNuid} onValueChange={setBulkReviewerNuid}>
@@ -375,18 +436,34 @@ export function InterviewAssignmentsClient() {
                     assignedInterviewers={
                       interviewersByApp[application.id] ?? []
                     }
+                    groups={groups}
+                    interviewGroups={byGroup ? interviewGroups : []}
                     reviewers={reviewersByApp[application.id] ?? []}
                     selected={selected.has(application.id)}
                     onToggleSelected={() => toggleSelected(application.id)}
-                    onAddInterviewer={(interviewerNuid) =>
-                      addInterviewer.mutate({
-                        applicationId: application.id,
-                        interviewerNuid,
-                      })
+                    onAddInterviewer={(value) =>
+                      byGroup
+                        ? assignGroup.mutate({
+                            groupId: value,
+                            applicationIds: [application.id],
+                          })
+                        : addInterviewer.mutate({
+                            applicationId: application.id,
+                            interviewerNuid: value,
+                          })
                     }
                     onRemoveInterviewer={(id) =>
                       removeInterviewer.mutate({ id })
                     }
+                    onRemoveGroup={(groupName, members) => {
+                      setRemoveGroupFailed(false)
+                      setRemovingGroup({
+                        applicantName:
+                          application.full_name || application.user_nuid,
+                        groupName,
+                        members,
+                      })
+                    }}
                     onAddReviewer={(reviewerNuid) =>
                       addReviewer.mutate({
                         applicationId: application.id,
@@ -401,6 +478,49 @@ export function InterviewAssignmentsClient() {
           )
         })
       )}
+
+      <Dialog
+        open={!!removingGroup}
+        onOpenChange={(open) => !open && setRemovingGroup(null)}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              Remove {removingGroup?.groupName} from{' '}
+              {removingGroup?.applicantName}?
+            </DialogTitle>
+            <DialogDescription>
+              {removingGroup?.members.map((m) => m.name).join(', ')} will no
+              longer interview {removingGroup?.applicantName}. The group itself
+              is kept.
+            </DialogDescription>
+          </DialogHeader>
+          {removeGroupFailed && (
+            <p className="text-destructive text-sm">
+              Some interviewers couldn&apos;t be removed. Try again.
+            </p>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setRemovingGroup(null)}
+              disabled={removingGroupPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={removingGroupPending}
+              onClick={confirmRemoveGroup}
+            >
+              {removingGroupPending && (
+                <Loader2 className="animate-spin" size={14} />
+              )}
+              Remove group
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={!!confirmingUnassignAll}
@@ -464,11 +584,14 @@ function InterviewAssignmentRow({
   leads,
   userName,
   assignedInterviewers,
+  groups,
+  interviewGroups,
   reviewers,
   selected,
   onToggleSelected,
   onAddInterviewer,
   onRemoveInterviewer,
+  onRemoveGroup,
   onAddReviewer,
   onRemoveReviewer,
 }: {
@@ -478,11 +601,17 @@ function InterviewAssignmentRow({
   leads: User[]
   userName: Record<string, string>
   assignedInterviewers: Interviewer[]
+  groups: InterviewGroupDetail[]
+  interviewGroups: InterviewGroupDetail[]
   reviewers: InterviewReviewer[]
   selected: boolean
   onToggleSelected: () => void
   onAddInterviewer: (interviewerNuid: string) => void
   onRemoveInterviewer: (id: string) => void
+  onRemoveGroup: (
+    groupName: string,
+    members: { id: string; name: string }[]
+  ) => void
   onAddReviewer: (reviewerNuid: string) => void
   onRemoveReviewer: (id: string) => void
 }) {
@@ -490,12 +619,28 @@ function InterviewAssignmentRow({
     assignedInterviewers.map((x) => x.interviewer_nuid)
   )
   const reviewerNuids = new Set(reviewers.map((r) => r.reviewer_nuid))
-  const availableInterviewers = interviewers.filter(
-    (u) => !interviewerNuids.has(u.nuid) && !reviewerNuids.has(u.nuid)
-  )
-  const availableReviewers = leads.filter(
-    (l) => !reviewerNuids.has(l.nuid) && !interviewerNuids.has(l.nuid)
-  )
+  const { groupBlocks, solo } = splitByGroup(assignedInterviewers, groups)
+  const interviewerLabel = (x: Interviewer) =>
+    x.interviewer_name ?? userName[x.interviewer_nuid] ?? x.interviewer_nuid
+  const availableInterviewers =
+    interviewGroups.length > 0
+      ? interviewGroups
+          .filter((g) => {
+            const nuids = (g.members ?? []).map((m) => m.member_nuid)
+            return (
+              !nuids.every((n) => interviewerNuids.has(n)) &&
+              !nuids.some((n) => reviewerNuids.has(n))
+            )
+          })
+          .map((g) => ({ value: g.id, label: g.name }))
+      : interviewers
+          .filter(
+            (u) => !interviewerNuids.has(u.nuid) && !reviewerNuids.has(u.nuid)
+          )
+          .map((u) => ({ value: u.nuid, label: u.full_name }))
+  const availableReviewers = leads
+    .filter((l) => !reviewerNuids.has(l.nuid) && !interviewerNuids.has(l.nuid))
+    .map((l) => ({ value: l.nuid, label: l.full_name }))
 
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-gray-100 bg-white p-4 sm:flex-row sm:items-center sm:gap-4">
@@ -517,21 +662,56 @@ function InterviewAssignmentRow({
         </span>
       </div>
 
-      <AssigneeChips
-        label="Interviewers"
-        name={name}
-        chips={assignedInterviewers.map((x) => ({
-          id: x.id,
-          label:
-            x.interviewer_name ??
-            userName[x.interviewer_nuid] ??
-            x.interviewer_nuid,
-        }))}
-        options={availableInterviewers}
-        addLabel="+ Add interviewer"
-        onAdd={onAddInterviewer}
-        onRemove={onRemoveInterviewer}
-      />
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-text-faint text-xs whitespace-nowrap">
+          Interviewers
+        </span>
+        {groupBlocks.map(({ group, members }) => (
+          <div
+            key={group.id}
+            className="flex flex-col gap-1 rounded-lg border border-gray-200 px-2.5 py-1.5"
+          >
+            <div className="flex items-center gap-1.5">
+              <Users size={12} className="text-text-faint" />
+              <span className="text-text-default text-xs font-semibold">
+                {group.name}
+              </span>
+              <button
+                type="button"
+                aria-label={`Remove ${group.name} from ${name}`}
+                className="text-text-faint hover:text-destructive -m-1 ml-auto p-1"
+                onClick={() =>
+                  onRemoveGroup(
+                    group.name,
+                    members.map((m) => ({
+                      id: m.id,
+                      name: interviewerLabel(m),
+                    }))
+                  )
+                }
+              >
+                <X size={12} />
+              </button>
+            </div>
+            <ul className="text-text-muted flex flex-col text-xs">
+              {members.map((m) => (
+                <li key={m.id}>{interviewerLabel(m)}</li>
+              ))}
+            </ul>
+          </div>
+        ))}
+        <AssigneeChips
+          label=""
+          name={name}
+          chips={solo.map((x) => ({ id: x.id, label: interviewerLabel(x) }))}
+          options={availableInterviewers}
+          addLabel={
+            interviewGroups.length > 0 ? '+ Add group' : '+ Add interviewer'
+          }
+          onAdd={onAddInterviewer}
+          onRemove={onRemoveInterviewer}
+        />
+      </div>
 
       <div className="sm:ml-auto">
         <AssigneeChips
@@ -564,14 +744,18 @@ function AssigneeChips({
   label: string
   name: string
   chips: { id: string; label: string }[]
-  options: User[]
+  options: { value: string; label: string }[]
   addLabel: string
   onAdd: (nuid: string) => void
   onRemove: (id: string) => void
 }) {
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="text-text-faint text-xs whitespace-nowrap">{label}</span>
+      {label && (
+        <span className="text-text-faint text-xs whitespace-nowrap">
+          {label}
+        </span>
+      )}
       {chips.map((c) => (
         <span
           key={c.id}
@@ -597,9 +781,9 @@ function AssigneeChips({
             <SelectValue placeholder={addLabel} />
           </SelectTrigger>
           <SelectContent>
-            {options.map((u) => (
-              <SelectItem key={u.nuid} value={u.nuid}>
-                {u.full_name}
+            {options.map((o) => (
+              <SelectItem key={o.value} value={o.value}>
+                {o.label}
               </SelectItem>
             ))}
           </SelectContent>

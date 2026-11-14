@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { apiErrorDetail } from '@/lib/api/client'
 import type { Role } from '@/lib/api/types'
 import {
   useCommitInterviewerPlan,
@@ -30,6 +31,7 @@ import {
 } from '@/lib/queries/interview-assignment-plan'
 import { ROLE_LABEL } from '@/lib/roles'
 import type { DraftConflict } from './ConflictBuilder'
+import type { DraftGroupDay } from './GroupBuilder'
 import type { DraftLeadDay } from './MeetingDayPicker'
 import { InterviewerPlanPreview } from './InterviewerPlanPreview'
 
@@ -37,11 +39,13 @@ export function InterviewerPlanPanel({
   cycleId,
   role,
   meetingDays,
+  groupDays,
   conflicts,
 }: {
   cycleId: string
   role: Role
   meetingDays: DraftLeadDay[]
+  groupDays: DraftGroupDay[]
   conflicts: DraftConflict[]
 }) {
   const [cap, setCap] = useState(10)
@@ -66,7 +70,13 @@ export function InterviewerPlanPanel({
       })),
     [conflicts]
   )
-  const canPlan = apiLeads.length > 0 && !!cycleId
+  const apiGroups = useMemo(
+    () => groupDays.map((d) => ({ group_id: d.groupId, day: d.day })),
+    [groupDays]
+  )
+  const byGroup = apiGroups.length > 0
+  const units = byGroup ? { groups: apiGroups } : { leads: apiLeads }
+  const canPlan = (byGroup || apiLeads.length > 0) && !!cycleId
 
   const excludedApplicationIds = useMemo(() => [...excludedIds], [excludedIds])
   const poolAppliedSize = pool
@@ -96,7 +106,7 @@ export function InterviewerPlanPanel({
         cycleId,
         body: {
           role,
-          leads: apiLeads,
+          ...units,
           excluded_application_ids: excludedApplicationIds,
         },
       },
@@ -104,37 +114,33 @@ export function InterviewerPlanPanel({
     )
   }
 
+  const planBody = {
+    role,
+    ...units,
+    conflicts: apiConflicts,
+    cap,
+    excluded_application_ids: excludedApplicationIds,
+  }
+  const planKey = JSON.stringify([cycleId, planBody])
+  const [previewedKey, setPreviewedKey] = useState<string | null>(null)
+  const fresh = previewedKey === planKey
+  const stalePreview = !fresh && (!!preview.data || !!commit.data)
+
   function onPreview() {
-    preview.mutate({
-      cycleId,
-      body: {
-        role,
-        leads: apiLeads,
-        conflicts: apiConflicts,
-        cap,
-        excluded_application_ids: excludedApplicationIds,
-      },
-    })
+    setPreviewedKey(planKey)
+    commit.reset()
+    preview.mutate({ cycleId, body: planBody })
   }
 
   function onCommit() {
     commit.mutate(
-      {
-        cycleId,
-        body: {
-          role,
-          leads: apiLeads,
-          conflicts: apiConflicts,
-          cap,
-          excluded_application_ids: excludedApplicationIds,
-        },
-      },
+      { cycleId, body: planBody },
       { onSuccess: () => setConfirming(false) }
     )
   }
 
   const capacity = suggestCapacity.data
-  const shownPlan = commit.data?.plan ?? preview.data
+  const shownPlan = fresh ? (commit.data?.plan ?? preview.data) : undefined
 
   return (
     <div className="flex flex-col gap-6">
@@ -154,9 +160,15 @@ export function InterviewerPlanPanel({
           )}
         </div>
         <div className="flex flex-col">
-          <span className="text-text-faint text-xs">Leads with a day set</span>
+          <span className="text-text-faint text-xs">
+            {byGroup ? 'Groups' : 'Leads'}
+          </span>
           <span className="text-text-default text-sm font-semibold">
-            {meetingDays.length}
+            {byGroup ? groupDays.length : meetingDays.length}
+          </span>
+          <span className="text-text-faint text-xs">
+            {(byGroup ? groupDays : meetingDays).filter((d) => d.day).length}{' '}
+            with a day set
           </span>
         </div>
       </div>
@@ -214,7 +226,7 @@ export function InterviewerPlanPanel({
         <div className="flex flex-wrap items-end gap-4">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="interviewer-cap" className="text-xs">
-              Max interviews per lead
+              Max interviews per {byGroup ? 'group' : 'lead'}
             </Label>
             <Input
               id="interviewer-cap"
@@ -278,6 +290,13 @@ export function InterviewerPlanPanel({
       {preview.isError && (
         <p className="text-destructive text-sm">
           Could not build a preview: {errorMessage(preview.error)}
+        </p>
+      )}
+
+      {stalePreview && (
+        <p className="text-text-muted rounded-xl border border-dashed border-gray-200 bg-white px-4 py-3 text-sm">
+          The setup changed since the last preview. Generate a new preview
+          before assigning.
         </p>
       )}
 
@@ -355,10 +374,7 @@ export function InterviewerPlanPanel({
 }
 
 function errorMessage(error: unknown): string {
-  const detail = (error as { response?: { data?: { detail?: string } } })
-    ?.response?.data?.detail
-  if (detail) return detail
-  return error instanceof Error ? error.message : String(error)
+  return apiErrorDetail(error)
 }
 
 function Figure({ label, value }: { label: string; value: string | number }) {

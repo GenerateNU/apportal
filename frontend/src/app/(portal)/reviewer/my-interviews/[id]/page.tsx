@@ -7,10 +7,8 @@ import {
 import { listAnswers } from '@/generated/answers/answers'
 import { getApplicant } from '@/generated/applicants/applicants'
 import { getApplication } from '@/generated/applications/applications'
-import {
-  getInterview,
-  listInterviewComments,
-} from '@/generated/interviews/interviews'
+import { listApplicationComments } from '@/generated/application-comments/application-comments'
+import { getInterview } from '@/generated/interviews/interviews'
 import { listCycleQuestions } from '@/generated/questions/questions'
 import { listInterviewReviewers } from '@/generated/recording-reviews/recording-reviews'
 import type { Application, Interview, Role } from '@/lib/api/types'
@@ -76,7 +74,7 @@ export default async function InterviewConductPage({
     }),
     queryClient.prefetchQuery({
       queryKey: queryKeys.interviewComments.list(id),
-      queryFn: () => listInterviewComments(id, requestOptions),
+      queryFn: () => listApplicationComments(id, requestOptions),
     }),
     ...(interview
       ? [
