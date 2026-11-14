@@ -164,10 +164,14 @@ export function InterviewerPlanPanel({
         </div>
         <div className="flex flex-col">
           <span className="text-text-faint text-xs">
-            {byGroup ? 'Groups with a day set' : 'Leads with a day set'}
+            {byGroup ? 'Groups' : 'Leads'}
           </span>
           <span className="text-text-default text-sm font-semibold">
             {byGroup ? groupDays.length : meetingDays.length}
+          </span>
+          <span className="text-text-faint text-xs">
+            {(byGroup ? groupDays : meetingDays).filter((d) => d.day).length}{' '}
+            with a day set
           </span>
         </div>
       </div>

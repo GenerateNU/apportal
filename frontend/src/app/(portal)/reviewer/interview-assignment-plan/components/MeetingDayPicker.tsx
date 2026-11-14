@@ -7,7 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { AVAILABILITY_OPTIONS } from '@/lib/availability'
+import { ANY_DAY, AVAILABILITY_OPTIONS } from '@/lib/availability'
 
 export type DraftLeadDay = { leadNuid: string; day: string }
 
@@ -42,9 +42,9 @@ export function MeetingDayPicker({
           Meeting days
         </h2>
         <p className="text-text-muted mt-0.5 text-xs">
-          Declare each lead&apos;s meeting day for this run — used to match them
-          against applicants&apos; availability. Not saved; re-declare it each
-          time you plan.
+          Set each lead&apos;s meeting day to match them against
+          applicants&apos; availability. Leads on Any day can take any
+          applicant. Not saved; set it each time you plan.
         </p>
       </div>
 
@@ -63,16 +63,19 @@ export function MeetingDayPicker({
                 {lead.full_name}
               </span>
               <Select
-                value={dayOf(lead.nuid)}
-                onValueChange={(day) => setDay(lead.nuid, day)}
+                value={dayOf(lead.nuid) || ANY_DAY}
+                onValueChange={(day) =>
+                  setDay(lead.nuid, day === ANY_DAY ? '' : day)
+                }
               >
                 <SelectTrigger
                   className="h-8 w-40 text-xs"
                   aria-label={`Meeting day for ${lead.full_name}`}
                 >
-                  <SelectValue placeholder="No day set" />
+                  <SelectValue placeholder="Any day" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value={ANY_DAY}>Any day</SelectItem>
                   {AVAILABILITY_OPTIONS.map((opt) => (
                     <SelectItem key={opt.key} value={opt.key}>
                       {opt.label}

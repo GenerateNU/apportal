@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import type { InterviewGroupDetail } from '@/generated/model'
-import { AVAILABILITY_OPTIONS } from '@/lib/availability'
+import { ANY_DAY, AVAILABILITY_OPTIONS } from '@/lib/availability'
 import {
   useCreateInterviewGroups,
   useDeleteInterviewGroup,
@@ -228,14 +228,18 @@ function GroupCard({
             if (e.key === 'Enter') e.currentTarget.blur()
           }}
         />
-        <Select value={day} onValueChange={onDayChange}>
+        <Select
+          value={day || ANY_DAY}
+          onValueChange={(v) => onDayChange(v === ANY_DAY ? '' : v)}
+        >
           <SelectTrigger
             className="h-8 w-40 flex-shrink-0 text-xs"
             aria-label={`Meeting day for ${group.name}`}
           >
-            <SelectValue placeholder="No day set" />
+            <SelectValue placeholder="Any day" />
           </SelectTrigger>
           <SelectContent>
+            <SelectItem value={ANY_DAY}>Any day</SelectItem>
             {AVAILABILITY_OPTIONS.map((opt) => (
               <SelectItem key={opt.key} value={opt.key}>
                 {opt.label}

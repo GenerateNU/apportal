@@ -225,6 +225,10 @@ func loadRatio(l leadState) float64 {
 // Returns -1 if no eligible lead has spare capacity at all. The second
 // return reports whether the chosen lead's day actually matched the
 // applicant's availability.
+func dayFits(day string, availableDays map[string]bool) bool {
+	return day == "" || availableDays[day]
+}
+
 func bestInterviewer(leads []leadState, availableDays, wroteReview, conflicted map[string]bool) (int, bool) {
 	best, bestDayMatch := -1, false
 	var bestRatio float64
@@ -243,7 +247,7 @@ func bestInterviewer(leads []leadState, availableDays, wroteReview, conflicted m
 	}
 
 	for li, l := range leads {
-		if l.load >= l.cap || conflicted[l.nuid] || !availableDays[l.day] {
+		if l.load >= l.cap || conflicted[l.nuid] || !dayFits(l.day, availableDays) {
 			continue
 		}
 		consider(li, true)
@@ -377,7 +381,7 @@ func PlanReviewers(in ReviewerInput) (ReviewerPlan, error) {
 	interviewerDays := make(map[string]map[string]bool, len(in.Interviewer))
 	for appID, nuids := range in.Interviewer {
 		for _, nuid := range nuids {
-			if li, ok := byNUID[nuid]; ok {
+			if li, ok := byNUID[nuid]; ok && leads[li].day != "" {
 				if interviewerDays[appID] == nil {
 					interviewerDays[appID] = make(map[string]bool)
 				}
@@ -486,7 +490,7 @@ func bestReviewer(leads []leadState, already map[string]bool, availableDays map[
 	}
 
 	for li, l := range leads {
-		if l.load >= l.cap || already[l.nuid] || !availableDays[l.day] {
+		if l.load >= l.cap || already[l.nuid] || !dayFits(l.day, availableDays) {
 			continue
 		}
 		consider(li, true)

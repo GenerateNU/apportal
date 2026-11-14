@@ -172,9 +172,12 @@ export function ReviewerPlanPanel({
           )}
         </div>
         <div className="flex flex-col">
-          <span className="text-text-faint text-xs">Leads with a day set</span>
+          <span className="text-text-faint text-xs">Leads</span>
           <span className="text-text-default text-sm font-semibold">
             {meetingDays.length}
+          </span>
+          <span className="text-text-faint text-xs">
+            {meetingDays.filter((d) => d.day).length} with a day set
           </span>
         </div>
       </div>

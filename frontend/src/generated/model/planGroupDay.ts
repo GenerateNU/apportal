@@ -7,7 +7,7 @@
  */
 
 export interface PlanGroupDay {
-  /** @minLength 1 */
+  /** Empty matches any day */
   day: string;
   group_id: string;
 }

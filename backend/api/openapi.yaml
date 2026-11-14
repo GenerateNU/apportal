@@ -2430,7 +2430,7 @@ components:
       additionalProperties: false
       properties:
         day:
-          minLength: 1
+          description: Empty matches any day
           type: string
         group_id:
           type: string
@@ -2442,8 +2442,7 @@ components:
       additionalProperties: false
       properties:
         day:
-          description: The lead's meeting-day key for this run (matches an applicant availability key)
-          minLength: 1
+          description: The lead's meeting-day key for this run (matches an applicant availability key); empty matches any day
           type: string
         lead_nuid:
           type: string

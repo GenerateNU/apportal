@@ -48,25 +48,35 @@ export function InterviewAssignmentPlanClient() {
 
   const plannedGroupDays = useMemo(
     () =>
-      groupDays.filter((d) =>
-        groups.some((g) => g.id === d.groupId && (g.members ?? []).length > 0)
-      ),
+      groups
+        .filter((g) => (g.members ?? []).length > 0)
+        .map((g) => ({
+          groupId: g.id,
+          day: groupDays.find((d) => d.groupId === g.id)?.day ?? '',
+        })),
     [groupDays, groups]
   )
 
+  const soloDays = useMemo(
+    () =>
+      leads.map((l) => ({
+        leadNuid: l.nuid,
+        day: meetingDays.find((d) => d.leadNuid === l.nuid)?.day ?? '',
+      })),
+    [leads, meetingDays]
+  )
+
   const leadDays = useMemo(() => {
-    if (!useGroups) return meetingDays
-    const out: DraftLeadDay[] = []
-    for (const d of plannedGroupDays) {
-      const group = groups.find((g) => g.id === d.groupId)
-      for (const m of group?.members ?? []) {
-        if (!out.some((o) => o.leadNuid === m.member_nuid)) {
-          out.push({ leadNuid: m.member_nuid, day: d.day })
-        }
-      }
-    }
-    return out
-  }, [useGroups, meetingDays, plannedGroupDays, groups])
+    if (!useGroups) return soloDays
+    return leads.map((l) => {
+      const group = plannedGroupDays.find((d) =>
+        groups
+          .find((g) => g.id === d.groupId)
+          ?.members?.some((m) => m.member_nuid === l.nuid)
+      )
+      return { leadNuid: l.nuid, day: group?.day ?? '' }
+    })
+  }, [useGroups, soloDays, leads, plannedGroupDays, groups])
   const [conflicts, setConflicts] = useState<DraftConflict[]>([])
   const [stage, setStage] = useState<Stage>('interviewer')
 
@@ -85,7 +95,7 @@ export function InterviewAssignmentPlanClient() {
           <p className="text-text-muted mt-1 text-sm">
             Set each lead&apos;s or group&apos;s meeting day, then plan
             interviewers and interview reviewers matched to applicant
-            availability.
+            availability. Anyone without a day is assigned to any applicant.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -183,7 +193,7 @@ export function InterviewAssignmentPlanClient() {
         <InterviewerPlanPanel
           cycleId={cycleId}
           role={role}
-          meetingDays={useGroups ? [] : meetingDays}
+          meetingDays={useGroups ? [] : soloDays}
           groupDays={useGroups ? plannedGroupDays : []}
           conflicts={conflicts}
         />

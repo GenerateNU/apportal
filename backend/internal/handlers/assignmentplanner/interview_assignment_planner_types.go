@@ -9,7 +9,7 @@ import (
 // supplied per request rather than stored, same as PlanTeam.
 type PlanLeadDay struct {
 	LeadNUID string `json:"lead_nuid"`
-	Day      string `json:"day" minLength:"1" doc:"The lead's meeting-day key for this run (matches an applicant availability key)"`
+	Day      string `json:"day" doc:"The lead's meeting-day key for this run (matches an applicant availability key); empty matches any day"`
 }
 
 // PlanConflict declares a lead ineligible to interview or review a specific
@@ -22,7 +22,7 @@ type PlanConflict struct {
 
 type PlanGroupDay struct {
 	GroupID string `json:"group_id"`
-	Day     string `json:"day" minLength:"1"`
+	Day     string `json:"day" doc:"Empty matches any day"`
 }
 
 type PlannedGroup struct {

@@ -8,7 +8,9 @@ import type {
 import { AVAILABILITY_OPTIONS } from '@/lib/availability'
 
 const dayLabel = (day: string) =>
-  AVAILABILITY_OPTIONS.find((o) => o.key === day)?.label ?? day
+  day
+    ? (AVAILABILITY_OPTIONS.find((o) => o.key === day)?.label ?? day)
+    : 'Any day'
 
 type Queue = {
   id: string
