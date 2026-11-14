@@ -19,4 +19,6 @@ export interface UpdateReviewQuestionInputBody {
   options?: unknown;
   question_text?: string;
   question_type?: UpdateReviewQuestionInputBodyQuestionType;
+  /** */
+  weight?: number;
 }

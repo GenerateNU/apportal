@@ -20,4 +20,8 @@ export interface CreateReviewQuestionInputBody {
   question_type?: CreateReviewQuestionInputBodyQuestionType;
   /** Omit for a global question shown for all roles */
   role?: CreateReviewQuestionInputBodyRole;
+  /**
+   * How much a score question counts toward the applicant's score; defaults to 1
+   */
+  weight?: number;
 }

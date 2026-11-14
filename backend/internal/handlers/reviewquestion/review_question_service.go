@@ -51,6 +51,10 @@ func (s *reviewQuestionService) create(ctx context.Context, in *CreateReviewQues
 		required = *in.Body.IsRequired
 	}
 
+	weight := 1.0
+	if in.Body.Weight != nil {
+		weight = *in.Body.Weight
+	}
 	q, err := s.reviewQuestionDB.CreateReviewQuestion(ctx, ReviewQuestionCreate{
 		CycleID:      in.ID,
 		Role:         in.Body.Role,
@@ -60,6 +64,7 @@ func (s *reviewQuestionService) create(ctx context.Context, in *CreateReviewQues
 		DisplayOrder: in.Body.DisplayOrder,
 		Options:      in.Body.Options,
 		Description:  in.Body.Description,
+		Weight:       weight,
 	})
 	if err != nil {
 		return nil, utils.StoreErr(err)
@@ -83,6 +88,7 @@ func (s *reviewQuestionService) update(ctx context.Context, in *UpdateReviewQues
 		Options:          in.Body.Options,
 		Description:      in.Body.Description,
 		ClearDescription: in.Body.ClearDescription,
+		Weight:           in.Body.Weight,
 	})
 	if err != nil {
 		return nil, utils.StoreErr(err)

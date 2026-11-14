@@ -10,6 +10,7 @@ import (
 
 	"github.com/GenerateNU/apportal/backend/internal/handlers/user"
 	"github.com/GenerateNU/apportal/backend/internal/models"
+	"github.com/GenerateNU/apportal/backend/internal/utils"
 )
 
 type WrittenReviewDB struct {
@@ -24,7 +25,7 @@ func NewWrittenReviewDB(db *gorm.DB) *WrittenReviewDB {
 // isEmpty reports whether the answer was cleared, so its row gets deleted
 // rather than coming back on the next load.
 func (in ReviewAnswerInput) isEmpty() bool {
-	if in.Score != nil {
+	if in.Score != nil || in.CategoryID != nil {
 		return false
 	}
 	if in.AnswerText != nil && strings.TrimSpace(*in.AnswerText) != "" {
@@ -38,6 +39,46 @@ func (in ReviewAnswerInput) isEmpty() bool {
 		return len(opts) == 0
 	}
 	return false
+}
+
+func (w *WrittenReviewDB) AnswerRules(ctx context.Context, applicationID string, questionIDs []string) (answerRules, error) {
+	db := w.db.WithContext(ctx)
+	var app struct {
+		CycleID         string
+		ApplicationRole models.Role
+		ReviewRubric    models.ReviewRubric
+		ReviewScoreMin  int
+		ReviewScoreMax  int
+	}
+	err := db.Table("applications a").
+		Select("a.cycle_id, a.application_role, c.review_rubric, c.review_score_min, c.review_score_max").
+		Joins("JOIN cycles c ON c.id = a.cycle_id").
+		Where("a.id = ?", applicationID).Take(&app).Error
+	if err != nil {
+		return answerRules{}, utils.DBErr(err)
+	}
+	rules := answerRules{
+		CycleID: app.CycleID, Role: app.ApplicationRole, Rubric: app.ReviewRubric,
+		ScoreMin: app.ReviewScoreMin, ScoreMax: app.ReviewScoreMax,
+		Questions: map[string]models.ReviewQuestion{}, Category: map[string]bool{},
+	}
+	if len(questionIDs) > 0 {
+		var questions []models.ReviewQuestion
+		if err := db.Where("id IN ?", questionIDs).Find(&questions).Error; err != nil {
+			return answerRules{}, err
+		}
+		for _, q := range questions {
+			rules.Questions[q.ID] = q
+		}
+	}
+	var catIDs []string
+	if err := db.Model(&models.ReviewRubricCategory{}).Where("cycle_id = ?", app.CycleID).Pluck("id", &catIDs).Error; err != nil {
+		return answerRules{}, err
+	}
+	for _, id := range catIDs {
+		rules.Category[id] = true
+	}
+	return rules, nil
 }
 
 // UpsertWrittenReview upserts the review, keyed on application + reviewer, and
@@ -81,12 +122,13 @@ func (w *WrittenReviewDB) UpsertWrittenReview(ctx context.Context, in WrittenRev
 				AnswerText:       a.AnswerText,
 				AnswerOptions:    a.AnswerOptions,
 				Score:            a.Score,
+				CategoryID:       a.CategoryID,
 			}
-			err := tx.Select("review_id", "review_question_id", "answer_text", "answer_options", "score").
+			err := tx.Select("review_id", "review_question_id", "answer_text", "answer_options", "score", "category_id").
 				Clauses(clause.OnConflict{
 					Columns: []clause.Column{{Name: "review_id"}, {Name: "review_question_id"}},
 					DoUpdates: append(
-						clause.AssignmentColumns([]string{"answer_text", "answer_options", "score"}),
+						clause.AssignmentColumns([]string{"answer_text", "answer_options", "score", "category_id"}),
 						clause.Assignment{Column: clause.Column{Name: "submitted_at"}, Value: gorm.Expr("NOW()")},
 					),
 				}).

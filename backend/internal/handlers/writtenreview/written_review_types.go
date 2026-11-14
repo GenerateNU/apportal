@@ -20,7 +20,8 @@ type ReviewAnswerSubmission struct {
 	ReviewQuestionID string          `json:"review_question_id"`
 	AnswerText       *string         `json:"answer_text,omitempty"`
 	AnswerOptions    json.RawMessage `json:"answer_options,omitempty"`
-	Score            *int            `json:"score,omitempty" minimum:"1" maximum:"10"`
+	Score            *int            `json:"score,omitempty" doc:"For score questions when the cycle rubric is score; must be within the cycle's range"`
+	CategoryID       *string         `json:"category_id,omitempty" doc:"For score questions when the cycle rubric is category"`
 }
 
 type UpsertWrittenReviewInput struct {
@@ -37,6 +38,17 @@ type ReviewAnswerInput struct {
 	AnswerText       *string
 	AnswerOptions    json.RawMessage
 	Score            *int
+	CategoryID       *string
+}
+
+type answerRules struct {
+	CycleID   string
+	Role      models.Role
+	Rubric    models.ReviewRubric
+	ScoreMin  int
+	ScoreMax  int
+	Questions map[string]models.ReviewQuestion
+	Category  map[string]bool
 }
 
 // WrittenReviewUpsert carries a reviewer's full written review for an application.

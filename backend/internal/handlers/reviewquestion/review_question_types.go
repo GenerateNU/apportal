@@ -29,6 +29,7 @@ type CreateReviewQuestionInput struct {
 		DisplayOrder int                 `json:"display_order,omitempty"`
 		Options      json.RawMessage     `json:"options,omitempty"`
 		Description  *string             `json:"description,omitempty" doc:"Markdown help text shown under the question's label"`
+		Weight       *float64            `json:"weight,omitempty" exclusiveMinimum:"0" doc:"How much a score question counts toward the applicant's score; defaults to 1"`
 	}
 }
 
@@ -42,6 +43,7 @@ type UpdateReviewQuestionInput struct {
 		Options          json.RawMessage      `json:"options,omitempty"`
 		Description      *string              `json:"description,omitempty" doc:"Markdown help text shown under the question's label"`
 		ClearDescription bool                 `json:"clear_description,omitempty" doc:"Set true to remove this question's help text"`
+		Weight           *float64             `json:"weight,omitempty" exclusiveMinimum:"0"`
 	}
 }
 
@@ -58,6 +60,7 @@ type ReviewQuestionCreate struct {
 	DisplayOrder int
 	Options      json.RawMessage
 	Description  *string
+	Weight       float64
 }
 
 type ReviewQuestionUpdate struct {
@@ -68,6 +71,7 @@ type ReviewQuestionUpdate struct {
 	Options          json.RawMessage
 	Description      *string
 	ClearDescription bool
+	Weight           *float64
 }
 
 // ReviewQuestionAverageRow is one lead's average on one review question,

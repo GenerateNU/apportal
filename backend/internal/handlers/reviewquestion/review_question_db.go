@@ -27,9 +27,10 @@ func (r *ReviewQuestionDB) CreateReviewQuestion(ctx context.Context, in ReviewQu
 		DisplayOrder: in.DisplayOrder,
 		Options:      in.Options,
 		Description:  in.Description,
+		Weight:       in.Weight,
 	}
 	err := utils.Insert(r.db.WithContext(ctx), &question, "cycle_id", "application_role", "question_text",
-		"question_type", "is_required", "display_order", "options", "description")
+		"question_type", "is_required", "display_order", "options", "description", "weight")
 	return question, err
 }
 
@@ -50,6 +51,7 @@ func (r *ReviewQuestionDB) UpdateReviewQuestion(ctx context.Context, id string, 
 	utils.SetIf(updates, "question_type", in.QuestionType)
 	utils.SetIf(updates, "is_required", in.IsRequired)
 	utils.SetIf(updates, "display_order", in.DisplayOrder)
+	utils.SetIf(updates, "weight", in.Weight)
 	if len(in.Options) > 0 {
 		updates["options"] = models.JSONValue(in.Options)
 	}
@@ -77,10 +79,11 @@ func (r *ReviewQuestionDB) DeleteReviewQuestion(ctx context.Context, id string) 
 func (r *ReviewQuestionDB) ListReviewQuestionAverages(ctx context.Context, cycleID string, role models.Role) ([]ReviewQuestionAverageRow, error) {
 	rows := []ReviewQuestionAverageRow{}
 	err := r.db.WithContext(ctx).Table("written_review_answers wra").
-		Select("wr.reviewer_nuid AS lead_nuid, wra.review_question_id, AVG(wra.score)::float8 AS avg_score, COUNT(*)::int AS count").
+		Select("wr.reviewer_nuid AS lead_nuid, wra.review_question_id, AVG(COALESCE(wra.score, rc.points))::float8 AS avg_score, COUNT(*)::int AS count").
 		Joins("JOIN written_reviews wr ON wr.id = wra.review_id").
 		Joins("JOIN applications a ON a.id = wr.application_id").
-		Where("a.cycle_id = ? AND a.application_role = ? AND wra.score IS NOT NULL", cycleID, role).
+		Joins("LEFT JOIN review_rubric_categories rc ON rc.id = wra.category_id").
+		Where("a.cycle_id = ? AND a.application_role = ? AND (wra.score IS NOT NULL OR wra.category_id IS NOT NULL)", cycleID, role).
 		Group("wr.reviewer_nuid").Group("wra.review_question_id").
 		Order("wr.reviewer_nuid").
 		Scan(&rows).Error

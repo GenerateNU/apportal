@@ -9,10 +9,9 @@
 export interface ReviewAnswerSubmission {
   answer_options?: unknown;
   answer_text?: string;
+  /** For score questions when the cycle rubric is category */
+  category_id?: string;
   review_question_id: string;
-  /**
-   * @minimum 1
-   * @maximum 10
-   */
+  /** For score questions when the cycle rubric is score; must be within the cycle's range */
   score?: number;
 }
