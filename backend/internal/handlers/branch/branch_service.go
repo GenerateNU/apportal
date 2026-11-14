@@ -7,6 +7,8 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 
 	"github.com/GenerateNU/apportal/backend/internal/utils"
+
+	"github.com/GenerateNU/apportal/backend/internal/access"
 )
 
 type branchService struct {
@@ -14,7 +16,7 @@ type branchService struct {
 }
 
 func (s *branchService) create(ctx context.Context, in *CreateBranchInput) (*BranchOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := access.RequireAdmin(ctx); err != nil {
 		return nil, err
 	}
 	name := strings.TrimSpace(in.Body.Name)
@@ -46,7 +48,7 @@ func (s *branchService) get(ctx context.Context, in *BranchIDInput) (*BranchOutp
 }
 
 func (s *branchService) update(ctx context.Context, in *UpdateBranchInput) (*BranchOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := access.RequireAdmin(ctx); err != nil {
 		return nil, err
 	}
 	var name *string

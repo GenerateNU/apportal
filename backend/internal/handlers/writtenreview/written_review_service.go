@@ -4,18 +4,20 @@ import (
 	"context"
 
 	"github.com/GenerateNU/apportal/backend/internal/handlers/reviewrelease"
-	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 	"github.com/danielgtaylor/huma/v2"
+
+	"github.com/GenerateNU/apportal/backend/internal/access"
 )
 
 type writtenReviewService struct {
+	access          *access.Checker
 	reviewReleaseDB *reviewrelease.ReviewReleaseDB
 	writtenReviewDB *WrittenReviewDB
 }
 
 func (s *writtenReviewService) upsert(ctx context.Context, in *UpsertWrittenReviewInput) (*WrittenReviewOutput, error) {
-	if err := utils.RequireReviewer(ctx); err != nil {
+	if err := s.access.RequireApplication(ctx, in.ID, access.Review); err != nil {
 		return nil, err
 	}
 	answers := make([]ReviewAnswerInput, 0, len(in.Body.Answers))
@@ -39,15 +41,16 @@ func (s *writtenReviewService) upsert(ctx context.Context, in *UpsertWrittenRevi
 }
 
 func (s *writtenReviewService) list(ctx context.Context, in *utils.ApplicationScopedInput) (*WrittenReviewsOutput, error) {
-	if err := utils.RequireReviewer(ctx); err != nil {
+	level, err := s.access.ApplicationLevelAtLeast(ctx, in.ID, access.Review)
+	if err != nil {
 		return nil, err
 	}
 	actor := utils.CurrentActor(ctx)
 
-	// Chiefs and admins always see every review. A plain lead sees only their
-	// own until a chief releases the cycle's written reviews (blind review).
+	// Managers see every review. A lead sees only their own until a chief
+	// releases the cycle's written reviews (blind review).
 	onlyReviewer := ""
-	if !actor.HasAnyRole(models.UserRoleChief, models.UserRoleAdmin) {
+	if level < access.Manage {
 		released, err := s.reviewReleaseDB.WrittenReviewsReleased(ctx, in.ID)
 		if err != nil {
 			return nil, utils.StoreErr(err)

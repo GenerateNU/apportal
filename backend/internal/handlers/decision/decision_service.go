@@ -12,13 +12,16 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 	"github.com/danielgtaylor/huma/v2"
+
+	"github.com/GenerateNU/apportal/backend/internal/access"
 )
 
 // decisionService runs the decisions page: the per-cycle rejection letters and
 // the per-applicant paragraphs that fill them in. Reads are open to any
-// reviewer so a lead can find their own queue; template edits are chief-only,
-// and a lead may only write the feedback for applicants they interviewed.
+// cycle's reviewers so a lead can find their own queue; template edits need
+// Manage, and a lead may only write feedback for applicants they interviewed.
 type decisionService struct {
+	access                *access.Checker
 	decisionDB            *DecisionDB
 	interviewDB           *interview.InterviewDB
 	interviewAssignmentDB *interviewassignment.InterviewAssignmentDB
@@ -36,7 +39,10 @@ func parseDecisionKind(raw string) (models.DecisionKind, error) {
 }
 
 func (s *decisionService) listTemplates(ctx context.Context, in *ListDecisionTemplatesInput) (*DecisionTemplatesOutput, error) {
-	if err := utils.RequireReviewer(ctx); err != nil {
+	if err := role.ParseRoleID(in.RoleID); err != nil {
+		return nil, err
+	}
+	if err := s.access.RequireCycle(ctx, in.ID, access.Review); err != nil {
 		return nil, err
 	}
 	if err := role.RequireCycleRole(ctx, s.roleDB, in.ID, in.RoleID); err != nil {
@@ -50,11 +56,11 @@ func (s *decisionService) listTemplates(ctx context.Context, in *ListDecisionTem
 }
 
 func (s *decisionService) updateTemplate(ctx context.Context, in *UpdateDecisionTemplateInput) (*DecisionTemplateOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
-		return nil, err
-	}
 	kind, err := parseDecisionKind(in.Kind)
 	if err != nil {
+		return nil, err
+	}
+	if err := s.access.RequireCycle(ctx, in.ID, access.Manage); err != nil {
 		return nil, err
 	}
 	if err := role.RequireCycleRole(ctx, s.roleDB, in.ID, in.RoleID); err != nil {
@@ -77,19 +83,10 @@ func (s *decisionService) updateTemplate(ctx context.Context, in *UpdateDecision
 }
 
 func (s *decisionService) list(ctx context.Context, in *ListDecisionsInput) (*DecisionsOutput, error) {
-	if err := utils.RequireReviewer(ctx); err != nil {
-		return nil, err
-	}
 	filter := DecisionFilter{
 		CycleID:         in.ID,
 		InterviewerNUID: in.InterviewerNUID,
 		Search:          in.Search,
-	}
-	// A lead's decisions queue is only the applicants they interviewed —
-	// enforced here rather than left to the client's filter, since writing the
-	// feedback is the only reason they have access to this page at all.
-	if !utils.CurrentActor(ctx).HasAnyRole(models.UserRoleChief, models.UserRoleAdmin) {
-		filter.InterviewerNUID = utils.CurrentActor(ctx).NUID
 	}
 	if in.RoleID != "" {
 		if err := role.ParseRoleID(in.RoleID); err != nil {
@@ -104,6 +101,18 @@ func (s *decisionService) list(ctx context.Context, in *ListDecisionsInput) (*De
 		}
 		filter.Kind = &kind
 	}
+	level, err := s.access.CycleLevel(ctx, in.ID)
+	if err != nil {
+		return nil, err
+	}
+	if err := access.RequireLevel(level, access.Review); err != nil {
+		return nil, err
+	}
+	// A lead's decisions queue is only the applicants they interviewed —
+	// enforced here rather than left to the client's filter.
+	if level < access.Manage {
+		filter.InterviewerNUID = utils.CurrentActor(ctx).NUID
+	}
 	rows, err := s.decisionDB.ListDecisions(ctx, filter)
 	if err != nil {
 		return nil, utils.StoreErr(err)
@@ -115,20 +124,17 @@ func (s *decisionService) list(ctx context.Context, in *ListDecisionsInput) (*De
 }
 
 func (s *decisionService) upsert(ctx context.Context, in *UpsertDecisionInput) (*DecisionOutput, error) {
-	if err := utils.RequireReviewer(ctx); err != nil {
-		return nil, err
-	}
-	actor := utils.CurrentActor(ctx)
-	isChief := actor.HasAnyRole(models.UserRoleChief, models.UserRoleAdmin)
-
 	if in.Body.Kind != nil && !in.Body.Kind.Valid() {
 		return nil, huma.Error422UnprocessableEntity("invalid kind")
 	}
-
-	// Checked before the read below, since it turns on the fields sent rather
-	// than on anything about the row.
-	if !isChief && (in.Body.Kind != nil || in.Body.BodyOverride != nil || in.Body.MarkSent != nil) {
-		return nil, huma.Error403Forbidden("chief role required to change the kind, override the message, or mark it sent")
+	level, err := s.access.ApplicationLevelAtLeast(ctx, in.ID, access.Review)
+	if err != nil {
+		return nil, err
+	}
+	actor := utils.CurrentActor(ctx)
+	isChief := level >= access.Manage
+	if err := requireChiefFields(isChief, in); err != nil {
+		return nil, err
 	}
 
 	// The existing row decides both who may write and which letter applies.
@@ -160,7 +166,7 @@ func (s *decisionService) upsert(ctx context.Context, in *UpsertDecisionInput) (
 }
 
 func (s *decisionService) context(ctx context.Context, in *ListDecisionContextInput) (*DecisionContextOutput, error) {
-	if err := utils.RequireReviewer(ctx); err != nil {
+	if err := access.RequireActor(ctx); err != nil {
 		return nil, err
 	}
 	ids := utils.SplitIDs(in.ApplicationIDs)
@@ -172,18 +178,9 @@ func (s *decisionService) context(ctx context.Context, in *ListDecisionContextIn
 	}
 
 	actor := utils.CurrentActor(ctx)
-	isChief := actor.HasAnyRole(models.UserRoleChief, models.UserRoleAdmin)
-
-	// Running the ids back through the decisions list is what enforces access:
-	// it drops anything outside the caller's queue, so a lead can't read the
-	// reviews of an applicant they didn't interview by naming their id here.
-	filter := DecisionFilter{ApplicationIDs: ids}
-	if !isChief {
-		filter.InterviewerNUID = actor.NUID
-	}
-	rows, err := s.decisionDB.ListDecisions(ctx, filter)
+	rows, managed, err := s.contextRows(ctx, ids, actor.NUID)
 	if err != nil {
-		return nil, utils.StoreErr(err)
+		return nil, err
 	}
 	if len(rows) == 0 {
 		return &DecisionContextOutput{Body: []models.DecisionContext{}}, nil
@@ -221,7 +218,7 @@ func (s *decisionService) context(ctx context.Context, in *ListDecisionContextIn
 
 	writtenReleased := map[string]bool{}
 	recordingReleased := map[string]bool{}
-	if !isChief {
+	if len(managed) < len(allowed) {
 		if writtenReleased, err = s.reviewReleaseDB.ReleasedApplications(ctx, models.ReviewKindWritten, allowed); err != nil {
 			return nil, utils.StoreErr(err)
 		}
@@ -241,6 +238,7 @@ func (s *decisionService) context(ctx context.Context, in *ListDecisionContextIn
 			entry.RecordingReviews = recordingReviews[applicationID]
 		}
 
+		isChief := managed[applicationID]
 		if !isChief && !writtenReleased[applicationID] {
 			entry.WrittenReviews, entry.WrittenReviewsBlind = ownWrittenReviews(entry.WrittenReviews, actor.NUID)
 		}
@@ -257,6 +255,50 @@ func (s *decisionService) context(ctx context.Context, in *ListDecisionContextIn
 		out = append(out, entry)
 	}
 	return &DecisionContextOutput{Body: out}, nil
+}
+
+// requireChiefFields turns on the fields sent, not the row, so it runs before
+// the row is read.
+func requireChiefFields(isChief bool, in *UpsertDecisionInput) error {
+	if !isChief && (in.Body.Kind != nil || in.Body.BodyOverride != nil || in.Body.MarkSent != nil) {
+		return huma.Error403Forbidden("chief role required to change the kind, override the message, or mark it sent")
+	}
+	return nil
+}
+
+// contextRows runs the ids back through the decisions list, which is what
+// enforces access: managers get every row on their cycles, reviewers only the
+// applicants they interviewed. managed marks the rows the caller manages.
+func (s *decisionService) contextRows(ctx context.Context, ids []string, nuid string) ([]models.DecisionRow, map[string]bool, error) {
+	managedIDs, err := s.access.VisibleApplicationIDs(ctx, ids, access.Manage)
+	if err != nil {
+		return nil, nil, err
+	}
+	reviewIDs, err := s.access.VisibleApplicationIDs(ctx, ids, access.Review)
+	if err != nil {
+		return nil, nil, err
+	}
+	managed := make(map[string]bool, len(managedIDs))
+	for _, id := range managedIDs {
+		managed[id] = true
+	}
+	reviewOnly := slices.DeleteFunc(reviewIDs, func(id string) bool { return managed[id] })
+
+	var rows []models.DecisionRow
+	for _, f := range []DecisionFilter{
+		{ApplicationIDs: managedIDs},
+		{ApplicationIDs: reviewOnly, InterviewerNUID: nuid},
+	} {
+		if len(f.ApplicationIDs) == 0 {
+			continue
+		}
+		part, err := s.decisionDB.ListDecisions(ctx, f)
+		if err != nil {
+			return nil, nil, utils.StoreErr(err)
+		}
+		rows = append(rows, part...)
+	}
+	return rows, managed, nil
 }
 
 // ownWrittenReviews keeps only the caller's own review, and reports whether

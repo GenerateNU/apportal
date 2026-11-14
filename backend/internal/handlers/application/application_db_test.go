@@ -291,3 +291,16 @@ func TestAssignedToAndInterviewerFilterSeparately(t *testing.T) {
 		t.Fatalf("args = %#v, want %#v", args, want)
 	}
 }
+
+func TestListApplicationsQueryVisibleCycles(t *testing.T) {
+	db := dryRunDB(t)
+	visible := db.Table("cycles c").Select("c.id").Where("c.status = ?", "open")
+	stmt := listApplicationsQuery(db, ApplicationFilter{VisibleCycles: visible}).Find(&[]models.ApplicationSummary{}).Statement
+	if want := `a.cycle_id IN (SELECT c.id FROM cycles c WHERE c.status = $1)`; !strings.Contains(stmt.SQL.String(), want) {
+		t.Fatalf("sql missing %q:\n%s", want, stmt.SQL.String())
+	}
+	query, _ := listSQL(t, ApplicationFilter{})
+	if strings.Contains(query, "cycles") {
+		t.Fatalf("no visibility filter means no cycles subquery: %s", query)
+	}
+}

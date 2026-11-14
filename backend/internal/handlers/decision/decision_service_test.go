@@ -16,11 +16,11 @@ import (
 // rest need a real database and are exercised by integration/manual testing.
 
 func chiefActor() middleware.Actor {
-	return middleware.Actor{NUID: "c1", Roles: []models.UserRole{models.UserRoleChief}}
+	return middleware.Actor{NUID: "c1"}
 }
 
 func leadActor() middleware.Actor {
-	return middleware.Actor{NUID: "l1", Roles: []models.UserRole{models.UserRoleLead}}
+	return middleware.Actor{NUID: "l1"}
 }
 
 func TestListDecisionsRequiresReviewer(t *testing.T) {
@@ -46,16 +46,6 @@ func TestListDecisionTemplatesRequiresRole(t *testing.T) {
 	testutil.WantStatus(t, err, http.StatusUnprocessableEntity)
 }
 
-func TestUpdateDecisionTemplateIsChiefOnly(t *testing.T) {
-	s := &decisionService{}
-	in := &UpdateDecisionTemplateInput{ID: "cycle1", RoleID: "6f1c2a52-6d2c-4a8e-9a57-2b8f3b1c9d10", Kind: "rejection_generic"}
-	in.Body.Subject = "s"
-	in.Body.Body = "b"
-
-	_, err := s.updateTemplate(testutil.WithActor(leadActor()), in)
-	testutil.WantStatus(t, err, http.StatusForbidden)
-}
-
 func TestUpdateDecisionTemplateValidatesKind(t *testing.T) {
 	s := &decisionService{}
 	in := &UpdateDecisionTemplateInput{ID: "cycle1", RoleID: "6f1c2a52-6d2c-4a8e-9a57-2b8f3b1c9d10", Kind: ""}
@@ -72,10 +62,11 @@ func TestUpsertDecisionRequiresReviewer(t *testing.T) {
 	testutil.WantStatus(t, err, http.StatusUnauthorized)
 }
 
-func TestUpsertDecisionRejectsChiefOnlyFieldsFromLead(t *testing.T) {
+func TestChiefOnlyFields(t *testing.T) {
 	override := "rewritten by hand"
 	sent := true
 	kind := models.DecisionRejectionGeneric
+	feedback := "great energy"
 
 	cases := []struct {
 		name  string
@@ -87,12 +78,18 @@ func TestUpsertDecisionRejectsChiefOnlyFieldsFromLead(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			s := &decisionService{}
 			in := &UpsertDecisionInput{ID: "app1"}
 			tc.apply(in)
-			_, err := s.upsert(testutil.WithActor(leadActor()), in)
-			testutil.WantStatus(t, err, http.StatusForbidden)
+			testutil.WantStatus(t, requireChiefFields(false, in), http.StatusForbidden)
+			if err := requireChiefFields(true, in); err != nil {
+				t.Errorf("chief: %v", err)
+			}
 		})
+	}
+	in := &UpsertDecisionInput{ID: "app1"}
+	in.Body.Feedback = &feedback
+	if err := requireChiefFields(false, in); err != nil {
+		t.Errorf("a lead may write feedback: %v", err)
 	}
 }
 

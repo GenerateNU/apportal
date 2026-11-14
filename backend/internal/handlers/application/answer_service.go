@@ -7,14 +7,17 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 	"github.com/danielgtaylor/huma/v2"
+
+	"github.com/GenerateNU/apportal/backend/internal/access"
 )
 
 type answerService struct {
+	access        *access.Checker
 	applicationDB *ApplicationDB
 }
 
 func (s *answerService) listBulk(ctx context.Context, in *ListAnswersBulkInput) (*AnswersOutput, error) {
-	if err := utils.RequireReviewer(ctx); err != nil {
+	if err := access.RequireActor(ctx); err != nil {
 		return nil, err
 	}
 	ids := utils.SplitIDs(in.ApplicationIDs)
@@ -23,6 +26,10 @@ func (s *answerService) listBulk(ctx context.Context, in *ListAnswersBulkInput) 
 	}
 	if len(ids) > utils.MaxBulkApplications {
 		return nil, huma.Error422UnprocessableEntity("too many application_ids")
+	}
+	ids, err := s.access.VisibleApplicationIDs(ctx, ids, access.Review)
+	if err != nil {
+		return nil, err
 	}
 	answers, err := s.applicationDB.ListAnswersForApplications(ctx, ids)
 	if err != nil {
@@ -75,19 +82,15 @@ func (s *answerService) upsert(ctx context.Context, in *UpsertAnswersInput) (*An
 }
 
 func (s *answerService) list(ctx context.Context, in *ListAnswersInput) (*AnswersOutput, error) {
+	if err := access.RequireActor(ctx); err != nil {
+		return nil, err
+	}
 	app, err := s.applicationDB.GetApplication(ctx, in.ID)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
-	// A draft's answers are private autosave content — only its owner can
-	// list them. Mirrors get-application: reject the same way as a missing
-	// row so a guessed/shared draft ID can't be distinguished from one that
-	// doesn't exist.
-	if app.Stage == models.StageDraft {
-		actor, hasActor := middleware.ActorFrom(ctx)
-		if !hasActor || actor.NUID != app.UserNUID {
-			return nil, huma.Error404NotFound("not found")
-		}
+	if err := requireViewable(ctx, s.access, app); err != nil {
+		return nil, err
 	}
 
 	answers, err := s.applicationDB.ListAnswers(ctx, in.ID)

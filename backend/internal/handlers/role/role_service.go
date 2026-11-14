@@ -8,9 +8,12 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/GenerateNU/apportal/backend/internal/utils"
+
+	"github.com/GenerateNU/apportal/backend/internal/access"
 )
 
 type roleService struct {
+	access *access.Checker
 	roleDB *RoleDB
 }
 
@@ -41,15 +44,15 @@ func ParseRoleID(roleID string) error {
 }
 
 func (s *roleService) create(ctx context.Context, in *CreateRoleInput) (*RoleOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
-		return nil, err
-	}
 	if in.Body.CycleID == "" {
 		return nil, huma.Error422UnprocessableEntity("cycle_id is required")
 	}
 	name := strings.TrimSpace(in.Body.Name)
 	if name == "" {
 		return nil, huma.Error422UnprocessableEntity("name is required")
+	}
+	if err := s.access.RequireCycle(ctx, in.Body.CycleID, access.Manage); err != nil {
+		return nil, err
 	}
 
 	role, err := s.roleDB.CreateRole(ctx, in.Body.CycleID, name)
@@ -76,9 +79,6 @@ func (s *roleService) get(ctx context.Context, in *RoleIDInput) (*RoleOutput, er
 }
 
 func (s *roleService) update(ctx context.Context, in *UpdateRoleInput) (*RoleOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
-		return nil, err
-	}
 	var name *string
 	if in.Body.Name != nil {
 		trimmed := strings.TrimSpace(*in.Body.Name)
@@ -86,6 +86,9 @@ func (s *roleService) update(ctx context.Context, in *UpdateRoleInput) (*RoleOut
 			return nil, huma.Error422UnprocessableEntity("name cannot be blank")
 		}
 		name = &trimmed
+	}
+	if err := s.requireManage(ctx, in.ID); err != nil {
+		return nil, err
 	}
 
 	role, err := s.roleDB.UpdateRole(ctx, in.ID, RoleUpdate{Name: name})
@@ -96,11 +99,26 @@ func (s *roleService) update(ctx context.Context, in *UpdateRoleInput) (*RoleOut
 }
 
 func (s *roleService) delete(ctx context.Context, in *RoleIDInput) (*struct{}, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := s.requireManage(ctx, in.ID); err != nil {
 		return nil, err
 	}
 	if err := s.roleDB.DeleteRole(ctx, in.ID); err != nil {
 		return nil, utils.StoreErr(err)
 	}
 	return nil, nil
+}
+
+// requireManage checks the caller manages the role's cycle.
+func (s *roleService) requireManage(ctx context.Context, roleID string) error {
+	if err := ParseRoleID(roleID); err != nil {
+		return err
+	}
+	if err := access.RequireActor(ctx); err != nil {
+		return err
+	}
+	role, err := s.roleDB.GetRole(ctx, roleID)
+	if err != nil {
+		return utils.StoreErr(err)
+	}
+	return s.access.RequireCycle(ctx, role.CycleID, access.Manage)
 }

@@ -8,12 +8,14 @@ import (
 
 	"github.com/GenerateNU/apportal/backend/internal/assign"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/application"
+	"github.com/GenerateNU/apportal/backend/internal/handlers/cyclestaff"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/leadassignment"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
-	"github.com/GenerateNU/apportal/backend/internal/handlers/user"
 	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 	"github.com/danielgtaylor/huma/v2"
+
+	"github.com/GenerateNU/apportal/backend/internal/access"
 )
 
 // Assignment planning: a chief groups leads into teams, sizes the per-lead cap,
@@ -24,9 +26,10 @@ import (
 // existing assignments are interpreted through whatever teams the current
 // request declares.
 type assignmentPlannerService struct {
+	access           *access.Checker
 	applicationDB    *application.ApplicationDB
 	leadAssignmentDB *leadassignment.LeadAssignmentDB
-	userDB           *user.UserDB
+	staffDB          *cyclestaff.CycleStaffDB
 }
 
 // reviewPoolStages are the stages an application can be in and still need lead
@@ -45,10 +48,13 @@ func toAssignTeams(in []PlanTeam) []assign.Team {
 }
 
 func (s *assignmentPlannerService) capacity(ctx context.Context, in *CapacityInput) (*CapacityOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := access.RequireActor(ctx); err != nil {
 		return nil, err
 	}
 	if err := role.ParseRoleID(in.Body.RoleID); err != nil {
+		return nil, err
+	}
+	if err := s.access.RequireCycle(ctx, in.ID, access.Manage); err != nil {
 		return nil, err
 	}
 
@@ -70,7 +76,7 @@ func (s *assignmentPlannerService) capacity(ctx context.Context, in *CapacityInp
 }
 
 func (s *assignmentPlannerService) preview(ctx context.Context, in *PreviewPlanInput) (*PreviewPlanOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := access.RequireActor(ctx); err != nil {
 		return nil, err
 	}
 	planned, err := s.buildPlan(ctx, in)
@@ -95,6 +101,9 @@ func (s *assignmentPlannerService) buildPlan(ctx context.Context, in *PreviewPla
 	}
 	if len(in.Body.Teams) == 0 {
 		return plannedRun{}, huma.Error422UnprocessableEntity("at least one team is required")
+	}
+	if err := s.access.RequireCycle(ctx, in.ID, access.Manage); err != nil {
+		return plannedRun{}, err
 	}
 
 	pool, err := s.reviewPool(ctx, in.ID, in.Body.RoleID)
@@ -137,6 +146,7 @@ func (s *assignmentPlannerService) buildPlan(ctx context.Context, in *PreviewPla
 	}
 
 	return plannedRun{
+		cycleID:  in.ID,
 		plan:     plan,
 		prior:    prior,
 		byID:     byID,
@@ -146,7 +156,7 @@ func (s *assignmentPlannerService) buildPlan(ctx context.Context, in *PreviewPla
 }
 
 func (s *assignmentPlannerService) commit(ctx context.Context, in *PreviewPlanInput) (*CommitPlanOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := access.RequireActor(ctx); err != nil {
 		return nil, err
 	}
 	planned, err := s.buildPlan(ctx, in)
@@ -195,7 +205,7 @@ func (s *assignmentPlannerService) decoratePlan(
 ) (AssignmentPlanPreview, error) {
 	plan, prior, byID := run.plan, run.prior, run.byID
 
-	leadNames, err := s.leadNames(ctx)
+	leadNames, err := s.leadNames(ctx, run.cycleID)
 	if err != nil {
 		return AssignmentPlanPreview{}, err
 	}
@@ -268,10 +278,13 @@ func (s *assignmentPlannerService) decoratePlan(
 }
 
 func (s *assignmentPlannerService) pool(ctx context.Context, in *PoolInput) (*PoolOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := access.RequireActor(ctx); err != nil {
 		return nil, err
 	}
 	if err := role.ParseRoleID(in.RoleID); err != nil {
+		return nil, err
+	}
+	if err := s.access.RequireCycle(ctx, in.ID, access.Manage); err != nil {
 		return nil, err
 	}
 
@@ -279,7 +292,7 @@ func (s *assignmentPlannerService) pool(ctx context.Context, in *PoolInput) (*Po
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
-	names, err := s.leadNames(ctx)
+	names, err := s.leadNames(ctx, in.ID)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
@@ -328,15 +341,14 @@ func excludeApplications(pool []models.ApplicationSummary, excludeIDs []string) 
 	return out
 }
 
-func (s *assignmentPlannerService) leadNames(ctx context.Context) (map[string]string, error) {
-	role := models.UserRoleLead
-	users, _, err := s.userDB.ListUsers(ctx, &role, nil, 0)
+func (s *assignmentPlannerService) leadNames(ctx context.Context, cycleID string) (map[string]string, error) {
+	leads, err := s.staffDB.ListStaff(ctx, cycleID, models.CycleStaffLead)
 	if err != nil {
 		return nil, err
 	}
-	out := make(map[string]string, len(users))
-	for _, u := range users {
-		out[u.NUID] = u.FullName
+	out := make(map[string]string, len(leads))
+	for _, l := range leads {
+		out[l.UserNUID] = l.FullName
 	}
 	return out, nil
 }

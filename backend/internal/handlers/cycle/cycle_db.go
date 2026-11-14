@@ -5,6 +5,7 @@ import (
 
 	"gorm.io/gorm"
 
+	"github.com/GenerateNU/apportal/backend/internal/handlers/cyclestaff"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
@@ -27,12 +28,15 @@ func (c *CycleDB) CreateCycle(ctx context.Context, in CycleCreate) (models.Cycle
 		OpensAt:         in.OpensAt,
 		ClosesAt:        in.ClosesAt,
 	}
-	// Starts with the previous same-type cycle's roles, edited from there.
+	// Starts with the previous same-type cycle's roles and staff, edited from there.
 	err := c.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := utils.Insert(tx, &cycle, "branch_id", "name", "status", "application_type", "opens_at", "closes_at"); err != nil {
 			return err
 		}
-		return role.CopyPreviousCycleRoles(tx, cycle.ID)
+		if err := role.CopyPreviousCycleRoles(tx, cycle.ID); err != nil {
+			return err
+		}
+		return cyclestaff.CopyPreviousCycleStaff(tx, cycle.ID)
 	})
 	return cycle, err
 }
@@ -50,12 +54,16 @@ func cyclesQuery(db *gorm.DB, f CycleFilter) *gorm.DB {
 	if f.BranchID != "" {
 		q = q.Where("branch_id = ?", f.BranchID)
 	}
+	if f.Listable != nil {
+		q = q.Where(f.Listable)
+	}
 	return q
 }
 
-func (c *CycleDB) GetCycle(ctx context.Context, id string) (models.Cycle, error) {
+// GetCycle finds the cycle among those the filter allows (ErrNotFound otherwise).
+func (c *CycleDB) GetCycle(ctx context.Context, id string, f CycleFilter) (models.Cycle, error) {
 	var cycle models.Cycle
-	err := c.db.WithContext(ctx).Where("id = ?", id).Take(&cycle).Error
+	err := cyclesQuery(c.db.WithContext(ctx), f).Where("id = ?", id).Take(&cycle).Error
 	return cycle, utils.DBErr(err)
 }
 

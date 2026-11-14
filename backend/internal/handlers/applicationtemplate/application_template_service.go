@@ -6,9 +6,12 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 	"github.com/danielgtaylor/huma/v2"
+
+	"github.com/GenerateNU/apportal/backend/internal/access"
 )
 
 type applicationTemplateService struct {
+	access                *access.Checker
 	applicationTemplateDB *ApplicationTemplateDB
 	roleDB                *role.RoleDB
 }
@@ -22,6 +25,12 @@ func (s *applicationTemplateService) listOpen(ctx context.Context, _ *ListOpenAp
 }
 
 func (s *applicationTemplateService) get(ctx context.Context, in *GetApplicationTemplateInput) (*ApplicationTemplateOutput, error) {
+	if err := role.ParseRoleID(in.RoleID); err != nil {
+		return nil, err
+	}
+	if err := s.access.RequireForm(ctx, in.ID, in.RoleID); err != nil {
+		return nil, err
+	}
 	if err := role.RequireCycleRole(ctx, s.roleDB, in.ID, in.RoleID); err != nil {
 		return nil, err
 	}
@@ -33,10 +42,10 @@ func (s *applicationTemplateService) get(ctx context.Context, in *GetApplication
 }
 
 func (s *applicationTemplateService) update(ctx context.Context, in *UpdateApplicationTemplateInput) (*ApplicationTemplateOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := role.ParseRoleID(in.RoleID); err != nil {
 		return nil, err
 	}
-	if err := role.ParseRoleID(in.RoleID); err != nil {
+	if err := s.access.RequireCycle(ctx, in.ID, access.Manage); err != nil {
 		return nil, err
 	}
 	if in.Body.Status != nil && !in.Body.Status.Valid() {

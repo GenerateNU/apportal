@@ -15,9 +15,14 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 	"github.com/danielgtaylor/huma/v2"
+
+	"github.com/GenerateNU/apportal/backend/internal/access"
+
+	"gorm.io/gorm"
 )
 
 type applicationService struct {
+	access                *access.Checker
 	applicationDB         *ApplicationDB
 	applicationTemplateDB *applicationtemplate.ApplicationTemplateDB
 	challengeDB           *challenge.ChallengeDB
@@ -32,6 +37,9 @@ func (s *applicationService) create(ctx context.Context, in *CreateApplicationIn
 		return nil, huma.Error401Unauthorized("authentication required")
 	}
 	if err := role.RequireCycleRole(ctx, s.roleDB, in.Body.CycleID, in.Body.RoleID); err != nil {
+		return nil, err
+	}
+	if err := s.access.RequireOpenForm(ctx, in.Body.CycleID, in.Body.RoleID); err != nil {
 		return nil, err
 	}
 
@@ -57,35 +65,46 @@ func (s *applicationService) create(ctx context.Context, in *CreateApplicationIn
 }
 
 func (s *applicationService) get(ctx context.Context, in *ApplicationIDInput) (*ApplicationOutput, error) {
+	if err := access.RequireActor(ctx); err != nil {
+		return nil, err
+	}
 	app, err := s.applicationDB.GetApplication(ctx, in.ID)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
-	// A draft is a private autosave — only its owner can fetch it directly.
-	// Reject the same way as a missing row so a guessed/shared draft ID can't
-	// be distinguished from one that doesn't exist.
-	if app.Stage == models.StageDraft {
-		actor, hasActor := middleware.ActorFrom(ctx)
-		if !hasActor || actor.NUID != app.UserNUID {
-			return nil, huma.Error404NotFound("not found")
-		}
+	if err := requireViewable(ctx, s.access, app); err != nil {
+		return nil, err
 	}
 	return &ApplicationOutput{Body: app}, nil
 }
 
+// requireViewable lets owners read their own application and staff with
+// Review read a submitted one. A draft or hidden application reads as missing.
+func requireViewable(ctx context.Context, c *access.Checker, app models.Application) error {
+	actor, _ := middleware.ActorFrom(ctx)
+	if actor.NUID != "" && actor.NUID == app.UserNUID {
+		return nil
+	}
+	if app.Stage == models.StageDraft {
+		return huma.Error404NotFound("not found")
+	}
+	return c.RequireApplication(ctx, app.ID, access.Review)
+}
+
 func (s *applicationService) list(ctx context.Context, in *ListApplicationsInput) (*ApplicationsOutput, error) {
-	// Applicants may fetch their own applications by scoping to their own
-	// user_nuid; the unscoped reviewer queue requires a reviewer identity, and
-	// a non-reviewer scoping to someone else's user_nuid is rejected outright
-	// rather than silently ignored.
-	actor, hasActor := middleware.ActorFrom(ctx)
-	isReviewer := hasActor && actor.HasAnyRole(models.UserRoleLead, models.UserRoleChief, models.UserRoleAdmin)
-	if in.UserNUID == "" {
-		if err := utils.RequireReviewer(ctx); err != nil {
+	// Anyone may list their own applications by passing their user_nuid;
+	// everything else is the staff queue, limited to the caller's cycles.
+	if err := access.RequireActor(ctx); err != nil {
+		return nil, err
+	}
+	actor, _ := middleware.ActorFrom(ctx)
+	own := in.UserNUID == actor.NUID
+	var visible *gorm.DB
+	if !own {
+		if err := s.access.RequireAnyCycle(ctx, access.Review); err != nil {
 			return nil, err
 		}
-	} else if !isReviewer && (!hasActor || actor.NUID != in.UserNUID) {
-		return nil, huma.Error403Forbidden("cannot list another user's applications")
+		visible = s.access.VisibleCycleIDs(ctx, access.Review)
 	}
 	answerFilters, err := parseAnswerFilters(in.AnswerFilters)
 	if err != nil {
@@ -121,10 +140,11 @@ func (s *applicationService) list(ctx context.Context, in *ListApplicationsInput
 		Returner:              returner,
 		Search:                in.Search,
 		Offset:                in.Offset,
+		VisibleCycles:         visible,
 		// Only a user listing their own applications by their own identity
 		// ever sees their own draft — the reviewer queue and lookups of
 		// someone else's user_nuid never do.
-		IncludeDraft: in.UserNUID != "" && hasActor && actor.NUID == in.UserNUID,
+		IncludeDraft: own,
 	}
 	if in.RoleID != "" {
 		if err := role.ParseRoleID(in.RoleID); err != nil {
@@ -257,9 +277,13 @@ func (s *applicationService) update(ctx context.Context, in *UpdateApplicationIn
 	}
 
 	isOwner := actor.NUID == current.UserNUID
-	isReviewer := actor.HasAnyRole(models.UserRoleLead, models.UserRoleChief, models.UserRoleAdmin)
+	level, err := s.access.ApplicationLevel(ctx, current.ID)
+	if err != nil {
+		return nil, err
+	}
+	isReviewer := level >= access.Review && current.Stage != models.StageDraft
 	if !isOwner && !isReviewer {
-		return nil, huma.Error403Forbidden("cannot update another applicant's application")
+		return nil, huma.Error404NotFound("not found")
 	}
 
 	// A draft is frozen once its template's deadline has passed — no autosave,
@@ -286,7 +310,7 @@ func (s *applicationService) update(ctx context.Context, in *UpdateApplicationIn
 			if current.Stage != models.StageDraft || *in.Body.Stage != models.StageSubmitted {
 				return nil, huma.Error403Forbidden("applicants may only submit their own draft")
 			}
-		} else if !actor.HasAnyRole(models.UserRoleChief, models.UserRoleAdmin) {
+		} else if level < access.Manage {
 			// Every other stage change — a lead moving an application through
 			// the pipeline, or an owner who also happens to hold a reviewer
 			// role — is a chief decision (advance to interview, reject,

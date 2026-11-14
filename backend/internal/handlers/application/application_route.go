@@ -11,6 +11,8 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/storage"
 	"github.com/danielgtaylor/huma/v2"
 	"gorm.io/gorm"
+
+	"github.com/GenerateNU/apportal/backend/internal/access"
 )
 
 func Route(api huma.API, db *gorm.DB, storageClient *storage.Client) {
@@ -20,9 +22,9 @@ func Route(api huma.API, db *gorm.DB, storageClient *storage.Client) {
 	codeSubmissionDB := codesubmission.NewCodeSubmissionDB(db)
 	questionDB := question.NewQuestionDB(db)
 
-	registerAnswer(api, &answerService{applicationDB: applicationDB})
-	registerApplication(api, &applicationService{applicationDB: applicationDB, applicationTemplateDB: applicationTemplateDB, challengeDB: challengeDB, codeSubmissionDB: codeSubmissionDB, questionDB: questionDB, roleDB: role.NewRoleDB(db)})
-	registerUpload(api, &uploadService{applicationDB: applicationDB, questionDB: questionDB, storage: storageClient})
+	registerAnswer(api, &answerService{access: access.NewChecker(db), applicationDB: applicationDB})
+	registerApplication(api, &applicationService{access: access.NewChecker(db), applicationDB: applicationDB, applicationTemplateDB: applicationTemplateDB, challengeDB: challengeDB, codeSubmissionDB: codeSubmissionDB, questionDB: questionDB, roleDB: role.NewRoleDB(db)})
+	registerUpload(api, &uploadService{access: access.NewChecker(db), applicationDB: applicationDB, questionDB: questionDB, storage: storageClient})
 }
 
 func registerApplication(api huma.API, s *applicationService) {

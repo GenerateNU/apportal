@@ -32,7 +32,7 @@ func Route(api huma.API, db *gorm.DB) {
 		Method:        http.MethodPost,
 		Path:          "/branches",
 		Summary:       "Create a branch",
-		Description:   "Chief only. Names are unique.",
+		Description:   "Admin only. Names are unique.",
 		Tags:          []string{"Branches"},
 		DefaultStatus: http.StatusCreated,
 		Errors:        []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusConflict},
@@ -43,7 +43,7 @@ func Route(api huma.API, db *gorm.DB) {
 		Method:      http.MethodPatch,
 		Path:        "/branches/{id}",
 		Summary:     "Rename a branch",
-		Description: "Chief only.",
+		Description: "Admin only.",
 		Tags:        []string{"Branches"},
 		Errors:      []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound, http.StatusConflict},
 	}, s.update)

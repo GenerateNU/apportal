@@ -11,6 +11,8 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/google/uuid"
+
+	"github.com/GenerateNU/apportal/backend/internal/access"
 )
 
 // uploadService lets an applicant answer a `url`-type question by uploading a
@@ -18,6 +20,7 @@ import (
 // mints short-lived signed Storage URLs (after the same ownership checks used
 // elsewhere) for the frontend to upload/download directly.
 type uploadService struct {
+	access        *access.Checker
 	applicationDB *ApplicationDB
 	questionDB    *question.QuestionDB
 	storage       *storage.Client
@@ -73,10 +76,8 @@ func (s *uploadService) createFileURL(ctx context.Context, in *CreateFileURLInpu
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
-	isOwner := actor.NUID == app.UserNUID
-	isReviewer := actor.HasAnyRole(models.UserRoleLead, models.UserRoleChief, models.UserRoleAdmin)
-	if !isOwner && !isReviewer {
-		return nil, huma.Error403Forbidden("cannot view another applicant's file")
+	if err := requireViewable(ctx, s.access, app); err != nil {
+		return nil, err
 	}
 
 	answer, err := s.applicationDB.GetAnswer(ctx, in.ID, in.QuestionID)

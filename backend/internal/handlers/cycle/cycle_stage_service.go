@@ -5,14 +5,17 @@ import (
 
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 	"github.com/danielgtaylor/huma/v2"
+
+	"github.com/GenerateNU/apportal/backend/internal/access"
 )
 
 type cycleStageService struct {
+	access  *access.Checker
 	cycleDB *CycleDB
 }
 
 func (s *cycleStageService) create(ctx context.Context, in *CreateCycleStageInput) (*CycleStageOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := access.RequireAdmin(ctx); err != nil {
 		return nil, err
 	}
 	if !in.Body.Stage.Valid() {
@@ -38,6 +41,9 @@ func (s *cycleStageService) create(ctx context.Context, in *CreateCycleStageInpu
 }
 
 func (s *cycleStageService) list(ctx context.Context, in *ListCycleStagesInput) (*CycleStagesOutput, error) {
+	if err := s.access.RequireCycle(ctx, in.ID, access.Review); err != nil {
+		return nil, err
+	}
 	stages, err := s.cycleDB.ListCycleStages(ctx, in.ID)
 	if err != nil {
 		return nil, utils.StoreErr(err)
@@ -46,7 +52,7 @@ func (s *cycleStageService) list(ctx context.Context, in *ListCycleStagesInput) 
 }
 
 func (s *cycleStageService) update(ctx context.Context, in *UpdateCycleStageInput) (*CycleStageOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := access.RequireAdmin(ctx); err != nil {
 		return nil, err
 	}
 

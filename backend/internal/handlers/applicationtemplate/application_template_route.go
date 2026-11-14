@@ -7,11 +7,13 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
+
+	"github.com/GenerateNU/apportal/backend/internal/access"
 )
 
 func Route(api huma.API, db *gorm.DB) {
 	applicationTemplateDB := NewApplicationTemplateDB(db)
-	s := &applicationTemplateService{applicationTemplateDB: applicationTemplateDB, roleDB: role.NewRoleDB(db)}
+	s := &applicationTemplateService{access: access.NewChecker(db), applicationTemplateDB: applicationTemplateDB, roleDB: role.NewRoleDB(db)}
 
 	huma.Register(api, huma.Operation{
 		OperationID: "list-open-application-templates",

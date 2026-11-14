@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 
 	"github.com/GenerateNU/apportal/backend/internal/models"
+
+	"gorm.io/gorm"
 )
 
 type ApplicationOutput struct {
@@ -124,6 +126,9 @@ type ApplicationFilter struct {
 	IncludeDraft bool
 	// Search matches name, NUID, or email by case-insensitive substring.
 	Search string
+	// VisibleCycles is a cycle-id subquery limiting staff to their cycles;
+	// nil when users list their own applications.
+	VisibleCycles *gorm.DB
 	// Limit caps the page; nil returns every match.
 	Limit *int
 	// Offset is ignored unless Limit is set.

@@ -33,24 +33,32 @@ func (s ApplicationStage) Valid() bool {
 	return false
 }
 
-// UserRole is a role a user can hold. Users carry an array of these (a user can
-// be both an applicant and a reviewer), replacing the old scalar reviewer_role.
+// UserRole is a global role. Lead and chief are per cycle (CycleStaffRole).
 type UserRole string
 
 const (
 	UserRoleApplicant UserRole = "applicant"
-	UserRoleMember    UserRole = "member"
-	UserRoleLead      UserRole = "lead"
-	UserRoleChief     UserRole = "chief"
 	UserRoleAdmin     UserRole = "admin"
 )
 
 func (r UserRole) Valid() bool {
 	switch r {
-	case UserRoleApplicant, UserRoleMember, UserRoleLead, UserRoleChief, UserRoleAdmin:
+	case UserRoleApplicant, UserRoleAdmin:
 		return true
 	}
 	return false
+}
+
+// CycleStaffRole is a user's role on one cycle's staff.
+type CycleStaffRole string
+
+const (
+	CycleStaffLead  CycleStaffRole = "lead"
+	CycleStaffChief CycleStaffRole = "chief"
+)
+
+func (r CycleStaffRole) Valid() bool {
+	return r == CycleStaffLead || r == CycleStaffChief
 }
 
 // InterviewRating is the qualitative verdict interviewers and recording

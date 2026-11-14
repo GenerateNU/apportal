@@ -5,19 +5,22 @@ import (
 
 	"github.com/GenerateNU/apportal/backend/internal/handlers/interviewassignment"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/reviewrelease"
-	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 	"github.com/danielgtaylor/huma/v2"
+
+	"github.com/GenerateNU/apportal/backend/internal/access"
 )
 
 type recordingReviewService struct {
+	access                *access.Checker
 	interviewAssignmentDB *interviewassignment.InterviewAssignmentDB
 	recordingReviewDB     *RecordingReviewDB
 	reviewReleaseDB       *reviewrelease.ReviewReleaseDB
 }
 
 func (s *recordingReviewService) upsert(ctx context.Context, in *UpsertRecordingReviewInput) (*RecordingReviewsOutput, error) {
-	if err := utils.RequireReviewer(ctx); err != nil {
+	level, err := s.access.ApplicationLevelAtLeast(ctx, in.ID, access.Review)
+	if err != nil {
 		return nil, err
 	}
 	if in.Body.Rating != nil && !in.Body.Rating.Valid() {
@@ -25,7 +28,7 @@ func (s *recordingReviewService) upsert(ctx context.Context, in *UpsertRecording
 	}
 
 	actor := utils.CurrentActor(ctx)
-	if in.Body.Rating != nil && !actor.HasAnyRole(models.UserRoleChief, models.UserRoleAdmin) {
+	if in.Body.Rating != nil && level < access.Manage {
 		return nil, huma.Error403Forbidden("only a chief may override the interview rating")
 	}
 	assigned, err := s.interviewAssignmentDB.IsReviewer(ctx, in.ID, actor.NUID)
@@ -58,7 +61,8 @@ func (s *recordingReviewService) upsert(ctx context.Context, in *UpsertRecording
 }
 
 func (s *recordingReviewService) list(ctx context.Context, in *utils.ApplicationScopedInput) (*RecordingReviewsOutput, error) {
-	if err := utils.RequireReviewer(ctx); err != nil {
+	level, err := s.access.ApplicationLevelAtLeast(ctx, in.ID, access.Review)
+	if err != nil {
 		return nil, err
 	}
 	items, err := s.interviewAssignmentDB.ListReviewers(ctx, []string{in.ID})
@@ -67,7 +71,7 @@ func (s *recordingReviewService) list(ctx context.Context, in *utils.Application
 	}
 
 	actor := utils.CurrentActor(ctx)
-	if !actor.HasAnyRole(models.UserRoleChief, models.UserRoleAdmin) {
+	if level < access.Manage {
 		released, err := s.reviewReleaseDB.RecordingReviewsReleased(ctx, in.ID)
 		if err != nil {
 			return nil, utils.StoreErr(err)

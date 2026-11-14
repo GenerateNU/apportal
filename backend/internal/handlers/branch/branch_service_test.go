@@ -14,8 +14,8 @@ import (
 // touches the database.
 
 var (
-	lead  = middleware.Actor{NUID: "l1", Roles: []models.UserRole{models.UserRoleLead}}
-	chief = middleware.Actor{NUID: "c1", Roles: []models.UserRole{models.UserRoleChief}}
+	lead  = middleware.Actor{NUID: "l1", Roles: []models.UserRole{models.UserRoleApplicant}}
+	chief = middleware.Actor{NUID: "c1", Roles: []models.UserRole{models.UserRoleAdmin}}
 )
 
 func strPtr(s string) *string { return &s }

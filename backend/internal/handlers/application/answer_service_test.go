@@ -11,7 +11,6 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 
 	"github.com/GenerateNU/apportal/backend/internal/middleware"
-	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/testutil"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 )
@@ -55,7 +54,7 @@ func TestAnswersBulkRequiresReviewer(t *testing.T) {
 // are reachable without a database.
 func TestAnswersBulkParsesIDs(t *testing.T) {
 	s := &answerService{}
-	lead := middleware.Actor{NUID: "l1", Roles: []models.UserRole{models.UserRoleLead}}
+	lead := middleware.Actor{NUID: "l1"}
 
 	// Blank entries are dropped, and an empty list short-circuits to no rows
 	// rather than querying for none.
@@ -78,4 +77,9 @@ func TestAnswersBulkParsesIDs(t *testing.T) {
 	if !errors.As(err, &se) || se.GetStatus() != http.StatusUnprocessableEntity {
 		t.Fatalf("got %v, want 422", err)
 	}
+}
+
+func TestAnswersListRequiresActor(t *testing.T) {
+	_, err := (&answerService{}).list(context.Background(), &ListAnswersInput{ID: "app-1"})
+	testutil.WantStatus(t, err, http.StatusUnauthorized)
 }

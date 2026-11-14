@@ -7,10 +7,12 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/handlers/reviewrelease"
 	"github.com/danielgtaylor/huma/v2"
 	"gorm.io/gorm"
+
+	"github.com/GenerateNU/apportal/backend/internal/access"
 )
 
 func Route(api huma.API, db *gorm.DB) {
-	s := &recordingReviewService{
+	s := &recordingReviewService{access: access.NewChecker(db),
 		interviewAssignmentDB: interviewassignment.NewInterviewAssignmentDB(db),
 		recordingReviewDB:     NewRecordingReviewDB(db),
 		reviewReleaseDB:       reviewrelease.NewReviewReleaseDB(db),

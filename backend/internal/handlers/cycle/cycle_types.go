@@ -4,6 +4,8 @@ import (
 	"time"
 
 	"github.com/GenerateNU/apportal/backend/internal/models"
+
+	"gorm.io/gorm"
 )
 
 // CycleOutput wraps a single cycle response body.
@@ -74,6 +76,8 @@ type CycleUpdate struct {
 type CycleFilter struct {
 	Status   models.CycleStatus
 	BranchID string
+	// Listable limits to cycles the caller may list; nil means every cycle.
+	Listable *gorm.DB
 }
 
 type CycleStageCreate struct {

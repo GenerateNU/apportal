@@ -133,6 +133,9 @@ func applicationsFrom(db *gorm.DB, f ApplicationFilter, scope applicationFilterS
 	if f.CycleID != "" {
 		q = q.Where("a.cycle_id = ?", f.CycleID)
 	}
+	if f.VisibleCycles != nil {
+		q = q.Where("a.cycle_id IN (?)", f.VisibleCycles)
+	}
 	if f.UserNUID != "" {
 		q = q.Where("a.user_nuid = ?", f.UserNUID)
 	}

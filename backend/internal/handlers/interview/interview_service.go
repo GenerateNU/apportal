@@ -5,24 +5,27 @@ import (
 
 	"github.com/GenerateNU/apportal/backend/internal/handlers/application"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/interviewassignment"
-	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 	"github.com/danielgtaylor/huma/v2"
+
+	"github.com/GenerateNU/apportal/backend/internal/access"
 )
 
 type interviewService struct {
+	access                *access.Checker
 	applicationDB         *application.ApplicationDB
 	interviewDB           *InterviewDB
 	interviewAssignmentDB *interviewassignment.InterviewAssignmentDB
 }
 
 func (s *interviewService) listBulk(ctx context.Context, in *ListInterviewsBulkInput) (*InterviewsOutput, error) {
-	if err := utils.RequireReviewer(ctx); err != nil {
-		return nil, err
-	}
 	ids := utils.SplitIDs(in.ApplicationIDs)
 	if len(ids) > utils.MaxBulkApplications {
 		return nil, huma.Error422UnprocessableEntity("too many application_ids")
+	}
+	ids, err := s.access.VisibleApplicationIDs(ctx, ids, access.Review)
+	if err != nil {
+		return nil, err
 	}
 	items, err := s.interviewDB.ListInterviewDetails(ctx, ids)
 	if err != nil {
@@ -32,7 +35,8 @@ func (s *interviewService) listBulk(ctx context.Context, in *ListInterviewsBulkI
 }
 
 func (s *interviewService) upsert(ctx context.Context, in *UpsertInterviewInput) (*InterviewOutput, error) {
-	if err := utils.RequireReviewer(ctx); err != nil {
+	level, err := s.access.ApplicationLevelAtLeast(ctx, in.ID, access.Review)
+	if err != nil {
 		return nil, err
 	}
 	if in.Body.Rating != nil && !in.Body.Rating.Valid() {
@@ -44,7 +48,7 @@ func (s *interviewService) upsert(ctx context.Context, in *UpsertInterviewInput)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
-	if !assigned && !actor.HasAnyRole(models.UserRoleChief, models.UserRoleAdmin) {
+	if !assigned && level < access.Manage {
 		return nil, huma.Error403Forbidden("only an assigned interviewer may edit this interview")
 	}
 	if !assigned && (in.Body.Writeup != nil || in.Body.RecordingURL != nil || in.Body.NotesURL != nil || in.Body.Submit) {
@@ -85,7 +89,7 @@ func (s *interviewService) upsert(ctx context.Context, in *UpsertInterviewInput)
 }
 
 func (s *interviewService) get(ctx context.Context, in *utils.ApplicationScopedInput) (*InterviewOutput, error) {
-	if err := utils.RequireReviewer(ctx); err != nil {
+	if err := s.access.RequireApplication(ctx, in.ID, access.Review); err != nil {
 		return nil, err
 	}
 	iv, err := s.interviewDB.GetInterviewDetail(ctx, in.ID)
