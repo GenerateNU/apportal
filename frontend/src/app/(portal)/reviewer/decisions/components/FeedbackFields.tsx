@@ -37,7 +37,7 @@ export function FeedbackFields({
       />
       <p className="text-text-faint text-xs">
         {!canWrite
-          ? `Only ${row.interviewer_name ?? 'the assigned interviewer'} or a chief can write this.`
+          ? `Only ${row.interviewers.map((iv) => iv.name).join(', ') || 'the assigned interviewer'} or a chief can write this.`
           : saving
             ? 'Saving…'
             : 'Saved'}

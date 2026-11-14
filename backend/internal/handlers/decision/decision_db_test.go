@@ -55,7 +55,7 @@ func TestDecisionsFromFilters(t *testing.T) {
 				`a.cycle_id = $4`,
 				`a.application_role = $5`,
 				`END) = $6`,
-				`COALESCE(iv.interviewer_nuid, ia.interviewer_nuid) = $7`,
+				`$7 = ANY(ivs.nuids)`,
 				`(u.full_name ILIKE $8 ESCAPE '\'`,
 			},
 			wantArgs: withExcludedStages("c1", role, kind, "l1", "%dao%", "%dao%", "%dao%"),

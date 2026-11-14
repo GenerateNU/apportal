@@ -42,12 +42,11 @@ import type {
 } from '@/lib/api/types'
 import { useApplications } from '@/lib/queries/applications'
 import { pickDefaultCycleId, useCycles } from '@/lib/queries/cycles'
+import { useInterviewReviewersBulk } from '@/lib/queries/interview-assignments'
 import {
-  useInterviewAssignmentsBulk,
-  useRecordingReviewerAssignmentsBulk,
-} from '@/lib/queries/interview-assignments'
-import { useInterviewsByApplicationIdBatches } from '@/lib/queries/interviews'
-import { useRecordingReviewsByInterviewIds } from '@/lib/queries/recording-reviews'
+  interviewSubmitted,
+  useInterviewsByApplicationIds,
+} from '@/lib/queries/interviews'
 import {
   useReviewGates,
   useSetReviewRelease,
@@ -78,7 +77,7 @@ const INTERVIEW_STAGES: ApplicationStage[] = [
 type Row = {
   application: ApplicationSummary
   interview: Interview | null | undefined
-  interviewerNuid: string | null
+  interviewerNuids: string[]
   reviewerCount: number
   reviewedCount: number
 }
@@ -258,50 +257,28 @@ export function InterviewRatingsClient() {
   )
 
   // Everything below is fetched once for the whole roster, not once per row.
-  const [interviewBatch] = useInterviewsByApplicationIdBatches(
-    applicationIds.length > 0 ? [applicationIds] : []
-  )
-  const interviewByApplicationId = interviewBatch?.data
+  const { data: interviewByApplicationId } =
+    useInterviewsByApplicationIds(applicationIds)
 
-  const { data: assignmentByApplicationId } = useInterviewAssignmentsBulk(
+  const { data: reviewersByApplicationId } = useInterviewReviewersBulk(
     isChief ? applicationIds : []
   )
-  const { data: reviewerAssignmentsByApplicationId } =
-    useRecordingReviewerAssignmentsBulk(isChief ? applicationIds : [])
-
-  const interviewIds = useMemo(
-    () =>
-      applications
-        .map((a) => interviewByApplicationId?.[a.id]?.id)
-        .filter((id): id is string => !!id),
-    [applications, interviewByApplicationId]
-  )
-  const { data: recordingReviewsByInterviewId } =
-    useRecordingReviewsByInterviewIds(interviewIds)
 
   const rows: Row[] = useMemo(
     () =>
       applications
         .map((application) => {
           const interview = interviewByApplicationId?.[application.id]
-          const reviewerAssignments =
-            reviewerAssignmentsByApplicationId?.[application.id] ?? []
-          const reviews = interview?.id
-            ? (recordingReviewsByInterviewId?.[interview.id] ?? [])
-            : []
-          const reviewedNuids = new Set(
-            reviews.filter((r) => r.submitted_at).map((r) => r.reviewer_nuid)
-          )
+          const reviewers = reviewersByApplicationId?.[application.id] ?? []
           return {
             application,
             interview,
-            interviewerNuid:
-              assignmentByApplicationId?.[application.id]?.interviewer_nuid ??
-              null,
-            reviewerCount: reviewerAssignments.length,
-            reviewedCount: reviewerAssignments.filter((a) =>
-              reviewedNuids.has(a.lead_nuid)
-            ).length,
+            interviewerNuids: (interview?.interviewers ?? []).map(
+              (iv) => iv.interviewer_nuid
+            ),
+            reviewerCount: reviewers.length,
+            reviewedCount: reviewers.filter((r) => !!r.writeup_submitted_at)
+              .length,
           }
         })
         .filter(
@@ -309,13 +286,7 @@ export function InterviewRatingsClient() {
             !!interview ||
             INTERVIEW_STAGES.includes(application.stage as ApplicationStage)
         ),
-    [
-      applications,
-      interviewByApplicationId,
-      assignmentByApplicationId,
-      reviewerAssignmentsByApplicationId,
-      recordingReviewsByInterviewId,
-    ]
+    [applications, interviewByApplicationId, reviewersByApplicationId]
   )
 
   const byName = (a: Row, b: Row) =>
@@ -328,7 +299,7 @@ export function InterviewRatingsClient() {
   const availableInterviewers = useMemo(() => {
     const nuids = new Set<string>()
     for (const row of rows) {
-      if (row.interviewerNuid) nuids.add(row.interviewerNuid)
+      for (const nuid of row.interviewerNuids) nuids.add(nuid)
     }
     return [...nuids]
       .map((nuid) => ({ nuid, name: nameByNuid.get(nuid) ?? nuid }))
@@ -341,10 +312,10 @@ export function InterviewRatingsClient() {
     // Filter by interviewer
     if (interviewerFilter !== 'all') {
       if (interviewerFilter === 'unassigned') {
-        filtered = filtered.filter((r) => !r.interviewerNuid)
+        filtered = filtered.filter((r) => r.interviewerNuids.length === 0)
       } else {
-        filtered = filtered.filter(
-          (r) => r.interviewerNuid === interviewerFilter
+        filtered = filtered.filter((r) =>
+          r.interviewerNuids.includes(interviewerFilter)
         )
       }
     }
@@ -399,10 +370,13 @@ export function InterviewRatingsClient() {
   const swimlanes = useMemo(() => {
     const byInterviewer = new Map<string, Row[]>()
     for (const row of filteredRows) {
-      const key = row.interviewerNuid ?? 'unassigned'
-      const list = byInterviewer.get(key) ?? []
-      list.push(row)
-      byInterviewer.set(key, list)
+      const keys =
+        row.interviewerNuids.length > 0 ? row.interviewerNuids : ['unassigned']
+      for (const key of keys) {
+        const list = byInterviewer.get(key) ?? []
+        list.push(row)
+        byInterviewer.set(key, list)
+      }
     }
     const lanes = [...byInterviewer.entries()].map(([nuid, laneRows]) => {
       const byRating = emptyRatingBuckets()
@@ -771,7 +745,7 @@ function RatingColumn({
           ({
             application,
             interview,
-            interviewerNuid,
+            interviewerNuids,
             reviewerCount,
             reviewedCount,
           }) => (
@@ -780,9 +754,9 @@ function RatingColumn({
               application={application}
               interview={interview}
               interviewerName={
-                interviewerNuid
-                  ? (nameByNuid.get(interviewerNuid) ?? interviewerNuid)
-                  : null
+                interviewerNuids
+                  .map((nuid) => nameByNuid.get(nuid) ?? nuid)
+                  .join(', ') || null
               }
               reviewerCount={reviewerCount}
               reviewedCount={reviewedCount}
@@ -813,9 +787,9 @@ function RatingCard({
   showInterviewer: boolean
   showRole: boolean
 }) {
-  const state: ReviewState = interview?.submitted_at
+  const state: ReviewState = interviewSubmitted(interview)
     ? 'submitted'
-    : interview
+    : interview?.writeup
       ? 'draft'
       : 'none'
 

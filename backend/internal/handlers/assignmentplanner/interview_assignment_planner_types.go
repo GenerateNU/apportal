@@ -88,7 +88,7 @@ type InterviewerPreviewInput struct {
 
 type interviewerRun struct {
 	plan   interviewassign.InterviewerPlan
-	prior  map[string]string
+	prior  map[string][]string
 	byID   map[string]models.ApplicationSummary
 	appIDs []string
 }

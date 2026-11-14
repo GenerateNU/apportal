@@ -38,12 +38,9 @@ import {
   useUpdateInterviewComment,
 } from '@/lib/queries/interview-comments'
 import {
-  useInterviewAssignment,
-  useRecordingReviewerAssignments,
-} from '@/lib/queries/interview-assignments'
-import {
+  interviewSubmitted,
   useInterview,
-  useInterviewsByApplicationIdBatches,
+  useInterviewsByApplicationIds,
   useUpsertInterview,
 } from '@/lib/queries/interviews'
 import { useQuestions } from '@/lib/queries/questions'
@@ -115,34 +112,34 @@ export function InterviewConductClient({
   const otherWrittenReviews = writtenReviews.filter(
     (r) => r.reviewer_nuid !== currentUser?.nuid
   )
-  const { data: assignment } = useInterviewAssignment(applicationId)
-  const { data: reviewerAssignments = [] } =
-    useRecordingReviewerAssignments(applicationId)
   const nameByNuid = useReviewerNames()
   const nameFor = useCallback(
     (nuid: string) => nameByNuid.get(nuid) ?? nuid,
     [nameByNuid]
   )
-  const interviewerName = assignment?.interviewer_nuid
-    ? nameFor(assignment.interviewer_nuid)
-    : null
   const { data: interview } = useInterview(applicationId)
+  const interviewers = interview?.interviewers ?? []
+  const interviewerNames = interviewers
+    .map((iv) => iv.interviewer_name ?? nameFor(iv.interviewer_nuid))
+    .join(', ')
   const upsertInterview = useUpsertInterview()
   const { data: recordingReviews = [] } = useRecordingReviews(
-    interview?.id ?? ''
+    interview ? applicationId : ''
   )
   const upsertRecordingReview = useUpsertRecordingReview()
 
+  const isInterviewer = interviewers.some(
+    (iv) => iv.interviewer_nuid === currentUser?.nuid
+  )
   const isChief = !!currentUser?.roles.some(
     (r) => r === 'chief' || r === 'admin'
   )
-  const isAssignedInterviewer =
-    !!currentUser && assignment?.interviewer_nuid === currentUser.nuid
-  const canEditInterview = isChief || isAssignedInterviewer
-  const isAssignedReviewer =
+  const writeupSubmitted = !!interview?.submitted_at
+  const canEditInterview = !!interview && (isInterviewer || isChief)
+  const canReview =
     !!currentUser &&
-    reviewerAssignments.some((a) => a.lead_nuid === currentUser.nuid)
-  const canReview = isChief || isAssignedReviewer
+    recordingReviews.some((r) => r.reviewer_nuid === currentUser.nuid)
+  const writeupDone = interviewSubmitted(interview)
 
   // The rest of my interview queue, so a "next" button can jump to the next
   // assigned applicant who still needs to be interviewed — same ordering
@@ -160,10 +157,8 @@ export function InterviewConductClient({
     [assignedApplications]
   )
   const queueIds = useMemo(() => orderedQueue.map((a) => a.id), [orderedQueue])
-  const [queueInterviewBatch] = useInterviewsByApplicationIdBatches(
-    queueIds.length > 0 ? [queueIds] : []
-  )
-  const interviewByApplicationId = queueInterviewBatch?.data
+  const { data: interviewByApplicationId } =
+    useInterviewsByApplicationIds(queueIds)
   const needsInterviewAt = useMemo(
     () => (i: number) =>
       !interviewByApplicationId?.[orderedQueue[i].id]?.submitted_at,
@@ -197,32 +192,32 @@ export function InterviewConductClient({
   const [comments, setComments] = useState('')
   const [rating, setRating] = useState<InterviewRating | ''>('')
   const [seeded, setSeeded] = useState(false)
-  const [savedInterview, setSavedInterview] = useState(false)
-
   if (!seeded && interview) {
     setRecordingUrl(interview.recording_url ?? '')
     setNotesUrl(interview.notes_url ?? '')
-    setComments(interview.comments ?? '')
+    setComments(interview.writeup ?? '')
     setRating(interview.rating ?? '')
     setSeeded(true)
   }
+  const [savedInterview, setSavedInterview] = useState(false)
 
-  const interviewSubmitted = !!interview?.submitted_at
   const missingInterviewRequired = !comments.trim() || !rating
 
   async function saveInterview(submit: boolean) {
     setSavedInterview(false)
-    await upsertInterview.mutateAsync({
-      applicationId,
-      body: {
-        recording_url: recordingUrl || undefined,
-        notes_url: notesUrl || undefined,
-        comments: comments || undefined,
-        rating: rating || undefined,
-        submit,
-      },
-    })
-    setSavedInterview(true)
+    try {
+      await upsertInterview.mutateAsync({
+        applicationId,
+        body: {
+          recording_url: isInterviewer ? recordingUrl || undefined : undefined,
+          notes_url: isInterviewer ? notesUrl || undefined : undefined,
+          writeup: isInterviewer ? comments : undefined,
+          rating: rating || undefined,
+          submit,
+        },
+      })
+      setSavedInterview(true)
+    } catch {}
   }
 
   const ownReview = recordingReviews.find(
@@ -233,20 +228,28 @@ export function InterviewConductClient({
   )
 
   const [reviewComment, setReviewComment] = useState('')
+  const [reviewRating, setReviewRating] = useState<InterviewRating | ''>('')
   const [reviewSeeded, setReviewSeeded] = useState(false)
   const [savedReview, setSavedReview] = useState(false)
-  if (!reviewSeeded && ownReview) {
-    setReviewComment(ownReview.comments ?? '')
+  if (!reviewSeeded && ownReview && interview) {
+    setReviewComment(ownReview.writeup ?? '')
+    setReviewRating(interview.rating ?? '')
     setReviewSeeded(true)
   }
-  const reviewSubmitted = !!ownReview?.submitted_at
+  const reviewSubmitted = !!ownReview?.writeup_submitted_at
 
   async function saveReview(submit: boolean) {
-    if (!interview) return
     setSavedReview(false)
     await upsertRecordingReview.mutateAsync({
-      interviewId: interview.id,
-      body: { comments: reviewComment || undefined, submit },
+      applicationId,
+      body: {
+        writeup: reviewComment || undefined,
+        rating:
+          isChief && reviewRating && reviewRating !== interview?.rating
+            ? reviewRating
+            : undefined,
+        submit,
+      },
     })
     setSavedReview(true)
   }
@@ -311,9 +314,10 @@ export function InterviewConductClient({
                 {RATING_LABEL[interview.rating]}
               </span>
             )}
-            {interviewerName && (
+            {interviewerNames && (
               <span className="text-text-subtle text-sm">
-                Interviewer: {interviewerName}
+                {interviewers.length === 1 ? 'Interviewer' : 'Interviewers'}:{' '}
+                {interviewerNames}
               </span>
             )}
           </div>
@@ -333,7 +337,7 @@ export function InterviewConductClient({
             <ArrowDown data-icon="inline-start" size={14} />
             Write-up
           </Button>
-          {interviewSubmitted && (
+          {writeupDone && (
             <span
               className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium ${REVIEW_STATE_BADGE.submitted}`}
             >
@@ -475,11 +479,26 @@ export function InterviewConductClient({
               Interview
             </h2>
 
-            {interviewSubmitted && (
+            {upsertInterview.isError && (
+              <p className="text-destructive text-sm">
+                Couldn&apos;t save the interview. Try again.
+              </p>
+            )}
+
+            {interviewerNames && (
+              <p className="text-text-muted text-sm">
+                Interviewers: {interviewerNames}
+              </p>
+            )}
+
+            {writeupSubmitted && (
               <div className="border-border bg-muted/40 text-text-muted flex items-center gap-2 rounded-lg border px-4 py-3 text-sm">
-                <Lock size={14} />
-                You&apos;ve submitted this interview. You can still make changes
-                below.
+                <CheckCircle2 size={14} />
+                Submitted
+                {interview?.submitted_at
+                  ? ` on ${new Date(interview.submitted_at).toLocaleDateString()}`
+                  : ''}
+                . You can still make changes below.
               </div>
             )}
 
@@ -490,15 +509,14 @@ export function InterviewConductClient({
             )}
             {!canEditInterview && !!interview && (
               <p className="text-text-faint text-sm">
-                You&apos;re not the assigned interviewer — showing their
-                write-up for context.
+                You&apos;re not an assigned interviewer, so this is read-only.
               </p>
             )}
 
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-1.5">
                 <Label>Recording link</Label>
-                {canEditInterview ? (
+                {isInterviewer ? (
                   <div className="flex items-center gap-2">
                     <Input
                       value={recordingUrl}
@@ -535,7 +553,7 @@ export function InterviewConductClient({
 
               <div className="flex flex-col gap-1.5">
                 <Label>Notes link (e.g. Granola)</Label>
-                {canEditInterview ? (
+                {isInterviewer ? (
                   <div className="flex items-center gap-2">
                     <Input
                       value={notesUrl}
@@ -571,8 +589,8 @@ export function InterviewConductClient({
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <Label>Comments</Label>
-                {canEditInterview ? (
+                <Label>Write-up</Label>
+                {isInterviewer ? (
                   <textarea
                     className={TEXTAREA_CLASS}
                     value={comments}
@@ -582,7 +600,7 @@ export function InterviewConductClient({
                   />
                 ) : (
                   <p className="text-text-default text-sm whitespace-pre-wrap">
-                    {interview?.comments || (
+                    {interview?.writeup || (
                       <span className="text-text-faint">Not added yet.</span>
                     )}
                   </p>
@@ -629,49 +647,37 @@ export function InterviewConductClient({
                     Saved
                   </span>
                 )}
-                {interviewSubmitted ? (
+                {!writeupSubmitted && isInterviewer && (
                   <Button
-                    onClick={() => saveInterview(true)}
+                    variant="outline"
+                    onClick={() => saveInterview(false)}
                     disabled={upsertInterview.isPending}
                     className="w-full sm:w-auto"
                   >
-                    {upsertInterview.isPending ? (
-                      <>
-                        <Loader2 className="animate-spin" size={14} />
-                        Saving…
-                      </>
-                    ) : (
-                      'Save changes'
-                    )}
+                    Save draft
                   </Button>
-                ) : (
-                  <>
-                    <Button
-                      variant="outline"
-                      onClick={() => saveInterview(false)}
-                      disabled={upsertInterview.isPending}
-                      className="w-full sm:w-auto"
-                    >
-                      Save draft
-                    </Button>
-                    <Button
-                      onClick={() => saveInterview(true)}
-                      disabled={
-                        upsertInterview.isPending || missingInterviewRequired
-                      }
-                      className="w-full sm:w-auto"
-                    >
-                      {upsertInterview.isPending ? (
-                        <>
-                          <Loader2 className="animate-spin" size={14} />
-                          Saving…
-                        </>
-                      ) : (
-                        'Submit interview'
-                      )}
-                    </Button>
-                  </>
                 )}
+                <Button
+                  onClick={() =>
+                    saveInterview(!writeupSubmitted && isInterviewer)
+                  }
+                  disabled={
+                    upsertInterview.isPending ||
+                    (isInterviewer && missingInterviewRequired)
+                  }
+                  className="w-full sm:w-auto"
+                >
+                  {upsertInterview.isPending ? (
+                    <>
+                      <Loader2 className="animate-spin" size={14} />
+                      Saving…
+                    </>
+                  ) : writeupSubmitted || !isInterviewer ? (
+                    'Save changes'
+                  ) : (
+                    'Submit write-up'
+                  )}
+                </Button>
               </div>
             )}
           </div>
@@ -682,9 +688,9 @@ export function InterviewConductClient({
               Recording reviews
             </h2>
 
-            {!interviewSubmitted ? (
+            {!writeupDone ? (
               <p className="text-text-faint text-sm">
-                Waiting for the interviewer to submit their write-up before
+                Waiting for the interview write-up to be submitted before
                 reviews can start.
               </p>
             ) : (
@@ -708,6 +714,28 @@ export function InterviewConductClient({
                         disabled={upsertRecordingReview.isPending}
                       />
                     </div>
+                    {isChief && (
+                      <div className="flex flex-col gap-1.5">
+                        <Label>Rating</Label>
+                        <Select
+                          value={reviewRating}
+                          onValueChange={(v) =>
+                            setReviewRating(v as InterviewRating)
+                          }
+                        >
+                          <SelectTrigger aria-label="Rating">
+                            <SelectValue placeholder="Choose a rating" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {RATING_OPTIONS.map((o) => (
+                              <SelectItem key={o.value} value={o.value}>
+                                {o.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                     <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-end">
                       {savedReview && !upsertRecordingReview.isPending && (
                         <span
@@ -780,9 +808,11 @@ export function InterviewConductClient({
                             {nameFor(r.reviewer_nuid)}
                           </span>
                           <p className="text-text-default mt-2 text-sm break-words whitespace-pre-wrap">
-                            {r.comments ?? (
+                            {r.writeup ?? (
                               <span className="text-text-faint">
-                                Hidden until released.
+                                {r.writeup_submitted_at
+                                  ? 'Hidden until released.'
+                                  : 'Not written yet.'}
                               </span>
                             )}
                           </p>

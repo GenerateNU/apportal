@@ -134,7 +134,7 @@ func TestPlanInterviewersSkipsExistingAndCountsLoad(t *testing.T) {
 			{ApplicationID: "app2", AvailableDays: map[string]bool{"monday": true}},
 		},
 		Leads:    []Lead{{NUID: "a", Day: "monday"}, {NUID: "b", Day: "monday"}},
-		Existing: map[string]string{"app1": "a"},
+		Existing: map[string][]string{"app1": {"a"}},
 		Cap:      1,
 		Seed:     SeedFrom("t"),
 	}
@@ -197,7 +197,7 @@ func TestPlanReviewersCoverageAndDayMatch(t *testing.T) {
 	in := ReviewerInput{
 		Applicants:  []Applicant{{ApplicationID: "app1", AvailableDays: map[string]bool{"monday": true}}},
 		Leads:       []Lead{{NUID: "mon1", Day: "monday"}, {NUID: "mon2", Day: "monday"}, {NUID: "tue", Day: "tuesday"}},
-		Interviewer: map[string]string{},
+		Interviewer: map[string][]string{},
 		Cap:         10,
 		Coverage:    2,
 		Seed:        SeedFrom("t"),
@@ -226,7 +226,7 @@ func TestPlanReviewersNeverAssignsTheInterviewerToTheirOwnApp(t *testing.T) {
 	in := ReviewerInput{
 		Applicants:  []Applicant{{ApplicationID: "app1", AvailableDays: map[string]bool{"monday": true}}},
 		Leads:       []Lead{{NUID: "interviewer", Day: "monday"}},
-		Interviewer: map[string]string{"app1": "interviewer"},
+		Interviewer: map[string][]string{"app1": {"interviewer"}},
 		Cap:         10,
 		Coverage:    1,
 		Seed:        SeedFrom("t"),
@@ -251,7 +251,7 @@ func TestPlanReviewersAvoidsInterviewersDay(t *testing.T) {
 	in := ReviewerInput{
 		Applicants:  []Applicant{{ApplicationID: "app1", AvailableDays: map[string]bool{"monday": true}}},
 		Leads:       []Lead{{NUID: "interviewer", Day: "monday"}, {NUID: "teammate", Day: "monday"}, {NUID: "other", Day: "tuesday"}},
-		Interviewer: map[string]string{"app1": "interviewer"},
+		Interviewer: map[string][]string{"app1": {"interviewer"}},
 		Cap:         10,
 		Coverage:    1,
 		Seed:        SeedFrom("t"),
@@ -276,7 +276,7 @@ func TestPlanReviewersSameDayTieBreak(t *testing.T) {
 	in := ReviewerInput{
 		Applicants:  []Applicant{{ApplicationID: "app1", AvailableDays: map[string]bool{"monday": true, "tuesday": true}}},
 		Leads:       []Lead{{NUID: "teammate", Day: "monday"}, {NUID: "other", Day: "tuesday"}},
-		Interviewer: map[string]string{"app1": "interviewer-not-in-roster"},
+		Interviewer: map[string][]string{"app1": {"interviewer-not-in-roster"}},
 		Cap:         10,
 		Coverage:    1,
 		Seed:        SeedFrom("t"),

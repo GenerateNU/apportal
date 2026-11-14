@@ -74,11 +74,8 @@ export function ApplicantOverview({
   const { data: writtenReviews = [] } = useWrittenReviews(applicationId)
 
   const { data: interview } = useInterview(applicationId)
-  // Recording reviews have the same kind of release gate — a row can exist
-  // with `comments: null` ("Hidden until released") rather than being
-  // omitted outright.
   const { data: recordingReviews = [] } = useRecordingReviews(
-    interview?.id ?? ''
+    interview ? applicationId : ''
   )
   const { data: comments = [] } = useInterviewComments(applicationId)
 
@@ -145,18 +142,21 @@ export function ApplicantOverview({
               ) : (
                 <span className="text-text-faint text-xs">Not rated yet</span>
               )}
-              <span className="text-text-muted">
-                Interviewed by{' '}
-                <span className="text-text-default font-medium">
-                  {nameByNuid.get(interview.interviewer_nuid) ??
-                    interview.interviewer_nuid}
+              {interview.interviewers.length > 0 && (
+                <span className="text-text-muted">
+                  Interviewed by{' '}
+                  <span className="text-text-default font-medium">
+                    {interview.interviewers
+                      .map(
+                        (iv) =>
+                          iv.interviewer_name ??
+                          nameByNuid.get(iv.interviewer_nuid) ??
+                          iv.interviewer_nuid
+                      )
+                      .join(', ')}
+                  </span>
                 </span>
-              </span>
-              <span className="text-text-faint text-xs">
-                {interview.submitted_at
-                  ? `· Submitted ${formatDate(interview.submitted_at)}`
-                  : '· Write-up not submitted'}
-              </span>
+              )}
             </div>
 
             {/* Spelled out as labelled rows with the URL visible: which share
@@ -198,9 +198,24 @@ export function ApplicantOverview({
             </dl>
 
             <div>
-              <p className="text-text-muted text-xs font-medium">Write-up</p>
+              <p className="text-text-muted text-xs font-medium">
+                Write-up ·{' '}
+                {interview.interviewers
+                  .map(
+                    (iv) =>
+                      iv.interviewer_name ??
+                      nameByNuid.get(iv.interviewer_nuid) ??
+                      iv.interviewer_nuid
+                  )
+                  .join(', ') || 'No interviewers'}
+                <span className="text-text-faint font-normal">
+                  {interview.submitted_at
+                    ? ` · Submitted ${formatDate(interview.submitted_at)}`
+                    : ' · Not submitted'}
+                </span>
+              </p>
               <p className="text-text-default mt-1 whitespace-pre-wrap">
-                {interview.comments || (
+                {interview.writeup || (
                   <span className="text-text-faint">No write-up yet.</span>
                 )}
               </p>
@@ -220,9 +235,11 @@ export function ApplicantOverview({
                         {nameByNuid.get(r.reviewer_nuid) ?? r.reviewer_nuid}
                       </span>
                       <p className="text-text-default mt-2 whitespace-pre-wrap">
-                        {r.comments ?? (
+                        {r.writeup ?? (
                           <span className="text-text-faint">
-                            Hidden until released.
+                            {r.writeup_submitted_at
+                              ? 'Hidden until released.'
+                              : 'Not written yet.'}
                           </span>
                         )}
                       </p>

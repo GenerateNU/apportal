@@ -27,8 +27,8 @@ import type {
 import type {
   CreateInterviewCommentInputBody,
   ErrorModel,
-  Interview,
   InterviewCommentDetail,
+  InterviewDetail,
   ListInterviewComments200,
   ListInterviewsBulk200,
   ListInterviewsBulkParams,
@@ -79,7 +79,7 @@ export const getInterview = (
 ) => {
       
       
-      return customInstance<Interview>(
+      return customInstance<InterviewDetail>(
       {url: `/applications/${id}/interview`, method: 'GET', signal
     },
       options);
@@ -162,8 +162,8 @@ export function useGetInterview<TData = Awaited<ReturnType<typeof getInterview>>
 
 
 /**
- * Reviewer only (the interviewer). Provided fields overwrite; omitted ones are preserved.
- * @summary Create or update the interview write-up
+ * Assigned interviewers only. Updates the shared interview fields and your own write-up; omitted fields are preserved.
+ * @summary Update the interview and your write-up
  */
 export const upsertInterview = (
     id: string,
@@ -171,7 +171,7 @@ export const upsertInterview = (
  options?: SecondParameter<typeof customInstance>,) => {
       
       
-      return customInstance<Interview>(
+      return customInstance<InterviewDetail>(
       {url: `/applications/${id}/interview`, method: 'PUT',
       headers: {'Content-Type': 'application/json', },
       data: upsertInterviewInputBody
@@ -181,7 +181,7 @@ export const upsertInterview = (
   
 
 
-export const getUpsertInterviewMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel,
+export const getUpsertInterviewMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upsertInterview>>, TError,{id: string;data: NonReadonly<UpsertInterviewInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
 ): UseMutationOptions<Awaited<ReturnType<typeof upsertInterview>>, TError,{id: string;data: NonReadonly<UpsertInterviewInputBody>}, TContext> => {
 
@@ -208,12 +208,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type UpsertInterviewMutationResult = NonNullable<Awaited<ReturnType<typeof upsertInterview>>>
     export type UpsertInterviewMutationBody = NonReadonly<UpsertInterviewInputBody>
-    export type UpsertInterviewMutationError = ErrorModel | ErrorModel | ErrorModel
+    export type UpsertInterviewMutationError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel
 
     /**
- * @summary Create or update the interview write-up
+ * @summary Update the interview and your write-up
  */
-export const useUpsertInterview = <TError = ErrorModel | ErrorModel | ErrorModel,
+export const useUpsertInterview = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upsertInterview>>, TError,{id: string;data: NonReadonly<UpsertInterviewInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof upsertInterview>>,

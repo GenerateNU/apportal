@@ -43,23 +43,30 @@ export function DecisionContextPanel({
       )}
 
       {interview && (
-        <Section title="Interview write-up">
+        <Section title="Interview">
+          <div className="flex flex-wrap items-center gap-2">
+            <RatingChip rating={interview.rating} />
+            {interview.recording_url && (
+              <LinkOut href={interview.recording_url} label="Recording" />
+            )}
+            {interview.notes_url && (
+              <LinkOut href={interview.notes_url} label="Notes" />
+            )}
+          </div>
           <div className="rounded-lg border border-gray-200 bg-white p-3">
-            <div className="mb-1.5 flex flex-wrap items-center gap-2">
-              <RatingChip rating={interview.rating} />
+            <div className="mb-1.5 flex items-center gap-2">
+              <span className="text-text-default text-sm font-medium">
+                {interview.interviewers
+                  .map((iv) => iv.interviewer_name || iv.interviewer_nuid)
+                  .join(', ')}
+              </span>
               {!interview.submitted_at && (
                 <span className="text-text-faint text-xs">
                   Draft — not submitted
                 </span>
               )}
-              {interview.recording_url && (
-                <LinkOut href={interview.recording_url} label="Recording" />
-              )}
-              {interview.notes_url && (
-                <LinkOut href={interview.notes_url} label="Notes" />
-              )}
             </div>
-            <Body text={interview.comments} empty="No comments written." />
+            <Body text={interview.writeup} empty="No write-up yet." />
           </div>
         </Section>
       )}
@@ -75,10 +82,12 @@ export function DecisionContextPanel({
                 <span className="text-text-default text-sm font-medium">
                   {r.reviewer_name || r.reviewer_nuid}
                 </span>
-                <RatingChip rating={r.rating} />
+                {!r.writeup_submitted_at && (
+                  <span className="text-text-faint text-xs">Draft</span>
+                )}
               </div>
               <Body
-                text={r.comments}
+                text={r.writeup}
                 empty={
                   context.recording_reviews_blind
                     ? 'Comments withheld until reviews are released.'

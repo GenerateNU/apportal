@@ -24,10 +24,10 @@ func registerInterview(api huma.API, s *interviewService) {
 		OperationID: "upsert-interview",
 		Method:      http.MethodPut,
 		Path:        "/applications/{id}/interview",
-		Summary:     "Create or update the interview write-up",
-		Description: "Reviewer only (the interviewer). Provided fields overwrite; omitted ones are preserved.",
+		Summary:     "Update the interview and your write-up",
+		Description: "Assigned interviewers only. Updates the shared interview fields and your own write-up; omitted fields are preserved.",
 		Tags:        []string{"Interviews"},
-		Errors:      []int{http.StatusUnauthorized, http.StatusUnprocessableEntity},
+		Errors:      []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound, http.StatusUnprocessableEntity},
 	}, s.upsert)
 
 	huma.Register(api, huma.Operation{

@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/GenerateNU/apportal/backend/internal/handlers/interview"
-	"github.com/GenerateNU/apportal/backend/internal/handlers/recordingreview"
+	"github.com/GenerateNU/apportal/backend/internal/handlers/interviewassignment"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/reviewrelease"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/writtenreview"
 	"github.com/danielgtaylor/huma/v2"
@@ -14,10 +14,10 @@ import (
 func Route(api huma.API, db *gorm.DB) {
 	decisionDB := NewDecisionDB(db)
 	interviewDB := interview.NewInterviewDB(db)
-	recordingReviewDB := recordingreview.NewRecordingReviewDB(db)
+	interviewAssignmentDB := interviewassignment.NewInterviewAssignmentDB(db)
 	reviewReleaseDB := reviewrelease.NewReviewReleaseDB(db)
 	writtenReviewDB := writtenreview.NewWrittenReviewDB(db)
-	s := &decisionService{decisionDB: decisionDB, interviewDB: interviewDB, recordingReviewDB: recordingReviewDB, reviewReleaseDB: reviewReleaseDB, writtenReviewDB: writtenReviewDB}
+	s := &decisionService{decisionDB: decisionDB, interviewDB: interviewDB, interviewAssignmentDB: interviewAssignmentDB, reviewReleaseDB: reviewReleaseDB, writtenReviewDB: writtenReviewDB}
 
 	huma.Register(api, huma.Operation{
 		OperationID: "list-decision-templates",

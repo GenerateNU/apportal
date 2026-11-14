@@ -10,8 +10,9 @@ import type { UpsertRecordingReviewInputBodyRating } from './upsertRecordingRevi
 export interface UpsertRecordingReviewInputBody {
   /** A URL to the JSON Schema for this object. */
   readonly $schema?: string;
-  comments?: string;
+  /** Sets the interview's shared rating */
   rating?: UpsertRecordingReviewInputBodyRating;
-  /** When true, marks the review as submitted */
+  /** When true, submits your review */
   submit?: boolean;
+  writeup?: string;
 }

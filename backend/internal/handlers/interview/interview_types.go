@@ -8,17 +8,14 @@ import (
 )
 
 type InterviewOutput struct {
-	Body models.Interview
+	Body models.InterviewDetail
 }
 
 type InterviewsOutput struct {
-	Body []models.Interview
+	Body []models.InterviewDetail
 }
 
 type ListInterviewsBulkInput struct {
-	// Comma-separated rather than a repeated/array param because huma splits
-	// this form itself, while the browser client serializes arrays as
-	// `application_ids[]=…`, which binds to nothing server-side.
 	ApplicationIDs string `query:"application_ids" doc:"Comma-separated application IDs"`
 }
 
@@ -29,14 +26,12 @@ type UpsertInterviewInput struct {
 		ConductedAt  *time.Time              `json:"conducted_at,omitempty"`
 		RecordingURL *string                 `json:"recording_url,omitempty"`
 		NotesURL     *string                 `json:"notes_url,omitempty"`
-		Comments     *string                 `json:"comments,omitempty"`
 		Rating       *models.InterviewRating `json:"rating,omitempty"`
-		Submit       bool                    `json:"submit,omitempty" doc:"When true, marks the interview as submitted"`
+		Writeup      *string                 `json:"writeup,omitempty"`
+		Submit       bool                    `json:"submit,omitempty" doc:"When true, submits your write-up"`
 	}
 }
 
-// InterviewUpsert carries the interviewer's write-up. Nil fields keep their
-// stored value; Submit stamps submitted_at.
 type InterviewUpsert struct {
 	ApplicationID   string
 	InterviewerNUID string
@@ -44,8 +39,8 @@ type InterviewUpsert struct {
 	ConductedAt     *time.Time
 	RecordingURL    *string
 	NotesURL        *string
-	Comments        *string
 	Rating          *models.InterviewRating
+	Writeup         *string
 	Submit          bool
 }
 

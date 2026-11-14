@@ -5,11 +5,10 @@
  * Generate application portal — applications, reviews, and the hiring pipeline.
  * OpenAPI spec version: 0.1.0
  */
-import type { UnassignAllRecordingReviewersRole } from './unassignAllRecordingReviewersRole';
 
-export type UnassignAllRecordingReviewersParams = {
+export type ListInterviewReviewersBulkParams = {
 /**
- * Applicant role
+ * Comma-separated application IDs
  */
-role?: UnassignAllRecordingReviewersRole;
+application_ids?: string;
 };

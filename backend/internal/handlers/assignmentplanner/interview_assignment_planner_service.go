@@ -120,7 +120,7 @@ func (s *interviewAssignmentPlannerService) buildInterviewerPlan(ctx context.Con
 	}
 	pool = excludeApplications(pool, in.Body.ExcludedApplicationIDs)
 
-	existingRows, err := s.interviewAssignmentDB.ListInterviewAssignmentsForCycle(ctx, in.ID, in.Body.Role)
+	existingRows, err := s.interviewAssignmentDB.ListInterviewersForCycle(ctx, in.ID, in.Body.Role)
 	if err != nil {
 		return interviewerRun{}, utils.StoreErr(err)
 	}
@@ -136,10 +136,10 @@ func (s *interviewAssignmentPlannerService) buildInterviewerPlan(ctx context.Con
 
 	// Only existing assignments against applications still in the pool
 	// matter; anything past the interview stage is settled.
-	existing := make(map[string]string, len(existingRows))
+	existing := make(map[string][]string, len(existingRows))
 	for _, e := range existingRows {
 		if _, inPool := byID[e.ApplicationID]; inPool {
-			existing[e.ApplicationID] = e.InterviewerNUID
+			existing[e.ApplicationID] = append(existing[e.ApplicationID], e.InterviewerNUID)
 		}
 	}
 
@@ -189,11 +189,11 @@ func (s *interviewAssignmentPlannerService) interviewerCommit(ctx context.Contex
 		return nil, err
 	}
 
-	pairs := make([]interviewassignment.InterviewAssignmentPair, len(run.plan.New))
+	pairs := make([]interviewassignment.AssignmentPair, len(run.plan.New))
 	for i, p := range run.plan.New {
-		pairs[i] = interviewassignment.InterviewAssignmentPair{ApplicationID: p.ApplicationID, LeadNUID: p.LeadNUID}
+		pairs[i] = interviewassignment.AssignmentPair{ApplicationID: p.ApplicationID, LeadNUID: p.LeadNUID}
 	}
-	created, err := s.interviewAssignmentDB.CreateInterviewAssignments(ctx, pairs, utils.CurrentActor(ctx).NUID)
+	created, err := s.interviewAssignmentDB.CreateInterviewers(ctx, pairs, utils.CurrentActor(ctx).NUID)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
@@ -234,8 +234,10 @@ func (s *interviewAssignmentPlannerService) decorateInterviewerPlan(ctx context.
 			AlreadyAssigned: already,
 		})
 	}
-	for appID, nuid := range run.prior {
-		add(nuid, appID, true)
+	for appID, nuids := range run.prior {
+		for _, nuid := range nuids {
+			add(nuid, appID, true)
+		}
 	}
 	for _, p := range run.plan.New {
 		add(p.LeadNUID, p.ApplicationID, false)
@@ -304,20 +306,18 @@ func (s *interviewAssignmentPlannerService) reviewerPool(ctx context.Context, in
 	return out, nil
 }
 
-// reviewablePool is the interview-stage applications that already have an
-// interviewer assigned, alongside that interviewer's NUID per application.
-func (s *interviewAssignmentPlannerService) reviewablePool(ctx context.Context, cycleID string, role models.Role) ([]models.ApplicationSummary, map[string]string, error) {
+func (s *interviewAssignmentPlannerService) reviewablePool(ctx context.Context, cycleID string, role models.Role) ([]models.ApplicationSummary, map[string][]string, error) {
 	pool, err := s.interviewPool(ctx, cycleID, role)
 	if err != nil {
 		return nil, nil, err
 	}
-	assignments, err := s.interviewAssignmentDB.ListInterviewAssignmentsForCycle(ctx, cycleID, role)
+	assignments, err := s.interviewAssignmentDB.ListInterviewersForCycle(ctx, cycleID, role)
 	if err != nil {
 		return nil, nil, err
 	}
-	interviewerOf := make(map[string]string, len(assignments))
+	interviewerOf := make(map[string][]string, len(assignments))
 	for _, a := range assignments {
-		interviewerOf[a.ApplicationID] = a.InterviewerNUID
+		interviewerOf[a.ApplicationID] = append(interviewerOf[a.ApplicationID], a.InterviewerNUID)
 	}
 
 	out := make([]models.ApplicationSummary, 0, len(pool))
@@ -371,24 +371,24 @@ func (s *interviewAssignmentPlannerService) buildReviewerPlan(ctx context.Contex
 	appIDs := make([]string, len(pool))
 	byID := make(map[string]models.ApplicationSummary, len(pool))
 	applicants := make([]interviewassign.Applicant, len(pool))
-	interviewer := make(map[string]string, len(pool))
+	interviewer := make(map[string][]string, len(pool))
 	for i, a := range pool {
 		appIDs[i] = a.ID
 		byID[a.ID] = a
 		applicants[i] = interviewassign.Applicant{ApplicationID: a.ID, AvailableDays: parseAvailability(a.Availability)}
-		if nuid, ok := interviewerOf[a.ID]; ok {
-			interviewer[a.ID] = nuid
+		if nuids, ok := interviewerOf[a.ID]; ok {
+			interviewer[a.ID] = nuids
 		}
 	}
 
-	existingRows, err := s.interviewAssignmentDB.ListInterviewReviewAssignmentsForCycle(ctx, in.ID, in.Body.Role)
+	existingRows, err := s.interviewAssignmentDB.ListReviewersForCycle(ctx, in.ID, in.Body.Role)
 	if err != nil {
 		return reviewerRun{}, utils.StoreErr(err)
 	}
 	prior := make([]interviewassign.ReviewerPair, 0, len(existingRows))
 	for _, e := range existingRows {
 		if _, inPool := byID[e.ApplicationID]; inPool {
-			prior = append(prior, interviewassign.ReviewerPair{ApplicationID: e.ApplicationID, LeadNUID: e.LeadNUID})
+			prior = append(prior, interviewassign.ReviewerPair{ApplicationID: e.ApplicationID, LeadNUID: e.ReviewerNUID})
 		}
 	}
 
@@ -434,11 +434,11 @@ func (s *interviewAssignmentPlannerService) reviewerCommit(ctx context.Context, 
 		return nil, err
 	}
 
-	pairs := make([]interviewassignment.InterviewReviewAssignmentPair, len(run.plan.New))
+	pairs := make([]interviewassignment.AssignmentPair, len(run.plan.New))
 	for i, p := range run.plan.New {
-		pairs[i] = interviewassignment.InterviewReviewAssignmentPair{ApplicationID: p.ApplicationID, LeadNUID: p.LeadNUID}
+		pairs[i] = interviewassignment.AssignmentPair{ApplicationID: p.ApplicationID, LeadNUID: p.LeadNUID}
 	}
-	created, err := s.interviewAssignmentDB.CreateInterviewReviewAssignments(ctx, pairs, utils.CurrentActor(ctx).NUID)
+	created, err := s.interviewAssignmentDB.CreateReviewers(ctx, pairs, utils.CurrentActor(ctx).NUID)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}

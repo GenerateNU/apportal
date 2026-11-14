@@ -179,17 +179,6 @@ export const queryKeys = {
       [...queryKeys.interviews.all, 'bulk', applicationIds] as const,
   },
 
-  interviewAssignments: {
-    all: ['interview-assignments'] as const,
-    details: () => [...queryKeys.interviewAssignments.all, 'detail'] as const,
-    detail: (applicationId: string) =>
-      [...queryKeys.interviewAssignments.details(), applicationId] as const,
-    // One entry per batch of applications fetched together. Keyed by the exact
-    // id list so a batch stays cached as more are loaded alongside it.
-    bulk: (applicationIds: string[]) =>
-      [...queryKeys.interviewAssignments.all, 'bulk', applicationIds] as const,
-  },
-
   interviewComments: {
     all: ['interview-comments'] as const,
     lists: () => [...queryKeys.interviewComments.all, 'list'] as const,
@@ -209,12 +198,8 @@ export const queryKeys = {
   recordingReviews: {
     all: ['recording-reviews'] as const,
     lists: () => [...queryKeys.recordingReviews.all, 'list'] as const,
-    list: (interviewId: string) =>
-      [...queryKeys.recordingReviews.lists(), interviewId] as const,
-    // One entry per batch of interviews fetched together. Keyed by the exact
-    // id list so a batch stays cached as more are loaded alongside it.
-    bulk: (interviewIds: string[]) =>
-      [...queryKeys.recordingReviews.all, 'bulk', interviewIds] as const,
+    list: (applicationId: string) =>
+      [...queryKeys.recordingReviews.lists(), applicationId] as const,
   },
 
   challengeScore: {
@@ -226,9 +211,6 @@ export const queryKeys = {
 
   interviewReviewAssignments: {
     all: ['interview-review-assignments'] as const,
-    lists: () => [...queryKeys.interviewReviewAssignments.all, 'list'] as const,
-    list: (applicationId: string) =>
-      [...queryKeys.interviewReviewAssignments.lists(), applicationId] as const,
     // One entry per batch of applications fetched together. Keyed by the exact
     // id list so a batch stays cached as more are loaded alongside it.
     bulk: (applicationIds: string[]) =>

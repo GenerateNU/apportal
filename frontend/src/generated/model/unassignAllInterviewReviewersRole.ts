@@ -6,14 +6,11 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type InterviewRating = typeof InterviewRating[keyof typeof InterviewRating];
+export type UnassignAllInterviewReviewersRole = typeof UnassignAllInterviewReviewersRole[keyof typeof UnassignAllInterviewReviewersRole];
 
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-export const InterviewRating = {
-  do_not_hire: 'do_not_hire',
-  neutral: 'neutral',
-  good: 'good',
-  great: 'great',
-  must_hire: 'must_hire',
+export const UnassignAllInterviewReviewersRole = {
+  software_engineer: 'software_engineer',
+  software_designer: 'software_designer',
 } as const;

@@ -8,87 +8,79 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
+	"github.com/GenerateNU/apportal/backend/internal/handlers/interviewassignment"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/user"
 	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 )
 
 type InterviewDB struct {
-	db    *gorm.DB
-	users *user.UserDB
+	db          *gorm.DB
+	users       *user.UserDB
+	assignments *interviewassignment.InterviewAssignmentDB
 }
 
 func NewInterviewDB(db *gorm.DB) *InterviewDB {
-	return &InterviewDB{db: db, users: user.NewUserDB(db)}
+	return &InterviewDB{db: db, users: user.NewUserDB(db), assignments: interviewassignment.NewInterviewAssignmentDB(db)}
 }
 
-// keepIfNull keeps the stored value when the upsert supplies NULL.
-func keepIfNull(table string, columns ...string) []clause.Assignment {
-	set := make([]clause.Assignment, len(columns))
-	for i, col := range columns {
-		set[i] = clause.Assignment{
-			Column: clause.Column{Name: col},
-			Value:  gorm.Expr("COALESCE(EXCLUDED." + col + ", " + table + "." + col + ")"),
-		}
+func (i *InterviewDB) UpsertInterview(ctx context.Context, in InterviewUpsert) error {
+	updates := map[string]any{}
+	utils.SetIf(updates, "scheduled_at", in.ScheduledAt)
+	utils.SetIf(updates, "conducted_at", in.ConductedAt)
+	utils.SetIf(updates, "recording_url", in.RecordingURL)
+	utils.SetIf(updates, "notes_url", in.NotesURL)
+	utils.SetIf(updates, "rating", in.Rating)
+	utils.SetIf(updates, "writeup", in.Writeup)
+	if in.Submit {
+		updates["submitted_at"] = gorm.Expr("COALESCE(submitted_at, NOW())")
 	}
-	return set
-}
-
-// UpsertInterview creates or updates an application's single interview.
-// Supplied fields overwrite; omitted ones are kept.
-func (i *InterviewDB) UpsertInterview(ctx context.Context, in InterviewUpsert) (models.Interview, error) {
-	interview := models.Interview{
-		ApplicationID:   in.ApplicationID,
-		InterviewerNUID: in.InterviewerNUID,
-		ScheduledAt:     in.ScheduledAt,
-		ConductedAt:     in.ConductedAt,
-		RecordingURL:    in.RecordingURL,
-		NotesURL:        in.NotesURL,
-		Comments:        in.Comments,
-		Rating:          in.Rating,
+	if len(updates) == 0 {
+		return nil
 	}
-	set := append(clause.AssignmentColumns([]string{"interviewer_nuid"}),
-		keepIfNull("interviews", "scheduled_at", "conducted_at", "recording_url", "notes_url", "comments", "rating")...)
-	set = append(set, clause.Assignment{Column: clause.Column{Name: "updated_at"}, Value: gorm.Expr("NOW()")})
-
-	err := i.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		err := tx.Select("application_id", "interviewer_nuid", "scheduled_at", "conducted_at",
-			"recording_url", "notes_url", "comments", "rating").
-			Clauses(
-				clause.OnConflict{Columns: []clause.Column{{Name: "application_id"}}, DoUpdates: set},
-				clause.Returning{},
-			).
-			Create(&interview).Error
-		if err != nil || !in.Submit {
-			return err
-		}
-		return tx.Model(&interview).Clauses(clause.Returning{}).UpdateColumn("submitted_at", gorm.Expr("NOW()")).Error
-	})
-	return interview, err
+	updates["updated_at"] = gorm.Expr("NOW()")
+	return i.db.WithContext(ctx).Model(&models.Interview{}).
+		Where("application_id = ?", in.ApplicationID).
+		UpdateColumns(updates).Error
 }
 
-func (i *InterviewDB) GetInterview(ctx context.Context, applicationID string) (models.Interview, error) {
-	var interview models.Interview
-	err := i.db.WithContext(ctx).Where("application_id = ?", applicationID).Take(&interview).Error
-	return interview, utils.DBErr(err)
-}
-
-// ListInterviewsForApplications is the batch form of GetInterview, for pages
-// of applications.
-func (i *InterviewDB) ListInterviewsForApplications(ctx context.Context, applicationIDs []string) ([]models.Interview, error) {
+func (i *InterviewDB) ListInterviewDetails(ctx context.Context, applicationIDs []string) ([]models.InterviewDetail, error) {
+	out := []models.InterviewDetail{}
 	if len(applicationIDs) == 0 {
-		return nil, nil
+		return out, nil
 	}
-	interviews := []models.Interview{}
+	var interviews []models.Interview
 	err := i.db.WithContext(ctx).Where("application_id IN ?", applicationIDs).Order("application_id").Find(&interviews).Error
-	return interviews, err
+	if err != nil {
+		return nil, err
+	}
+	interviewers, err := i.assignments.ListInterviewers(ctx, applicationIDs)
+	if err != nil {
+		return nil, err
+	}
+	byInterview := map[string][]models.InterviewerDetail{}
+	for _, x := range interviewers {
+		byInterview[x.InterviewID] = append(byInterview[x.InterviewID], x)
+	}
+	for _, iv := range interviews {
+		list := byInterview[iv.ID]
+		if list == nil {
+			list = []models.InterviewerDetail{}
+		}
+		out = append(out, models.InterviewDetail{Interview: iv, Interviewers: list})
+	}
+	return out, nil
 }
 
-// GetInterviewByID fetches an interview by its own ID, for recording reviews.
-func (i *InterviewDB) GetInterviewByID(ctx context.Context, id string) (models.Interview, error) {
-	var interview models.Interview
-	err := i.db.WithContext(ctx).Where("id = ?", id).Take(&interview).Error
-	return interview, utils.DBErr(err)
+func (i *InterviewDB) GetInterviewDetail(ctx context.Context, applicationID string) (models.InterviewDetail, error) {
+	list, err := i.ListInterviewDetails(ctx, []string{applicationID})
+	if err != nil {
+		return models.InterviewDetail{}, err
+	}
+	if len(list) == 0 {
+		return models.InterviewDetail{}, utils.ErrNotFound
+	}
+	return list[0], nil
 }
 
 // CreateInterviewComment adds a comment; any reviewer may leave any number.

@@ -71,7 +71,7 @@ export function useCommitInterviewerPlan() {
     }) => commitInterviewerPlan(vars.cycleId, vars.body, vars.opts),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: queryKeys.interviewAssignments.all,
+        queryKey: queryKeys.interviews.all,
       })
       queryClient.invalidateQueries({ queryKey: queryKeys.applications.all })
       queryClient.invalidateQueries({
