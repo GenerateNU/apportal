@@ -241,7 +241,7 @@ export function QuestionField({
                 checked={value.text === option}
                 onChange={() => onChange({ text: option })}
                 disabled={disabled}
-                className="accent-brand-blue h-4 w-4 shrink-0 cursor-pointer"
+                className="accent-ink h-4 w-4 shrink-0 cursor-pointer"
               />
               {option}
             </label>
@@ -310,7 +310,7 @@ export function QuestionField({
                     })
                   }
                   disabled={disabled}
-                  className="accent-brand-blue h-4 w-4 shrink-0 cursor-pointer"
+                  className="accent-ink h-4 w-4 shrink-0 cursor-pointer"
                 />
                 {option}
               </label>

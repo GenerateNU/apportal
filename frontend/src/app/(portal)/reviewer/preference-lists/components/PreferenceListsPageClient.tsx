@@ -75,7 +75,7 @@ export function PreferenceListsPageClient({ isChief }: { isChief: boolean }) {
           {cycleId && (
             <Link
               href={`/reviewer/preference-lists/overview?cycle=${cycleId}`}
-              className="text-brand-blue inline-flex items-center gap-1.5 text-sm hover:underline"
+              className="text-ink inline-flex items-center gap-1.5 text-sm hover:underline"
             >
               <LayoutGrid size={14} />
               Compare all groups
@@ -119,7 +119,7 @@ export function PreferenceListsPageClient({ isChief }: { isChief: boolean }) {
                 </p>
                 <ArrowRight
                   size={14}
-                  className="text-text-faint group-hover:text-brand-blue mt-0.5 shrink-0 transition-transform group-hover:translate-x-1"
+                  className="text-text-faint group-hover:text-ink mt-0.5 shrink-0 transition-transform group-hover:translate-x-1"
                 />
               </div>
               <div className="flex flex-wrap items-center gap-1.5">
@@ -133,7 +133,7 @@ export function PreferenceListsPageClient({ isChief }: { isChief: boolean }) {
                   {list.entry_count} entr{list.entry_count === 1 ? 'y' : 'ies'}
                 </span>
                 {list.meeting_day && (
-                  <Badge size="sm" className="bg-brand-blue/10 text-brand-blue">
+                  <Badge size="sm" className="bg-ink/10 text-ink">
                     Meets {MEETING_DAY_LABEL[list.meeting_day]}
                   </Badge>
                 )}

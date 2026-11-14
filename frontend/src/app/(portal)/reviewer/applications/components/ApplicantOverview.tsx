@@ -115,7 +115,7 @@ export function ApplicantOverview({
           <SectionLabel>Interview review</SectionLabel>
           <Link
             href={`/reviewer/my-interviews/${applicationId}`}
-            className="text-brand-blue text-xs hover:underline"
+            className="text-ink text-xs hover:underline"
           >
             Open interview page →
           </Link>
@@ -162,7 +162,7 @@ export function ApplicantOverview({
                     href={interview.recording_url}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-brand-blue inline-flex max-w-full items-center gap-1 hover:underline"
+                    className="text-ink inline-flex max-w-full items-center gap-1 hover:underline"
                   >
                     <span className="truncate">{interview.recording_url}</span>
                     <ExternalLink size={12} className="shrink-0" />
@@ -178,7 +178,7 @@ export function ApplicantOverview({
                     href={interview.notes_url}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-brand-blue inline-flex max-w-full items-center gap-1 hover:underline"
+                    className="text-ink inline-flex max-w-full items-center gap-1 hover:underline"
                   >
                     <span className="truncate">{interview.notes_url}</span>
                     <ExternalLink size={12} className="shrink-0" />
@@ -276,7 +276,7 @@ export function ApplicantOverview({
           </div>
           <Link
             href={`/reviewer/my-reviews/${applicationId}`}
-            className="text-brand-blue text-xs hover:underline"
+            className="text-ink text-xs hover:underline"
           >
             Open review page →
           </Link>

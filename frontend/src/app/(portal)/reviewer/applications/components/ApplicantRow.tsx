@@ -66,7 +66,7 @@ export function ApplicantRow({
       onAuxClick={handleAuxClick}
       className={cn(
         'h-12 cursor-pointer border-b border-gray-200 transition-colors',
-        isSelected ? 'bg-blue-50' : 'bg-white hover:bg-gray-50'
+        isSelected ? 'bg-gray-100' : 'bg-white hover:bg-gray-50'
       )}
     >
       {selectable && (

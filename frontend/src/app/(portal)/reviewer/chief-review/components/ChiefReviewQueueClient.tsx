@@ -705,7 +705,7 @@ export function ChiefReviewQueueClient() {
                             </Badge>
                           )}
                           {submitted && (
-                            <Badge className="bg-brand-blue/10 text-brand-blue">
+                            <Badge className="bg-ink/10 text-ink">
                               <Check size={12} />
                               Submitted
                             </Badge>

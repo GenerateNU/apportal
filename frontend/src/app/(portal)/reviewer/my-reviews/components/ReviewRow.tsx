@@ -93,7 +93,7 @@ export function ReviewRow({
       </span>
 
       {/* Same hover affordance as the applicant's apply card. */}
-      <span className="text-text-faint group-hover:text-brand-blue flex items-center transition-colors">
+      <span className="text-text-faint group-hover:text-ink flex items-center transition-colors">
         {href && (
           <ArrowRight
             size={16}

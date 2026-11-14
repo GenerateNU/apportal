@@ -634,7 +634,7 @@ export function InterviewRatingsClient() {
                   <button
                     type="button"
                     onClick={() => toggleLane(lane.key)}
-                    className="text-text-default hover:text-brand-blue sticky top-[2.2rem] left-0 z-[6] col-span-full flex w-fit items-center gap-1.5 bg-inherit px-4 py-2 text-sm font-medium"
+                    className="text-text-default hover:text-ink sticky top-[2.2rem] left-0 z-[6] col-span-full flex w-fit items-center gap-1.5 bg-inherit px-4 py-2 text-sm font-medium"
                   >
                     {collapsed ? (
                       <ChevronRight size={14} />
@@ -852,7 +852,7 @@ function RatingCard({
         </div>
         <ArrowRight
           size={14}
-          className="text-text-faint group-hover:text-brand-blue shrink-0 transition-transform group-hover:translate-x-1"
+          className="text-text-faint group-hover:text-ink shrink-0 transition-transform group-hover:translate-x-1"
         />
       </div>
 

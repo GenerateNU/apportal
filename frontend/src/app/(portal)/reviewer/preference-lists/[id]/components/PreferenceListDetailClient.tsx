@@ -498,7 +498,7 @@ export function PreferenceListDetailClient({
             {STATUS_LABEL[list.status]}
           </Badge>
           {meetingDay && (
-            <Badge className="bg-brand-blue/10 text-brand-blue">
+            <Badge className="bg-ink/10 text-ink">
               Meets {MEETING_DAY_LABEL[meetingDay]}
             </Badge>
           )}
@@ -513,7 +513,7 @@ export function PreferenceListDetailClient({
               only reach the lists inside this group. */}
           <Link
             href={`/reviewer/preference-lists/overview?cycle=${list.cycle_id}`}
-            className="text-brand-blue inline-flex items-center gap-1.5 text-sm hover:underline"
+            className="text-ink inline-flex items-center gap-1.5 text-sm hover:underline"
           >
             <LayoutGrid size={14} />
             Compare all groups

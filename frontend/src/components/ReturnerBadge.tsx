@@ -17,9 +17,7 @@ export function ReturnerBadge({ showLabel = false }: { showLabel?: boolean }) {
           className="object-contain"
         />
         <span
-          className={
-            showLabel ? 'text-brand-blue text-xs font-medium' : 'sr-only'
-          }
+          className={showLabel ? 'text-ink text-xs font-medium' : 'sr-only'}
         >
           Returner
         </span>

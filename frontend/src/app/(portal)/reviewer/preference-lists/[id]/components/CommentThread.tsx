@@ -62,7 +62,7 @@ export function CommentThread({
                   rows={3}
                   autoFocus
                   aria-label="Edit comment"
-                  className="focus:border-brand-blue text-text-default placeholder:text-text-subtle w-full border border-gray-200 p-3 text-sm focus:outline-none"
+                  className="focus:border-ink text-text-default placeholder:text-text-subtle w-full border border-gray-200 p-3 text-sm focus:outline-none"
                 />
                 <div className="flex items-center gap-2">
                   <Button
@@ -115,7 +115,7 @@ export function CommentThread({
           onChange={(e) => setNewComment(e.target.value)}
           placeholder={placeholder}
           rows={3}
-          className="focus:border-brand-blue text-text-default placeholder:text-text-subtle w-full border border-gray-200 p-3 text-sm focus:outline-none"
+          className="focus:border-ink text-text-default placeholder:text-text-subtle w-full border border-gray-200 p-3 text-sm focus:outline-none"
         />
         <div className="mt-3">
           <Button

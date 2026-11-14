@@ -71,7 +71,7 @@ export function RoleEditDialog({
                   type="checkbox"
                   checked={roles.includes(role)}
                   onChange={(e) => toggleRole(role, e.target.checked)}
-                  className="accent-brand-blue h-4 w-4"
+                  className="accent-ink h-4 w-4"
                 />
                 {USER_ROLE_LABEL[role]}
               </label>

@@ -164,7 +164,7 @@ export function DecisionsClient({ currentNUID }: { currentNUID: string }) {
             type="checkbox"
             checked={mineOnly}
             onChange={(e) => setMineOnly(e.target.checked)}
-            className="accent-brand-blue size-4"
+            className="accent-ink size-4"
           />
           Only applicants I interviewed
         </label>

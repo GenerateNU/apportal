@@ -213,7 +213,7 @@ function LinkOut({ href, label }: { href: string; label: string }) {
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="text-brand-blue inline-flex items-center gap-1 text-xs underline underline-offset-2"
+      className="text-ink inline-flex items-center gap-1 text-xs underline underline-offset-2"
     >
       {label}
       <ExternalLink size={11} />

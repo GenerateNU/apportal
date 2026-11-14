@@ -54,7 +54,7 @@ export default function ResetPasswordForm() {
           autoComplete="new-password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
-          className="text-text-default focus:border-brand-blue focus:ring-brand-blue rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-1"
+          className="text-text-default focus:border-ink focus:ring-ink rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-1"
         />
       </div>
 
@@ -74,7 +74,7 @@ export default function ResetPasswordForm() {
           autoComplete="new-password"
           value={confirmPassword}
           onChange={(event) => setConfirmPassword(event.target.value)}
-          className="text-text-default focus:border-brand-blue focus:ring-brand-blue rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-1"
+          className="text-text-default focus:border-ink focus:ring-ink rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-1"
         />
       </div>
 
@@ -83,7 +83,7 @@ export default function ResetPasswordForm() {
       <button
         type="submit"
         disabled={isSubmitting}
-        className="bg-brand-blue text-brand-white mt-2 rounded-md px-3 py-2 text-sm font-semibold disabled:opacity-60"
+        className="bg-ink text-brand-white mt-2 rounded-md px-3 py-2 text-sm font-semibold disabled:opacity-60"
       >
         {isSubmitting ? 'Saving…' : 'Update password'}
       </button>

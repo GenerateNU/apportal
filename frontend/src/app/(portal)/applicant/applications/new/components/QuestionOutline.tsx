@@ -47,14 +47,14 @@ export function QuestionOutline({
             className={cn(
               'text-text-secondary hover:text-text-default mb-2 flex w-full items-start gap-2.5 rounded-md px-3 py-2.5 text-left text-sm transition-all duration-200 select-none hover:bg-blue-50',
               row.question.id === selectedQuestionId &&
-                'text-brand-blue bg-blue-50 font-medium'
+                'text-ink bg-gray-100 font-medium'
             )}
           >
             <span
               className={cn(
                 'pointer-events-none flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-xs font-semibold transition-all duration-200',
                 row.question.id === selectedQuestionId
-                  ? 'bg-brand-blue scale-105 text-white'
+                  ? 'bg-ink scale-105 text-white'
                   : 'text-text-default bg-gray-200'
               )}
             >

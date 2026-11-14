@@ -397,7 +397,7 @@ export function InterviewConductClient({
               <>
                 <Link
                   href={`/reviewer/interview-script?cycle=${cycleId}&role=${role}`}
-                  className="text-brand-blue self-start text-xs hover:underline"
+                  className="text-ink self-start text-xs hover:underline"
                 >
                   Open as a full page →
                 </Link>
@@ -518,7 +518,7 @@ export function InterviewConductClient({
                         href={interview.recording_url}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-brand-blue inline-flex shrink-0 items-center gap-1 text-sm hover:underline"
+                        className="text-ink inline-flex shrink-0 items-center gap-1 text-sm hover:underline"
                       >
                         Open
                         <ExternalLink size={12} />
@@ -530,7 +530,7 @@ export function InterviewConductClient({
                     href={interview.recording_url}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-brand-blue inline-flex items-center gap-1 text-sm break-all hover:underline"
+                    className="text-ink inline-flex items-center gap-1 text-sm break-all hover:underline"
                   >
                     {interview.recording_url}
                     <ExternalLink size={12} />
@@ -555,7 +555,7 @@ export function InterviewConductClient({
                         href={interview.notes_url}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-brand-blue inline-flex shrink-0 items-center gap-1 text-sm hover:underline"
+                        className="text-ink inline-flex shrink-0 items-center gap-1 text-sm hover:underline"
                       >
                         Open
                         <ExternalLink size={12} />
@@ -567,7 +567,7 @@ export function InterviewConductClient({
                     href={interview.notes_url}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-brand-blue inline-flex items-center gap-1 text-sm break-all hover:underline"
+                    className="text-ink inline-flex items-center gap-1 text-sm break-all hover:underline"
                   >
                     {interview.notes_url}
                     <ExternalLink size={12} />
@@ -831,7 +831,7 @@ export function InterviewConductClient({
                           rows={3}
                           autoFocus
                           aria-label="Edit comment"
-                          className="focus:border-brand-blue text-text-default placeholder:text-text-subtle w-full rounded-md border border-gray-200 p-3 text-sm focus:outline-none"
+                          className="focus:border-ink text-text-default placeholder:text-text-subtle w-full rounded-md border border-gray-200 p-3 text-sm focus:outline-none"
                         />
                         <div className="flex items-center gap-2">
                           <Button
@@ -886,7 +886,7 @@ export function InterviewConductClient({
                   onChange={(e) => setNewComment(e.target.value)}
                   placeholder="Add a comment on this applicant…"
                   rows={3}
-                  className="focus:border-brand-blue text-text-default placeholder:text-text-subtle w-full rounded-md border border-gray-200 p-3 text-sm focus:outline-none"
+                  className="focus:border-ink text-text-default placeholder:text-text-subtle w-full rounded-md border border-gray-200 p-3 text-sm focus:outline-none"
                 />
                 <div className="mt-3">
                   <Button

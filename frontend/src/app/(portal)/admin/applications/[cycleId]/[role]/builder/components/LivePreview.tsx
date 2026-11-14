@@ -35,7 +35,7 @@ function PreviewField({ question }: { question: QuestionCardQuestion }) {
       {question.question_type === 'short_answer' && (
         <input
           placeholder="Your answer"
-          className="text-text-default focus:border-brand-blue focus:ring-brand-blue rounded-md border border-gray-300 px-4 py-2.5 text-base outline-none focus:ring-1"
+          className="text-text-default focus:border-ink focus:ring-ink rounded-md border border-gray-300 px-4 py-2.5 text-base outline-none focus:ring-1"
         />
       )}
 
@@ -43,7 +43,7 @@ function PreviewField({ question }: { question: QuestionCardQuestion }) {
         <div className="flex flex-col gap-2">
           <input
             placeholder="https://example.com"
-            className="text-text-default focus:border-brand-blue focus:ring-brand-blue rounded-md border border-gray-300 px-4 py-2.5 text-base outline-none focus:ring-1"
+            className="text-text-default focus:border-ink focus:ring-ink rounded-md border border-gray-300 px-4 py-2.5 text-base outline-none focus:ring-1"
           />
           <button
             type="button"
@@ -60,7 +60,7 @@ function PreviewField({ question }: { question: QuestionCardQuestion }) {
         <textarea
           placeholder="Your answer"
           rows={3}
-          className="text-text-default focus:border-brand-blue focus:ring-brand-blue rounded-md border border-gray-300 px-4 py-2.5 text-base outline-none focus:ring-1"
+          className="text-text-default focus:border-ink focus:ring-ink rounded-md border border-gray-300 px-4 py-2.5 text-base outline-none focus:ring-1"
         />
       )}
 
@@ -74,7 +74,7 @@ function PreviewField({ question }: { question: QuestionCardQuestion }) {
               <input
                 type="radio"
                 name={question.id}
-                className="accent-brand-blue h-4 w-4"
+                className="accent-ink h-4 w-4"
               />
               {option}
             </label>
@@ -106,7 +106,7 @@ function PreviewField({ question }: { question: QuestionCardQuestion }) {
               key={index}
               className="text-text-secondary flex items-center gap-2.5 text-base"
             >
-              <input type="checkbox" className="accent-brand-blue h-4 w-4" />
+              <input type="checkbox" className="accent-ink h-4 w-4" />
               {option}
             </label>
           ))}
@@ -119,7 +119,7 @@ function PreviewField({ question }: { question: QuestionCardQuestion }) {
           min={1}
           max={10}
           placeholder="1-10"
-          className="text-text-default focus:border-brand-blue focus:ring-brand-blue w-24 rounded-md border border-gray-300 px-4 py-2.5 text-base outline-none focus:ring-1"
+          className="text-text-default focus:border-ink focus:ring-ink w-24 rounded-md border border-gray-300 px-4 py-2.5 text-base outline-none focus:ring-1"
           onWheel={(e) => e.currentTarget.blur()}
         />
       )}

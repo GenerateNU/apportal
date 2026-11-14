@@ -68,7 +68,7 @@ function Paragraph({
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
         rows={5}
-        className="focus:border-brand-blue text-text-default w-full resize-y rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none disabled:bg-gray-50 disabled:text-gray-400"
+        className="focus:border-ink text-text-default w-full resize-y rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none disabled:bg-gray-50 disabled:text-gray-400"
       />
     </label>
   )

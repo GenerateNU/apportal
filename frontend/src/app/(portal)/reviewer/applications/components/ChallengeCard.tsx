@@ -91,7 +91,7 @@ export function ChallengeCard({
           href={submission.submission_url}
           target="_blank"
           rel="noreferrer"
-          className="text-brand-blue inline-flex w-fit items-center gap-1 text-sm hover:underline"
+          className="text-ink inline-flex w-fit items-center gap-1 text-sm hover:underline"
         >
           View code submission
           <ExternalLink size={12} />
@@ -124,7 +124,7 @@ export function ChallengeCard({
             <button
               type="button"
               onClick={() => setShowHistory((v) => !v)}
-              className="text-brand-blue inline-flex w-fit items-center gap-1 text-xs hover:underline"
+              className="text-ink inline-flex w-fit items-center gap-1 text-xs hover:underline"
             >
               {showHistory ? (
                 <ChevronUp size={12} />
@@ -149,7 +149,7 @@ export function ChallengeCard({
                   <span
                     className={
                       attempt.overall_score === score.overall_score
-                        ? 'text-brand-blue font-medium'
+                        ? 'text-ink font-medium'
                         : 'text-text-default font-medium'
                     }
                   >
@@ -173,7 +173,7 @@ export function ChallengeCard({
             target="_blank"
             rel="noreferrer"
             title="Best-effort name match — the challenge server doesn't expose the applicant's exact repo, so this searches the org for repos matching their name."
-            className="text-brand-blue inline-flex w-fit items-center gap-1 hover:underline"
+            className="text-ink inline-flex w-fit items-center gap-1 hover:underline"
           >
             Find challenge repo (best-effort match)
             <ExternalLink size={10} />
@@ -188,7 +188,7 @@ export function ChallengeCard({
                     href={challengeRepoSearchUrl(query)}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-brand-blue hover:underline"
+                    className="text-ink hover:underline"
                   >
                     try {i === 0 ? 'last name only' : 'first name only'}
                   </a>

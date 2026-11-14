@@ -60,7 +60,7 @@ export default function LoginForm() {
           autoComplete="email"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
-          className="text-text-default focus:border-brand-blue focus:ring-brand-blue rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-1"
+          className="text-text-default focus:border-ink focus:ring-ink rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-1"
         />
       </div>
 
@@ -74,7 +74,7 @@ export default function LoginForm() {
           </label>
           <Link
             href="/forgot-password"
-            className="text-brand-blue text-sm font-medium"
+            className="text-ink text-sm font-medium"
           >
             Forgot password?
           </Link>
@@ -87,7 +87,7 @@ export default function LoginForm() {
           autoComplete="current-password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
-          className="text-text-default focus:border-brand-blue focus:ring-brand-blue rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-1"
+          className="text-text-default focus:border-ink focus:ring-ink rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-1"
         />
       </div>
 
@@ -96,14 +96,14 @@ export default function LoginForm() {
       <button
         type="submit"
         disabled={isSubmitting}
-        className="bg-brand-blue text-brand-white mt-2 rounded-md px-3 py-2 text-sm font-semibold disabled:opacity-60"
+        className="bg-ink text-brand-white mt-2 rounded-md px-3 py-2 text-sm font-semibold disabled:opacity-60"
       >
         {isSubmitting ? 'Signing in…' : 'Sign in'}
       </button>
 
       <p className="text-text-secondary text-center text-sm">
         Don&apos;t have an account?{' '}
-        <Link href="/signup" className="text-brand-blue font-medium">
+        <Link href="/signup" className="text-ink font-medium">
           Sign up
         </Link>
       </p>

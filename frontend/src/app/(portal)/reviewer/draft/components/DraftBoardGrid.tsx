@@ -118,7 +118,7 @@ export function DraftBoardGrid({
                           pick
                             ? 'border-gray-200 bg-white'
                             : onTheClock
-                              ? 'border-brand-blue border-dashed bg-blue-50'
+                              ? 'border-ink border-dashed bg-gray-100'
                               : 'border-gray-100 bg-gray-50/60'
                         }`}
                       >
@@ -137,7 +137,7 @@ export function DraftBoardGrid({
                                   onClick={() => onChangePick(slot)}
                                   aria-label={`Change pick ${slot}`}
                                   title="Change this pick"
-                                  className="text-text-subtle hover:text-brand-blue p-0.5 transition-colors pointer-coarse:p-2"
+                                  className="text-text-subtle hover:text-ink p-0.5 transition-colors pointer-coarse:p-2"
                                 >
                                   <Pencil size={12} />
                                 </button>
@@ -159,7 +159,7 @@ export function DraftBoardGrid({
                             <span
                               className={`text-sm ${
                                 onTheClock
-                                  ? 'text-brand-blue font-semibold'
+                                  ? 'text-ink font-semibold'
                                   : 'text-text-subtle'
                               }`}
                             >

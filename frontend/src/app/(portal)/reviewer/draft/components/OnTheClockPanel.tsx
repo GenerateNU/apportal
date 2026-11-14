@@ -70,9 +70,9 @@ export function OnTheClockPanel({
 
   return (
     <Card padding="none" className="overflow-hidden">
-      {/* The brand-blue band is the page's focal point — from across a room
+      {/* The ink band is the page's focal point — from across a room
           it's the only thing that has to be legible. */}
-      <div className="bg-brand-blue text-brand-white flex flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-5">
+      <div className="bg-ink text-brand-white flex flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-5">
         <div className="flex min-w-0 flex-wrap items-center gap-3">
           <span className="bg-white/20 px-2 py-0.5 text-xs font-semibold tracking-wide uppercase">
             On the clock

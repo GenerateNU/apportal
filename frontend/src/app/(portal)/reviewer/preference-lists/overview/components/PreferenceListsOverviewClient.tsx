@@ -121,7 +121,7 @@ function GroupColumn({
           </p>
           <ArrowRight
             size={14}
-            className="text-text-faint group-hover:text-brand-blue shrink-0 transition-transform group-hover:translate-x-1"
+            className="text-text-faint group-hover:text-ink shrink-0 transition-transform group-hover:translate-x-1"
           />
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
@@ -135,7 +135,7 @@ function GroupColumn({
             {entries.length} entr{entries.length === 1 ? 'y' : 'ies'}
           </span>
           {list.meeting_day && (
-            <Badge size="sm" className="bg-brand-blue/10 text-brand-blue">
+            <Badge size="sm" className="bg-ink/10 text-ink">
               Meets {MEETING_DAY_LABEL[list.meeting_day]}
             </Badge>
           )}

@@ -90,7 +90,7 @@ export function ApplicationRoleCard({
           </span>
         </div>
 
-        <span className="text-text-subtle group-hover:text-brand-blue flex items-center gap-1 text-sm font-medium transition-colors">
+        <span className="text-text-subtle group-hover:text-ink flex items-center gap-1 text-sm font-medium transition-colors">
           {isDraft ? (
             <>
               Continue

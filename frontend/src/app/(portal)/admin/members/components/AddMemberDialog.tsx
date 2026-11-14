@@ -138,7 +138,7 @@ export function AddMemberDialog({
                     type="checkbox"
                     checked={roles.includes(role)}
                     onChange={(e) => toggleRole(role, e.target.checked)}
-                    className="accent-brand-blue h-4 w-4"
+                    className="accent-ink h-4 w-4"
                   />
                   {USER_ROLE_LABEL[role]}
                 </label>
@@ -228,7 +228,7 @@ export function AddMemberDialog({
                           secondary={u.email}
                           trailing={
                             isSelected && (
-                              <Check className="text-brand-blue ml-auto h-4 w-4 shrink-0" />
+                              <Check className="text-ink ml-auto h-4 w-4 shrink-0" />
                             )
                           }
                         />

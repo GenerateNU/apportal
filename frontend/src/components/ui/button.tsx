@@ -9,7 +9,7 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: 'bg-gen-blue text-white hover:bg-gen-blue/85',
+        default: 'bg-ink text-white hover:bg-ink/85',
         outline:
           'border-gray-300 bg-white hover:border-ink hover:bg-gray-50 hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50',
         secondary:
@@ -22,7 +22,7 @@ const buttonVariants = cva(
         brutal:
           'font-display rounded-none border border-gray-300 bg-white text-ink hover:border-ink uppercase tracking-wide hover:bg-gray-100',
         'brutal-accent':
-          'font-display rounded-none border-transparent bg-gen-blue text-white uppercase hover:bg-gen-blue/85 tracking-wide',
+          'font-display rounded-none border-transparent bg-ink text-white uppercase hover:bg-ink/85 tracking-wide',
         'brutal-ink':
           'font-display rounded-none border-transparent bg-ink text-white uppercase tracking-wide hover:bg-ink/85',
       },

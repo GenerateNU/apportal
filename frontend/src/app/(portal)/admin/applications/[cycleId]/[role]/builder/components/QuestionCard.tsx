@@ -246,7 +246,7 @@ export function QuestionCard({
                   type="checkbox"
                   checked={hasPageBreak}
                   onChange={togglePageBreak}
-                  className="accent-brand-blue h-3.5 w-3.5"
+                  className="accent-ink h-3.5 w-3.5"
                 />
                 Start a new page here
               </label>
@@ -332,7 +332,7 @@ export function QuestionCard({
               type="checkbox"
               checked={question.is_required}
               onChange={toggleRequired}
-              className="accent-brand-blue h-4 w-4"
+              className="accent-ink h-4 w-4"
             />
             Required
           </label>

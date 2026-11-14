@@ -67,7 +67,7 @@ export function InterviewScriptPageClient({ isChief }: { isChief: boolean }) {
         {isChief && cycleId && (
           <Link
             href={`/reviewer/interview-script/edit?cycle=${cycleId}&role=${role}`}
-            className="text-brand-blue inline-flex items-center gap-1 text-sm hover:underline"
+            className="text-ink inline-flex items-center gap-1 text-sm hover:underline"
           >
             <Pencil size={14} />
             Edit script

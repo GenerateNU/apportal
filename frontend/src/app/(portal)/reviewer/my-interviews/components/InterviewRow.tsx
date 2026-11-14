@@ -127,7 +127,7 @@ export function InterviewRow({
             {copied ? (
               <Check className="h-4 w-4 text-green-600" />
             ) : (
-              <Mail className="text-text-faint group-hover:text-brand-blue h-4 w-4 transition-colors" />
+              <Mail className="text-text-faint group-hover:text-ink h-4 w-4 transition-colors" />
             )}
           </button>
         )}

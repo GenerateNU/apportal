@@ -108,7 +108,7 @@ function ChiefControls({
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           rows={12}
-          className="focus:border-brand-blue text-text-default w-full resize-y rounded-lg border border-gray-200 bg-white px-3 py-2 font-mono text-xs outline-none"
+          className="focus:border-ink text-text-default w-full resize-y rounded-lg border border-gray-200 bg-white px-3 py-2 font-mono text-xs outline-none"
         />
         <div className="flex gap-2">
           <Button

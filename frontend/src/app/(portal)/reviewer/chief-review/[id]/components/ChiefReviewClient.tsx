@@ -435,7 +435,7 @@ export function ChiefReviewClient({
                           onChange={(e) => setEditingBody(e.target.value)}
                           rows={3}
                           autoFocus
-                          className="focus:border-brand-blue text-text-default placeholder:text-text-subtle w-full border border-gray-200 p-3 text-sm focus:outline-none"
+                          className="focus:border-ink text-text-default placeholder:text-text-subtle w-full border border-gray-200 p-3 text-sm focus:outline-none"
                         />
                         <div className="flex items-center gap-2">
                           <Button
@@ -485,7 +485,7 @@ export function ChiefReviewClient({
                   onChange={(e) => setNewComment(e.target.value)}
                   placeholder="Add a comment on this applicant…"
                   rows={3}
-                  className="focus:border-brand-blue text-text-default placeholder:text-text-subtle w-full border border-gray-200 p-3 text-sm focus:outline-none"
+                  className="focus:border-ink text-text-default placeholder:text-text-subtle w-full border border-gray-200 p-3 text-sm focus:outline-none"
                 />
                 <div className="mt-3">
                   <Button

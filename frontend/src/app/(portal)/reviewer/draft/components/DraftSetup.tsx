@@ -256,7 +256,7 @@ function SeatRow({
       >
         <GripVertical className="h-4 w-4" />
       </button>
-      <span className="bg-brand-blue/10 text-brand-blue flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
+      <span className="bg-ink/10 text-ink flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
         {index + 1}
       </span>
       <div className="min-w-0 flex-1">
@@ -273,7 +273,7 @@ function SeatRow({
           onClick={() => onMove(index, -1)}
           disabled={index === 0}
           aria-label={`Move ${name} up`}
-          className="text-text-subtle hover:text-brand-blue disabled:hover:text-text-subtle p-1 transition-colors disabled:opacity-30 pointer-coarse:p-2"
+          className="text-text-subtle hover:text-ink disabled:hover:text-text-subtle p-1 transition-colors disabled:opacity-30 pointer-coarse:p-2"
         >
           <ArrowUp size={14} />
         </button>
@@ -282,7 +282,7 @@ function SeatRow({
           onClick={() => onMove(index, 1)}
           disabled={index === total - 1}
           aria-label={`Move ${name} down`}
-          className="text-text-subtle hover:text-brand-blue disabled:hover:text-text-subtle p-1 transition-colors disabled:opacity-30 pointer-coarse:p-2"
+          className="text-text-subtle hover:text-ink disabled:hover:text-text-subtle p-1 transition-colors disabled:opacity-30 pointer-coarse:p-2"
         >
           <ArrowDown size={14} />
         </button>
