@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { ArrowRight, Calendar, FileQuestion } from 'lucide-react'
+import { ArrowRight, Calendar, CheckCircle2, FileQuestion } from 'lucide-react'
 import {
   cycleStatusDot,
   cycleStatusLabel,
@@ -60,10 +60,12 @@ export function ApplicationRoleCard({
           {cycle.name}
         </Badge>
         {status ? (
-          <span className="text-text-subtle flex shrink-0 items-center gap-1.5 text-xs">
-            <StatusDot className="bg-gray-400" />
+          <Badge className={status.className}>
+            <CheckCircle2 size={12} />
             {status.label}
-          </span>
+          </Badge>
+        ) : isDraft ? (
+          <Badge>In progress</Badge>
         ) : (
           <span className="text-text-subtle flex shrink-0 items-center gap-1.5 text-xs">
             <StatusDot className={cycleStatusDot[cycle.status]} />

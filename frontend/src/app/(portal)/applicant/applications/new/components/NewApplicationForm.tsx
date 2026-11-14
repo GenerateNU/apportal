@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, ArrowRight, ChevronDown, Loader2 } from 'lucide-react'
 import { HelpContact } from '@/components/HelpContact'
-import { MarkdownContent } from '@/components/MarkdownContent'
+import { TemplateNote } from '../../components/TemplateNote'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -26,7 +26,6 @@ import { useApplicationTemplate } from '@/lib/queries/application-templates'
 import {
   useApplications,
   useCreateApplication,
-  useDeleteApplication,
   useUpdateApplication,
 } from '@/lib/queries/applications'
 import { useAnswers, usePutAnswers } from '@/lib/queries/answers'
@@ -34,9 +33,25 @@ import { useChallenges } from '@/lib/queries/challenges'
 import { useQuestions } from '@/lib/queries/questions'
 import { usePutSubmission, useSubmission } from '@/lib/queries/submissions'
 import { useCurrentUser } from '@/lib/queries/users'
-import { ApplicationFields } from '../../components/ApplicationFields'
+import { useStore } from '@tanstack/react-form'
+import { ApplicationFormFields } from './ApplicationFormFields'
+import {
+  useApplicationForm,
+  type ApplicationFormValues,
+} from './useApplicationForm'
+import {
+  answerError,
+  challengeLinkError,
+  isEmptyAnswer,
+} from '../../lib/validation'
 import type { AnswerValue } from '../../components/QuestionField'
 import { PageHeader } from '@/components/ui/page-header'
+import { Breadcrumbs } from '@/components/ui/breadcrumbs'
+import {
+  ApplicantPage,
+  useCycleCrumb,
+  useOriginCrumb,
+} from '../../components/ApplicantPage'
 import { QuestionOutline } from './QuestionOutline'
 import { useRoleLookup } from '@/lib/queries/roles'
 
@@ -214,6 +229,8 @@ function Form({
   initialSubmission: CodeSubmission | null
 }) {
   const { roleLabel } = useRoleLookup()
+  const cycleCrumb = useCycleCrumb(cycleId, cycleName)
+  const origin = useOriginCrumb()
   const { data: questions = [] } = useQuestions(cycleId, role)
   const { data: challenges = [] } = useChallenges(cycleId, role)
   const { data: template } = useApplicationTemplate(cycleId, role)
@@ -221,7 +238,6 @@ function Form({
 
   const createApplication = useCreateApplication()
   const updateApplication = useUpdateApplication()
-  const deleteApplication = useDeleteApplication()
   const putAnswers = usePutAnswers()
   const putSubmission = usePutSubmission()
 
@@ -230,7 +246,7 @@ function Form({
   const [applicationId, setApplicationId] = useState(
     initialApplication?.id ?? null
   )
-  const [values, setValues] = useState<Record<string, AnswerValue>>(() => {
+  const [initialFormValues] = useState<ApplicationFormValues>(() => {
     const map: Record<string, AnswerValue> = {}
     for (const a of initialAnswers) {
       if (a.answer_options?.length) {
@@ -244,29 +260,45 @@ function Form({
         map[a.question_id] = { text: a.answer_text ?? '' }
       }
     }
-    return map
+    return {
+      answers: map,
+      submissionUrl: initialSubmission?.submission_url ?? '',
+    }
   })
-  const [resumeUrl, setResumeUrl] = useState(
-    initialApplication?.resume_url ?? ''
-  )
-  const [availability, setAvailability] = useState<Record<string, boolean>>(
+  const form = useApplicationForm(initialFormValues)
+  const formValues = useStore(form.store, (state) => state.values)
+  const fieldMeta = useStore(form.store, (state) => state.fieldMeta) as Record<
+    string,
+    { isBlurred?: boolean; isDirty?: boolean } | undefined
+  >
+  const formDirty = useStore(form.store, (state) => state.isDirty)
+  const values = formValues.answers
+  const submissionUrl = formValues.submissionUrl
+  const [resumeUrl] = useState(initialApplication?.resume_url ?? '')
+  const [availability] = useState<Record<string, boolean>>(
     initialApplication?.availability ?? {}
   )
-  const [submissionUrl, setSubmissionUrl] = useState(
-    initialSubmission?.submission_url ?? ''
-  )
-  const [hasEdited, setHasEdited] = useState(!!initialApplication)
+  const hasEdited = !!initialApplication || formDirty
   const [saveStatus, setSaveStatus] = useState<SaveStatus>(
     initialApplication ? 'saved' : 'idle'
   )
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
-  const [confirmDiscard, setConfirmDiscard] = useState(false)
+  const [confirmSubmit, setConfirmSubmit] = useState(false)
   // Set once the backend rejects a save/submit because the template's
   // deadline has passed — freezes the form instead of retrying autosave
   // against a request that will only ever 403 again.
   const [deadlineRejected, setDeadlineRejected] = useState(false)
   const [pageIndex, setPageIndex] = useState(0)
+  const [shownPage, setShownPage] = useState(0)
+  const [furthestPage, setFurthestPage] = useState(0)
+  const [pageDirection, setPageDirection] = useState<'forward' | 'back'>(
+    'forward'
+  )
+  if (pageIndex !== shownPage) {
+    setPageDirection(pageIndex > shownPage ? 'forward' : 'back')
+    setShownPage(pageIndex)
+  }
   const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(
     null
   )
@@ -281,7 +313,41 @@ function Form({
   const mobileOutlineRef = useRef<HTMLDetailsElement>(null)
 
   const pages = useMemo(() => groupQuestionsIntoPages(questions), [questions])
-  const lastPage = Math.max(pages.length - 1, 0)
+  const challengePage = challenge ? pages.length : -1
+  const totalPages = pages.length + (challenge ? 1 : 0)
+  const lastPage = Math.max(totalPages - 1, 0)
+
+  const [resumed, setResumed] = useState(false)
+  const [resumeScrollId, setResumeScrollId] = useState<string | null>(null)
+  if (!resumed && pages.length > 0) {
+    setResumed(true)
+    let resumePage = -1
+    let resumeId: string | null = null
+    for (let p = 0; p < pages.length; p++) {
+      for (const q of pages[p].questions) {
+        const v = values[q.id]
+        if (v?.text?.trim() || v?.options?.length || v?.filePath) {
+          resumePage = p
+          resumeId = q.id
+        }
+      }
+    }
+    if (resumeId) {
+      setPageIndex(resumePage)
+      setShownPage(resumePage)
+      setFurthestPage(resumePage)
+      setSelectedQuestionId(resumeId)
+      setResumeScrollId(resumeId)
+    }
+  }
+
+  useEffect(() => {
+    if (!resumeScrollId) return
+    document
+      .getElementById(`question-${resumeScrollId}`)
+      ?.scrollIntoView({ block: 'center' })
+  }, [resumeScrollId])
+
   const currentPageQuestions = pages[pageIndex]?.questions ?? []
   const startIndex = pages
     .slice(0, pageIndex)
@@ -473,9 +539,9 @@ function Form({
   useEffect(() => {
     if (pendingBackRef.current && saveStatus !== 'saving') {
       pendingBackRef.current = false
-      router.push('/applicant/applications')
+      router.push(origin.href)
     }
-  }, [saveStatus, router])
+  }, [saveStatus, router, origin.href])
 
   // Intercept the browser Back button (App Router has no route-change guard)
   // only long enough to make sure an in-flight save finishes first — content
@@ -488,51 +554,18 @@ function Form({
         pendingBackRef.current = true
         return
       }
-      router.push('/applicant/applications')
+      router.push(origin.href)
     }
     window.addEventListener('popstate', onPopState)
     return () => window.removeEventListener('popstate', onPopState)
-  }, [router])
+  }, [router, origin.href])
 
   function handleBack() {
     if (savingRef.current) {
       pendingBackRef.current = true
       return
     }
-    router.push('/applicant/applications')
-  }
-
-  function updateValue(id: string, next: AnswerValue) {
-    setHasEdited(true)
-    setValues((prev) => ({ ...prev, [id]: next }))
-  }
-  function updateResumeUrl(next: string) {
-    setHasEdited(true)
-    setResumeUrl(next)
-  }
-  function updateAvailability(next: Record<string, boolean>) {
-    setHasEdited(true)
-    setAvailability(next)
-  }
-  function updateSubmissionUrl(next: string) {
-    setHasEdited(true)
-    setSubmissionUrl(next)
-  }
-
-  async function handleDiscard() {
-    if (applicationId) {
-      await deleteApplication.mutateAsync({ id: applicationId })
-    }
-    setApplicationId(null)
-    setValues({})
-    setResumeUrl('')
-    setAvailability({})
-    setSubmissionUrl('')
-    setHasEdited(false)
-    setSaveStatus('idle')
-    setSubmitError(null)
-    setPageIndex(0)
-    setConfirmDiscard(false)
+    router.push(origin.href)
   }
 
   // Waits out any autosave already in flight (including chained follow-ups
@@ -544,28 +577,62 @@ function Form({
     }
   }
 
-  function isMissing(q: (typeof questions)[number]) {
-    if (!q.is_required) return false
-    const v = values[q.id]
-    if (q.question_type === 'checkbox') return !v?.options?.length
-    if (q.question_type === 'url') return !v?.text?.trim() && !v?.filePath
-    return !v?.text?.trim()
+  function errorFor(q: (typeof questions)[number]) {
+    return answerError(q, values[q.id])
+  }
+  const challengeError = challenge
+    ? challengeLinkError(submissionUrl)
+    : undefined
+  const blockedHere =
+    pageIndex === lastPage
+      ? questions.some((q) => !!errorFor(q)) || !!challengeError
+      : currentPageQuestions.some((q) => !!errorFor(q))
+
+  function revealed(p: number) {
+    return p !== pageIndex ? p <= furthestPage : p < furthestPage
+  }
+  function engaged(name: string) {
+    const meta = fieldMeta[name]
+    return !!(meta?.isBlurred || meta?.isDirty)
+  }
+  const answeredIds = new Set(
+    questions
+      .filter((q) => !isEmptyAnswer(q, values[q.id]) && !errorFor(q))
+      .map((q) => q.id)
+  )
+  if (challenge && submissionUrl.trim() && !challengeError) {
+    answeredIds.add('challenge')
+  }
+  const problemIds = new Set<string>()
+  pages.forEach((page, p) => {
+    for (const q of page.questions) {
+      if (
+        errorFor(q) &&
+        (revealed(p) ||
+          engaged(`answers.${q.id}`) ||
+          !isEmptyAnswer(q, values[q.id]))
+      ) {
+        problemIds.add(q.id)
+      }
+    }
+  })
+  if (challengeError && (revealed(challengePage) || engaged('submissionUrl'))) {
+    problemIds.add('challenge')
   }
 
-  // Full-form check gates the final submit; the current page's own check
-  // gates "Next" so issues surface page-by-page rather than all at once.
-  const missingRequired = useMemo(
-    () => questions.some(isMissing),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [questions, values]
-  )
-  const currentPageMissingRequired = useMemo(
-    () => currentPageQuestions.some(isMissing),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [currentPageQuestions, values]
-  )
+  const unlockedThrough =
+    pages
+      .slice(0, furthestPage + 1)
+      .reduce((n, p) => n + p.questions.length, 0) -
+    1 +
+    (challenge && furthestPage >= challengePage ? 1 : 0)
+  const activeQuestionId =
+    selectedQuestionId ??
+    currentPageQuestions[0]?.id ??
+    (pageIndex === challengePage ? 'challenge' : null)
 
   function handleOutlineNavigate(targetPage: number, questionId: string) {
+    if (targetPage > furthestPage) return
     setSelectedQuestionId(questionId)
     if (mobileOutlineRef.current) mobileOutlineRef.current.open = false
     if (targetPage === pageIndex) {
@@ -579,14 +646,28 @@ function Form({
     setPageIndex(targetPage)
   }
 
-  function handleNextPage() {
-    setPageIndex((i) => Math.min(lastPage, i + 1))
+  function goToPage(next: number) {
+    setPageIndex(next)
+    setFurthestPage((f) => Math.max(f, next))
+    setSelectedQuestionId(
+      next === challengePage
+        ? 'challenge'
+        : (pages[next]?.questions[0]?.id ?? null)
+    )
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
+  function handleNextPage() {
+    goToPage(Math.min(lastPage, pageIndex + 1))
+  }
+
   function handlePrevPage() {
-    setPageIndex((i) => Math.max(0, i - 1))
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    goToPage(Math.max(0, pageIndex - 1))
+  }
+
+  function handleFocusCapture(event: React.FocusEvent<HTMLDivElement>) {
+    const block = (event.target as HTMLElement).closest('[id^="question-"]')
+    if (block) setSelectedQuestionId(block.id.slice('question-'.length))
   }
 
   // Scroll to a question the outline linked to only after the page it lives
@@ -635,18 +716,18 @@ function Form({
   }
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-8 sm:py-10">
-      <button
-        type="button"
-        onClick={handleBack}
-        className="text-text-muted hover:text-text-default mb-6 inline-flex items-center gap-1 text-sm"
-      >
-        <ArrowLeft size={14} />
-        My Applications
-      </button>
-
-      <header className="mb-8">
+    <ApplicantPage>
+      <header className="mb-6">
         <PageHeader
+          back={
+            <Breadcrumbs
+              items={[
+                { label: origin.label, onClick: handleBack },
+                { label: cycleCrumb },
+                { label: roleLabel(role) },
+              ]}
+            />
+          }
           title={roleLabel(role)}
           subtitle={cycleName}
           actions={
@@ -664,19 +745,9 @@ function Form({
                   Couldn&apos;t save
                 </span>
               )}
-              {applicationId && (
-                <button
-                  type="button"
-                  onClick={() => setConfirmDiscard(true)}
-                  className="text-text-subtle hover:text-text-default text-xs underline underline-offset-2"
-                >
-                  Discard and start over
-                </button>
-              )}
             </div>
           }
         />
-        <HelpContact className="mt-3 text-left" />
       </header>
 
       {deadlineClosed && (
@@ -686,19 +757,17 @@ function Form({
         </p>
       )}
 
-      {template?.description && pageIndex === 0 && (
-        <MarkdownContent className="text-text-muted mb-8 text-sm leading-relaxed">
+      {template?.description && (
+        <TemplateNote
+          label="About this role"
+          className="mb-8"
+          expandable={false}
+        >
           {template.description}
-        </MarkdownContent>
+        </TemplateNote>
       )}
 
-      {pages.length > 1 && (
-        <p className="text-text-subtle mb-4 text-xs">
-          Page {pageIndex + 1} of {pages.length}
-        </p>
-      )}
-
-      {pages.length > 1 && (
+      {totalPages > 1 && (
         <details
           ref={mobileOutlineRef}
           className="group mb-6 border border-gray-200 bg-white lg:hidden"
@@ -713,7 +782,11 @@ function Form({
           <div className="max-h-[60dvh] overflow-y-auto border-t border-gray-100 px-1 py-3">
             <QuestionOutline
               pages={pages}
-              selectedQuestionId={selectedQuestionId}
+              selectedQuestionId={activeQuestionId}
+              unlockedThrough={unlockedThrough}
+              problemIds={problemIds}
+              answeredIds={answeredIds}
+              challengeName={challenge?.name}
               onNavigate={handleOutlineNavigate}
             />
           </div>
@@ -724,53 +797,50 @@ function Form({
         <aside className="hidden lg:sticky lg:top-20 lg:block lg:max-h-[calc(100vh-80px)] lg:overflow-y-auto">
           <QuestionOutline
             pages={pages}
-            selectedQuestionId={selectedQuestionId}
+            selectedQuestionId={activeQuestionId}
+            unlockedThrough={unlockedThrough}
+            problemIds={problemIds}
+            answeredIds={answeredIds}
+            challengeName={challenge?.name}
             onNavigate={handleOutlineNavigate}
           />
         </aside>
 
-        <div className="min-w-0">
-          {pages[pageIndex]?.title && (
-            <h2 className="text-text-default mb-4 text-lg font-semibold">
-              {pages[pageIndex].title}
-            </h2>
-          )}
+        <div className="min-w-0" onFocusCapture={handleFocusCapture}>
+          <div
+            key={pageIndex}
+            className={`animate-in fade-in duration-300 ease-out motion-reduce:animate-none ${pageDirection === 'forward' ? 'slide-in-from-right-8' : 'slide-in-from-left-8'}`}
+          >
+            {pageIndex === challengePage ? (
+              <h2 className="font-display text-ink mb-6 text-lg font-bold tracking-tight uppercase">
+                Challenge
+              </h2>
+            ) : (
+              pages[pageIndex]?.title && (
+                <h2 className="font-display text-ink mb-6 text-lg font-bold tracking-tight uppercase">
+                  {pages[pageIndex].title}
+                </h2>
+              )
+            )}
 
-          <ApplicationFields
-            questions={currentPageQuestions}
-            startIndex={startIndex}
-            challenge={pageIndex === lastPage ? challenge : undefined}
-            values={values}
-            onValueChange={updateValue}
-            applicationId={applicationId ?? undefined}
-            resumeUrl={resumeUrl}
-            onResumeChange={updateResumeUrl}
-            availability={availability}
-            onAvailabilityChange={updateAvailability}
-            submissionUrl={submissionUrl}
-            onSubmissionChange={updateSubmissionUrl}
-            disabled={deadlineClosed}
-          />
+            <ApplicationFormFields
+              form={form}
+              questions={currentPageQuestions}
+              startIndex={startIndex}
+              challenge={pageIndex === challengePage ? challenge : undefined}
+              reveal={pageIndex < furthestPage}
+              disabled={deadlineClosed}
+              applicationId={applicationId ?? undefined}
+            />
 
-          {template?.instructions && pageIndex === lastPage && (
-            <MarkdownContent className="text-text-muted mt-8 text-sm leading-relaxed">
-              {template.instructions}
-            </MarkdownContent>
-          )}
+            {template?.instructions && pageIndex === lastPage && (
+              <TemplateNote label="Before you submit" className="mt-8">
+                {template.instructions}
+              </TemplateNote>
+            )}
+          </div>
 
-          <div className="mt-8 flex flex-wrap items-center justify-end gap-3 border-t border-gray-100 pt-6 sm:flex-nowrap">
-            {pageIndex === lastPage
-              ? missingRequired && (
-                  <p className="text-text-muted w-full text-xs sm:mr-auto sm:w-auto">
-                    Answer all required questions (*) before submitting.
-                  </p>
-                )
-              : currentPageMissingRequired && (
-                  <p className="text-text-muted w-full text-xs sm:mr-auto sm:w-auto">
-                    Answer all required questions (*) on this page before
-                    continuing.
-                  </p>
-                )}
+          <div className="sticky bottom-0 z-10 -mx-4 mt-8 flex flex-wrap items-center justify-end gap-3 border-t border-gray-200 bg-white/95 px-4 py-4 backdrop-blur sm:mx-0 sm:flex-nowrap sm:px-0">
             {submitError && (
               <p className="text-destructive w-full text-xs sm:mr-auto sm:w-auto">
                 {submitError}
@@ -785,15 +855,15 @@ function Form({
             {pageIndex < lastPage ? (
               <Button
                 onClick={handleNextPage}
-                disabled={currentPageMissingRequired || deadlineClosed}
+                disabled={blockedHere || deadlineClosed}
               >
                 Next
                 <ArrowRight size={14} />
               </Button>
             ) : (
               <Button
-                onClick={handleSubmit}
-                disabled={submitting || missingRequired || deadlineClosed}
+                onClick={() => setConfirmSubmit(true)}
+                disabled={submitting || blockedHere || deadlineClosed}
               >
                 {submitting ? (
                   <>
@@ -809,25 +879,33 @@ function Form({
         </div>
       </div>
 
-      <Dialog open={confirmDiscard} onOpenChange={setConfirmDiscard}>
+      <HelpContact className="mt-12 text-left" />
+
+      <Dialog open={confirmSubmit} onOpenChange={setConfirmSubmit}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Discard this draft?</DialogTitle>
+            <DialogTitle>Submit your application?</DialogTitle>
             <DialogDescription>
-              This will permanently delete everything you&apos;ve entered so far
-              and start you over with a blank form.
+              Once you submit, you can&apos;t edit your answers. Make sure
+              everything looks right before you send it.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmDiscard(false)}>
+            <Button variant="outline" onClick={() => setConfirmSubmit(false)}>
               Keep editing
             </Button>
-            <Button variant="destructive" onClick={handleDiscard}>
-              Discard
+            <Button
+              disabled={submitting}
+              onClick={() => {
+                setConfirmSubmit(false)
+                void handleSubmit()
+              }}
+            >
+              Submit
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </ApplicantPage>
   )
 }

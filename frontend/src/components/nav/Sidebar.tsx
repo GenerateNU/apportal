@@ -65,7 +65,7 @@ const sectionsByRole: Record<Role, NavSection[]> = {
       items: [
         {
           href: '/applicant/applications',
-          label: 'Apply',
+          label: 'Applications',
           icon: FileText,
         },
       ],
