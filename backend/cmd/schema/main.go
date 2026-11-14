@@ -39,7 +39,7 @@ func main() {
 		&models.WrittenReview{}, &models.ReviewQuestion{}, &models.WrittenReviewAnswer{},
 		&models.ChiefReview{}, &models.ChiefReviewComment{},
 		&models.Interview{}, &models.Interviewer{}, &models.InterviewReviewer{},
-		&models.ApplicationComment{}, &models.LeadSelection{}, &models.PreferenceList{},
+		&models.ApplicationComment{}, &models.InterviewGroup{}, &models.InterviewGroupMember{}, &models.LeadSelection{}, &models.PreferenceList{},
 		&models.PreferenceListMember{}, &models.PreferenceListEntry{},
 		&models.PreferenceListPersonalEntry{}, &models.PreferenceListComment{},
 		&models.PreferenceListDeadline{}, &models.Draft{}, &models.DraftTeam{}, &models.DraftPick{},

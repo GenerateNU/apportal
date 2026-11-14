@@ -6,4 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
+/**
+ * Per-unit cap overrides, keyed by lead NUID or, when planning by group, group ID
+ */
 export type InterviewerPreviewInputBodyCapOverrides = {[key: string]: number};

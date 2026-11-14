@@ -5,6 +5,7 @@
  * Generate application portal — applications, reviews, and the hiring pipeline.
  * OpenAPI spec version: 0.1.0
  */
+import type { InterviewerPlanPreviewGroups } from './interviewerPlanPreviewGroups';
 import type { InterviewerPlanPreviewInterviewers } from './interviewerPlanPreviewInterviewers';
 import type { InterviewerPlanPreviewNoDayMatch } from './interviewerPlanPreviewNoDayMatch';
 import type { InterviewerPlanPreviewUnassigned } from './interviewerPlanPreviewUnassigned';
@@ -13,6 +14,7 @@ import type { InterviewerPlanPreviewWarnings } from './interviewerPlanPreviewWar
 export interface InterviewerPlanPreview {
   /** A URL to the JSON Schema for this object. */
   readonly $schema?: string;
+  groups: InterviewerPlanPreviewGroups;
   interviewers: InterviewerPlanPreviewInterviewers;
   no_day_match: InterviewerPlanPreviewNoDayMatch;
   pool_size: number;

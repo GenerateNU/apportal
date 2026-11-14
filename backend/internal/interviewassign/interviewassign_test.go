@@ -67,6 +67,53 @@ func TestPlanInterviewersFallsBackWhenNoDayMatches(t *testing.T) {
 	}
 }
 
+func TestPlanInterviewersNoDayMatchesAnyone(t *testing.T) {
+	in := InterviewerInput{
+		Applicants: []Applicant{
+			{ApplicationID: "app1", AvailableDays: map[string]bool{"friday": true}},
+			{ApplicationID: "app2"},
+			{ApplicationID: "app3", AvailableDays: map[string]bool{"monday": true}},
+			{ApplicationID: "app4"},
+		},
+		Leads: []Lead{{NUID: "a"}, {NUID: "b"}},
+		Cap:   10,
+		Seed:  SeedFrom("t"),
+	}
+	plan, err := PlanInterviewers(in)
+	if err != nil {
+		t.Fatalf("PlanInterviewers: %v", err)
+	}
+	if len(plan.New) != 4 {
+		t.Fatalf("New = %+v, want all 4 assigned", plan.New)
+	}
+	if len(plan.NoDayMatch) != 0 {
+		t.Errorf("NoDayMatch = %v, want none when leads have no day", plan.NoDayMatch)
+	}
+	load := map[string]int{}
+	for _, p := range plan.New {
+		load[p.LeadNUID]++
+	}
+	if load["a"] != 2 || load["b"] != 2 {
+		t.Errorf("load = %v, want 2 each", load)
+	}
+}
+
+func TestPlanInterviewersPrefersDayMatchOverNoDay(t *testing.T) {
+	in := InterviewerInput{
+		Applicants: []Applicant{{ApplicationID: "app1", AvailableDays: map[string]bool{"monday": true}}},
+		Leads:      []Lead{{NUID: "any"}, {NUID: "mon", Day: "monday"}, {NUID: "tue", Day: "tuesday"}},
+		Cap:        10,
+		Seed:       SeedFrom("t"),
+	}
+	plan, err := PlanInterviewers(in)
+	if err != nil {
+		t.Fatalf("PlanInterviewers: %v", err)
+	}
+	if len(plan.New) != 1 || plan.New[0].LeadNUID == "tue" {
+		t.Fatalf("New = %+v, want app1 assigned to mon or the no-day lead", plan.New)
+	}
+}
+
 func TestPlanInterviewersAvoidsOwnWrittenReview(t *testing.T) {
 	// Two same-day leads with equal load; one wrote this applicant's review.
 	in := InterviewerInput{

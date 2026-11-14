@@ -243,7 +243,7 @@ func bestInterviewer(leads []leadState, availableDays, wroteReview, conflicted m
 	}
 
 	for li, l := range leads {
-		if l.load >= l.cap || conflicted[l.nuid] || !availableDays[l.day] {
+		if l.load >= l.cap || conflicted[l.nuid] || !dayFits(l.day, availableDays) {
 			continue
 		}
 		consider(li, true)
@@ -261,6 +261,10 @@ func bestInterviewer(leads []leadState, availableDays, wroteReview, conflicted m
 		consider(li, false)
 	}
 	return best, bestDayMatch
+}
+
+func dayFits(day string, availableDays map[string]bool) bool {
+	return day == "" || availableDays[day]
 }
 
 func interviewerWarnings(pool int, leads []leadState, unassigned, noDayMatch, unknownExisting []string) []string {
@@ -377,7 +381,7 @@ func PlanReviewers(in ReviewerInput) (ReviewerPlan, error) {
 	interviewerDays := make(map[string]map[string]bool, len(in.Interviewer))
 	for appID, nuids := range in.Interviewer {
 		for _, nuid := range nuids {
-			if li, ok := byNUID[nuid]; ok {
+			if li, ok := byNUID[nuid]; ok && leads[li].day != "" {
 				if interviewerDays[appID] == nil {
 					interviewerDays[appID] = make(map[string]bool)
 				}
@@ -486,7 +490,7 @@ func bestReviewer(leads []leadState, already map[string]bool, availableDays map[
 	}
 
 	for li, l := range leads {
-		if l.load >= l.cap || already[l.nuid] || !availableDays[l.day] {
+		if l.load >= l.cap || already[l.nuid] || !dayFits(l.day, availableDays) {
 			continue
 		}
 		consider(li, true)
