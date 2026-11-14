@@ -25,7 +25,10 @@ func TestTagRoutesRequireReviewer(t *testing.T) {
 		"create": func(ctx context.Context) error { _, err := s.create(ctx, &CreateTagInput{}); return err },
 		"update": func(ctx context.Context) error { _, err := s.update(ctx, &UpdateTagInput{}); return err },
 		"delete": func(ctx context.Context) error { _, err := s.delete(ctx, &utils.IDInput{}); return err },
-		"set":    func(ctx context.Context) error { _, err := s.setApplicationTags(ctx, &SetApplicationTagsInput{}); return err },
+		"set": func(ctx context.Context) error {
+			_, err := s.setApplicationTags(ctx, &SetApplicationTagsInput{})
+			return err
+		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			testutil.WantStatus(t, call(context.Background()), http.StatusUnauthorized)
