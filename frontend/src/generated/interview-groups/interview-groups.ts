@@ -25,6 +25,8 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AssignGroupInputBody,
+  AssignGroupOutputBody,
   CreateGroupsInputBody,
   CreateInterviewGroups201,
   ErrorModel,
@@ -415,6 +417,72 @@ export const useUpdateInterviewGroup = <TError = ErrorModel | ErrorModel | Error
       > => {
 
       const mutationOptions = getUpdateInterviewGroupMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * Chief only. An application gets at most one group, so the request is rejected if any application already has interviewers.
+ * @summary Assign a group as the interviewers on each application
+ */
+export const assignInterviewGroup = (
+    id: string,
+    assignGroupInputBody: NonReadonly<AssignGroupInputBody>,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<AssignGroupOutputBody>(
+      {url: `/interview-groups/${id}/assignments`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: assignGroupInputBody, signal
+    },
+      options);
+    }
+  
+
+
+export const getAssignInterviewGroupMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assignInterviewGroup>>, TError,{id: string;data: NonReadonly<AssignGroupInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof assignInterviewGroup>>, TError,{id: string;data: NonReadonly<AssignGroupInputBody>}, TContext> => {
+
+const mutationKey = ['assignInterviewGroup'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof assignInterviewGroup>>, {id: string;data: NonReadonly<AssignGroupInputBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  assignInterviewGroup(id,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AssignInterviewGroupMutationResult = NonNullable<Awaited<ReturnType<typeof assignInterviewGroup>>>
+    export type AssignInterviewGroupMutationBody = NonReadonly<AssignGroupInputBody>
+    export type AssignInterviewGroupMutationError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel
+
+    /**
+ * @summary Assign a group as the interviewers on each application
+ */
+export const useAssignInterviewGroup = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assignInterviewGroup>>, TError,{id: string;data: NonReadonly<AssignGroupInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof assignInterviewGroup>>,
+        TError,
+        {id: string;data: NonReadonly<AssignGroupInputBody>},
+        TContext
+      > => {
+
+      const mutationOptions = getAssignInterviewGroupMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }

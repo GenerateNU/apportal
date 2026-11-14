@@ -252,6 +252,24 @@ func insertMembers(tx *gorm.DB, groupID string, nuids []string) error {
 	return tx.Select("group_id", "member_nuid").Create(&rows).Error
 }
 
+func (d *InterviewGroupDB) CountApplicationsInCycle(ctx context.Context, cycleID string, ids []string) (int64, error) {
+	var n int64
+	err := d.db.WithContext(ctx).Model(&models.Application{}).
+		Where("cycle_id = ? AND id IN ?", cycleID, ids).Count(&n).Error
+	return n, err
+}
+
+func (d *InterviewGroupDB) ApplicantsWithInterviewers(ctx context.Context, ids []string) ([]string, error) {
+	var names []string
+	err := d.db.WithContext(ctx).Table("applications a").
+		Joins("JOIN users u ON u.nuid = a.user_nuid").
+		Where("a.id IN ?", ids).
+		Where("EXISTS (SELECT 1 FROM interviews i JOIN interviewers iv ON iv.interview_id = i.id WHERE i.application_id = a.id)").
+		Order("u.full_name").
+		Pluck("u.full_name", &names).Error
+	return names, err
+}
+
 func (d *InterviewGroupDB) Delete(ctx context.Context, id string) error {
 	res := d.db.WithContext(ctx).Where("id = ?", id).Delete(&models.InterviewGroup{})
 	if res.Error != nil {

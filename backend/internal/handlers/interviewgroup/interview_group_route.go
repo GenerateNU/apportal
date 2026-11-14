@@ -5,10 +5,15 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"gorm.io/gorm"
+
+	"github.com/GenerateNU/apportal/backend/internal/handlers/interviewassignment"
 )
 
 func Route(api huma.API, db *gorm.DB) {
-	s := &interviewGroupService{groupDB: NewInterviewGroupDB(db)}
+	s := &interviewGroupService{
+		groupDB:               NewInterviewGroupDB(db),
+		interviewAssignmentDB: interviewassignment.NewInterviewAssignmentDB(db),
+	}
 
 	huma.Register(api, huma.Operation{
 		OperationID: "list-interview-groups",
@@ -62,4 +67,14 @@ func Route(api huma.API, db *gorm.DB) {
 		DefaultStatus: http.StatusCreated,
 		Errors:        []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusConflict, http.StatusUnprocessableEntity},
 	}, s.createMany)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "assign-interview-group",
+		Method:      http.MethodPost,
+		Path:        "/interview-groups/{id}/assignments",
+		Summary:     "Assign a group as the interviewers on each application",
+		Description: "Chief only. An application gets at most one group, so the request is rejected if any application already has interviewers.",
+		Tags:        []string{"Interview groups"},
+		Errors:      []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound, http.StatusConflict, http.StatusUnprocessableEntity},
+	}, s.assign)
 }

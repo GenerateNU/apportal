@@ -7,11 +7,15 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
+	"github.com/google/uuid"
+
+	"github.com/GenerateNU/apportal/backend/internal/handlers/interviewassignment"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 )
 
 type interviewGroupService struct {
-	groupDB *InterviewGroupDB
+	groupDB               *InterviewGroupDB
+	interviewAssignmentDB *interviewassignment.InterviewAssignmentDB
 }
 
 func toWrite(b GroupBody) (GroupWrite, error) {
@@ -98,6 +102,66 @@ func (s *interviewGroupService) delete(ctx context.Context, in *utils.IDInput) (
 		return nil, utils.StoreErr(err)
 	}
 	return nil, nil
+}
+
+func (s *interviewGroupService) assign(ctx context.Context, in *AssignGroupInput) (*AssignGroupOutput, error) {
+	if err := utils.RequireChief(ctx); err != nil {
+		return nil, err
+	}
+	seen := map[string]bool{}
+	ids := make([]string, 0, len(in.Body.ApplicationIDs))
+	for _, id := range in.Body.ApplicationIDs {
+		if _, err := uuid.Parse(id); err != nil {
+			return nil, huma.Error422UnprocessableEntity("application_ids must be UUIDs")
+		}
+		if !seen[id] {
+			seen[id] = true
+			ids = append(ids, id)
+		}
+	}
+
+	group, err := s.groupDB.Get(ctx, in.ID)
+	if err != nil {
+		return nil, utils.StoreErr(err)
+	}
+	if len(group.Members) == 0 {
+		return nil, huma.Error422UnprocessableEntity("the group has no members")
+	}
+	found, err := s.groupDB.CountApplicationsInCycle(ctx, group.CycleID, ids)
+	if err != nil {
+		return nil, utils.StoreErr(err)
+	}
+	if int(found) != len(ids) {
+		return nil, huma.Error422UnprocessableEntity("every application must exist and belong to the group's cycle")
+	}
+
+	taken, err := s.groupDB.ApplicantsWithInterviewers(ctx, ids)
+	if err != nil {
+		return nil, utils.StoreErr(err)
+	}
+	if len(taken) > 0 {
+		return nil, huma.Error409Conflict("already has interviewers: " + strings.Join(taken, ", "))
+	}
+
+	pairs := make([]interviewassignment.AssignmentPair, 0, len(ids)*len(group.Members))
+	for _, id := range ids {
+		for _, m := range group.Members {
+			pairs = append(pairs, interviewassignment.AssignmentPair{ApplicationID: id, LeadNUID: m.MemberNUID})
+		}
+	}
+	added, err := s.interviewAssignmentDB.CreateInterviewers(ctx, pairs, utils.CurrentActor(ctx).NUID)
+	if err != nil {
+		return nil, utils.StoreErr(err)
+	}
+	interviewers, err := s.interviewAssignmentDB.ListInterviewers(ctx, ids)
+	if err != nil {
+		return nil, utils.StoreErr(err)
+	}
+
+	out := &AssignGroupOutput{}
+	out.Body.Added = added
+	out.Body.Interviewers = interviewers
+	return out, nil
 }
 
 func groupErr(err error) error {

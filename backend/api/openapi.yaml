@@ -321,6 +321,50 @@ components:
         - total
         - stage_counts
       type: object
+    AssignGroupInputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/AssignGroupInputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        application_ids:
+          items:
+            type: string
+          maxItems: 200
+          minItems: 1
+          type:
+            - array
+            - "null"
+      required:
+        - application_ids
+      type: object
+    AssignGroupOutputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/AssignGroupOutputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        added:
+          format: int64
+          type: integer
+        interviewers:
+          items:
+            $ref: "#/components/schemas/InterviewerDetail"
+          type:
+            - array
+            - "null"
+      required:
+        - added
+        - interviewers
+      type: object
     AssignmentPlanPreview:
       additionalProperties: false
       properties:
@@ -9473,6 +9517,70 @@ paths:
                 $ref: "#/components/schemas/ErrorModel"
           description: Internal Server Error
       summary: Replace an interview group's name, meeting slot, and members
+      tags:
+        - Interview groups
+  /interview-groups/{id}/assignments:
+    post:
+      description: Chief only. An application gets at most one group, so the request is rejected if any application already has interviewers.
+      operationId: assign-interview-group
+      parameters:
+        - description: Interview group ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Interview group ID
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssignGroupInputBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssignGroupOutputBody"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "409":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Conflict
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Assign a group as the interviewers on each application
       tags:
         - Interview groups
   /interview-reviewers:

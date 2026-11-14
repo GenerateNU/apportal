@@ -1,7 +1,8 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { PageContainer } from '@/components/PageContainer'
+import { usePersistedFilters } from '@/hooks/usePersistedFilters'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -13,18 +14,41 @@ import {
 } from '@/components/ui/select'
 import type { Role } from '@/lib/api/types'
 import { pickDefaultCycleId, useCycles } from '@/lib/queries/cycles'
-import { useInterviewerPool } from '@/lib/queries/interview-assignment-plan'
+import {
+  useInterviewReviewerPool,
+  useInterviewerPool,
+} from '@/lib/queries/interview-assignment-plan'
 import { SKIP_DAY } from '@/lib/availability'
 import { useInterviewGroups } from '@/lib/queries/interview-groups'
 import { useLeads } from '@/lib/queries/users'
 import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 import { ConflictBuilder, type DraftConflict } from './ConflictBuilder'
+import { CurrentAssignments } from './CurrentAssignments'
 import { GroupBuilder, type DraftGroupDay } from './GroupBuilder'
 import { InterviewerPlanPanel } from './InterviewerPlanPanel'
 import { MeetingDayPicker, type DraftLeadDay } from './MeetingDayPicker'
 import { ReviewerPlanPanel } from './ReviewerPlanPanel'
 
 type Stage = 'interviewer' | 'reviewer'
+
+const SETTINGS_STORAGE_KEY = 'interview-assignment-plan-settings'
+
+type StoredSettings = {
+  role: Role
+  perApplicant?: number
+  meetingDays: DraftLeadDay[]
+  groupDays: DraftGroupDay[]
+}
+
+const isDayList = <T,>(value: unknown, idKey: keyof T): value is T[] =>
+  Array.isArray(value) &&
+  value.every(
+    (v) =>
+      !!v &&
+      typeof v === 'object' &&
+      typeof (v as Record<string, unknown>)[idKey as string] === 'string' &&
+      typeof (v as Record<string, unknown>).day === 'string'
+  )
 
 // Two stages, one shared meeting-day roster: a chief declares each lead's day
 // once above the tabs, then plans interviewers and interview reviewers
@@ -41,11 +65,46 @@ export function InterviewAssignmentPlanClient() {
     if (defaultId) setCycleId(defaultId)
   }
   const [role, setRole] = useState<Role>('software_engineer')
-  const [perApplicant, setPerApplicant] = useState(1)
+  const [chosenPerApplicant, setPerApplicant] = useState<number | null>(null)
   const [meetingDays, setMeetingDays] = useState<DraftLeadDay[]>([])
   const [groupDays, setGroupDays] = useState<DraftGroupDay[]>([])
   const { data: groups = [] } = useInterviewGroups(cycleId)
+  const savedGroups = groups.filter((g) => (g.members ?? []).length > 0)
+  const largestGroup = Math.max(
+    0,
+    ...savedGroups.map((g) => (g.members ?? []).length)
+  )
+  const perApplicant =
+    chosenPerApplicant ?? (largestGroup >= 2 ? largestGroup : 1)
   const useGroups = perApplicant > 1
+
+  const restoreSettings = useCallback((stored: Partial<StoredSettings>) => {
+    if (ROLE_COLUMNS.includes(stored.role as Role)) setRole(stored.role as Role)
+    if (
+      typeof stored.perApplicant === 'number' &&
+      Number.isInteger(stored.perApplicant) &&
+      stored.perApplicant >= 1
+    ) {
+      setPerApplicant(stored.perApplicant)
+    }
+    if (isDayList<DraftLeadDay>(stored.meetingDays, 'leadNuid')) {
+      setMeetingDays(stored.meetingDays)
+    }
+    if (isDayList<DraftGroupDay>(stored.groupDays, 'groupId')) {
+      setGroupDays(stored.groupDays)
+    }
+  }, [])
+
+  usePersistedFilters<StoredSettings>(
+    SETTINGS_STORAGE_KEY,
+    {
+      role,
+      perApplicant: chosenPerApplicant ?? undefined,
+      meetingDays,
+      groupDays,
+    },
+    restoreSettings
+  )
 
   const plannedGroupDays = useMemo(
     () =>
@@ -93,6 +152,7 @@ export function InterviewAssignmentPlanClient() {
   // whether or not they have an interviewer yet), so the conflict picker
   // covers whoever a chief might plan for in either stage.
   const { data: pool } = useInterviewerPool(cycleId, role)
+  const { data: reviewerPool } = useInterviewReviewerPool(cycleId, role)
 
   return (
     <PageContainer>
@@ -156,7 +216,9 @@ export function InterviewAssignmentPlanClient() {
         <p className="text-text-muted max-w-md text-xs">
           {useGroups
             ? `Leads interview in groups of ${perApplicant}. Each group shares one meeting day and is assigned as a unit.`
-            : 'Each applicant gets one lead. Set 2 or more to interview in groups.'}
+            : savedGroups.length > 0
+              ? `Each applicant gets one lead. You have ${savedGroups.length} saved group${savedGroups.length === 1 ? '' : 's'}; set 2 or more to plan by group.`
+              : 'Each applicant gets one lead. Set 2 or more to interview in groups.'}
         </p>
       </section>
 
@@ -198,6 +260,15 @@ export function InterviewAssignmentPlanClient() {
           2. Interview reviewers
         </StageTab>
       </div>
+
+      <CurrentAssignments
+        key={stage}
+        kind={stage === 'interviewer' ? 'interviewers' : 'reviewers'}
+        applicants={
+          (stage === 'interviewer' ? pool : reviewerPool)?.applicants ?? []
+        }
+        groups={groups}
+      />
 
       {stage === 'interviewer' ? (
         <InterviewerPlanPanel

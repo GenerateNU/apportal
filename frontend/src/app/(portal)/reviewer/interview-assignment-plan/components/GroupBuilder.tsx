@@ -3,6 +3,14 @@
 import { useState } from 'react'
 import { Loader2, Plus, Trash2, Users, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -167,7 +175,8 @@ export function GroupBuilder({
             <GroupCard
               key={group.id}
               group={group}
-              addable={ungrouped}
+              leads={leads}
+              groups={groups}
               size={size}
               day={days.find((d) => d.groupId === group.id)?.day ?? ''}
               onDayChange={(day) => setDay(group.id, day)}
@@ -182,14 +191,16 @@ export function GroupBuilder({
 
 function GroupCard({
   group,
-  addable,
+  leads,
+  groups,
   size,
   day,
   onDayChange,
   onDelete,
 }: {
   group: InterviewGroupDetail
-  addable: Lead[]
+  leads: Lead[]
+  groups: InterviewGroupDetail[]
   size: number
   day: string
   onDayChange: (day: string) => void
@@ -197,8 +208,58 @@ function GroupCard({
 }) {
   const update = useUpdateInterviewGroup()
   const [name, setName] = useState(group.name)
+  const [confirming, setConfirming] = useState<{
+    nuid: string
+    fullName: string
+    from?: InterviewGroupDetail
+  } | null>(null)
   const members = group.members ?? []
   const memberNuids = members.map((m) => m.member_nuid)
+  const addable = leads
+    .filter((l) => !memberNuids.includes(l.nuid))
+    .map((l) => ({
+      ...l,
+      from: groups.find(
+        (g) =>
+          g.id !== group.id &&
+          (g.members ?? []).some((m) => m.member_nuid === l.nuid)
+      ),
+    }))
+
+  function pickMember(nuid: string) {
+    const lead = addable.find((l) => l.nuid === nuid)
+    if (!lead) return
+    if (lead.from) {
+      setConfirming({ nuid, fullName: lead.full_name, from: lead.from })
+      return
+    }
+    addMember(nuid)
+  }
+
+  async function addMember(nuid: string, from?: InterviewGroupDetail) {
+    try {
+      if (from) {
+        await update.mutateAsync({
+          id: from.id,
+          body: {
+            name: from.name,
+            member_nuids: (from.members ?? [])
+              .map((m) => m.member_nuid)
+              .filter((n) => n !== nuid),
+            meeting_slot: from.meeting_slot,
+          },
+        })
+      }
+      await update.mutateAsync({
+        id: group.id,
+        body: {
+          name: group.name,
+          member_nuids: [...memberNuids, nuid],
+          meeting_slot: group.meeting_slot,
+        },
+      })
+    } catch {}
+  }
 
   function save(next: { name?: string; member_nuids?: string[] }) {
     update.mutate({
@@ -265,9 +326,7 @@ function GroupCard({
               aria-label={`Remove ${m.full_name}`}
               className="text-text-faint hover:text-text-default"
               onClick={() =>
-                save({
-                  member_nuids: memberNuids.filter((n) => n !== m.member_nuid),
-                })
+                setConfirming({ nuid: m.member_nuid, fullName: m.full_name })
               }
             >
               <X size={12} />
@@ -277,23 +336,20 @@ function GroupCard({
       </div>
 
       <div className="flex items-center justify-between gap-2">
-        <Select
-          value=""
-          onValueChange={(nuid) =>
-            save({ member_nuids: [...memberNuids, nuid] })
-          }
-        >
+        <Select value="" onValueChange={pickMember}>
           <SelectTrigger
             className="h-8 w-48 text-xs"
             aria-label={`Add a member to ${group.name}`}
-            disabled={addable.length === 0}
+            disabled={addable.length === 0 || update.isPending}
           >
             <SelectValue placeholder="Add a member" />
           </SelectTrigger>
           <SelectContent>
             {addable.map((l) => (
               <SelectItem key={l.nuid} value={l.nuid}>
-                {l.full_name}
+                {l.from
+                  ? `${l.full_name} (move from ${l.from.name})`
+                  : l.full_name}
               </SelectItem>
             ))}
           </SelectContent>
@@ -310,6 +366,51 @@ function GroupCard({
           Couldn&apos;t save the group: {apiErrorDetail(update.error)}
         </p>
       )}
+
+      <Dialog
+        open={!!confirming}
+        onOpenChange={(open) => !open && setConfirming(null)}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {confirming?.from
+                ? `Move ${confirming.fullName} to ${group.name}?`
+                : `Remove ${confirming?.fullName} from ${group.name}?`}
+            </DialogTitle>
+            <DialogDescription>
+              {confirming?.from
+                ? `They'll be taken out of ${confirming.from.name}. `
+                : ''}
+              Interviews they&apos;re already assigned to stay as they are.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirming(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant={confirming?.from ? 'default' : 'destructive'}
+              disabled={update.isPending}
+              onClick={() => {
+                if (!confirming) return
+                if (confirming.from) {
+                  addMember(confirming.nuid, confirming.from)
+                } else {
+                  save({
+                    member_nuids: memberNuids.filter(
+                      (n) => n !== confirming.nuid
+                    ),
+                  })
+                }
+                setConfirming(null)
+              }}
+            >
+              {confirming?.from ? 'Move' : 'Remove'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
