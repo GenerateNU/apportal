@@ -1,7 +1,6 @@
 import type { Interview, Question, WrittenAnswer } from '@/lib/api/types'
 import type { ApplicantApplication } from './types'
 import { formatDate } from '@/lib/utils'
-import { CandidateTags } from '@/components/CandidateTags'
 import { ReturnerBadge } from '@/components/ReturnerBadge'
 import { AnswerCell } from './AnswerCell'
 import { StageSelect } from './StageSelect'
@@ -92,17 +91,6 @@ export function ApplicantRow({
           )}
           {applicant.returner && <ReturnerBadge />}
         </div>
-      </td>
-      <td
-        className="min-w-44 border-r border-gray-100 px-3 py-2"
-        onClick={(e) => e.stopPropagation()}
-        onAuxClick={(e) => e.stopPropagation()}
-      >
-        <CandidateTags
-          applicationId={applicant.id}
-          cycleId={applicant.cycleId}
-          tagIds={applicant.tagIds}
-        />
       </td>
       {columns.map((q) => {
         const rowQuestion = rowQuestions.find(

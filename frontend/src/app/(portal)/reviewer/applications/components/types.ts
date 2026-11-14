@@ -12,5 +12,4 @@ export type ApplicantApplication = {
   stage: ApplicationStage
   submittedAt?: string
   returner: boolean
-  tagIds: string[]
 }

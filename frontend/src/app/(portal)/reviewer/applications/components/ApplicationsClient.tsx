@@ -238,7 +238,6 @@ export function ApplicationsClient() {
         stage: app.stage,
         submittedAt: app.submitted_at,
         returner: app.returner,
-        tagIds: app.tag_ids ?? [],
       })),
     [applications]
   )
