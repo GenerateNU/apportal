@@ -43,7 +43,7 @@ func main() {
 		&models.PreferenceListMember{}, &models.PreferenceListEntry{},
 		&models.PreferenceListPersonalEntry{}, &models.PreferenceListComment{},
 		&models.PreferenceListDeadline{}, &models.Draft{}, &models.DraftTeam{}, &models.DraftPick{},
-		&models.DecisionTemplate{}, &models.DecisionDraft{}, &models.ReviewRelease{},
+		&models.CycleTag{}, &models.DecisionTemplate{},&models.DecisionDraft{}, &models.ReviewRelease{},
 	)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "failed to load gorm schema:", err)

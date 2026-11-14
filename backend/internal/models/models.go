@@ -146,8 +146,21 @@ type Application struct {
 	// submitted); it is not the row's creation time.
 	SubmittedAt *time.Time `json:"submitted_at,omitempty"`
 	UpdatedAt   time.Time  `json:"updated_at" gorm:"not null;default:now()"`
-	Cycle       Cycle      `json:"-" gorm:"foreignKey:CycleID;references:ID"`
-	User        User       `json:"-" gorm:"foreignKey:UserNUID;references:NUID"`
+	// TagIDs reference cycle_tags in this application's cycle. A uuid[] has no
+	// foreign key, so the tag handlers keep it consistent.
+	TagIDs []string `json:"tag_ids" gorm:"serializer:pgarray;type:uuid[];not null;default:'{}';check:applications_tag_ids_max,cardinality(tag_ids) <= 3"`
+	Cycle  Cycle    `json:"-" gorm:"foreignKey:CycleID;references:ID"`
+	User   User     `json:"-" gorm:"foreignKey:UserNUID;references:NUID"`
+}
+
+// CycleTag is one entry in a cycle's tag catalog, attachable to applications.
+type CycleTag struct {
+	ID        string    `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	CycleID   string    `json:"cycle_id" gorm:"type:uuid;not null;uniqueIndex:cycle_tags_cycle_id_name_key,priority:1"`
+	Name      string    `json:"name" gorm:"not null;uniqueIndex:cycle_tags_cycle_id_name_key,priority:2"`
+	Color     string    `json:"color" gorm:"not null"`
+	CreatedAt time.Time `json:"created_at" gorm:"not null;default:now()"`
+	Cycle     Cycle     `json:"-" gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
 }
 
 // ApplicationSummary bundles an application with its applicant's display name
