@@ -14,6 +14,7 @@ import type {
   ChiefReviewDetail as GenChiefReviewDetail,
   ChiefReviewDetailVote,
   Cycle as GenCycle,
+  CycleTag as GenCycleTag,
   DecisionContext as GenDecisionContext,
   DecisionInterviewer,
   DecisionRow as GenDecisionRow,
@@ -128,6 +129,8 @@ export type Application = Omit<
   availability: Record<string, boolean> | null
   resume_url: string | null
 }
+
+export type CycleTag = Omit<GenCycleTag, '$schema'>
 
 // An application bundled with its applicant's full_name/email — what the
 // reviewer applications list actually returns, so the frontend never needs a

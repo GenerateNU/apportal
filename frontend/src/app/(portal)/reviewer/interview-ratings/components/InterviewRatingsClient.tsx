@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { CandidateTags } from '@/components/CandidateTags'
 import {
   ArrowRight,
   CheckCircle2,
@@ -16,7 +17,9 @@ import {
 } from 'lucide-react'
 import { PageContainer } from '@/components/PageContainer'
 import { Button } from '@/components/ui/button'
+import { TagFilter } from '@/components/ui/tag-filter'
 import { usePersistedFilters } from '@/hooks/usePersistedFilters'
+import { useCycleTags } from '@/lib/queries/tags'
 import {
   Dialog,
   DialogContent,
@@ -120,6 +123,7 @@ type StoredFilters = {
   cycleId: string
   role: Role | 'all'
   groupByInterviewer: boolean
+  tagIds: string[]
   interviewerFilter: string
   searchQuery: string
 }
@@ -147,6 +151,7 @@ export function InterviewRatingsClient() {
   const [activeRole, setActiveRole] = useState<Role | 'all'>('all')
   const [groupByInterviewer, setGroupByInterviewer] = useState(true)
   const [interviewerFilter, setInterviewerFilter] = useState('all')
+  const [tagFilter, setTagFilter] = useState<string[]>([])
   const [collapsedLanes, setCollapsedLanes] = useState<Set<string>>(new Set())
   const [searchQuery, setSearchQuery] = useState('')
 
@@ -166,6 +171,12 @@ export function InterviewRatingsClient() {
       if (typeof stored.interviewerFilter === 'string') {
         setInterviewerFilter(stored.interviewerFilter)
       }
+      if (
+        Array.isArray(stored.tagIds) &&
+        stored.tagIds.every((id) => typeof id === 'string')
+      ) {
+        setTagFilter(stored.tagIds)
+      }
       if (typeof stored.searchQuery === 'string') {
         setSearchQuery(stored.searchQuery)
       }
@@ -181,6 +192,7 @@ export function InterviewRatingsClient() {
       cycleId,
       role: activeRole,
       groupByInterviewer,
+      tagIds: tagFilter,
       interviewerFilter,
       searchQuery,
     },
@@ -206,6 +218,15 @@ export function InterviewRatingsClient() {
     (r) => r === 'chief' || r === 'admin'
   )
   const showSwimlanes = groupByInterviewer && isChief
+
+  // A saved tag can be deleted (or belong to another cycle), so only the ones
+  // still in the catalog count. Until the catalog loads, don't filter at all
+  // rather than hide everything.
+  const { data: cycleTags = [] } = useCycleTags(cycleId)
+  const activeTagIds = useMemo(
+    () => tagFilter.filter((id) => cycleTags.some((t) => t.id === id)),
+    [tagFilter, cycleTags]
+  )
 
   // The blind-review gate is per cycle x applicant role, so the button acts on
   // whichever roles the page is currently showing — both, under "All roles".
@@ -320,6 +341,13 @@ export function InterviewRatingsClient() {
       }
     }
 
+    // Filter by tag: any of the chosen tags
+    if (activeTagIds.length > 0) {
+      filtered = filtered.filter((r) =>
+        r.application.tag_ids?.some((id) => activeTagIds.includes(id))
+      )
+    }
+
     // Filter by search query
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim()
@@ -332,7 +360,7 @@ export function InterviewRatingsClient() {
     }
 
     return filtered
-  }, [rows, interviewerFilter, searchQuery])
+  }, [rows, interviewerFilter, activeTagIds, searchQuery])
 
   // Total per rating across the current filter — drives both the flat kanban
   // and the swimlane header, and which (usually empty) columns to hide.
@@ -462,6 +490,14 @@ export function InterviewRatingsClient() {
             )}
           </div>
 
+          {cycleTags.length > 0 && (
+            <TagFilter
+              tags={cycleTags}
+              value={activeTagIds}
+              onChange={setTagFilter}
+            />
+          )}
+
           {isChief && (
             <div className="flex rounded-md border border-gray-200 bg-white">
               <button
@@ -558,7 +594,7 @@ export function InterviewRatingsClient() {
         </p>
       ) : filteredRows.length === 0 ? (
         <p className="text-text-faint px-1 text-sm">
-          No applicants match this interviewer filter.
+          No applicants match these filters.
         </p>
       ) : showSwimlanes ? (
         <div className="max-h-[70vh] overflow-auto rounded-lg border border-gray-200 pb-4">
@@ -850,6 +886,20 @@ function RatingCard({
             {RATING_LABEL[interview.rating]}
           </span>
         )}
+        {/* The card is a link, so stop clicks here from navigating. */}
+        <span
+          onClick={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+          }}
+        >
+          <CandidateTags
+            compact
+            applicationId={application.id}
+            cycleId={application.cycle_id}
+            tagIds={application.tag_ids}
+          />
+        </span>
       </div>
 
       {showInterviewer && interviewerName && (
