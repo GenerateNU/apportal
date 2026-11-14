@@ -6,9 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface CreateInterviewCommentInputBody {
-  /** A URL to the JSON Schema for this object. */
-  readonly $schema?: string;
-  /** @minLength 1 */
-  body: string;
-}
+/**
+ * @minItems 1
+ * @maxItems 200
+ */
+export type AssignGroupInputBodyApplicationIds = string[] | null;

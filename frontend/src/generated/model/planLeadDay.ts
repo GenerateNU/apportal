@@ -7,10 +7,7 @@
  */
 
 export interface PlanLeadDay {
-  /**
-   * The lead's meeting-day key for this run (matches an applicant availability key)
-   * @minLength 1
-   */
+  /** The lead's meeting-day key for this run (matches an applicant availability key); empty matches any day */
   day: string;
   lead_nuid: string;
 }

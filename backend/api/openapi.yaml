@@ -123,6 +123,12 @@ components:
         submitted_at:
           format: date-time
           type: string
+        tag_ids:
+          items:
+            type: string
+          type:
+            - array
+            - "null"
         updated_at:
           format: date-time
           type: string
@@ -134,6 +140,41 @@ components:
         - user_nuid
         - role_id
         - stage
+        - updated_at
+        - tag_ids
+      type: object
+    ApplicationCommentDetail:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/ApplicationCommentDetail.json
+          format: uri
+          readOnly: true
+          type: string
+        application_id:
+          type: string
+        author_name:
+          type: string
+        author_nuid:
+          type: string
+        body:
+          type: string
+        created_at:
+          format: date-time
+          type: string
+        id:
+          type: string
+        updated_at:
+          format: date-time
+          type: string
+      required:
+        - id
+        - application_id
+        - author_nuid
+        - body
+        - created_at
         - updated_at
       type: object
     ApplicationSummary:
@@ -172,6 +213,12 @@ components:
         submitted_at:
           format: date-time
           type: string
+        tag_ids:
+          items:
+            type: string
+          type:
+            - array
+            - "null"
         updated_at:
           format: date-time
           type: string
@@ -187,6 +234,26 @@ components:
         - role_id
         - stage
         - updated_at
+        - tag_ids
+      type: object
+    ApplicationTagsOutputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/ApplicationTagsOutputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        tag_ids:
+          items:
+            type: string
+          type:
+            - array
+            - "null"
+      required:
+        - tag_ids
       type: object
     ApplicationTemplate:
       additionalProperties: false
@@ -277,6 +344,50 @@ components:
         - applications
         - total
         - stage_counts
+      type: object
+    AssignGroupInputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/AssignGroupInputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        application_ids:
+          items:
+            type: string
+          maxItems: 200
+          minItems: 1
+          type:
+            - array
+            - "null"
+      required:
+        - application_ids
+      type: object
+    AssignGroupOutputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/AssignGroupOutputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        added:
+          format: int64
+          type: integer
+        interviewers:
+          items:
+            $ref: "#/components/schemas/InterviewerDetail"
+          type:
+            - array
+            - "null"
+      required:
+        - added
+        - interviewers
       type: object
     AssignmentPlanPreview:
       additionalProperties: false
@@ -814,6 +925,22 @@ components:
       required:
         - body
       type: object
+    CreateCommentInputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/CreateCommentInputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        body:
+          minLength: 1
+          type: string
+      required:
+        - body
+      type: object
     CreateCycleInputBody:
       additionalProperties: false
       properties:
@@ -905,21 +1032,26 @@ components:
       required:
         - url
       type: object
-    CreateInterviewCommentInputBody:
+    CreateGroupsInputBody:
       additionalProperties: false
       properties:
         $schema:
           description: A URL to the JSON Schema for this object.
           examples:
-            - https://example.com/schemas/CreateInterviewCommentInputBody.json
+            - https://example.com/schemas/CreateGroupsInputBody.json
           format: uri
           readOnly: true
           type: string
-        body:
-          minLength: 1
-          type: string
+        groups:
+          items:
+            $ref: "#/components/schemas/GroupBody"
+          maxItems: 100
+          minItems: 1
+          type:
+            - array
+            - "null"
       required:
-        - body
+        - groups
       type: object
     CreateLeadAssignmentInputBody:
       additionalProperties: false
@@ -1063,6 +1195,21 @@ components:
           type: string
       required:
         - cycle_id
+        - name
+      type: object
+    CreateTagInputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/CreateTagInputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        name:
+          type: string
+      required:
         - name
       type: object
     CreateUploadURLInputBody:
@@ -1257,6 +1404,34 @@ components:
         - display_order
         - is_active
         - required_assignments
+        - created_at
+      type: object
+    CycleTag:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/CycleTag.json
+          format: uri
+          readOnly: true
+          type: string
+        color:
+          type: string
+        created_at:
+          format: date-time
+          type: string
+        cycle_id:
+          type: string
+        id:
+          type: string
+        name:
+          type: string
+      required:
+        - id
+        - cycle_id
+        - name
+        - color
         - created_at
       type: object
     DecisionContext:
@@ -1723,6 +1898,32 @@ components:
           format: uri
           type: string
       type: object
+    GroupBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/GroupBody.json
+          format: uri
+          readOnly: true
+          type: string
+        meeting_slot:
+          format: date-time
+          type: string
+        member_nuids:
+          items:
+            type: string
+          type:
+            - array
+            - "null"
+        name:
+          minLength: 1
+          type: string
+      required:
+        - name
+        - member_nuids
+      type: object
     InterviewCapacity:
       additionalProperties: false
       properties:
@@ -1768,40 +1969,6 @@ components:
         - min_cap
         - suggested_cap
         - notes
-      type: object
-    InterviewCommentDetail:
-      additionalProperties: false
-      properties:
-        $schema:
-          description: A URL to the JSON Schema for this object.
-          examples:
-            - https://example.com/schemas/InterviewCommentDetail.json
-          format: uri
-          readOnly: true
-          type: string
-        application_id:
-          type: string
-        author_name:
-          type: string
-        author_nuid:
-          type: string
-        body:
-          type: string
-        created_at:
-          format: date-time
-          type: string
-        id:
-          type: string
-        updated_at:
-          format: date-time
-          type: string
-      required:
-        - id
-        - application_id
-        - author_nuid
-        - body
-        - created_at
-        - updated_at
       type: object
     InterviewDetail:
       additionalProperties: false
@@ -1858,6 +2025,59 @@ components:
         - application_id
         - created_at
         - updated_at
+      type: object
+    InterviewGroupDetail:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/InterviewGroupDetail.json
+          format: uri
+          readOnly: true
+          type: string
+        created_at:
+          format: date-time
+          type: string
+        created_by:
+          type: string
+        cycle_id:
+          type: string
+        id:
+          type: string
+        meeting_slot:
+          format: date-time
+          type: string
+        members:
+          items:
+            $ref: "#/components/schemas/InterviewGroupMemberDetail"
+          type:
+            - array
+            - "null"
+        name:
+          type: string
+        updated_at:
+          format: date-time
+          type: string
+      required:
+        - members
+        - id
+        - cycle_id
+        - name
+        - created_by
+        - created_at
+        - updated_at
+      type: object
+    InterviewGroupMemberDetail:
+      additionalProperties: false
+      properties:
+        full_name:
+          type: string
+        member_nuid:
+          type: string
+      required:
+        - member_nuid
+        - full_name
       type: object
     InterviewPoolOutputBody:
       additionalProperties: false
@@ -2047,6 +2267,12 @@ components:
           type:
             - array
             - "null"
+        groups:
+          items:
+            $ref: "#/components/schemas/PlanGroupDay"
+          type:
+            - array
+            - "null"
         leads:
           items:
             $ref: "#/components/schemas/PlanLeadDay"
@@ -2057,7 +2283,6 @@ components:
           type: string
       required:
         - role_id
-        - leads
       type: object
     InterviewerDetail:
       additionalProperties: false
@@ -2102,6 +2327,12 @@ components:
           format: uri
           readOnly: true
           type: string
+        groups:
+          items:
+            $ref: "#/components/schemas/PlannedGroup"
+          type:
+            - array
+            - "null"
         interviewers:
           items:
             $ref: "#/components/schemas/PlannedInterviewer"
@@ -2135,6 +2366,7 @@ components:
       required:
         - pool_size
         - interviewers
+        - groups
         - unassigned
         - no_day_match
         - warnings
@@ -2158,6 +2390,7 @@ components:
           additionalProperties:
             format: int64
             type: integer
+          description: Per-unit cap overrides, keyed by lead NUID or, when planning by group, group ID
           type: object
         conflicts:
           description: Leads ineligible to interview a specific applicant
@@ -2172,6 +2405,12 @@ components:
           type:
             - array
             - "null"
+        groups:
+          items:
+            $ref: "#/components/schemas/PlanGroupDay"
+          type:
+            - array
+            - "null"
         leads:
           items:
             $ref: "#/components/schemas/PlanLeadDay"
@@ -2182,7 +2421,6 @@ components:
           type: string
       required:
         - role_id
-        - leads
         - cap
       type: object
     Item:
@@ -2314,12 +2552,23 @@ components:
         - lead_nuid
         - application_id
       type: object
+    PlanGroupDay:
+      additionalProperties: false
+      properties:
+        day:
+          description: Empty matches any day
+          type: string
+        group_id:
+          type: string
+      required:
+        - group_id
+        - day
+      type: object
     PlanLeadDay:
       additionalProperties: false
       properties:
         day:
-          description: The lead's meeting-day key for this run (matches an applicant availability key)
-          minLength: 1
+          description: The lead's meeting-day key for this run (matches an applicant availability key); empty matches any day
           type: string
         lead_nuid:
           type: string
@@ -2364,6 +2613,50 @@ components:
         - full_name
         - email
         - already_assigned
+      type: object
+    PlannedGroup:
+      additionalProperties: false
+      properties:
+        added:
+          format: int64
+          type: integer
+        applications:
+          items:
+            $ref: "#/components/schemas/PlannedApplication"
+          type:
+            - array
+            - "null"
+        cap:
+          format: int64
+          type: integer
+        day:
+          type: string
+        existing:
+          format: int64
+          type: integer
+        group_id:
+          type: string
+        members:
+          items:
+            $ref: "#/components/schemas/InterviewGroupMemberDetail"
+          type:
+            - array
+            - "null"
+        name:
+          type: string
+        total:
+          format: int64
+          type: integer
+      required:
+        - group_id
+        - name
+        - day
+        - cap
+        - existing
+        - added
+        - total
+        - members
+        - applications
       type: object
     PlannedInterviewer:
       additionalProperties: false
@@ -3363,6 +3656,26 @@ components:
         - name
         - created_at
       type: object
+    SetApplicationTagsInputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/SetApplicationTagsInputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        tag_ids:
+          description: Replaces the application's tags; at most 3, all from its cycle
+          items:
+            type: string
+          type:
+            - array
+            - "null"
+      required:
+        - tag_ids
+      type: object
     SetDraftTeamsInputBody:
       additionalProperties: false
       properties:
@@ -3552,6 +3865,22 @@ components:
       required:
         - body
       type: object
+    UpdateCommentInputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/UpdateCommentInputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        body:
+          minLength: 1
+          type: string
+      required:
+        - body
+      type: object
     UpdateCycleInputBody:
       additionalProperties: false
       properties:
@@ -3643,22 +3972,6 @@ components:
         status:
           description: setup, active, or complete
           type: string
-      type: object
-    UpdateInterviewCommentInputBody:
-      additionalProperties: false
-      properties:
-        $schema:
-          description: A URL to the JSON Schema for this object.
-          examples:
-            - https://example.com/schemas/UpdateInterviewCommentInputBody.json
-          format: uri
-          readOnly: true
-          type: string
-        body:
-          minLength: 1
-          type: string
-      required:
-        - body
       type: object
     UpdateInterviewScriptInputBody:
       additionalProperties: false
@@ -3804,6 +4117,22 @@ components:
             - https://example.com/schemas/UpdateRoleInputBody.json
           format: uri
           readOnly: true
+          type: string
+        name:
+          type: string
+      type: object
+    UpdateTagInputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/UpdateTagInputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        color:
+          description: One of the palette colors
           type: string
         name:
           type: string
@@ -4517,6 +4846,13 @@ paths:
             enum:
               - "true"
               - "false"
+            type: string
+        - description: Comma-separated cycle tag ids; an application matches any of them
+          explode: false
+          in: query
+          name: tag_ids
+          schema:
+            description: Comma-separated cycle tag ids; an application matches any of them
             type: string
         - description: Case-insensitive substring match on the applicant's name, NUID, or email
           explode: false
@@ -5301,6 +5637,172 @@ paths:
       summary: Submit or update the challenge link
       tags:
         - Code submissions
+  /applications/{id}/comments:
+    get:
+      description: Reviewer only.
+      operationId: list-application-comments
+      parameters:
+        - description: Application ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Application ID
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/ApplicationCommentDetail"
+                type:
+                  - array
+                  - "null"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: List an application's comments
+      tags:
+        - Application comments
+    post:
+      description: Reviewer only. Any reviewer may leave any number of comments.
+      operationId: create-application-comment
+      parameters:
+        - description: Application ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Application ID
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCommentInputBody"
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationCommentDetail"
+          description: Created
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Comment on an application
+      tags:
+        - Application comments
+  /applications/{id}/comments/{commentId}:
+    put:
+      description: Reviewer only, and only the comment's own author.
+      operationId: update-application-comment
+      parameters:
+        - description: Application ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Application ID
+            type: string
+        - description: Comment ID
+          in: path
+          name: commentId
+          required: true
+          schema:
+            description: Comment ID
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCommentInputBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationCommentDetail"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Edit an application comment
+      tags:
+        - Application comments
   /applications/{id}/decision:
     put:
       description: The assigned interviewer may write feedback and compliments for their own applicants. Chiefs may additionally change the kind, override the whole message, and mark it sent.
@@ -5459,172 +5961,6 @@ paths:
                 $ref: "#/components/schemas/ErrorModel"
           description: Internal Server Error
       summary: Update the interview and your write-up
-      tags:
-        - Interviews
-  /applications/{id}/interview-comments:
-    get:
-      description: Reviewer only. Open to any reviewer, not just the assigned interviewer/chief.
-      operationId: list-interview-comments
-      parameters:
-        - description: Application ID
-          in: path
-          name: id
-          required: true
-          schema:
-            description: Application ID
-            type: string
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                items:
-                  $ref: "#/components/schemas/InterviewCommentDetail"
-                type:
-                  - array
-                  - "null"
-          description: OK
-        "401":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unauthorized
-        "403":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Forbidden
-        "422":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unprocessable Entity
-        "500":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Internal Server Error
-      summary: List an application's interview comments
-      tags:
-        - Interviews
-    post:
-      description: Reviewer only. Any reviewer may leave any number of comments on an application.
-      operationId: create-interview-comment
-      parameters:
-        - description: Application ID
-          in: path
-          name: id
-          required: true
-          schema:
-            description: Application ID
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CreateInterviewCommentInputBody"
-        required: true
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/InterviewCommentDetail"
-          description: OK
-        "401":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unauthorized
-        "403":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Forbidden
-        "422":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unprocessable Entity
-        "500":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Internal Server Error
-      summary: Add an interview comment
-      tags:
-        - Interviews
-  /applications/{id}/interview-comments/{commentId}:
-    put:
-      description: Reviewer only, and only the comment's own author.
-      operationId: update-interview-comment
-      parameters:
-        - description: Application ID
-          in: path
-          name: id
-          required: true
-          schema:
-            description: Application ID
-            type: string
-        - description: Comment ID
-          in: path
-          name: commentId
-          required: true
-          schema:
-            description: Comment ID
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/UpdateInterviewCommentInputBody"
-        required: true
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/InterviewCommentDetail"
-          description: OK
-        "401":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unauthorized
-        "403":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Forbidden
-        "404":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Not Found
-        "422":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unprocessable Entity
-        "500":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Internal Server Error
-      summary: Edit an interview comment
       tags:
         - Interviews
   /applications/{id}/interview-review:
@@ -6040,6 +6376,58 @@ paths:
       summary: Mark an application as wanted for your team
       tags:
         - Selections
+  /applications/{id}/tags:
+    put:
+      description: Lead, chief or admin. At most 3 tags, all from the application's cycle.
+      operationId: set-application-tags
+      parameters:
+        - description: Application ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Application ID
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetApplicationTagsInputBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationTagsOutputBody"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Replace an application's tags
+      tags:
+        - Tags
   /applications/{id}/written-review:
     put:
       description: Reviewer only; upserts the calling reviewer's review-question answers.
@@ -6350,6 +6738,56 @@ paths:
       summary: List chief reviews for several applications
       tags:
         - Chief reviews
+  /comments:
+    get:
+      description: Reviewer only. One request for a page of applications, instead of one per application.
+      operationId: list-application-comments-bulk
+      parameters:
+        - description: Comma-separated application IDs
+          explode: false
+          in: query
+          name: application_ids
+          schema:
+            description: Comma-separated application IDs
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/ApplicationCommentDetail"
+                type:
+                  - array
+                  - "null"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: List comments for several applications
+      tags:
+        - Application comments
   /cycle-stages/{id}:
     patch:
       description: Chief only.
@@ -7642,6 +8080,175 @@ paths:
       summary: Preview interview-review assignments for a meeting-day roster
       tags:
         - Interview assignment planning
+  /cycles/{id}/interview-groups:
+    get:
+      description: Chief only. Members are included.
+      operationId: list-interview-groups
+      parameters:
+        - description: Cycle ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Cycle ID
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/InterviewGroupDetail"
+                type:
+                  - array
+                  - "null"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: List a cycle's interview groups
+      tags:
+        - Interview groups
+    post:
+      description: Chief only. Names are unique within a cycle.
+      operationId: create-interview-group
+      parameters:
+        - description: Cycle ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Cycle ID
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GroupBody"
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InterviewGroupDetail"
+          description: Created
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "409":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Conflict
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Create an interview group
+      tags:
+        - Interview groups
+  /cycles/{id}/interview-groups/batch:
+    post:
+      description: "Chief only. All or nothing: if any group is invalid, none are created."
+      operationId: create-interview-groups
+      parameters:
+        - description: Cycle ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Cycle ID
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateGroupsInputBody"
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/InterviewGroupDetail"
+                type:
+                  - array
+                  - "null"
+          description: Created
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "409":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Conflict
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Create several interview groups at once
+      tags:
+        - Interview groups
   /cycles/{id}/interview-reviewers:
     delete:
       description: Chief only. Skips reviewers who have already submitted.
@@ -8556,6 +9163,100 @@ paths:
       summary: Add a stage to a cycle's flow template
       tags:
         - Cycle stages
+  /cycles/{id}/tags:
+    get:
+      operationId: list-cycle-tags
+      parameters:
+        - description: Cycle ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Cycle ID
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/CycleTag"
+                type:
+                  - array
+                  - "null"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: List a cycle's tags
+      tags:
+        - Tags
+    post:
+      description: Lead, chief or admin. The color is assigned from the palette.
+      operationId: create-cycle-tag
+      parameters:
+        - description: Cycle ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Cycle ID
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTagInputBody"
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CycleTag"
+          description: Created
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "409":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Conflict
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Create a tag in a cycle
+      tags:
+        - Tags
   /cycles/{id}/template:
     get:
       description: ?role_id= selects which role's template to fetch (required). Creates a default-titled row on first access.
@@ -9149,6 +9850,179 @@ paths:
       summary: Set the draft order
       tags:
         - Draft
+  /interview-groups/{id}:
+    delete:
+      description: Chief only. Interviewers already assigned from this group are left alone.
+      operationId: delete-interview-group
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Delete an interview group
+      tags:
+        - Interview groups
+    put:
+      description: Chief only. Interviewers already assigned from this group are left alone.
+      operationId: update-interview-group
+      parameters:
+        - description: Interview group ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Interview group ID
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GroupBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InterviewGroupDetail"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "409":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Conflict
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Replace an interview group's name, meeting slot, and members
+      tags:
+        - Interview groups
+  /interview-groups/{id}/assignments:
+    post:
+      description: Chief only. An application gets at most one group, so the request is rejected if any application already has interviewers.
+      operationId: assign-interview-group
+      parameters:
+        - description: Interview group ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Interview group ID
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssignGroupInputBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssignGroupOutputBody"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "409":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Conflict
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Assign a group as the interviewers on each application
+      tags:
+        - Interview groups
   /interview-reviewers:
     get:
       description: Reviewer only. Write-ups are omitted except the caller's own; read them from list-interview-reviewers.
@@ -10766,6 +11640,102 @@ paths:
       summary: Rename a role
       tags:
         - Roles
+  /tags/{id}:
+    delete:
+      description: Also removes it from every application in the cycle.
+      operationId: delete-tag
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Delete a tag
+      tags:
+        - Tags
+    patch:
+      operationId: update-tag
+      parameters:
+        - description: Tag ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Tag ID
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTagInputBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CycleTag"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "409":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Conflict
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Rename or recolor a tag
+      tags:
+        - Tags
   /users:
     get:
       description: Reviewer only. Any lead/chief/admin can browse the reviewer directory (e.g. to invite a fellow lead onto a preference list); creating or editing a user stays chief-only.

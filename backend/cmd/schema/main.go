@@ -38,11 +38,11 @@ func main() {
 		&models.WrittenReview{}, &models.ReviewQuestion{}, &models.WrittenReviewAnswer{},
 		&models.ChiefReview{}, &models.ChiefReviewComment{},
 		&models.Interview{}, &models.Interviewer{}, &models.InterviewReviewer{},
-		&models.InterviewComment{}, &models.LeadSelection{}, &models.PreferenceList{},
+		&models.ApplicationComment{}, &models.InterviewGroup{}, &models.InterviewGroupMember{}, &models.LeadSelection{}, &models.PreferenceList{},
 		&models.PreferenceListMember{}, &models.PreferenceListEntry{},
 		&models.PreferenceListPersonalEntry{}, &models.PreferenceListComment{},
 		&models.PreferenceListDeadline{}, &models.Draft{}, &models.DraftTeam{}, &models.DraftPick{},
-		&models.DecisionTemplate{}, &models.DecisionDraft{}, &models.ReviewRelease{},
+		&models.CycleTag{}, &models.DecisionTemplate{}, &models.DecisionDraft{}, &models.ReviewRelease{},
 	)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "failed to load gorm schema:", err)

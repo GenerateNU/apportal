@@ -15,7 +15,6 @@ func Route(api huma.API, db *gorm.DB) {
 	interviewAssignmentDB := interviewassignment.NewInterviewAssignmentDB(db)
 	interviewDB := NewInterviewDB(db)
 
-	registerInterviewComment(api, &interviewCommentService{interviewDB: interviewDB})
 	registerInterviewScript(api, &interviewScriptService{interviewDB: interviewDB, roleDB: role.NewRoleDB(db)})
 	registerInterview(api, &interviewService{applicationDB: applicationDB, interviewDB: interviewDB, interviewAssignmentDB: interviewAssignmentDB})
 }

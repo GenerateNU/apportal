@@ -167,6 +167,7 @@ export function ApplicationsClient() {
     questionsByCycleRole,
     availabilityQuestionIdByRole,
     hasAvailability,
+    tagNames,
     filterParams,
   } = useApplicationFilters({
     cycleId: activeCycle,
@@ -417,6 +418,7 @@ export function ApplicationsClient() {
             onFilterChange={handleFilterChange}
             hasAvailability={hasAvailability}
             roleOptions={roleOptions}
+            tagNames={tagNames}
             bulkBar={
               isChief && selectedIds.size > 0 ? (
                 <BulkActionBar

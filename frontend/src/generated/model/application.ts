@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { ApplicationStage } from './applicationStage';
+import type { ApplicationTagIds } from './applicationTagIds';
 
 export interface Application {
   /** A URL to the JSON Schema for this object. */
@@ -17,6 +18,7 @@ export interface Application {
   role_id: string;
   stage: ApplicationStage;
   submitted_at?: string;
+  tag_ids: ApplicationTagIds;
   updated_at: string;
   user_nuid: string;
 }

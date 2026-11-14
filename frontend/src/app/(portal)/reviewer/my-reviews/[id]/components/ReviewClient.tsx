@@ -14,10 +14,11 @@ import {
   Lock,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { CandidateTags } from '@/components/CandidateTags'
 import { useAnswers } from '@/lib/queries/answers'
 import { useApplicant } from '@/lib/queries/applicants'
 import { useApplicationTemplate } from '@/lib/queries/application-templates'
-import { useApplications } from '@/lib/queries/applications'
+import { useApplication, useApplications } from '@/lib/queries/applications'
 import { useQuestions } from '@/lib/queries/questions'
 import { useReviewQuestions } from '@/lib/queries/review-questions'
 import { useCurrentUser } from '@/lib/queries/users'
@@ -53,6 +54,7 @@ export function ReviewClient({
   const { data: template } = useApplicationTemplate(cycleId, role)
   const { data: reviews = [] } = useWrittenReviews(applicationId)
   const upsert = useUpsertWrittenReview()
+  const { data: application } = useApplication(applicationId)
 
   // The rest of my review queue, so a "next" button can jump to the next
   // assigned application that still needs a review from me — same ordering
@@ -206,6 +208,12 @@ export function ReviewClient({
             >
               {roleLabel(role)}
             </span>
+            <CandidateTags
+              compact
+              applicationId={applicationId}
+              cycleId={cycleId}
+              tagIds={application?.tag_ids}
+            />
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">

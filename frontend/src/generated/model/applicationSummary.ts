@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { ApplicationSummaryStage } from './applicationSummaryStage';
+import type { ApplicationSummaryTagIds } from './applicationSummaryTagIds';
 
 export interface ApplicationSummary {
   availability?: unknown;
@@ -18,6 +19,7 @@ export interface ApplicationSummary {
   role_id: string;
   stage: ApplicationSummaryStage;
   submitted_at?: string;
+  tag_ids: ApplicationSummaryTagIds;
   updated_at: string;
   user_nuid: string;
 }

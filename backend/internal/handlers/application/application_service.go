@@ -15,6 +15,7 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/google/uuid"
 )
 
 type applicationService struct {
@@ -107,6 +108,10 @@ func (s *applicationService) list(ctx context.Context, in *ListApplicationsInput
 	if err != nil {
 		return nil, err
 	}
+	tagIDs, err := parseTagIDs(in.TagIDs)
+	if err != nil {
+		return nil, err
+	}
 
 	filter := ApplicationFilter{
 		CycleID:               in.CycleID,
@@ -119,6 +124,7 @@ func (s *applicationService) list(ctx context.Context, in *ListApplicationsInput
 		RoleIDs:               roleIDs,
 		Stages:                stages,
 		Returner:              returner,
+		TagIDs:                tagIDs,
 		Search:                in.Search,
 		Offset:                in.Offset,
 		// Only a user listing their own applications by their own identity
@@ -174,6 +180,22 @@ func parseReturner(raw string) (*bool, error) {
 	default:
 		return nil, huma.Error422UnprocessableEntity("invalid returner: " + raw)
 	}
+}
+
+// parseTagIDs decodes a comma-separated list of tag UUIDs; empty means "don't filter".
+func parseTagIDs(raw string) ([]string, error) {
+	ids := utils.SplitIDs(raw)
+	if len(ids) > utils.MaxBulkApplications {
+		return nil, huma.Error422UnprocessableEntity("too many tag_ids")
+	}
+	for i, id := range ids {
+		parsed, err := uuid.Parse(id)
+		if err != nil {
+			return nil, huma.Error422UnprocessableEntity("invalid tag id in tag_ids: " + id)
+		}
+		ids[i] = parsed.String()
+	}
+	return ids, nil
 }
 
 // parseRoleIDs decodes a comma-separated list of applicant role IDs.
