@@ -14,3 +14,9 @@ export const AVAILABILITY_OPTIONS = [
 ] as const
 
 export const ANY_DAY = 'any'
+export const SKIP_DAY = 'skip'
+
+export function dayLabel(day: string): string {
+  if (!day) return 'Any day'
+  return AVAILABILITY_OPTIONS.find((o) => o.key === day)?.label ?? day
+}

@@ -25,7 +25,8 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
-  AssignGroupOutputBody,
+  CreateGroupsInputBody,
+  CreateInterviewGroups201,
   ErrorModel,
   GroupBody,
   InterviewGroupDetail,
@@ -67,70 +68,6 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
 /**
- * Chief only. Members already interviewing the application are skipped. The group is a preset: interviewers can be added or removed individually afterwards.
- * @summary Add every member of a group as an interviewer
- */
-export const assignInterviewGroup = (
-    id: string,
-    groupId: string,
- options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
-) => {
-      
-      
-      return customInstance<AssignGroupOutputBody>(
-      {url: `/applications/${id}/interview-groups/${groupId}`, method: 'POST', signal
-    },
-      options);
-    }
-  
-
-
-export const getAssignInterviewGroupMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assignInterviewGroup>>, TError,{id: string;groupId: string}, TContext>, request?: SecondParameter<typeof customInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof assignInterviewGroup>>, TError,{id: string;groupId: string}, TContext> => {
-
-const mutationKey = ['assignInterviewGroup'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-      
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof assignInterviewGroup>>, {id: string;groupId: string}> = (props) => {
-          const {id,groupId} = props ?? {};
-
-          return  assignInterviewGroup(id,groupId,requestOptions)
-        }
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type AssignInterviewGroupMutationResult = NonNullable<Awaited<ReturnType<typeof assignInterviewGroup>>>
-    
-    export type AssignInterviewGroupMutationError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel
-
-    /**
- * @summary Add every member of a group as an interviewer
- */
-export const useAssignInterviewGroup = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assignInterviewGroup>>, TError,{id: string;groupId: string}, TContext>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof assignInterviewGroup>>,
-        TError,
-        {id: string;groupId: string},
-        TContext
-      > => {
-
-      const mutationOptions = getAssignInterviewGroupMutationOptions(options);
-
-      return useMutation(mutationOptions, queryClient);
-    }
-    /**
  * Chief only. Members are included.
  * @summary List a cycle's interview groups
  */
@@ -285,6 +222,72 @@ export const useCreateInterviewGroup = <TError = ErrorModel | ErrorModel | Error
       > => {
 
       const mutationOptions = getCreateInterviewGroupMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * Chief only. All or nothing: if any group is invalid, none are created.
+ * @summary Create several interview groups at once
+ */
+export const createInterviewGroups = (
+    id: string,
+    createGroupsInputBody: NonReadonly<CreateGroupsInputBody>,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<CreateInterviewGroups201>(
+      {url: `/cycles/${id}/interview-groups/batch`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: createGroupsInputBody, signal
+    },
+      options);
+    }
+  
+
+
+export const getCreateInterviewGroupsMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInterviewGroups>>, TError,{id: string;data: NonReadonly<CreateGroupsInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof createInterviewGroups>>, TError,{id: string;data: NonReadonly<CreateGroupsInputBody>}, TContext> => {
+
+const mutationKey = ['createInterviewGroups'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createInterviewGroups>>, {id: string;data: NonReadonly<CreateGroupsInputBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createInterviewGroups(id,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateInterviewGroupsMutationResult = NonNullable<Awaited<ReturnType<typeof createInterviewGroups>>>
+    export type CreateInterviewGroupsMutationBody = NonReadonly<CreateGroupsInputBody>
+    export type CreateInterviewGroupsMutationError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel
+
+    /**
+ * @summary Create several interview groups at once
+ */
+export const useCreateInterviewGroups = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInterviewGroups>>, TError,{id: string;data: NonReadonly<CreateGroupsInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof createInterviewGroups>>,
+        TError,
+        {id: string;data: NonReadonly<CreateGroupsInputBody>},
+        TContext
+      > => {
+
+      const mutationOptions = getCreateInterviewGroupsMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }

@@ -2,6 +2,8 @@ package interviewgroup
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"time"
 
 	"gorm.io/gorm"
@@ -92,18 +94,121 @@ func (d *InterviewGroupDB) withMembers(db *gorm.DB, groups []models.InterviewGro
 	return out, nil
 }
 
+type InvalidMembersError struct {
+	NotInterviewers []string
+	AlreadyGrouped  []string
+}
+
+func (e *InvalidMembersError) Error() string {
+	var parts []string
+	if len(e.NotInterviewers) > 0 {
+		parts = append(parts, fmt.Sprintf("not a lead or chief: %s", strings.Join(e.NotInterviewers, ", ")))
+	}
+	if len(e.AlreadyGrouped) > 0 {
+		parts = append(parts, fmt.Sprintf("already in another group this cycle: %s", strings.Join(e.AlreadyGrouped, ", ")))
+	}
+	return strings.Join(parts, "; ")
+}
+
+func checkMembers(tx *gorm.DB, cycleID string, skipGroupIDs []string, writes []GroupWrite) error {
+	var nuids []string
+	inBatch := map[string]int{}
+	for _, w := range writes {
+		for _, n := range w.MemberNUIDs {
+			if inBatch[n] == 0 {
+				nuids = append(nuids, n)
+			}
+			inBatch[n]++
+		}
+	}
+	if len(nuids) == 0 {
+		return nil
+	}
+
+	var users []struct {
+		NUID        string
+		FullName    string
+		Interviewer bool
+	}
+	err := tx.Raw(`SELECT nuid, full_name, roles && ARRAY['lead','chief']::user_role[] AS interviewer
+		FROM users WHERE nuid IN ?`, nuids).Scan(&users).Error
+	if err != nil {
+		return err
+	}
+	name := make(map[string]string, len(users))
+	interviewer := make(map[string]bool, len(users))
+	for _, u := range users {
+		name[u.NUID] = u.FullName
+		interviewer[u.NUID] = u.Interviewer
+	}
+	label := func(nuid string) string {
+		if name[nuid] != "" {
+			return name[nuid]
+		}
+		return nuid
+	}
+
+	q := tx.Table("interview_group_members m").
+		Joins("JOIN interview_groups g ON g.id = m.group_id").
+		Where("g.cycle_id = ? AND m.member_nuid IN ?", cycleID, nuids)
+	if len(skipGroupIDs) > 0 {
+		q = q.Where("g.id NOT IN ?", skipGroupIDs)
+	}
+	var grouped []string
+	if err := q.Distinct().Pluck("m.member_nuid", &grouped).Error; err != nil {
+		return err
+	}
+	groupedSet := make(map[string]bool, len(grouped))
+	for _, n := range grouped {
+		groupedSet[n] = true
+	}
+
+	bad := &InvalidMembersError{}
+	for _, n := range nuids {
+		if !interviewer[n] {
+			bad.NotInterviewers = append(bad.NotInterviewers, label(n))
+		}
+		if groupedSet[n] || inBatch[n] > 1 {
+			bad.AlreadyGrouped = append(bad.AlreadyGrouped, label(n))
+		}
+	}
+	if len(bad.NotInterviewers) > 0 || len(bad.AlreadyGrouped) > 0 {
+		return bad
+	}
+	return nil
+}
+
 func (d *InterviewGroupDB) Create(ctx context.Context, cycleID, createdBy string, in GroupWrite) (models.InterviewGroupDetail, error) {
-	var out models.InterviewGroupDetail
+	out, err := d.CreateMany(ctx, cycleID, createdBy, []GroupWrite{in})
+	if err != nil {
+		return models.InterviewGroupDetail{}, err
+	}
+	return out[0], nil
+}
+
+func (d *InterviewGroupDB) CreateMany(ctx context.Context, cycleID, createdBy string, in []GroupWrite) ([]models.InterviewGroupDetail, error) {
+	var out []models.InterviewGroupDetail
 	err := d.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		group := models.InterviewGroup{CycleID: cycleID, Name: in.Name, MeetingSlot: in.MeetingSlot, CreatedBy: createdBy}
-		if err := utils.Insert(tx, &group, "cycle_id", "name", "meeting_slot", "created_by"); err != nil {
+		if err := checkMembers(tx, cycleID, nil, in); err != nil {
 			return err
 		}
-		if err := insertMembers(tx, group.ID, in.MemberNUIDs); err != nil {
+		ids := make([]string, len(in))
+		for n, w := range in {
+			group := models.InterviewGroup{CycleID: cycleID, Name: w.Name, MeetingSlot: w.MeetingSlot, CreatedBy: createdBy}
+			if err := utils.Insert(tx, &group, "cycle_id", "name", "meeting_slot", "created_by"); err != nil {
+				return err
+			}
+			if err := insertMembers(tx, group.ID, w.MemberNUIDs); err != nil {
+				return err
+			}
+			ids[n] = group.ID
+		}
+		var groups []models.InterviewGroup
+		if err := tx.Where("id IN ?", ids).Order("name").Find(&groups).Error; err != nil {
 			return err
 		}
 		var err error
-		out, err = d.get(tx, group.ID)
+		out, err = d.withMembers(tx, groups)
 		return err
 	})
 	return out, utils.DBErr(err)
@@ -112,6 +217,13 @@ func (d *InterviewGroupDB) Create(ctx context.Context, cycleID, createdBy string
 func (d *InterviewGroupDB) Update(ctx context.Context, id string, in GroupWrite) (models.InterviewGroupDetail, error) {
 	var out models.InterviewGroupDetail
 	err := d.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var current models.InterviewGroup
+		if err := tx.Where("id = ?", id).Take(&current).Error; err != nil {
+			return err
+		}
+		if err := checkMembers(tx, current.CycleID, []string{id}, []GroupWrite{in}); err != nil {
+			return err
+		}
 		_, err := utils.UpdateReturning[models.InterviewGroup](tx,
 			map[string]any{"name": in.Name, "meeting_slot": in.MeetingSlot}, "id = ?", id)
 		if err != nil {

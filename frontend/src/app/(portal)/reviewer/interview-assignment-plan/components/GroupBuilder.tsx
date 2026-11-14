@@ -12,7 +12,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import type { InterviewGroupDetail } from '@/generated/model'
-import { ANY_DAY, AVAILABILITY_OPTIONS } from '@/lib/availability'
+import { apiErrorDetail } from '@/lib/api/client'
+import { DaySelect } from './DaySelect'
 import {
   useCreateInterviewGroups,
   useDeleteInterviewGroup,
@@ -141,7 +142,12 @@ export function GroupBuilder({
 
       {createGroups.isError && (
         <p className="text-destructive text-xs">
-          Couldn&apos;t create groups. Try again.
+          Couldn&apos;t create groups: {apiErrorDetail(createGroups.error)}
+        </p>
+      )}
+      {deleteGroup.isError && (
+        <p className="text-destructive text-xs">
+          Couldn&apos;t delete the group: {apiErrorDetail(deleteGroup.error)}
         </p>
       )}
 
@@ -161,7 +167,7 @@ export function GroupBuilder({
             <GroupCard
               key={group.id}
               group={group}
-              leads={leads}
+              addable={ungrouped}
               size={size}
               day={days.find((d) => d.groupId === group.id)?.day ?? ''}
               onDayChange={(day) => setDay(group.id, day)}
@@ -176,14 +182,14 @@ export function GroupBuilder({
 
 function GroupCard({
   group,
-  leads,
+  addable,
   size,
   day,
   onDayChange,
   onDelete,
 }: {
   group: InterviewGroupDetail
-  leads: Lead[]
+  addable: Lead[]
   size: number
   day: string
   onDayChange: (day: string) => void
@@ -193,7 +199,6 @@ function GroupCard({
   const [name, setName] = useState(group.name)
   const members = group.members ?? []
   const memberNuids = members.map((m) => m.member_nuid)
-  const addable = leads.filter((l) => !memberNuids.includes(l.nuid))
 
   function save(next: { name?: string; member_nuids?: string[] }) {
     update.mutate({
@@ -228,25 +233,12 @@ function GroupCard({
             if (e.key === 'Enter') e.currentTarget.blur()
           }}
         />
-        <Select
-          value={day || ANY_DAY}
-          onValueChange={(v) => onDayChange(v === ANY_DAY ? '' : v)}
-        >
-          <SelectTrigger
-            className="h-8 w-40 flex-shrink-0 text-xs"
-            aria-label={`Meeting day for ${group.name}`}
-          >
-            <SelectValue placeholder="Any day" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ANY_DAY}>Any day</SelectItem>
-            {AVAILABILITY_OPTIONS.map((opt) => (
-              <SelectItem key={opt.key} value={opt.key}>
-                {opt.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <DaySelect
+          value={day}
+          onChange={onDayChange}
+          label={`Meeting day for ${group.name}`}
+          className="flex-shrink-0"
+        />
         <Button
           variant="ghost"
           size="icon"
@@ -315,7 +307,7 @@ function GroupCard({
 
       {update.isError && (
         <p className="text-destructive text-xs">
-          Couldn&apos;t save the group. Try again.
+          Couldn&apos;t save the group: {apiErrorDetail(update.error)}
         </p>
       )}
     </div>

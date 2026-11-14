@@ -5,17 +5,10 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"gorm.io/gorm"
-
-	"github.com/GenerateNU/apportal/backend/internal/handlers/application"
-	"github.com/GenerateNU/apportal/backend/internal/handlers/interviewassignment"
 )
 
 func Route(api huma.API, db *gorm.DB) {
-	s := &interviewGroupService{
-		groupDB:               NewInterviewGroupDB(db),
-		applicationDB:         application.NewApplicationDB(db),
-		interviewAssignmentDB: interviewassignment.NewInterviewAssignmentDB(db),
-	}
+	s := &interviewGroupService{groupDB: NewInterviewGroupDB(db)}
 
 	huma.Register(api, huma.Operation{
 		OperationID: "list-interview-groups",
@@ -60,13 +53,13 @@ func Route(api huma.API, db *gorm.DB) {
 	}, s.delete)
 
 	huma.Register(api, huma.Operation{
-		OperationID: "assign-interview-group",
-		Method:      http.MethodPost,
-		Path:        "/applications/{id}/interview-groups/{groupId}",
-		Summary:     "Add every member of a group as an interviewer",
-		Description: "Chief only. Members already interviewing the application are skipped. " +
-			"The group is a preset: interviewers can be added or removed individually afterwards.",
-		Tags:   []string{"Interview groups"},
-		Errors: []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound, http.StatusUnprocessableEntity},
-	}, s.assign)
+		OperationID:   "create-interview-groups",
+		Method:        http.MethodPost,
+		Path:          "/cycles/{id}/interview-groups/batch",
+		Summary:       "Create several interview groups at once",
+		Description:   "Chief only. All or nothing: if any group is invalid, none are created.",
+		Tags:          []string{"Interview groups"},
+		DefaultStatus: http.StatusCreated,
+		Errors:        []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusConflict, http.StatusUnprocessableEntity},
+	}, s.createMany)
 }

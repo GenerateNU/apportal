@@ -17,6 +17,7 @@ export interface InterviewerPreviewInputBody {
   readonly $schema?: string;
   /** @minimum 1 */
   cap: number;
+  /** Per-unit cap overrides, keyed by lead NUID or, when planning by group, group ID */
   cap_overrides?: InterviewerPreviewInputBodyCapOverrides;
   /** Leads ineligible to interview a specific applicant */
   conflicts?: InterviewerPreviewInputBodyConflicts;

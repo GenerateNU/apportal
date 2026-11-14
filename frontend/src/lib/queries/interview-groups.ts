@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  createInterviewGroup,
+  createInterviewGroups,
   deleteInterviewGroup,
   listInterviewGroups,
   updateInterviewGroup,
@@ -29,9 +29,7 @@ export function useCreateInterviewGroups() {
   const invalidate = useInvalidateGroups()
   return useMutation({
     mutationFn: (vars: { cycleId: string; groups: GroupBody[] }) =>
-      Promise.all(
-        vars.groups.map((g) => createInterviewGroup(vars.cycleId, g))
-      ),
+      createInterviewGroups(vars.cycleId, { groups: vars.groups }),
     onSettled: invalidate,
   })
 }

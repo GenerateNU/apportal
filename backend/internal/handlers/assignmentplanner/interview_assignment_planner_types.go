@@ -101,7 +101,7 @@ type InterviewerPreviewInput struct {
 		Groups                 []PlanGroupDay `json:"groups,omitempty"`
 		Conflicts              []PlanConflict `json:"conflicts,omitempty" doc:"Leads ineligible to interview a specific applicant"`
 		Cap                    int            `json:"cap" minimum:"1"`
-		CapOverrides           map[string]int `json:"cap_overrides,omitempty"`
+		CapOverrides           map[string]int `json:"cap_overrides,omitempty" doc:"Per-unit cap overrides, keyed by lead NUID or, when planning by group, group ID"`
 		ExcludedApplicationIDs []string       `json:"excluded_application_ids,omitempty"`
 	}
 }
@@ -111,7 +111,7 @@ type interviewerRun struct {
 	prior  map[string][]string
 	byID   map[string]models.ApplicationSummary
 	appIDs []string
-	groups map[string]models.InterviewGroupDetail
+	units  map[string]planUnit
 }
 
 type PreviewInterviewerPlanOutput struct {

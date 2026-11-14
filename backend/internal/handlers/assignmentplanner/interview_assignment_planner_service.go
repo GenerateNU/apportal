@@ -156,31 +156,33 @@ func (s *interviewAssignmentPlannerService) buildInterviewerPlan(ctx context.Con
 		return interviewerRun{}, utils.StoreErr(err)
 	}
 
-	planIn := interviewassign.InterviewerInput{
+	units := leadUnits(in.Body.Leads)
+	seedTag := "interviewer"
+	if len(in.Body.Groups) > 0 {
+		groups, err := s.loadPlanGroups(ctx, in.ID, in.Body.Groups)
+		if err != nil {
+			return interviewerRun{}, err
+		}
+		units = groupUnits(in.Body.Groups, groups)
+		seedTag = "interviewer-groups"
+	}
+
+	planIn := toUnitInput(interviewassign.InterviewerInput{
 		Applicants:   applicants,
-		Leads:        toInterviewassignLeads(in.Body.Leads),
 		Existing:     existing,
 		WroteReview:  wroteReview,
 		Conflicts:    toConflictMap(in.Body.Conflicts),
 		Cap:          in.Body.Cap,
 		CapOverrides: in.Body.CapOverrides,
-		Seed:         interviewassign.SeedFrom(in.ID, string(in.Body.Role), "interviewer"),
-	}
-	var groups map[string]models.InterviewGroupDetail
-	if len(in.Body.Groups) > 0 {
-		if groups, err = s.loadPlanGroups(ctx, in.ID, in.Body.Groups); err != nil {
-			return interviewerRun{}, err
-		}
-		planIn = asGroupInput(planIn, in.Body.Groups, groups)
-		planIn.Seed = interviewassign.SeedFrom(in.ID, string(in.Body.Role), "interviewer-groups")
-	}
+		Seed:         interviewassign.SeedFrom(in.ID, string(in.Body.Role), seedTag),
+	}, units)
 
 	plan, err := interviewassign.PlanInterviewers(planIn)
 	if err != nil {
 		return interviewerRun{}, huma.Error422UnprocessableEntity(err.Error())
 	}
 
-	return interviewerRun{plan: plan, prior: planIn.Existing, byID: byID, appIDs: appIDs, groups: groups}, nil
+	return interviewerRun{plan: plan, prior: planIn.Existing, byID: byID, appIDs: appIDs, units: unitsByID(units)}, nil
 }
 
 func (s *interviewAssignmentPlannerService) loadPlanGroups(ctx context.Context, cycleID string, in []PlanGroupDay) (map[string]models.InterviewGroupDetail, error) {
@@ -210,20 +212,56 @@ func (s *interviewAssignmentPlannerService) loadPlanGroups(ctx context.Context, 
 	return out, nil
 }
 
-func asGroupInput(in interviewassign.InterviewerInput, days []PlanGroupDay, groups map[string]models.InterviewGroupDetail) interviewassign.InterviewerInput {
-	units := make([]interviewassign.Lead, len(days))
-	groupsOf := map[string][]string{}
+type planUnit struct {
+	id      string
+	day     string
+	members []string
+	group   *models.InterviewGroupDetail
+}
+
+func leadUnits(in []PlanLeadDay) []planUnit {
+	out := make([]planUnit, len(in))
+	for i, l := range in {
+		out[i] = planUnit{id: l.LeadNUID, day: l.Day, members: []string{l.LeadNUID}}
+	}
+	return out
+}
+
+func groupUnits(days []PlanGroupDay, groups map[string]models.InterviewGroupDetail) []planUnit {
+	out := make([]planUnit, len(days))
 	for i, d := range days {
-		units[i] = interviewassign.Lead{NUID: d.GroupID, Day: d.Day}
-		for _, m := range groups[d.GroupID].Members {
-			groupsOf[m.MemberNUID] = append(groupsOf[m.MemberNUID], d.GroupID)
+		g := groups[d.GroupID]
+		members := make([]string, len(g.Members))
+		for n, m := range g.Members {
+			members[n] = m.MemberNUID
+		}
+		out[i] = planUnit{id: d.GroupID, day: d.Day, members: members, group: &g}
+	}
+	return out
+}
+
+func unitsByID(units []planUnit) map[string]planUnit {
+	out := make(map[string]planUnit, len(units))
+	for _, u := range units {
+		out[u.id] = u
+	}
+	return out
+}
+
+func toUnitInput(in interviewassign.InterviewerInput, units []planUnit) interviewassign.InterviewerInput {
+	in.Leads = make([]interviewassign.Lead, len(units))
+	unitsOf := map[string][]string{}
+	for i, u := range units {
+		in.Leads[i] = interviewassign.Lead{NUID: u.id, Day: u.day}
+		for _, m := range u.members {
+			unitsOf[m] = append(unitsOf[m], u.id)
 		}
 	}
-	toGroups := func(nuids map[string]bool) map[string]bool {
+	toUnits := func(nuids map[string]bool) map[string]bool {
 		out := map[string]bool{}
 		for nuid := range nuids {
-			for _, g := range groupsOf[nuid] {
-				out[g] = true
+			for _, id := range unitsOf[nuid] {
+				out[id] = true
 			}
 		}
 		return out
@@ -231,24 +269,29 @@ func asGroupInput(in interviewassign.InterviewerInput, days []PlanGroupDay, grou
 	remap := func(byApp map[string]map[string]bool) map[string]map[string]bool {
 		out := make(map[string]map[string]bool, len(byApp))
 		for app, nuids := range byApp {
-			out[app] = toGroups(nuids)
+			out[app] = toUnits(nuids)
 		}
 		return out
 	}
 
 	existing := make(map[string][]string, len(in.Existing))
 	for app, nuids := range in.Existing {
-		set := make(map[string]bool, len(nuids))
-		for _, n := range nuids {
-			set[n] = true
-		}
+		seen := map[string]bool{}
 		existing[app] = []string{}
-		for g := range toGroups(set) {
-			existing[app] = append(existing[app], g)
+		for _, nuid := range nuids {
+			ids := unitsOf[nuid]
+			if len(ids) == 0 {
+				ids = []string{nuid}
+			}
+			for _, id := range ids {
+				if !seen[id] {
+					seen[id] = true
+					existing[app] = append(existing[app], id)
+				}
+			}
 		}
 	}
 
-	in.Leads = units
 	in.Existing = existing
 	in.WroteReview = remap(in.WroteReview)
 	in.Conflicts = remap(in.Conflicts)
@@ -258,13 +301,8 @@ func asGroupInput(in interviewassign.InterviewerInput, days []PlanGroupDay, grou
 func (run interviewerRun) newPairs() []interviewassignment.AssignmentPair {
 	pairs := make([]interviewassignment.AssignmentPair, 0, len(run.plan.New))
 	for _, p := range run.plan.New {
-		g, isGroup := run.groups[p.LeadNUID]
-		if !isGroup {
-			pairs = append(pairs, interviewassignment.AssignmentPair{ApplicationID: p.ApplicationID, LeadNUID: p.LeadNUID})
-			continue
-		}
-		for _, m := range g.Members {
-			pairs = append(pairs, interviewassignment.AssignmentPair{ApplicationID: p.ApplicationID, LeadNUID: m.MemberNUID})
+		for _, m := range run.units[p.LeadNUID].members {
+			pairs = append(pairs, interviewassignment.AssignmentPair{ApplicationID: p.ApplicationID, LeadNUID: m})
 		}
 	}
 	return pairs
@@ -345,11 +383,11 @@ func (s *interviewAssignmentPlannerService) decorateInterviewerPlan(ctx context.
 	}
 
 	interviewers := make([]PlannedInterviewer, 0, len(run.plan.Loads))
-	groups := make([]PlannedGroup, 0, len(run.groups))
+	groups := []PlannedGroup{}
 	for _, l := range run.plan.Loads {
 		q := queues[l.LeadNUID]
 		sortPlannedApplications(q)
-		if g, isGroup := run.groups[l.LeadNUID]; isGroup {
+		if g := run.units[l.LeadNUID].group; g != nil {
 			groups = append(groups, PlannedGroup{
 				GroupID:      g.ID,
 				Name:         g.Name,

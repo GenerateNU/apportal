@@ -5,11 +5,14 @@
  * Generate application portal — applications, reviews, and the hiring pipeline.
  * OpenAPI spec version: 0.1.0
  */
-import type { AssignGroupOutputBodyInterviewers } from './assignGroupOutputBodyInterviewers';
+import type { CreateGroupsInputBodyGroups } from './createGroupsInputBodyGroups';
 
-export interface AssignGroupOutputBody {
+export interface CreateGroupsInputBody {
   /** A URL to the JSON Schema for this object. */
   readonly $schema?: string;
-  added: number;
-  interviewers: AssignGroupOutputBodyInterviewers;
+  /**
+   * @minItems 1
+   * @maxItems 100
+   */
+  groups: CreateGroupsInputBodyGroups;
 }

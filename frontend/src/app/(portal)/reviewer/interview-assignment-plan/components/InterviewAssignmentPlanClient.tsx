@@ -14,6 +14,7 @@ import {
 import type { Role } from '@/lib/api/types'
 import { pickDefaultCycleId, useCycles } from '@/lib/queries/cycles'
 import { useInterviewerPool } from '@/lib/queries/interview-assignment-plan'
+import { SKIP_DAY } from '@/lib/availability'
 import { useInterviewGroups } from '@/lib/queries/interview-groups'
 import { useLeads } from '@/lib/queries/users'
 import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
@@ -53,29 +54,37 @@ export function InterviewAssignmentPlanClient() {
         .map((g) => ({
           groupId: g.id,
           day: groupDays.find((d) => d.groupId === g.id)?.day ?? '',
-        })),
+        }))
+        .filter((d) => d.day !== SKIP_DAY),
     [groupDays, groups]
   )
 
   const soloDays = useMemo(
     () =>
-      leads.map((l) => ({
-        leadNuid: l.nuid,
-        day: meetingDays.find((d) => d.leadNuid === l.nuid)?.day ?? '',
-      })),
+      leads
+        .map((l) => ({
+          leadNuid: l.nuid,
+          day: meetingDays.find((d) => d.leadNuid === l.nuid)?.day ?? '',
+        }))
+        .filter((d) => d.day !== SKIP_DAY),
     [leads, meetingDays]
   )
 
   const leadDays = useMemo(() => {
     if (!useGroups) return soloDays
-    return leads.map((l) => {
-      const group = plannedGroupDays.find((d) =>
-        groups
-          .find((g) => g.id === d.groupId)
-          ?.members?.some((m) => m.member_nuid === l.nuid)
+    const out: DraftLeadDay[] = []
+    for (const l of leads) {
+      const group = groups.find((g) =>
+        (g.members ?? []).some((m) => m.member_nuid === l.nuid)
       )
-      return { leadNuid: l.nuid, day: group?.day ?? '' }
-    })
+      if (!group) {
+        out.push({ leadNuid: l.nuid, day: '' })
+        continue
+      }
+      const planned = plannedGroupDays.find((d) => d.groupId === group.id)
+      if (planned) out.push({ leadNuid: l.nuid, day: planned.day })
+    }
+    return out
   }, [useGroups, soloDays, leads, plannedGroupDays, groups])
   const [conflicts, setConflicts] = useState<DraftConflict[]>([])
   const [stage, setStage] = useState<Stage>('interviewer')
@@ -95,7 +104,8 @@ export function InterviewAssignmentPlanClient() {
           <p className="text-text-muted mt-1 text-sm">
             Set each lead&apos;s or group&apos;s meeting day, then plan
             interviewers and interview reviewers matched to applicant
-            availability. Anyone without a day is assigned to any applicant.
+            availability. Anyone on Any day can take any applicant, and skipped
+            leads or groups get none.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">

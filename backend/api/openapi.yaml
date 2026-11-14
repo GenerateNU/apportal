@@ -321,29 +321,6 @@ components:
         - total
         - stage_counts
       type: object
-    AssignGroupOutputBody:
-      additionalProperties: false
-      properties:
-        $schema:
-          description: A URL to the JSON Schema for this object.
-          examples:
-            - https://example.com/schemas/AssignGroupOutputBody.json
-          format: uri
-          readOnly: true
-          type: string
-        added:
-          format: int64
-          type: integer
-        interviewers:
-          items:
-            $ref: "#/components/schemas/InterviewerDetail"
-          type:
-            - array
-            - "null"
-      required:
-        - added
-        - interviewers
-      type: object
     AssignmentPlanPreview:
       additionalProperties: false
       properties:
@@ -958,6 +935,27 @@ components:
           type: string
       required:
         - url
+      type: object
+    CreateGroupsInputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/CreateGroupsInputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        groups:
+          items:
+            $ref: "#/components/schemas/GroupBody"
+          maxItems: 100
+          minItems: 1
+          type:
+            - array
+            - "null"
+      required:
+        - groups
       type: object
     CreateLeadAssignmentInputBody:
       additionalProperties: false
@@ -2259,6 +2257,7 @@ components:
           additionalProperties:
             format: int64
             type: integer
+          description: Per-unit cap overrides, keyed by lead NUID or, when planning by group, group ID
           type: object
         conflicts:
           description: Leads ineligible to interview a specific applicant
@@ -5773,65 +5772,6 @@ paths:
       summary: Update the interview and your write-up
       tags:
         - Interviews
-  /applications/{id}/interview-groups/{groupId}:
-    post:
-      description: "Chief only. Members already interviewing the application are skipped. The group is a preset: interviewers can be added or removed individually afterwards."
-      operationId: assign-interview-group
-      parameters:
-        - description: Application ID
-          in: path
-          name: id
-          required: true
-          schema:
-            description: Application ID
-            type: string
-        - description: Interview group ID
-          in: path
-          name: groupId
-          required: true
-          schema:
-            description: Interview group ID
-            type: string
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AssignGroupOutputBody"
-          description: OK
-        "401":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unauthorized
-        "403":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Forbidden
-        "404":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Not Found
-        "422":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unprocessable Entity
-        "500":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Internal Server Error
-      summary: Add every member of a group as an interviewer
-      tags:
-        - Interview groups
   /applications/{id}/interview-review:
     put:
       description: Assigned recording reviewers only, once every interviewer has submitted. A rating sets the interview's shared rating.
@@ -7834,6 +7774,68 @@ paths:
                 $ref: "#/components/schemas/ErrorModel"
           description: Internal Server Error
       summary: Create an interview group
+      tags:
+        - Interview groups
+  /cycles/{id}/interview-groups/batch:
+    post:
+      description: "Chief only. All or nothing: if any group is invalid, none are created."
+      operationId: create-interview-groups
+      parameters:
+        - description: Cycle ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Cycle ID
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateGroupsInputBody"
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/InterviewGroupDetail"
+                type:
+                  - array
+                  - "null"
+          description: Created
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "409":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Conflict
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Create several interview groups at once
       tags:
         - Interview groups
   /cycles/{id}/interview-reviewers:

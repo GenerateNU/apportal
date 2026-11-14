@@ -22,7 +22,8 @@ func TestGroupPlanAssignsEveryMember(t *testing.T) {
 		"g2": group("g2", "carol", "dan"),
 	}
 	days := []PlanGroupDay{{GroupID: "g1", Day: "mon"}, {GroupID: "g2", Day: "tue"}}
-	in := asGroupInput(interviewassign.InterviewerInput{
+	units := groupUnits(days, groups)
+	in := toUnitInput(interviewassign.InterviewerInput{
 		Applicants: []interviewassign.Applicant{
 			{ApplicationID: "a1", AvailableDays: map[string]bool{"mon": true}},
 			{ApplicationID: "a2", AvailableDays: map[string]bool{"tue": true}},
@@ -31,7 +32,7 @@ func TestGroupPlanAssignsEveryMember(t *testing.T) {
 		Existing:  map[string][]string{"a3": {"zed"}},
 		Conflicts: map[string]map[string]bool{"a2": {"alice": true}},
 		Cap:       5,
-	}, days, groups)
+	}, units)
 
 	if _, skipped := in.Existing["a3"]; !skipped {
 		t.Fatal("an application with an interviewer outside every group should still be skipped")
@@ -44,7 +45,7 @@ func TestGroupPlanAssignsEveryMember(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	run := interviewerRun{plan: plan, groups: groups}
+	run := interviewerRun{plan: plan, units: unitsByID(units)}
 	var got []string
 	for _, p := range run.newPairs() {
 		got = append(got, p.ApplicationID+":"+p.LeadNUID)
@@ -58,11 +59,47 @@ func TestGroupPlanAssignsEveryMember(t *testing.T) {
 
 func TestGroupPlanCountsExistingAgainstGroup(t *testing.T) {
 	groups := map[string]models.InterviewGroupDetail{"g1": group("g1", "alice", "bob")}
-	in := asGroupInput(interviewassign.InterviewerInput{
+	in := toUnitInput(interviewassign.InterviewerInput{
 		Existing: map[string][]string{"a1": {"alice", "bob"}},
-	}, []PlanGroupDay{{GroupID: "g1", Day: "mon"}}, groups)
+	}, groupUnits([]PlanGroupDay{{GroupID: "g1", Day: "mon"}}, groups))
 
 	if !slices.Equal(in.Existing["a1"], []string{"g1"}) {
 		t.Fatalf("existing = %v, want the group counted once", in.Existing["a1"])
+	}
+}
+
+func TestGroupPlanWarnsAboutInterviewersOutsideEveryGroup(t *testing.T) {
+	groups := map[string]models.InterviewGroupDetail{"g1": group("g1", "alice")}
+	in := toUnitInput(interviewassign.InterviewerInput{
+		Applicants: []interviewassign.Applicant{{ApplicationID: "a1"}, {ApplicationID: "a2"}},
+		Existing:   map[string][]string{"a1": {"zed"}},
+		Cap:        5,
+	}, groupUnits([]PlanGroupDay{{GroupID: "g1"}}, groups))
+
+	plan, err := interviewassign.PlanInterviewers(in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(plan.Warnings) == 0 {
+		t.Fatal("want a warning about zed, who is in no selected group")
+	}
+	if len(plan.New) != 1 || plan.New[0].ApplicationID != "a2" {
+		t.Fatalf("New = %+v, want only a2 planned", plan.New)
+	}
+}
+
+func TestLeadPlanPairsEachLeadWithThemself(t *testing.T) {
+	units := leadUnits([]PlanLeadDay{{LeadNUID: "alice"}})
+	in := toUnitInput(interviewassign.InterviewerInput{
+		Applicants: []interviewassign.Applicant{{ApplicationID: "a1"}},
+		Cap:        5,
+	}, units)
+	plan, err := interviewassign.PlanInterviewers(in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pairs := interviewerRun{plan: plan, units: unitsByID(units)}.newPairs()
+	if len(pairs) != 1 || pairs[0].LeadNUID != "alice" || pairs[0].ApplicationID != "a1" {
+		t.Fatalf("pairs = %+v, want a1:alice", pairs)
 	}
 }

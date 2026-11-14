@@ -1,13 +1,6 @@
 'use client'
 
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { ANY_DAY, AVAILABILITY_OPTIONS } from '@/lib/availability'
+import { DaySelect } from './DaySelect'
 
 export type DraftLeadDay = { leadNuid: string; day: string }
 
@@ -44,7 +37,8 @@ export function MeetingDayPicker({
         <p className="text-text-muted mt-0.5 text-xs">
           Set each lead&apos;s meeting day to match them against
           applicants&apos; availability. Leads on Any day can take any
-          applicant. Not saved; set it each time you plan.
+          applicant; skipped leads get none. Not saved; set it each time you
+          plan.
         </p>
       </div>
 
@@ -62,27 +56,11 @@ export function MeetingDayPicker({
               <span className="text-text-default truncate text-sm font-medium">
                 {lead.full_name}
               </span>
-              <Select
-                value={dayOf(lead.nuid) || ANY_DAY}
-                onValueChange={(day) =>
-                  setDay(lead.nuid, day === ANY_DAY ? '' : day)
-                }
-              >
-                <SelectTrigger
-                  className="h-8 w-40 text-xs"
-                  aria-label={`Meeting day for ${lead.full_name}`}
-                >
-                  <SelectValue placeholder="Any day" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={ANY_DAY}>Any day</SelectItem>
-                  {AVAILABILITY_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.key} value={opt.key}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <DaySelect
+                value={dayOf(lead.nuid)}
+                onChange={(day) => setDay(lead.nuid, day)}
+                label={`Meeting day for ${lead.full_name}`}
+              />
             </div>
           ))}
         </div>

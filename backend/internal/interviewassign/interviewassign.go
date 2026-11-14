@@ -225,10 +225,6 @@ func loadRatio(l leadState) float64 {
 // Returns -1 if no eligible lead has spare capacity at all. The second
 // return reports whether the chosen lead's day actually matched the
 // applicant's availability.
-func dayFits(day string, availableDays map[string]bool) bool {
-	return day == "" || availableDays[day]
-}
-
 func bestInterviewer(leads []leadState, availableDays, wroteReview, conflicted map[string]bool) (int, bool) {
 	best, bestDayMatch := -1, false
 	var bestRatio float64
@@ -265,6 +261,10 @@ func bestInterviewer(leads []leadState, availableDays, wroteReview, conflicted m
 		consider(li, false)
 	}
 	return best, bestDayMatch
+}
+
+func dayFits(day string, availableDays map[string]bool) bool {
+	return day == "" || availableDays[day]
 }
 
 func interviewerWarnings(pool int, leads []leadState, unassigned, noDayMatch, unknownExisting []string) []string {

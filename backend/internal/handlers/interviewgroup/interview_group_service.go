@@ -7,15 +7,11 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/GenerateNU/apportal/backend/internal/handlers/application"
-	"github.com/GenerateNU/apportal/backend/internal/handlers/interviewassignment"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 )
 
 type interviewGroupService struct {
-	groupDB               *InterviewGroupDB
-	applicationDB         *application.ApplicationDB
-	interviewAssignmentDB *interviewassignment.InterviewAssignmentDB
+	groupDB *InterviewGroupDB
 }
 
 func toWrite(b GroupBody) (GroupWrite, error) {
@@ -60,6 +56,25 @@ func (s *interviewGroupService) create(ctx context.Context, in *CreateGroupInput
 	return &GroupOutput{Body: group}, nil
 }
 
+func (s *interviewGroupService) createMany(ctx context.Context, in *CreateGroupsInput) (*GroupsOutput, error) {
+	if err := utils.RequireChief(ctx); err != nil {
+		return nil, err
+	}
+	writes := make([]GroupWrite, len(in.Body.Groups))
+	for n, b := range in.Body.Groups {
+		w, err := toWrite(b)
+		if err != nil {
+			return nil, err
+		}
+		writes[n] = w
+	}
+	groups, err := s.groupDB.CreateMany(ctx, in.ID, utils.CurrentActor(ctx).NUID, writes)
+	if err != nil {
+		return nil, groupErr(err)
+	}
+	return &GroupsOutput{Body: groups}, nil
+}
+
 func (s *interviewGroupService) update(ctx context.Context, in *UpdateGroupInput) (*GroupOutput, error) {
 	if err := utils.RequireChief(ctx); err != nil {
 		return nil, err
@@ -85,42 +100,11 @@ func (s *interviewGroupService) delete(ctx context.Context, in *utils.IDInput) (
 	return nil, nil
 }
 
-func (s *interviewGroupService) assign(ctx context.Context, in *AssignGroupInput) (*AssignGroupOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
-		return nil, err
-	}
-	app, err := s.applicationDB.GetApplication(ctx, in.ID)
-	if err != nil {
-		return nil, utils.StoreErr(err)
-	}
-	group, err := s.groupDB.Get(ctx, in.GroupID)
-	if err != nil {
-		return nil, utils.StoreErr(err)
-	}
-	if group.CycleID != app.CycleID {
-		return nil, huma.Error422UnprocessableEntity("the group belongs to a different cycle than the application")
-	}
-
-	pairs := make([]interviewassignment.AssignmentPair, len(group.Members))
-	for n, m := range group.Members {
-		pairs[n] = interviewassignment.AssignmentPair{ApplicationID: app.ID, LeadNUID: m.MemberNUID}
-	}
-	added, err := s.interviewAssignmentDB.CreateInterviewers(ctx, pairs, utils.CurrentActor(ctx).NUID)
-	if err != nil {
-		return nil, utils.StoreErr(err)
-	}
-	interviewers, err := s.interviewAssignmentDB.ListInterviewers(ctx, []string{app.ID})
-	if err != nil {
-		return nil, utils.StoreErr(err)
-	}
-
-	out := &AssignGroupOutput{}
-	out.Body.Added = added
-	out.Body.Interviewers = interviewers
-	return out, nil
-}
-
 func groupErr(err error) error {
+	var invalid *InvalidMembersError
+	if errors.As(err, &invalid) {
+		return huma.Error422UnprocessableEntity(invalid.Error())
+	}
 	if errors.Is(err, utils.ErrConflict) {
 		return huma.Error409Conflict("a group with that name already exists in this cycle")
 	}

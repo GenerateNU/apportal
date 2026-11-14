@@ -5,12 +5,7 @@ import type {
   InterviewerPlanPreview as InterviewerPlanPreviewType,
   PlannedApplication,
 } from '@/generated/model'
-import { AVAILABILITY_OPTIONS } from '@/lib/availability'
-
-const dayLabel = (day: string) =>
-  day
-    ? (AVAILABILITY_OPTIONS.find((o) => o.key === day)?.label ?? day)
-    : 'Any day'
+import { dayLabel } from '@/lib/availability'
 
 type Queue = {
   id: string

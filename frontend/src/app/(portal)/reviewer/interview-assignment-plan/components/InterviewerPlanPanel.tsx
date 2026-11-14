@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { apiErrorDetail } from '@/lib/api/client'
 import type { Role } from '@/lib/api/types'
 import {
   useCommitInterviewerPlan,
@@ -113,37 +114,33 @@ export function InterviewerPlanPanel({
     )
   }
 
+  const planBody = {
+    role,
+    ...units,
+    conflicts: apiConflicts,
+    cap,
+    excluded_application_ids: excludedApplicationIds,
+  }
+  const planKey = JSON.stringify([cycleId, planBody])
+  const [previewedKey, setPreviewedKey] = useState<string | null>(null)
+  const fresh = previewedKey === planKey
+  const stalePreview = !fresh && (!!preview.data || !!commit.data)
+
   function onPreview() {
-    preview.mutate({
-      cycleId,
-      body: {
-        role,
-        ...units,
-        conflicts: apiConflicts,
-        cap,
-        excluded_application_ids: excludedApplicationIds,
-      },
-    })
+    setPreviewedKey(planKey)
+    commit.reset()
+    preview.mutate({ cycleId, body: planBody })
   }
 
   function onCommit() {
     commit.mutate(
-      {
-        cycleId,
-        body: {
-          role,
-          ...units,
-          conflicts: apiConflicts,
-          cap,
-          excluded_application_ids: excludedApplicationIds,
-        },
-      },
+      { cycleId, body: planBody },
       { onSuccess: () => setConfirming(false) }
     )
   }
 
   const capacity = suggestCapacity.data
-  const shownPlan = commit.data?.plan ?? preview.data
+  const shownPlan = fresh ? (commit.data?.plan ?? preview.data) : undefined
 
   return (
     <div className="flex flex-col gap-6">
@@ -296,6 +293,13 @@ export function InterviewerPlanPanel({
         </p>
       )}
 
+      {stalePreview && (
+        <p className="text-text-muted rounded-xl border border-dashed border-gray-200 bg-white px-4 py-3 text-sm">
+          The setup changed since the last preview. Generate a new preview
+          before assigning.
+        </p>
+      )}
+
       {shownPlan && (
         <>
           <InterviewerPlanPreview plan={shownPlan} />
@@ -370,10 +374,7 @@ export function InterviewerPlanPanel({
 }
 
 function errorMessage(error: unknown): string {
-  const detail = (error as { response?: { data?: { detail?: string } } })
-    ?.response?.data?.detail
-  if (detail) return detail
-  return error instanceof Error ? error.message : String(error)
+  return apiErrorDetail(error)
 }
 
 function Figure({ label, value }: { label: string; value: string | number }) {

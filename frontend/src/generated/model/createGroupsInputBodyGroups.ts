@@ -5,6 +5,10 @@
  * Generate application portal — applications, reviews, and the hiring pipeline.
  * OpenAPI spec version: 0.1.0
  */
-import type { InterviewerDetail } from './interviewerDetail';
+import type { GroupBody } from './groupBody';
 
-export type AssignGroupOutputBodyInterviewers = InterviewerDetail[] | null;
+/**
+ * @minItems 1
+ * @maxItems 100
+ */
+export type CreateGroupsInputBodyGroups = GroupBody[] | null;

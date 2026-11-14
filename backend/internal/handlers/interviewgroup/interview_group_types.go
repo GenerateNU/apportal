@@ -30,14 +30,9 @@ type GroupsOutput struct {
 	Body []models.InterviewGroupDetail
 }
 
-type AssignGroupInput struct {
-	ID      string `path:"id" doc:"Application ID"`
-	GroupID string `path:"groupId" doc:"Interview group ID"`
-}
-
-type AssignGroupOutput struct {
+type CreateGroupsInput struct {
+	ID   string `path:"id" doc:"Cycle ID"`
 	Body struct {
-		Added        int                        `json:"added"`
-		Interviewers []models.InterviewerDetail `json:"interviewers"`
+		Groups []GroupBody `json:"groups" minItems:"1" maxItems:"100"`
 	}
 }
