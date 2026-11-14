@@ -25,32 +25,23 @@ func NewInterviewDB(db *gorm.DB) *InterviewDB {
 }
 
 func (i *InterviewDB) UpsertInterview(ctx context.Context, in InterviewUpsert) error {
-	return i.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		updates := map[string]any{}
-		utils.SetIf(updates, "scheduled_at", in.ScheduledAt)
-		utils.SetIf(updates, "conducted_at", in.ConductedAt)
-		utils.SetIf(updates, "recording_url", in.RecordingURL)
-		utils.SetIf(updates, "notes_url", in.NotesURL)
-		utils.SetIf(updates, "rating", in.Rating)
-		if len(updates) > 0 {
-			if err := tx.Model(&models.Interview{}).Where("application_id = ?", in.ApplicationID).UpdateColumns(updates).Error; err != nil {
-				return err
-			}
-		}
-
-		writeup := map[string]any{}
-		utils.SetIf(writeup, "writeup", in.Writeup)
-		if in.Submit {
-			writeup["writeup_submitted_at"] = gorm.Expr("COALESCE(writeup_submitted_at, NOW())")
-		}
-		if len(writeup) == 0 {
-			return nil
-		}
-		return tx.Model(&models.Interviewer{}).
-			Where("interviewer_nuid = ? AND interview_id IN (?)", in.InterviewerNUID,
-				tx.Model(&models.Interview{}).Select("id").Where("application_id = ?", in.ApplicationID)).
-			UpdateColumns(writeup).Error
-	})
+	updates := map[string]any{}
+	utils.SetIf(updates, "scheduled_at", in.ScheduledAt)
+	utils.SetIf(updates, "conducted_at", in.ConductedAt)
+	utils.SetIf(updates, "recording_url", in.RecordingURL)
+	utils.SetIf(updates, "notes_url", in.NotesURL)
+	utils.SetIf(updates, "rating", in.Rating)
+	utils.SetIf(updates, "writeup", in.Writeup)
+	if in.Submit {
+		updates["submitted_at"] = gorm.Expr("COALESCE(submitted_at, NOW())")
+	}
+	if len(updates) == 0 {
+		return nil
+	}
+	updates["updated_at"] = gorm.Expr("NOW()")
+	return i.db.WithContext(ctx).Model(&models.Interview{}).
+		Where("application_id = ?", in.ApplicationID).
+		UpdateColumns(updates).Error
 }
 
 func (i *InterviewDB) ListInterviewDetails(ctx context.Context, applicationIDs []string) ([]models.InterviewDetail, error) {
@@ -90,53 +81,6 @@ func (i *InterviewDB) GetInterviewDetail(ctx context.Context, applicationID stri
 		return models.InterviewDetail{}, utils.ErrNotFound
 	}
 	return list[0], nil
-}
-
-// CreateInterviewComment adds a comment; any reviewer may leave any number.
-func (i *InterviewDB) CreateInterviewComment(ctx context.Context, applicationID, authorNUID, body string) (models.InterviewCommentDetail, error) {
-	comment := models.InterviewComment{ApplicationID: applicationID, AuthorNUID: authorNUID, Body: body}
-	if err := utils.Insert(i.db.WithContext(ctx), &comment, "application_id", "author_nuid", "body"); err != nil {
-		return models.InterviewCommentDetail{}, err
-	}
-	return i.commentDetail(ctx, comment)
-}
-
-// UpdateInterviewComment edits the author's own comment. ErrNotFound covers
-// both "doesn't exist" and "isn't yours".
-func (i *InterviewDB) UpdateInterviewComment(ctx context.Context, commentID, authorNUID, body string) (models.InterviewCommentDetail, error) {
-	comment, err := utils.UpdateReturning[models.InterviewComment](i.db.WithContext(ctx),
-		map[string]any{"body": body, "updated_at": gorm.Expr("NOW()")}, "id = ? AND author_nuid = ?", commentID, authorNUID)
-	if err != nil {
-		return models.InterviewCommentDetail{}, err
-	}
-	return i.commentDetail(ctx, comment)
-}
-
-func (i *InterviewDB) commentDetail(ctx context.Context, comment models.InterviewComment) (models.InterviewCommentDetail, error) {
-	names, err := i.users.NamesByNUIDs(ctx, []string{comment.AuthorNUID})
-	return models.InterviewCommentDetail{InterviewComment: comment, AuthorName: names[comment.AuthorNUID]}, err
-}
-
-// ListInterviewComments returns an application's comments, oldest first.
-func (i *InterviewDB) ListInterviewComments(ctx context.Context, applicationID string) ([]models.InterviewCommentDetail, error) {
-	var comments []models.InterviewComment
-	err := i.db.WithContext(ctx).Where("application_id = ?", applicationID).Order("created_at").Find(&comments).Error
-	if err != nil {
-		return nil, err
-	}
-	nuids := make([]string, len(comments))
-	for n, c := range comments {
-		nuids[n] = c.AuthorNUID
-	}
-	names, err := i.users.NamesByNUIDs(ctx, nuids)
-	if err != nil {
-		return nil, err
-	}
-	details := make([]models.InterviewCommentDetail, len(comments))
-	for n, c := range comments {
-		details[n] = models.InterviewCommentDetail{InterviewComment: c, AuthorName: names[c.AuthorNUID]}
-	}
-	return details, nil
 }
 
 // defaultIntroSpeech etc. seed a new (cycle, role) script before a chief has

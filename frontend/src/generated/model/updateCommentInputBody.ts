@@ -6,7 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface CreateInterviewCommentInputBody {
+export interface UpdateCommentInputBody {
   /** A URL to the JSON Schema for this object. */
   readonly $schema?: string;
   /** @minLength 1 */

@@ -197,26 +197,29 @@ export function ApplicantOverview({
               </dd>
             </dl>
 
-            {interview.interviewers.map((iv) => (
-              <div key={iv.id}>
-                <p className="text-text-muted text-xs font-medium">
-                  Write-up ·{' '}
-                  {iv.interviewer_name ??
-                    nameByNuid.get(iv.interviewer_nuid) ??
-                    iv.interviewer_nuid}
-                  <span className="text-text-faint font-normal">
-                    {iv.writeup_submitted_at
-                      ? ` · Submitted ${formatDate(iv.writeup_submitted_at)}`
-                      : ' · Not submitted'}
-                  </span>
-                </p>
-                <p className="text-text-default mt-1 whitespace-pre-wrap">
-                  {iv.writeup || (
-                    <span className="text-text-faint">No write-up yet.</span>
-                  )}
-                </p>
-              </div>
-            ))}
+            <div>
+              <p className="text-text-muted text-xs font-medium">
+                Write-up ·{' '}
+                {interview.interviewers
+                  .map(
+                    (iv) =>
+                      iv.interviewer_name ??
+                      nameByNuid.get(iv.interviewer_nuid) ??
+                      iv.interviewer_nuid
+                  )
+                  .join(', ') || 'No interviewers'}
+                <span className="text-text-faint font-normal">
+                  {interview.submitted_at
+                    ? ` · Submitted ${formatDate(interview.submitted_at)}`
+                    : ' · Not submitted'}
+                </span>
+              </p>
+              <p className="text-text-default mt-1 whitespace-pre-wrap">
+                {interview.writeup || (
+                  <span className="text-text-faint">No write-up yet.</span>
+                )}
+              </p>
+            </div>
 
             <div className="border-t border-gray-100 pt-4">
               <p className="text-text-muted text-xs font-medium">

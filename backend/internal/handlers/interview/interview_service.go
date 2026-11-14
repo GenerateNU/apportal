@@ -5,6 +5,7 @@ import (
 
 	"github.com/GenerateNU/apportal/backend/internal/handlers/application"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/interviewassignment"
+	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 	"github.com/danielgtaylor/huma/v2"
 )
@@ -43,8 +44,18 @@ func (s *interviewService) upsert(ctx context.Context, in *UpsertInterviewInput)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
-	if !assigned {
+	if !assigned && !actor.HasAnyRole(models.UserRoleChief, models.UserRoleAdmin) {
 		return nil, huma.Error403Forbidden("only an assigned interviewer may edit this interview")
+	}
+	if !assigned && (in.Body.Writeup != nil || in.Body.RecordingURL != nil || in.Body.NotesURL != nil || in.Body.Submit) {
+		return nil, huma.Error403Forbidden("only an assigned interviewer may edit the write-up or links, or submit")
+	}
+	current, err := s.interviewDB.GetInterviewDetail(ctx, in.ID)
+	if err != nil {
+		return nil, utils.StoreErr(err)
+	}
+	if in.Body.Submit && in.Body.Rating == nil && current.Rating == nil {
+		return nil, huma.Error422UnprocessableEntity("a rating is required to submit")
 	}
 
 	err = s.interviewDB.UpsertInterview(ctx, InterviewUpsert{
@@ -63,9 +74,7 @@ func (s *interviewService) upsert(ctx context.Context, in *UpsertInterviewInput)
 	}
 
 	if in.Body.Submit {
-		if done, err := s.interviewAssignmentDB.AllInterviewersSubmitted(ctx, in.ID); err == nil && done {
-			_ = s.applicationDB.AdvanceApplicationToInterviewReview(ctx, in.ID)
-		}
+		_ = s.applicationDB.AdvanceApplicationToInterviewReview(ctx, in.ID)
 	}
 
 	iv, err := s.interviewDB.GetInterviewDetail(ctx, in.ID)

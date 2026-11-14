@@ -6,14 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface InterviewCommentDetail {
+export interface CreateCommentInputBody {
   /** A URL to the JSON Schema for this object. */
   readonly $schema?: string;
-  application_id: string;
-  author_name?: string;
-  author_nuid: string;
+  /** @minLength 1 */
   body: string;
-  created_at: string;
-  id: string;
-  updated_at: string;
 }

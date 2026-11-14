@@ -53,24 +53,21 @@ export function DecisionContextPanel({
               <LinkOut href={interview.notes_url} label="Notes" />
             )}
           </div>
-          {interview.interviewers.map((iv) => (
-            <div
-              key={iv.id}
-              className="rounded-lg border border-gray-200 bg-white p-3"
-            >
-              <div className="mb-1.5 flex items-center gap-2">
-                <span className="text-text-default text-sm font-medium">
-                  {iv.interviewer_name || iv.interviewer_nuid}
+          <div className="rounded-lg border border-gray-200 bg-white p-3">
+            <div className="mb-1.5 flex items-center gap-2">
+              <span className="text-text-default text-sm font-medium">
+                {interview.interviewers
+                  .map((iv) => iv.interviewer_name || iv.interviewer_nuid)
+                  .join(', ')}
+              </span>
+              {!interview.submitted_at && (
+                <span className="text-text-faint text-xs">
+                  Draft — not submitted
                 </span>
-                {!iv.writeup_submitted_at && (
-                  <span className="text-text-faint text-xs">
-                    Draft — not submitted
-                  </span>
-                )}
-              </div>
-              <Body text={iv.writeup} empty="No write-up yet." />
+              )}
             </div>
-          ))}
+            <Body text={interview.writeup} empty="No write-up yet." />
+          </div>
         </Section>
       )}
 

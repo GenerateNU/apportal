@@ -139,6 +139,40 @@ components:
         - stage
         - updated_at
       type: object
+    ApplicationCommentDetail:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/ApplicationCommentDetail.json
+          format: uri
+          readOnly: true
+          type: string
+        application_id:
+          type: string
+        author_name:
+          type: string
+        author_nuid:
+          type: string
+        body:
+          type: string
+        created_at:
+          format: date-time
+          type: string
+        id:
+          type: string
+        updated_at:
+          format: date-time
+          type: string
+      required:
+        - id
+        - application_id
+        - author_nuid
+        - body
+        - created_at
+        - updated_at
+      type: object
     ApplicationSummary:
       additionalProperties: false
       properties:
@@ -821,6 +855,22 @@ components:
       required:
         - body
       type: object
+    CreateCommentInputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/CreateCommentInputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        body:
+          minLength: 1
+          type: string
+      required:
+        - body
+      type: object
     CreateCycleInputBody:
       additionalProperties: false
       properties:
@@ -908,22 +958,6 @@ components:
           type: string
       required:
         - url
-      type: object
-    CreateInterviewCommentInputBody:
-      additionalProperties: false
-      properties:
-        $schema:
-          description: A URL to the JSON Schema for this object.
-          examples:
-            - https://example.com/schemas/CreateInterviewCommentInputBody.json
-          format: uri
-          readOnly: true
-          type: string
-        body:
-          minLength: 1
-          type: string
-      required:
-        - body
       type: object
     CreateLeadAssignmentInputBody:
       additionalProperties: false
@@ -1799,40 +1833,6 @@ components:
         - suggested_cap
         - notes
       type: object
-    InterviewCommentDetail:
-      additionalProperties: false
-      properties:
-        $schema:
-          description: A URL to the JSON Schema for this object.
-          examples:
-            - https://example.com/schemas/InterviewCommentDetail.json
-          format: uri
-          readOnly: true
-          type: string
-        application_id:
-          type: string
-        author_name:
-          type: string
-        author_nuid:
-          type: string
-        body:
-          type: string
-        created_at:
-          format: date-time
-          type: string
-        id:
-          type: string
-        updated_at:
-          format: date-time
-          type: string
-      required:
-        - id
-        - application_id
-        - author_nuid
-        - body
-        - created_at
-        - updated_at
-      type: object
     InterviewDetail:
       additionalProperties: false
       properties:
@@ -1874,8 +1874,13 @@ components:
         scheduled_at:
           format: date-time
           type: string
+        submitted_at:
+          format: date-time
+          type: string
         updated_at:
           format: date-time
+          type: string
+        writeup:
           type: string
       required:
         - interviewers
@@ -2172,11 +2177,6 @@ components:
         interviewer_name:
           type: string
         interviewer_nuid:
-          type: string
-        writeup:
-          type: string
-        writeup_submitted_at:
-          format: date-time
           type: string
       required:
         - application_id
@@ -3712,6 +3712,22 @@ components:
       required:
         - body
       type: object
+    UpdateCommentInputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/UpdateCommentInputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        body:
+          minLength: 1
+          type: string
+      required:
+        - body
+      type: object
     UpdateCycleInputBody:
       additionalProperties: false
       properties:
@@ -3803,22 +3819,6 @@ components:
         status:
           description: setup, active, or complete
           type: string
-      type: object
-    UpdateInterviewCommentInputBody:
-      additionalProperties: false
-      properties:
-        $schema:
-          description: A URL to the JSON Schema for this object.
-          examples:
-            - https://example.com/schemas/UpdateInterviewCommentInputBody.json
-          format: uri
-          readOnly: true
-          type: string
-        body:
-          minLength: 1
-          type: string
-      required:
-        - body
       type: object
     UpdateInterviewScriptInputBody:
       additionalProperties: false
@@ -5448,6 +5448,172 @@ paths:
       summary: Submit or update the challenge link
       tags:
         - Code submissions
+  /applications/{id}/comments:
+    get:
+      description: Reviewer only.
+      operationId: list-application-comments
+      parameters:
+        - description: Application ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Application ID
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/ApplicationCommentDetail"
+                type:
+                  - array
+                  - "null"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: List an application's comments
+      tags:
+        - Application comments
+    post:
+      description: Reviewer only. Any reviewer may leave any number of comments.
+      operationId: create-application-comment
+      parameters:
+        - description: Application ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Application ID
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCommentInputBody"
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationCommentDetail"
+          description: Created
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Comment on an application
+      tags:
+        - Application comments
+  /applications/{id}/comments/{commentId}:
+    put:
+      description: Reviewer only, and only the comment's own author.
+      operationId: update-application-comment
+      parameters:
+        - description: Application ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Application ID
+            type: string
+        - description: Comment ID
+          in: path
+          name: commentId
+          required: true
+          schema:
+            description: Comment ID
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCommentInputBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationCommentDetail"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Edit an application comment
+      tags:
+        - Application comments
   /applications/{id}/decision:
     put:
       description: The assigned interviewer may write feedback and compliments for their own applicants. Chiefs may additionally change the kind, override the whole message, and mark it sent.
@@ -5606,172 +5772,6 @@ paths:
                 $ref: "#/components/schemas/ErrorModel"
           description: Internal Server Error
       summary: Update the interview and your write-up
-      tags:
-        - Interviews
-  /applications/{id}/interview-comments:
-    get:
-      description: Reviewer only. Open to any reviewer, not just the assigned interviewer/chief.
-      operationId: list-interview-comments
-      parameters:
-        - description: Application ID
-          in: path
-          name: id
-          required: true
-          schema:
-            description: Application ID
-            type: string
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                items:
-                  $ref: "#/components/schemas/InterviewCommentDetail"
-                type:
-                  - array
-                  - "null"
-          description: OK
-        "401":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unauthorized
-        "403":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Forbidden
-        "422":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unprocessable Entity
-        "500":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Internal Server Error
-      summary: List an application's interview comments
-      tags:
-        - Interviews
-    post:
-      description: Reviewer only. Any reviewer may leave any number of comments on an application.
-      operationId: create-interview-comment
-      parameters:
-        - description: Application ID
-          in: path
-          name: id
-          required: true
-          schema:
-            description: Application ID
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CreateInterviewCommentInputBody"
-        required: true
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/InterviewCommentDetail"
-          description: OK
-        "401":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unauthorized
-        "403":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Forbidden
-        "422":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unprocessable Entity
-        "500":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Internal Server Error
-      summary: Add an interview comment
-      tags:
-        - Interviews
-  /applications/{id}/interview-comments/{commentId}:
-    put:
-      description: Reviewer only, and only the comment's own author.
-      operationId: update-interview-comment
-      parameters:
-        - description: Application ID
-          in: path
-          name: id
-          required: true
-          schema:
-            description: Application ID
-            type: string
-        - description: Comment ID
-          in: path
-          name: commentId
-          required: true
-          schema:
-            description: Comment ID
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/UpdateInterviewCommentInputBody"
-        required: true
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/InterviewCommentDetail"
-          description: OK
-        "401":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unauthorized
-        "403":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Forbidden
-        "404":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Not Found
-        "422":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unprocessable Entity
-        "500":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Internal Server Error
-      summary: Edit an interview comment
       tags:
         - Interviews
   /applications/{id}/interview-groups/{groupId}:
@@ -6386,6 +6386,56 @@ paths:
       summary: List chief reviews for several applications
       tags:
         - Chief reviews
+  /comments:
+    get:
+      description: Reviewer only. One request for a page of applications, instead of one per application.
+      operationId: list-application-comments-bulk
+      parameters:
+        - description: Comma-separated application IDs
+          explode: false
+          in: query
+          name: application_ids
+          schema:
+            description: Comma-separated application IDs
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/ApplicationCommentDetail"
+                type:
+                  - array
+                  - "null"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: List comments for several applications
+      tags:
+        - Application comments
   /cycle-stages/{id}:
     patch:
       description: Chief only.

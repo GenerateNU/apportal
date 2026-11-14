@@ -4,8 +4,6 @@ CREATE TABLE "public"."interviewers" (
   "interviewer_nuid" text NOT NULL,
   "assigned_by" text NOT NULL,
   "assigned_at" timestamptz NOT NULL DEFAULT now(),
-  "writeup" text NULL,
-  "writeup_submitted_at" timestamptz NULL,
   PRIMARY KEY ("id"),
   CONSTRAINT "fk_interviewers_assigner" FOREIGN KEY ("assigned_by") REFERENCES "public"."users" ("nuid") ON UPDATE NO ACTION ON DELETE NO ACTION,
   CONSTRAINT "fk_interviewers_interview" FOREIGN KEY ("interview_id") REFERENCES "public"."interviews" ("id") ON UPDATE NO ACTION ON DELETE CASCADE,
@@ -40,4 +38,4 @@ DROP TABLE "public"."interview_review_assignments";
 
 DROP TABLE "public"."interview_assignments";
 
-ALTER TABLE "public"."interviews" DROP COLUMN "interviewer_nuid", DROP COLUMN "comments", DROP COLUMN "submitted_at";
+ALTER TABLE "public"."interviews" DROP COLUMN "interviewer_nuid", DROP COLUMN "comments", ADD COLUMN "writeup" text NULL;

@@ -183,22 +183,22 @@ type Interview struct {
 	// alongside RecordingURL.
 	NotesURL    *string          `json:"notes_url,omitempty" gorm:"comment:link to the interviewer's notes doc (e.g. Granola)"`
 	Rating      *InterviewRating `json:"rating,omitempty" gorm:"type:interview_rating"`
+	Writeup     *string          `json:"writeup,omitempty"`
+	SubmittedAt *time.Time       `json:"submitted_at,omitempty"`
 	CreatedAt   time.Time        `json:"created_at" gorm:"not null;default:now()"`
 	UpdatedAt   time.Time        `json:"updated_at" gorm:"not null;default:now()"`
 	Application Application      `json:"-" gorm:"foreignKey:ApplicationID;references:ID;constraint:OnDelete:CASCADE"`
 }
 
 type Interviewer struct {
-	ID                 string     `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
-	InterviewID        string     `json:"interview_id" gorm:"type:uuid;not null;uniqueIndex:interviewers_interview_id_interviewer_nuid_key,priority:1"`
-	InterviewerNUID    string     `json:"interviewer_nuid" gorm:"not null;index:idx_interviewers_interviewer;uniqueIndex:interviewers_interview_id_interviewer_nuid_key,priority:2"`
-	AssignedBy         string     `json:"assigned_by" gorm:"not null"`
-	AssignedAt         time.Time  `json:"assigned_at" gorm:"not null;default:now()"`
-	Writeup            *string    `json:"writeup,omitempty"`
-	WriteupSubmittedAt *time.Time `json:"writeup_submitted_at,omitempty"`
-	Interview          Interview  `json:"-" gorm:"foreignKey:InterviewID;references:ID;constraint:OnDelete:CASCADE"`
-	User               User       `json:"-" gorm:"foreignKey:InterviewerNUID;references:NUID"`
-	Assigner           User       `json:"-" gorm:"foreignKey:AssignedBy;references:NUID"`
+	ID              string    `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	InterviewID     string    `json:"interview_id" gorm:"type:uuid;not null;uniqueIndex:interviewers_interview_id_interviewer_nuid_key,priority:1"`
+	InterviewerNUID string    `json:"interviewer_nuid" gorm:"not null;index:idx_interviewers_interviewer;uniqueIndex:interviewers_interview_id_interviewer_nuid_key,priority:2"`
+	AssignedBy      string    `json:"assigned_by" gorm:"not null"`
+	AssignedAt      time.Time `json:"assigned_at" gorm:"not null;default:now()"`
+	Interview       Interview `json:"-" gorm:"foreignKey:InterviewID;references:ID;constraint:OnDelete:CASCADE"`
+	User            User      `json:"-" gorm:"foreignKey:InterviewerNUID;references:NUID"`
+	Assigner        User      `json:"-" gorm:"foreignKey:AssignedBy;references:NUID"`
 }
 
 type InterviewReviewer struct {
@@ -231,12 +231,9 @@ type InterviewDetail struct {
 	Interviewers []InterviewerDetail `json:"interviewers" gorm:"-"`
 }
 
-// InterviewComment is an open comment on an application's interview, visible
-// to and postable by any reviewer — unlike ChiefReviewComment, not restricted
-// to chiefs, since interview calibration is meant to be a shared discussion.
-type InterviewComment struct {
+type ApplicationComment struct {
 	ID            string      `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
-	ApplicationID string      `json:"application_id" gorm:"type:uuid;not null;index:idx_interview_comments_app"`
+	ApplicationID string      `json:"application_id" gorm:"type:uuid;not null;index:idx_application_comments_app"`
 	AuthorNUID    string      `json:"author_nuid" gorm:"not null"`
 	Body          string      `json:"body" gorm:"not null"`
 	CreatedAt     time.Time   `json:"created_at" gorm:"not null;default:now()"`
@@ -245,10 +242,8 @@ type InterviewComment struct {
 	Author        User        `json:"-" gorm:"foreignKey:AuthorNUID;references:NUID"`
 }
 
-// InterviewCommentDetail bundles a comment with the author's resolved display
-// name (not a table column).
-type InterviewCommentDetail struct {
-	InterviewComment
+type ApplicationCommentDetail struct {
+	ApplicationComment
 	AuthorName string `json:"author_name,omitempty"`
 }
 
