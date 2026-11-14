@@ -96,7 +96,7 @@ func (a *ApplicationDB) ListApplicationsPage(ctx context.Context, f ApplicationF
 func listApplicationsQuery(db *gorm.DB, f ApplicationFilter) *gorm.DB {
 	q := applicationsFrom(db, f, applicationFilterAll).
 		Distinct("a.id", "a.cycle_id", "a.user_nuid", "a.application_role", "a.stage", "a.availability",
-			"a.resume_url", "a.submitted_at", "a.updated_at", "u.full_name", "u.email", "u.returner").
+			"a.resume_url", "a.submitted_at", "a.updated_at", "a.tag_ids", "u.full_name", "u.email", "u.returner").
 		Order("a.submitted_at DESC NULLS LAST")
 	if f.Limit != nil {
 		q = q.Limit(*f.Limit).Offset(f.Offset)
@@ -175,6 +175,10 @@ func applicationsFrom(db *gorm.DB, f ApplicationFilter, scope applicationFilterS
 	}
 	if f.Returner != nil {
 		q = q.Where("u.returner = ?", *f.Returner)
+	}
+	if len(f.TagIDs) > 0 {
+		// Ids are UUID-validated by the caller, so the literal is safe to build.
+		q = q.Where("a.tag_ids && ?::uuid[]", "{"+strings.Join(f.TagIDs, ",")+"}")
 	}
 	if !f.IncludeDraft {
 		q = q.Where("a.stage != ?", models.StageDraft)

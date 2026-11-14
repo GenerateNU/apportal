@@ -126,6 +126,12 @@ components:
         submitted_at:
           format: date-time
           type: string
+        tag_ids:
+          items:
+            type: string
+          type:
+            - array
+            - "null"
         updated_at:
           format: date-time
           type: string
@@ -138,6 +144,7 @@ components:
         - role
         - stage
         - updated_at
+        - tag_ids
       type: object
     ApplicationCommentDetail:
       additionalProperties: false
@@ -212,6 +219,12 @@ components:
         submitted_at:
           format: date-time
           type: string
+        tag_ids:
+          items:
+            type: string
+          type:
+            - array
+            - "null"
         updated_at:
           format: date-time
           type: string
@@ -227,6 +240,26 @@ components:
         - role
         - stage
         - updated_at
+        - tag_ids
+      type: object
+    ApplicationTagsOutputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/ApplicationTagsOutputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        tag_ids:
+          items:
+            type: string
+          type:
+            - array
+            - "null"
+      required:
+        - tag_ids
       type: object
     ApplicationTemplate:
       additionalProperties: false
@@ -1068,6 +1101,21 @@ components:
       required:
         - question_text
       type: object
+    CreateTagInputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/CreateTagInputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        name:
+          type: string
+      required:
+        - name
+      type: object
     CreateUploadURLInputBody:
       additionalProperties: false
       properties:
@@ -1260,6 +1308,34 @@ components:
         - display_order
         - is_active
         - required_assignments
+        - created_at
+      type: object
+    CycleTag:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/CycleTag.json
+          format: uri
+          readOnly: true
+          type: string
+        color:
+          type: string
+        created_at:
+          format: date-time
+          type: string
+        cycle_id:
+          type: string
+        id:
+          type: string
+        name:
+          type: string
+      required:
+        - id
+        - cycle_id
+        - name
+        - color
         - created_at
       type: object
     DecisionContext:
@@ -3358,6 +3434,26 @@ components:
         - email
         - assigned_at
       type: object
+    SetApplicationTagsInputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/SetApplicationTagsInputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        tag_ids:
+          description: Replaces the application's tags; at most 3, all from its cycle
+          items:
+            type: string
+          type:
+            - array
+            - "null"
+      required:
+        - tag_ids
+      type: object
     SetDraftTeamsInputBody:
       additionalProperties: false
       properties:
@@ -3778,6 +3874,22 @@ components:
             - dropdown
             - url
             - score
+          type: string
+      type: object
+    UpdateTagInputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/UpdateTagInputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        color:
+          description: One of the palette colors
+          type: string
+        name:
           type: string
       type: object
     UpdateUserInputBody:
@@ -4489,6 +4601,13 @@ paths:
             enum:
               - "true"
               - "false"
+            type: string
+        - description: Comma-separated cycle tag ids; an application matches any of them
+          explode: false
+          in: query
+          name: tag_ids
+          schema:
+            description: Comma-separated cycle tag ids; an application matches any of them
             type: string
         - description: Case-insensitive substring match on the applicant's name, NUID, or email
           explode: false
@@ -6012,6 +6131,58 @@ paths:
       summary: Mark an application as wanted for your team
       tags:
         - Selections
+  /applications/{id}/tags:
+    put:
+      description: Lead, chief or admin. At most 3 tags, all from the application's cycle.
+      operationId: set-application-tags
+      parameters:
+        - description: Application ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Application ID
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetApplicationTagsInputBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationTagsOutputBody"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Replace an application's tags
+      tags:
+        - Tags
   /applications/{id}/written-review:
     put:
       description: Reviewer only; upserts the calling reviewer's review-question answers.
@@ -8431,6 +8602,100 @@ paths:
       summary: Add a stage to a cycle's flow template
       tags:
         - Cycle stages
+  /cycles/{id}/tags:
+    get:
+      operationId: list-cycle-tags
+      parameters:
+        - description: Cycle ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Cycle ID
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/CycleTag"
+                type:
+                  - array
+                  - "null"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: List a cycle's tags
+      tags:
+        - Tags
+    post:
+      description: Lead, chief or admin. The color is assigned from the palette.
+      operationId: create-cycle-tag
+      parameters:
+        - description: Cycle ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Cycle ID
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTagInputBody"
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CycleTag"
+          description: Created
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "409":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Conflict
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Create a tag in a cycle
+      tags:
+        - Tags
   /cycles/{id}/template:
     get:
       description: ?role= selects which role's template to fetch (required). Creates a default-titled row on first access.
@@ -10411,6 +10676,102 @@ paths:
       summary: Update a review question
       tags:
         - Review questions
+  /tags/{id}:
+    delete:
+      description: Also removes it from every application in the cycle.
+      operationId: delete-tag
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Delete a tag
+      tags:
+        - Tags
+    patch:
+      operationId: update-tag
+      parameters:
+        - description: Tag ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Tag ID
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTagInputBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CycleTag"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "409":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Conflict
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Rename or recolor a tag
+      tags:
+        - Tags
   /users:
     get:
       description: Reviewer only. Any lead/chief/admin can browse the reviewer directory (e.g. to invite a fellow lead onto a preference list); creating or editing a user stays chief-only.
