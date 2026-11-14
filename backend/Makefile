@@ -5,6 +5,7 @@ MAIN_PACKAGE := ./cmd/server
 BIN_DIR := bin
 BIN_PATH := $(BIN_DIR)/$(APP_NAME)
 RUN_ALWAYS_SQL := internal/sql/run-always.sql
+SEED_DEV_SQL := internal/sql/seed-dev.sql
 
 # Configs are passed explicitly (not via `doppler setup`) so *-prod can only touch prd.
 DOPPLER_PROJECT     ?= apportal-backend
@@ -14,7 +15,7 @@ DOPPLER_PROD_CONFIG ?= prd
 DOPPLER_DEV  := doppler run --project $(DOPPLER_PROJECT) --config $(DOPPLER_DEV_CONFIG) --
 DOPPLER_PROD := doppler run --project $(DOPPLER_PROJECT) --config $(DOPPLER_PROD_CONFIG) --
 
-.PHONY: help fmt fmt-check lint test test-cover vet tidy run start-dev start-prod air build clean docker-build docker-up docker-down docker-logs prettier prettier-check openapi gen-migration migrate-dev migrate-prod revert-single-dev revert-single-prod
+.PHONY: help fmt fmt-check lint test test-cover vet tidy run start-dev start-prod air build clean docker-build docker-up docker-down docker-logs prettier prettier-check openapi gen-migration migrate-dev migrate-prod seed-dev revert-single-dev revert-single-prod
 
 help:
 	@printf '%s\n' \
@@ -33,6 +34,7 @@ help:
 		'  make gen-migration MIGRATION_NAME=x  Generate a migration from model changes' \
 		'  make migrate-dev  Apply pending migrations and run-always.sql using Doppler dev secrets' \
 		'  make migrate-prod Apply pending migrations and run-always.sql using Doppler prd secrets' \
+		'  make seed-dev     Load fake data into a local (localhost) dev database' \
 		'  make revert-single-dev   Roll back the last migration (dev)' \
 		'  make revert-single-prod  Roll back the last migration (prd)' \
 		'  make docker-build Build the backend Docker image' \
@@ -112,6 +114,13 @@ migrate-dev:
 migrate-prod:
 	@$(DOPPLER_PROD) atlas migrate apply --env apportal
 	@$(DOPPLER_PROD) sh -c 'psql "$$MIGRATION_DB_CONNECTION_STRING" -v ON_ERROR_STOP=1 -f $(RUN_ALWAYS_SQL)'
+
+# Refuses anything but a localhost database so fake data never lands in a shared one.
+seed-dev:
+	@$(DOPPLER_DEV) sh -c 'case "$$MIGRATION_DB_CONNECTION_STRING" in \
+		*@127.0.0.1:*|*@localhost:*) psql "$$MIGRATION_DB_CONNECTION_STRING" -v ON_ERROR_STOP=1 -f $(SEED_DEV_SQL) ;; \
+		*) echo "seed-dev: refusing to seed a non-local database" >&2; exit 1 ;; \
+	esac'
 
 revert-single-dev:
 	@$(DOPPLER_DEV) atlas migrate down --env apportal

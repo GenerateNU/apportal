@@ -68,10 +68,17 @@ export const queryKeys = {
     detail: (id: string) => [...queryKeys.applications.details(), id] as const,
   },
 
+  branches: {
+    all: ['branches'] as const,
+    list: () => [...queryKeys.branches.all, 'list'] as const,
+    details: () => [...queryKeys.branches.all, 'detail'] as const,
+    detail: (id: string) => [...queryKeys.branches.details(), id] as const,
+  },
+
   cycles: {
     all: ['cycles'] as const,
     lists: () => [...queryKeys.cycles.all, 'list'] as const,
-    list: (params?: { status?: string }) =>
+    list: (params?: { status?: string; branch_id?: string }) =>
       [...queryKeys.cycles.lists(), params ?? {}] as const,
     details: () => [...queryKeys.cycles.all, 'detail'] as const,
     detail: (id: string) => [...queryKeys.cycles.details(), id] as const,

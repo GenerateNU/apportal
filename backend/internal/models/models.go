@@ -24,14 +24,23 @@ type User struct {
 	Returner bool `json:"returner" gorm:"not null;default:false"`
 }
 
+// Branch is a Generate branch (e.g. Software); every cycle recruits for one.
+type Branch struct {
+	ID        string    `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	Name      string    `json:"name" gorm:"not null;uniqueIndex:branches_name_key"`
+	CreatedAt time.Time `json:"created_at" gorm:"not null;default:now()"`
+}
+
 type Cycle struct {
 	ID              string          `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	BranchID        string          `json:"branch_id" gorm:"type:uuid;not null;index:idx_cycles_branch"`
 	Name            string          `json:"name" gorm:"not null"`
 	Status          CycleStatus     `json:"status" gorm:"type:cycle_status;not null;default:draft"`
 	ApplicationType ApplicationType `json:"application_type" gorm:"type:application_type;not null;default:member"`
 	OpensAt         *time.Time      `json:"opens_at,omitempty"`
 	ClosesAt        *time.Time      `json:"closes_at,omitempty"`
 	CreatedAt       time.Time       `json:"created_at" gorm:"not null;default:now()"`
+	Branch          Branch          `json:"-" gorm:"foreignKey:BranchID;references:ID;constraint:OnDelete:RESTRICT"`
 }
 
 // ApplicationTemplate holds per-role application content within a cycle

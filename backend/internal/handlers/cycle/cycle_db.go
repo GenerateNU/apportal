@@ -19,23 +19,31 @@ func NewCycleDB(db *gorm.DB) *CycleDB {
 
 func (c *CycleDB) CreateCycle(ctx context.Context, in CycleCreate) (models.Cycle, error) {
 	cycle := models.Cycle{
+		BranchID:        in.BranchID,
 		Name:            in.Name,
 		Status:          in.Status,
 		ApplicationType: in.ApplicationType,
 		OpensAt:         in.OpensAt,
 		ClosesAt:        in.ClosesAt,
 	}
-	err := utils.Insert(c.db.WithContext(ctx), &cycle, "name", "status", "application_type", "opens_at", "closes_at")
+	err := utils.Insert(c.db.WithContext(ctx), &cycle, "branch_id", "name", "status", "application_type", "opens_at", "closes_at")
 	return cycle, err
 }
 
 func (c *CycleDB) ListCycles(ctx context.Context, f CycleFilter) ([]models.Cycle, error) {
-	q := c.db.WithContext(ctx).Order("created_at DESC")
+	cycles := []models.Cycle{}
+	return cycles, cyclesQuery(c.db.WithContext(ctx), f).Find(&cycles).Error
+}
+
+func cyclesQuery(db *gorm.DB, f CycleFilter) *gorm.DB {
+	q := db.Order("created_at DESC")
 	if f.Status != "" {
 		q = q.Where("status = ?", f.Status)
 	}
-	cycles := []models.Cycle{}
-	return cycles, q.Find(&cycles).Error
+	if f.BranchID != "" {
+		q = q.Where("branch_id = ?", f.BranchID)
+	}
+	return q
 }
 
 func (c *CycleDB) GetCycle(ctx context.Context, id string) (models.Cycle, error) {

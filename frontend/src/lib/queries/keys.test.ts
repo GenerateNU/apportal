@@ -44,4 +44,19 @@ describe('queryKeys', () => {
   it('gives each signed-in identity its own me key', () => {
     expect(queryKeys.users.me('uid-1')).not.toEqual(queryKeys.users.me('uid-2'))
   })
+
+  it('nests branch list and detail keys under the branches root', () => {
+    expect(queryKeys.branches.list()).toEqual(['branches', 'list'])
+    expect(queryKeys.branches.detail('b1')).toEqual([
+      'branches',
+      'detail',
+      'b1',
+    ])
+  })
+
+  it('keys cycle lists by branch so each branch caches separately', () => {
+    expect(queryKeys.cycles.list({ branch_id: 'b1' })).not.toEqual(
+      queryKeys.cycles.list({ branch_id: 'b2' })
+    )
+  })
 })

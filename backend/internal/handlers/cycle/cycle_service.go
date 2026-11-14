@@ -16,6 +16,9 @@ func (s *cycleService) create(ctx context.Context, in *CreateCycleInput) (*Cycle
 	if err := utils.RequireChief(ctx); err != nil {
 		return nil, err
 	}
+	if in.Body.BranchID == "" {
+		return nil, huma.Error422UnprocessableEntity("branch_id is required")
+	}
 	status := in.Body.Status
 	if status == "" {
 		status = models.CycleDraft
@@ -32,6 +35,7 @@ func (s *cycleService) create(ctx context.Context, in *CreateCycleInput) (*Cycle
 	}
 
 	cycle, err := s.cycleDB.CreateCycle(ctx, CycleCreate{
+		BranchID:        in.Body.BranchID,
 		Name:            in.Body.Name,
 		Status:          status,
 		ApplicationType: appType,
@@ -45,7 +49,7 @@ func (s *cycleService) create(ctx context.Context, in *CreateCycleInput) (*Cycle
 }
 
 func (s *cycleService) list(ctx context.Context, in *ListCyclesInput) (*CyclesOutput, error) {
-	filter := CycleFilter{}
+	filter := CycleFilter{BranchID: in.BranchID}
 	if in.Status != "" {
 		parsed := models.CycleStatus(in.Status)
 		if !parsed.Valid() {

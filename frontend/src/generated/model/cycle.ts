@@ -12,6 +12,7 @@ export interface Cycle {
   /** A URL to the JSON Schema for this object. */
   readonly $schema?: string;
   application_type: CycleApplicationType;
+  branch_id: string;
   closes_at?: string;
   created_at: string;
   id: string;

@@ -15,17 +15,16 @@ import type { RequestOptions } from '@/lib/api/orval-mutator'
 import type { Cycle, CycleRoleSummary, CycleStatus } from '@/lib/api/types'
 import { queryKeys } from './keys'
 
+type CycleListParams = { status?: CycleStatus; branch_id?: string }
+
 export async function fetchCycles(
-  params?: { status?: CycleStatus },
+  params?: CycleListParams,
   opts?: RequestOptions
 ) {
   return ((await listCycles(params, opts)) ?? []) as Cycle[]
 }
 
-export function useCycles(
-  params?: { status?: CycleStatus },
-  opts?: RequestOptions
-) {
+export function useCycles(params?: CycleListParams, opts?: RequestOptions) {
   return useQuery({
     queryKey: queryKeys.cycles.list(params),
     queryFn: () => fetchCycles(params, opts),

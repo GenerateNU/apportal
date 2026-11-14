@@ -11,4 +11,8 @@ export type ListCyclesParams = {
  * Optional status filter: draft, open, closed, archived
  */
 status?: string;
+/**
+ * Optional branch filter
+ */
+branch_id?: string;
 };

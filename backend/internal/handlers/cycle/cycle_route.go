@@ -20,7 +20,7 @@ func registerCycle(api huma.API, s *cycleService) {
 		Method:      http.MethodGet,
 		Path:        "/cycles",
 		Summary:     "List cycles",
-		Description: "Optional ?status= filters to one status (draft, open, closed, archived).",
+		Description: "Optional ?status= filters to one status (draft, open, closed, archived); ?branch_id= to one branch.",
 		Tags:        []string{"Cycles"},
 	}, s.list)
 

@@ -12,6 +12,7 @@ export interface CreateCycleInputBody {
   /** A URL to the JSON Schema for this object. */
   readonly $schema?: string;
   application_type?: CreateCycleInputBodyApplicationType;
+  branch_id: string;
   closes_at?: string;
   name: string;
   opens_at?: string;

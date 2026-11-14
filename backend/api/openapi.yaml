@@ -338,6 +338,28 @@ components:
         - warnings
         - total_added
       type: object
+    Branch:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/Branch.json
+          format: uri
+          readOnly: true
+          type: string
+        created_at:
+          format: date-time
+          type: string
+        id:
+          type: string
+        name:
+          type: string
+      required:
+        - id
+        - name
+        - created_at
+      type: object
     Capacity:
       additionalProperties: false
       properties:
@@ -754,6 +776,21 @@ components:
         - cycle_id
         - role
       type: object
+    CreateBranchInputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/CreateBranchInputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        name:
+          type: string
+      required:
+        - name
+      type: object
     CreateChallengeInputBody:
       additionalProperties: false
       properties:
@@ -814,6 +851,8 @@ components:
             - lead
             - chief
           type: string
+        branch_id:
+          type: string
         closes_at:
           format: date-time
           type: string
@@ -830,6 +869,7 @@ components:
             - archived
           type: string
       required:
+        - branch_id
         - name
       type: object
     CreateCycleStageInputBody:
@@ -1127,6 +1167,8 @@ components:
             - lead
             - chief
           type: string
+        branch_id:
+          type: string
         closes_at:
           format: date-time
           type: string
@@ -1149,6 +1191,7 @@ components:
           type: string
       required:
         - id
+        - branch_id
         - name
         - status
         - application_type
@@ -3519,6 +3562,19 @@ components:
             - archived
           type: string
         title:
+          type: string
+      type: object
+    UpdateBranchInputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/UpdateBranchInputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        name:
           type: string
       type: object
     UpdateChiefReviewCommentInputBody:
@@ -6102,6 +6158,176 @@ paths:
       summary: List an application's written reviews
       tags:
         - Written reviews
+  /branches:
+    get:
+      operationId: list-branches
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/Branch"
+                type:
+                  - array
+                  - "null"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      summary: List branches
+      tags:
+        - Branches
+    post:
+      description: Chief only. Names are unique.
+      operationId: create-branch
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBranchInputBody"
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Branch"
+          description: Created
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "409":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Conflict
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Create a branch
+      tags:
+        - Branches
+  /branches/{id}:
+    get:
+      operationId: get-branch
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Branch"
+          description: OK
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Get a branch
+      tags:
+        - Branches
+    patch:
+      description: Chief only.
+      operationId: update-branch
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateBranchInputBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Branch"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "409":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Conflict
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Rename a branch
+      tags:
+        - Branches
   /chief-reviews:
     get:
       description: Chief only. One request for a page of applications, instead of one per application.
@@ -6212,7 +6438,7 @@ paths:
         - Cycle stages
   /cycles:
     get:
-      description: Optional ?status= filters to one status (draft, open, closed, archived).
+      description: Optional ?status= filters to one status (draft, open, closed, archived); ?branch_id= to one branch.
       operationId: list-cycles
       parameters:
         - description: "Optional status filter: draft, open, closed, archived"
@@ -6221,6 +6447,13 @@ paths:
           name: status
           schema:
             description: "Optional status filter: draft, open, closed, archived"
+            type: string
+        - description: Optional branch filter
+          explode: false
+          in: query
+          name: branch_id
+          schema:
+            description: Optional branch filter
             type: string
       responses:
         "200":
