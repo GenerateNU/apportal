@@ -38,6 +38,7 @@ export function TableView({
   onFilterChange,
   hasAvailability,
   roleOptions,
+  tagNames,
   bulkBar,
   loading,
   hasMore,
@@ -68,6 +69,7 @@ export function TableView({
   onFilterChange: FilterChangeHandler
   hasAvailability?: boolean
   roleOptions?: string[]
+  tagNames?: string[]
   // Rendered in the filter row's place while a selection is active. Owned by
   // the parent, which holds the selection and the bulk mutation.
   bulkBar?: React.ReactNode
@@ -154,6 +156,7 @@ export function TableView({
             onFilterChange={onFilterChange}
             hasAvailability={hasAvailability}
             roleOptions={roleOptions}
+            tagNames={tagNames}
           />
         )}
         <div className="flex shrink-0 items-center gap-1 overflow-x-auto">

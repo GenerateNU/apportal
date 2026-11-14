@@ -44,6 +44,7 @@ export const queryKeys = {
       rating_filters?: string
       answer_filters?: AnswerFilterParam[]
       returner?: boolean
+      tag_ids?: string
     }) => [...queryKeys.applications.lists(), params ?? {}] as const,
     // Namespaced away from `list` because an infinite query caches
     // `{ pages, pageParams }` rather than a single response — sharing a key
@@ -59,6 +60,7 @@ export const queryKeys = {
       rating_filters?: string
       answer_filters?: AnswerFilterParam[]
       returner?: boolean
+      tag_ids?: string
       search?: string
       limit?: number
     }) =>
@@ -79,6 +81,12 @@ export const queryKeys = {
     lists: () => [...queryKeys.roles.all, 'list'] as const,
     list: (branchId?: string) =>
       [...queryKeys.roles.lists(), branchId ?? 'all'] as const,
+  },
+
+  tags: {
+    all: ['tags'] as const,
+    cycle: (cycleId: string) =>
+      [...queryKeys.tags.all, 'cycle', cycleId] as const,
   },
 
   cycles: {
@@ -252,6 +260,12 @@ export const queryKeys = {
         cycleId,
         roleId,
       ] as const,
+  },
+
+  interviewGroups: {
+    all: ['interview-groups'] as const,
+    list: (cycleId: string) =>
+      [...queryKeys.interviewGroups.all, cycleId] as const,
   },
 
   reviewGates: {

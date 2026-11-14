@@ -5,10 +5,7 @@ import type {
   InterviewReviewPlanPreview as InterviewReviewPlanPreviewType,
   PlannedReviewer,
 } from '@/generated/model'
-import { AVAILABILITY_OPTIONS } from '@/lib/availability'
-
-const dayLabel = (day: string) =>
-  AVAILABILITY_OPTIONS.find((o) => o.key === day)?.label ?? day
+import { dayLabel } from '@/lib/availability'
 
 // Parallel to the written-review planner's PlanPreview, grouped by declared
 // meeting day instead of team.

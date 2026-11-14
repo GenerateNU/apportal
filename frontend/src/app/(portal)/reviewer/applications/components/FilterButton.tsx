@@ -14,6 +14,7 @@ import {
   Clock,
   Briefcase,
   Repeat,
+  Tag as TagIcon,
   MessageSquare,
   ChevronRight,
 } from 'lucide-react'
@@ -53,8 +54,10 @@ export type SpecialFilter =
   | 'availability'
   | 'role'
   | 'returner'
+  | 'tag'
 
 const SPECIAL_FILTER_ID: Record<SpecialFilter, string> = {
+  tag: '__tag__',
   rating: '__rating__',
   stage: '__stage__',
   availability: '__availability__',
@@ -123,7 +126,16 @@ const SPECIAL_QUESTIONS: { special: SpecialFilter; question: Question }[] = [
       FIRST_TIME_OPTION,
     ]),
   },
+  // Options are the cycle's tag names, filled in at render from tagNames.
+  { special: 'tag', question: specialQuestion('tag', 'Tag', []) },
 ]
+
+// The tag chip's options depend on the cycle, so it carries them separately.
+function withTagOptions(question: Question, tagNames: string[]): Question {
+  return question.id === SPECIAL_FILTER_ID.tag
+    ? { ...question, options: tagNames }
+    : question
+}
 
 // Question types whose answers are picked from a fixed option list, so the
 // filter offers checkboxes instead of a text box.
@@ -161,6 +173,8 @@ interface FilterChipsProps {
   hiddenSpecials?: SpecialFilter[]
   // Names of the cycle's roles; the Role filter is hidden without them.
   roleOptions?: string[]
+  // The cycle's tag names; the Tag filter is only offered when there are some.
+  tagNames?: string[]
 }
 
 export function FilterChips({
@@ -170,6 +184,7 @@ export function FilterChips({
   hasAvailability,
   hiddenSpecials,
   roleOptions = [],
+  tagNames = [],
 }: FilterChipsProps) {
   const specials = withRoleOptions(roleOptions)
   const [isOpen, setIsOpen] = useState(false)
@@ -201,10 +216,11 @@ export function FilterChips({
         ({ special }) =>
           (special !== 'availability' || hasAvailability) &&
           (special !== 'role' || roleOptions.length > 0) &&
+          (special !== 'tag' || tagNames.length > 0) &&
           !hiddenSpecials?.includes(special) &&
           !filters.some((f) => f.special === special)
       )
-      .map(({ question }) => question),
+      .map(({ question }) => withTagOptions(question, tagNames)),
     ...columns.filter((q) => !filters.some((f) => f.question_id === q.id)),
   ]
 
@@ -246,7 +262,7 @@ export function FilterChips({
         <FilterChip
           key={filter.question_id}
           filter={filter}
-          question={questionForFilter(filter, columns, specials)}
+          question={questionForFilter(filter, columns, specials, tagNames)}
           onUpdate={(values) => onFilterChange({ ...filter, values }, 'update')}
           onRemove={() => onFilterChange(filter, 'remove')}
         />
@@ -344,10 +360,14 @@ export function FilterChips({
 function questionForFilter(
   filter: AnswerFilter,
   columns: Question[],
-  specials: typeof SPECIAL_QUESTIONS
+  specials: typeof SPECIAL_QUESTIONS,
+  tagNames: string[]
 ): Question | undefined {
   if (filter.special) {
-    return specials.find(({ special }) => special === filter.special)?.question
+    const question = specials.find(
+      ({ special }) => special === filter.special
+    )?.question
+    return question && withTagOptions(question, tagNames)
   }
   return columns.find((q) => q.id === filter.question_id)
 }
@@ -590,6 +610,7 @@ function getFilterIcon(
   if (special === 'stage') return <Layers {...iconProps} />
   if (special === 'availability') return <Clock {...iconProps} />
   if (special === 'returner') return <Repeat {...iconProps} />
+  if (special === 'tag') return <TagIcon {...iconProps} />
 
   switch (questionType) {
     case 'short_answer':

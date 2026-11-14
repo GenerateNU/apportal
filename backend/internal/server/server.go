@@ -26,6 +26,7 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/handlers/draft"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/interview"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/interviewassignment"
+	"github.com/GenerateNU/apportal/backend/internal/handlers/interviewgroup"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/leadassignment"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/preferencelist"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/question"
@@ -34,6 +35,7 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/handlers/reviewrelease"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/selection"
+	"github.com/GenerateNU/apportal/backend/internal/handlers/tag"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/user"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/writtenreview"
 	"github.com/GenerateNU/apportal/backend/internal/middleware"
@@ -110,6 +112,7 @@ func CreateRoutes(api huma.API, db *gorm.DB, storageClient *storage.Client, chal
 	applicant.Route(api, db, challengeClient)
 	application.Route(api, db, storageClient)
 	codesubmission.Route(api, db)
+	tag.Route(api, db)
 
 	// Review → interview → selection pipeline.
 	leadassignment.Route(api, db)
@@ -119,6 +122,7 @@ func CreateRoutes(api huma.API, db *gorm.DB, storageClient *storage.Client, chal
 	chiefreview.Route(api, db)
 	reviewrelease.Route(api, db)
 	interviewassignment.Route(api, db)
+	interviewgroup.Route(api, db)
 	interview.Route(api, db)
 	recordingreview.Route(api, db)
 	preferencelist.Route(api, db)
