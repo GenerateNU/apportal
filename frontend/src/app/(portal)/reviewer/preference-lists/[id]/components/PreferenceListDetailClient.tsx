@@ -166,7 +166,7 @@ export function PreferenceListDetailClient({
 
   // Role is a filter chip like everything else. Entries and their ranks are
   // still per-role, so the applicants card ranks one role at a time.
-  const { roles, columns, hasAvailability, filterParams } =
+  const { roles, columns, hasAvailability, tagNames, filterParams } =
     useApplicationFilters({
       cycleId: list?.cycle_id ?? '',
       defaultRoles: ROLE_COLUMNS,
@@ -673,6 +673,7 @@ export function PreferenceListDetailClient({
             columns={columns}
             onFilterChange={handleFilterChange}
             hasAvailability={hasAvailability}
+            tagNames={tagNames}
           />
         </div>
 

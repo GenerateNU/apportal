@@ -45,6 +45,7 @@ export const queryKeys = {
       rating_filters?: string
       answer_filters?: AnswerFilterParam[]
       returner?: boolean
+      tag_ids?: string
     }) => [...queryKeys.applications.lists(), params ?? {}] as const,
     // Namespaced away from `list` because an infinite query caches
     // `{ pages, pageParams }` rather than a single response — sharing a key
@@ -60,6 +61,7 @@ export const queryKeys = {
       rating_filters?: string
       answer_filters?: AnswerFilterParam[]
       returner?: boolean
+      tag_ids?: string
       search?: string
       limit?: number
     }) =>
