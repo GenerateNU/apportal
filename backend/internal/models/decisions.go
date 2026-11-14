@@ -39,17 +39,18 @@ const (
 // DecisionTemplate is one cycle × role × kind letter. Subject and body both
 // carry {{placeholders}}; the frontend's renderDecision fills them in.
 type DecisionTemplate struct {
-	ID              string       `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
-	CycleID         string       `json:"cycle_id" gorm:"type:uuid;not null;uniqueIndex:decision_templates_cycle_id_application_role_kind_key,priority:1"`
-	ApplicationRole Role         `json:"application_role" gorm:"type:application_role;not null;uniqueIndex:decision_templates_cycle_id_application_role_kind_key,priority:2"`
-	Kind            DecisionKind `json:"kind" gorm:"type:decision_kind;not null;uniqueIndex:decision_templates_cycle_id_application_role_kind_key,priority:3"`
-	Subject         string       `json:"subject" gorm:"not null"`
-	Body            string       `json:"body" gorm:"not null"`
-	CreatedAt       time.Time    `json:"created_at" gorm:"not null;default:now()"`
-	UpdatedAt       time.Time    `json:"updated_at" gorm:"not null;default:now()"`
-	UpdatedBy       *string      `json:"updated_by,omitempty"`
-	Cycle           Cycle        `json:"-" gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
-	UpdatedByUser   *User        `json:"-" gorm:"foreignKey:UpdatedBy;references:NUID"`
+	ID            string       `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	CycleID       string       `json:"cycle_id" gorm:"type:uuid;not null;uniqueIndex:decision_templates_cycle_id_role_id_kind_key,priority:1"`
+	RoleID        string       `json:"role_id" gorm:"type:uuid;not null;uniqueIndex:decision_templates_cycle_id_role_id_kind_key,priority:2"`
+	Kind          DecisionKind `json:"kind" gorm:"type:decision_kind;not null;uniqueIndex:decision_templates_cycle_id_role_id_kind_key,priority:3"`
+	Subject       string       `json:"subject" gorm:"not null"`
+	Body          string       `json:"body" gorm:"not null"`
+	CreatedAt     time.Time    `json:"created_at" gorm:"not null;default:now()"`
+	UpdatedAt     time.Time    `json:"updated_at" gorm:"not null;default:now()"`
+	UpdatedBy     *string      `json:"updated_by,omitempty"`
+	Cycle         Cycle        `json:"-" gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
+	UpdatedByUser *User        `json:"-" gorm:"foreignKey:UpdatedBy;references:NUID"`
+	Role          Role         `json:"-" gorm:"foreignKey:RoleID;references:ID;constraint:OnDelete:RESTRICT"`
 }
 
 // DecisionRow is one line of the decisions page (not a table): the applicant,
@@ -57,24 +58,24 @@ type DecisionTemplate struct {
 // far. Everything a row renders arrives here, so the page never fetches per
 // applicant.
 type DecisionRow struct {
-	ApplicationID   string                `json:"application_id"`
-	CycleID         string                `json:"cycle_id"`
-	ApplicationRole Role                  `json:"application_role"`
-	ApplicantNUID   string                `json:"applicant_nuid"`
-	FullName        string                `json:"full_name"`
-	Email           string                `json:"email"`
-	Stage           ApplicationStage      `json:"stage"`
-	Kind            DecisionKind          `json:"kind"`
-	Status          DecisionStatus        `json:"status"`
-	Interviewers    []DecisionInterviewer `json:"interviewers"`
-	Feedback        *string               `json:"feedback,omitempty"`
-	Compliments     *string               `json:"compliments,omitempty"`
-	BodyOverride    *string               `json:"body_override,omitempty"`
-	AuthorNUID      *string               `json:"author_nuid,omitempty"`
-	AuthorName      *string               `json:"author_name,omitempty"`
-	SentAt          *time.Time            `json:"sent_at,omitempty"`
-	SentBy          *string               `json:"sent_by,omitempty"`
-	UpdatedAt       *time.Time            `json:"updated_at,omitempty"`
+	ApplicationID string                `json:"application_id"`
+	CycleID       string                `json:"cycle_id"`
+	RoleID        string                `json:"role_id"`
+	ApplicantNUID string                `json:"applicant_nuid"`
+	FullName      string                `json:"full_name"`
+	Email         string                `json:"email"`
+	Stage         ApplicationStage      `json:"stage"`
+	Kind          DecisionKind          `json:"kind"`
+	Status        DecisionStatus        `json:"status"`
+	Interviewers  []DecisionInterviewer `json:"interviewers"`
+	Feedback      *string               `json:"feedback,omitempty"`
+	Compliments   *string               `json:"compliments,omitempty"`
+	BodyOverride  *string               `json:"body_override,omitempty"`
+	AuthorNUID    *string               `json:"author_nuid,omitempty"`
+	AuthorName    *string               `json:"author_name,omitempty"`
+	SentAt        *time.Time            `json:"sent_at,omitempty"`
+	SentBy        *string               `json:"sent_by,omitempty"`
+	UpdatedAt     *time.Time            `json:"updated_at,omitempty"`
 }
 
 type DecisionInterviewer struct {

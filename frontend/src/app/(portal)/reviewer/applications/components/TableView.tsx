@@ -37,6 +37,7 @@ export function TableView({
   filters,
   onFilterChange,
   hasAvailability,
+  roleOptions,
   tagNames,
   bulkBar,
   loading,
@@ -67,6 +68,7 @@ export function TableView({
   filters: AnswerFilter[]
   onFilterChange: FilterChangeHandler
   hasAvailability?: boolean
+  roleOptions?: string[]
   tagNames?: string[]
   // Rendered in the filter row's place while a selection is active. Owned by
   // the parent, which holds the selection and the bulk mutation.
@@ -153,6 +155,7 @@ export function TableView({
             columns={columns}
             onFilterChange={onFilterChange}
             hasAvailability={hasAvailability}
+            roleOptions={roleOptions}
             tagNames={tagNames}
           />
         )}

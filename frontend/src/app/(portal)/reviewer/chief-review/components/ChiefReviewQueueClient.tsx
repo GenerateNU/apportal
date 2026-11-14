@@ -32,7 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import type { ApplicationStage, ChiefVote, Role } from '@/lib/api/types'
+import type { ApplicationStage, ChiefVote } from '@/lib/api/types'
 import {
   useApplications,
   useUpdateApplication,
@@ -46,10 +46,11 @@ import {
   CHIEF_VOTE_ORDER,
 } from '@/lib/chief-votes'
 import { pickDefaultCycleId, useCycles } from '@/lib/queries/cycles'
-import { useReviewerProgress } from '@/lib/queries/reviewer-progress'
+import { useReviewerProgressByRoles } from '@/lib/queries/reviewer-progress'
 import { useChiefReviewers, useCurrentUser } from '@/lib/queries/users'
 import { FILTER_STAGES } from '@/app/(portal)/reviewer/applications/components/constants'
-import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
+import { useCycleRoles } from '@/lib/queries/roles'
+import { resolveRoleFilter } from '@/lib/roles'
 
 // Whether to show every applicant or just the ones still needing my vote.
 type VoteScope = 'needsVote' | 'all'
@@ -65,11 +66,12 @@ const SEARCH_DEBOUNCE_MS = 250
 // resurrect it — that default hid almost everything (see activeStage below).
 // v3: bumped so a voteScope: 'needsVote' saved under the old default doesn't
 // resurrect it now that the default is 'all'.
-const FILTERS_STORAGE_KEY = 'chief-review-queue-filters-v3'
+// v4: role went from an enum value to a role ID.
+const FILTERS_STORAGE_KEY = 'chief-review-queue-filters-v4'
 
 type StoredFilters = {
   cycleId?: string
-  role?: Role | 'all'
+  role?: string
   stage?: ApplicationStage | 'all'
   voteScope?: VoteScope
   voteValue?: VoteValueFilter
@@ -114,7 +116,10 @@ export function ChiefReviewQueueClient() {
   // the server prefetch in ../page.tsx, which scopes its application-list
   // prefetch to this same cycle.
   const [cycleId, setCycleIdState] = useState('')
-  const [activeRole, setActiveRoleState] = useState<Role | 'all'>('all')
+  // A role ID, or 'all'; one outside the cycle reads as 'all'.
+  const [pickedRole, setActiveRoleState] = useState('all')
+  const { roleIds, roleLabel, isLoading: rolesLoading } = useCycleRoles(cycleId)
+  const activeRole = resolveRoleFilter(pickedRole, roleIds, rolesLoading)
   // Advancing an application to the chief_review stage is a manual, separate
   // action nobody reliably takes — defaulting this filter to that stage hid
   // every application chiefs actually needed to see (and already-cast votes
@@ -170,7 +175,7 @@ export function ChiefReviewQueueClient() {
     setCycleIdState(id)
     writeStoredFilters({ cycleId: id })
   }
-  function setActiveRole(role: Role | 'all') {
+  function setActiveRole(role: string) {
     setActiveRoleState(role)
     writeStoredFilters({ role })
   }
@@ -192,7 +197,7 @@ export function ChiefReviewQueueClient() {
       cycleId
         ? {
             cycle_id: cycleId,
-            ...(activeRole !== 'all' && { role: activeRole }),
+            ...(activeRole !== 'all' && { role_id: activeRole }),
             ...(activeStage !== 'all' && { stage: activeStage }),
             ...(debouncedSearch && { search: debouncedSearch }),
           }
@@ -323,15 +328,10 @@ export function ChiefReviewQueueClient() {
 
   // How many of the leads assigned to each application have submitted their
   // written review, so the queue can show "x/x reviews completed". Fetched
-  // per role — a fixed, small list, so this is always ROLE_COLUMNS.length
-  // requests rather than one per application. ROLE_COLUMNS is a module-level
-  // constant, so this calls the hook the same number of times every render.
-  const reviewerProgressQueries = ROLE_COLUMNS.map((role) =>
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    useReviewerProgress(cycleId, role)
-  )
+  // per role, not per application.
+  const reviewerProgressQueries = useReviewerProgressByRoles(cycleId, roleIds)
   const activeReviewerProgressQueries = reviewerProgressQueries.filter(
-    (_, i) => activeRole === 'all' || ROLE_COLUMNS[i] === activeRole
+    (_, i) => activeRole === 'all' || roleIds[i] === activeRole
   )
   const leadReviewProgressByApplicationId: Record<
     string,
@@ -400,16 +400,16 @@ export function ChiefReviewQueueClient() {
           </Select>
           <Select
             value={activeRole}
-            onValueChange={(val) => setActiveRole(val as Role | 'all')}
+            onValueChange={(val) => setActiveRole(val)}
           >
             <SelectTrigger className="w-56" aria-label="Filter by role">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All roles</SelectItem>
-              {ROLE_COLUMNS.map((r) => (
+              {roleIds.map((r) => (
                 <SelectItem key={r} value={r}>
-                  {ROLE_LABEL[r]}
+                  {roleLabel(r)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -557,13 +557,15 @@ export function ChiefReviewQueueClient() {
         </div>
       ) : (
         <div className="flex flex-col gap-8">
-          {ROLE_COLUMNS.map((role) => {
-            const roleApps = visibleApplications.filter((a) => a.role === role)
+          {roleIds.map((role) => {
+            const roleApps = visibleApplications.filter(
+              (a) => a.role_id === role
+            )
             if (roleApps.length === 0) return null
             return (
               <section key={role}>
                 <h2 className="text-text-default mb-3 text-sm font-semibold">
-                  {ROLE_LABEL[role]}{' '}
+                  {roleLabel(role)}{' '}
                   <span className="text-text-faint font-normal">
                     ({roleApps.length})
                   </span>

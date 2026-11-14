@@ -114,9 +114,9 @@ func ownerOf(owners []models.DraftSlot, slot int) string {
 	return ""
 }
 
-func (d *DraftDB) GetDraft(ctx context.Context, cycleID string, role models.Role) (models.Draft, error) {
+func (d *DraftDB) GetDraft(ctx context.Context, cycleID string, role string) (models.Draft, error) {
 	var draft models.Draft
-	err := d.db.WithContext(ctx).Where("cycle_id = ? AND application_role = ?", cycleID, role).Take(&draft).Error
+	err := d.db.WithContext(ctx).Where("cycle_id = ? AND role_id = ?", cycleID, role).Take(&draft).Error
 	return draft, utils.DBErr(err)
 }
 
@@ -128,9 +128,9 @@ func (d *DraftDB) GetDraftByID(ctx context.Context, id string) (models.Draft, er
 
 // CreateDraft opens the board for a (cycle, role). A second call returns the
 // existing board, so two chiefs opening the page at once don't race.
-func (d *DraftDB) CreateDraft(ctx context.Context, cycleID string, role models.Role, rounds int, createdBy string) (models.Draft, error) {
-	draft := models.Draft{CycleID: cycleID, ApplicationRole: role, Rounds: rounds, CreatedBy: createdBy}
-	res := d.db.WithContext(ctx).Select("cycle_id", "application_role", "rounds", "created_by").
+func (d *DraftDB) CreateDraft(ctx context.Context, cycleID string, role string, rounds int, createdBy string) (models.Draft, error) {
+	draft := models.Draft{CycleID: cycleID, RoleID: role, Rounds: rounds, CreatedBy: createdBy}
+	res := d.db.WithContext(ctx).Select("cycle_id", "role_id", "rounds", "created_by").
 		Clauses(clause.OnConflict{DoNothing: true}, clause.Returning{}).Create(&draft)
 	if res.Error != nil {
 		return models.Draft{}, res.Error
@@ -263,7 +263,7 @@ func lockDraft(tx *gorm.DB, draftID string) error {
 func boardStage(tx *gorm.DB, draft models.Draft, applicationID string) (string, error) {
 	var app models.Application
 	err := tx.Select("stage").
-		Where("id = ? AND cycle_id = ? AND application_role = ?", applicationID, draft.CycleID, draft.ApplicationRole).
+		Where("id = ? AND cycle_id = ? AND role_id = ?", applicationID, draft.CycleID, draft.RoleID).
 		Take(&app).Error
 	return string(app.Stage), utils.DBErr(err)
 }

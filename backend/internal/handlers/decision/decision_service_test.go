@@ -33,7 +33,7 @@ func TestListDecisionsValidatesFilters(t *testing.T) {
 	s := &decisionService{}
 	ctx := testutil.WithActor(leadActor())
 
-	_, err := s.list(ctx, &ListDecisionsInput{ID: "cycle1", Role: "not-a-role"})
+	_, err := s.list(ctx, &ListDecisionsInput{ID: "cycle1", RoleID: "not-a-role"})
 	testutil.WantStatus(t, err, http.StatusUnprocessableEntity)
 
 	_, err = s.list(ctx, &ListDecisionsInput{ID: "cycle1", Kind: "rejection_maybe"})
@@ -48,7 +48,7 @@ func TestListDecisionTemplatesRequiresRole(t *testing.T) {
 
 func TestUpdateDecisionTemplateIsChiefOnly(t *testing.T) {
 	s := &decisionService{}
-	in := &UpdateDecisionTemplateInput{ID: "cycle1", Role: "software_engineer", Kind: "rejection_generic"}
+	in := &UpdateDecisionTemplateInput{ID: "cycle1", RoleID: "6f1c2a52-6d2c-4a8e-9a57-2b8f3b1c9d10", Kind: "rejection_generic"}
 	in.Body.Subject = "s"
 	in.Body.Body = "b"
 
@@ -58,7 +58,7 @@ func TestUpdateDecisionTemplateIsChiefOnly(t *testing.T) {
 
 func TestUpdateDecisionTemplateValidatesKind(t *testing.T) {
 	s := &decisionService{}
-	in := &UpdateDecisionTemplateInput{ID: "cycle1", Role: "software_engineer", Kind: ""}
+	in := &UpdateDecisionTemplateInput{ID: "cycle1", RoleID: "6f1c2a52-6d2c-4a8e-9a57-2b8f3b1c9d10", Kind: ""}
 	in.Body.Subject = "s"
 	in.Body.Body = "b"
 

@@ -12,12 +12,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import type { ReviewerProgress, Role } from '@/lib/api/types'
+import type { ReviewerProgress } from '@/lib/api/types'
 import { pickDefaultCycleId, useCycles } from '@/lib/queries/cycles'
 import { useReviewerProgress } from '@/lib/queries/reviewer-progress'
-import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 import { REVIEW_STATE_BADGE } from '../../my-reviews/constants'
 import { ReviewRow } from '../../my-reviews/components/ReviewRow'
+import { useRoleLookup } from '@/lib/queries/roles'
+import {} from '@/hooks/useRoleSelection'
+import { useCycleRoleFilter } from '@/hooks/useRoleSelection'
 
 export function ReviewProgressClient() {
   const { data: cycles = [] } = useCycles({})
@@ -28,9 +30,11 @@ export function ReviewProgressClient() {
     const defaultId = pickDefaultCycleId(cycles)
     if (defaultId) setCycleId(defaultId)
   }
-  const [activeRole, setActiveRole] = useState<Role | 'all'>('all')
+  // A role ID, or 'all'.
+  const { activeRole, setActiveRole, roleIds, roleLabel } =
+    useCycleRoleFilter(cycleId)
 
-  const roles = activeRole === 'all' ? ROLE_COLUMNS : [activeRole]
+  const roles = activeRole === 'all' ? roleIds : [activeRole]
 
   return (
     <PageContainer>
@@ -46,16 +50,16 @@ export function ReviewProgressClient() {
         <div className="flex flex-wrap items-center gap-3">
           <Select
             value={activeRole}
-            onValueChange={(val) => setActiveRole(val as Role | 'all')}
+            onValueChange={(val) => setActiveRole(val)}
           >
             <SelectTrigger className="w-56" aria-label="Filter by role">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All roles</SelectItem>
-              {ROLE_COLUMNS.map((r) => (
+              {roleIds.map((r) => (
                 <SelectItem key={r} value={r}>
-                  {ROLE_LABEL[r]}
+                  {roleLabel(r)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -86,7 +90,8 @@ function outstandingCount(lead: ReviewerProgress) {
   return lead.items.filter((i) => !i.submitted_at).length
 }
 
-function RoleSection({ cycleId, role }: { cycleId: string; role: Role }) {
+function RoleSection({ cycleId, role }: { cycleId: string; role: string }) {
+  const { roleLabel } = useRoleLookup()
   const { data: progress = [], isLoading } = useReviewerProgress(cycleId, role)
 
   // Only leads who actually carry applications, most behind first.
@@ -101,7 +106,7 @@ function RoleSection({ cycleId, role }: { cycleId: string; role: Role }) {
   return (
     <div className="flex flex-col gap-2">
       <h2 className="text-text-faint text-xs font-semibold tracking-wide uppercase">
-        {ROLE_LABEL[role]}
+        {roleLabel(role)}
       </h2>
 
       {isLoading ? (

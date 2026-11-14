@@ -8,7 +8,7 @@
 
 export type GetDraftBoardParams = {
 /**
- * Applicant role: software_engineer or software_designer
+ * Applicant role ID
  */
-role?: string;
+role_id?: string;
 };

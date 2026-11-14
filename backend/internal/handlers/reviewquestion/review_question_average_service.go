@@ -3,10 +3,10 @@ package reviewquestion
 import (
 	"context"
 
+	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/user"
 	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
-	"github.com/danielgtaylor/huma/v2"
 )
 
 // reviewQuestionAverageService exposes, per lead, their average score on each
@@ -22,11 +22,11 @@ func (s *reviewQuestionAverageService) list(ctx context.Context, in *ReviewQuest
 	if err := utils.RequireChief(ctx); err != nil {
 		return nil, err
 	}
-	if !in.Role.Valid() {
-		return nil, huma.Error422UnprocessableEntity("role is invalid")
+	if err := role.ParseRoleID(in.RoleID); err != nil {
+		return nil, err
 	}
 
-	rows, err := s.reviewQuestionDB.ListReviewQuestionAverages(ctx, in.ID, in.Role)
+	rows, err := s.reviewQuestionDB.ListReviewQuestionAverages(ctx, in.ID, in.RoleID)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}

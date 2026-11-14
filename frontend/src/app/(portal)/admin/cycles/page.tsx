@@ -7,6 +7,7 @@ import { listCycles } from '@/generated/cycles/cycles'
 import { getServerRequestOptions } from '@/lib/api/server-request-options'
 import { fetchBranches } from '@/lib/queries/branches'
 import { queryKeys } from '@/lib/queries/keys'
+import { prefetchRoles } from '@/lib/queries/server-prefetch'
 import { CyclesClient } from './components/CyclesClient'
 
 // Auth-gated, live data fetched per request from the backend — never prerender
@@ -26,6 +27,7 @@ export default async function CyclesPage() {
       queryKey: queryKeys.cycles.list({}),
       queryFn: async () => (await listCycles({}, requestOptions)) ?? [],
     }),
+    prefetchRoles(queryClient, requestOptions),
   ])
 
   return (

@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { listReviewQuestionAverages } from '@/generated/review-releases/review-releases'
 import type { RequestOptions } from '@/lib/api/orval-mutator'
-import type { ReviewQuestionAverage, Role } from '@/lib/api/types'
+import type { ReviewQuestionAverage } from '@/lib/api/types'
 import { queryKeys } from './keys'
 
 // Per-lead average score on each of a cycle × role's score-type review
@@ -9,19 +9,23 @@ import { queryKeys } from './keys'
 // questions systematically higher or lower than their peers.
 export function useReviewQuestionAverages(
   cycleId: string,
-  role?: Role,
+  roleId?: string,
   opts?: RequestOptions
 ) {
   return useQuery({
-    queryKey: queryKeys.reviewQuestionAverages.list(cycleId, role),
+    queryKey: queryKeys.reviewQuestionAverages.list(cycleId, roleId),
     queryFn: async () => {
       const data =
-        (await listReviewQuestionAverages(cycleId, { role }, opts)) ?? []
+        (await listReviewQuestionAverages(
+          cycleId,
+          { role_id: roleId },
+          opts
+        )) ?? []
       return data.map((p) => ({
         ...p,
         scores: p.scores ?? [],
       })) as ReviewQuestionAverage[]
     },
-    enabled: !!cycleId && !!role,
+    enabled: !!cycleId && !!roleId,
   })
 }

@@ -21,7 +21,7 @@ import (
 func TestApplicationCreateRequiresActor(t *testing.T) {
 	s := &applicationService{}
 	in := &CreateApplicationInput{}
-	in.Body.Role = models.RoleSoftwareEngineer
+	in.Body.RoleID = "6f1c2a52-6d2c-4a8e-9a57-2b8f3b1c9d10"
 
 	_, err := s.create(context.Background(), in)
 	var se huma.StatusError
@@ -34,7 +34,7 @@ func TestApplicationCreateValidatesRole(t *testing.T) {
 	s := &applicationService{}
 	actor := middleware.Actor{NUID: "a1", Roles: []models.UserRole{models.UserRoleApplicant}}
 	in := &CreateApplicationInput{}
-	in.Body.Role = models.Role("not-a-real-role")
+	in.Body.RoleID = "not-a-real-role"
 
 	_, err := s.create(testutil.WithActor(actor), in)
 	var se huma.StatusError

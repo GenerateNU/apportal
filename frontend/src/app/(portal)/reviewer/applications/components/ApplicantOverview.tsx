@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { ExternalLink } from 'lucide-react'
 import { Avatar } from '@/components/ui/avatar'
 import { ReturnerBadge } from '@/components/ReturnerBadge'
-import type { ApplicationStage, Role } from '@/lib/api/types'
+import type { ApplicationStage } from '@/lib/api/types'
 import { useAnswers } from '@/lib/queries/answers'
 import { useApplicant } from '@/lib/queries/applicants'
 import { useInterviewComments } from '@/lib/queries/interview-comments'
@@ -16,10 +16,10 @@ import { useChiefs, useLeads } from '@/lib/queries/users'
 import { useWrittenReviews } from '@/lib/queries/written-reviews'
 import { formatDate } from '@/lib/utils'
 import { RATING_COLORS, RATING_LABEL } from '@/lib/interview-ratings'
-import { ROLE_CHIP_CLASS, ROLE_LABEL } from '@/lib/roles'
 import { ChallengeCard } from './ChallengeCard'
 import { stageBadge, stageLabel } from './constants'
 import { ResponseField } from './ResponseField'
+import { useRoleLookup } from '@/lib/queries/roles'
 
 const SECTION_CLASS =
   'flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-5 shadow-sm'
@@ -54,10 +54,11 @@ export function ApplicantOverview({
 }: {
   applicationId: string
   cycleId: string
-  role: Role
+  role: string
   applicantNuid: string
   stage?: ApplicationStage
 }) {
+  const { roleLabel, roleChipClass } = useRoleLookup()
   const { data: applicant } = useApplicant(applicantNuid)
   const { data: answers = [] } = useAnswers(applicationId)
   const { data: questions = [] } = useQuestions(cycleId, role)
@@ -91,9 +92,9 @@ export function ApplicantOverview({
               {applicant?.full_name ?? 'Applicant'}
             </h1>
             <span
-              className={`w-fit rounded-md px-2 py-0.5 text-xs font-medium ${ROLE_CHIP_CLASS[role]}`}
+              className={`w-fit rounded-md px-2 py-0.5 text-xs font-medium ${roleChipClass(role)}`}
             >
-              {ROLE_LABEL[role]}
+              {roleLabel(role)}
             </span>
             {stage && (
               <span
@@ -255,6 +256,7 @@ export function ApplicantOverview({
       <ChallengeCard
         applicantNuid={applicantNuid}
         applicationId={applicationId}
+        cycleId={cycleId}
         role={role}
       />
 

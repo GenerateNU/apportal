@@ -75,7 +75,7 @@ export function CycleDialog({
             <DialogDescription>
               {isEdit
                 ? 'Update this recruiting cycle.'
-                : 'Create a recruiting cycle. It starts as a draft — open it when applications should go live.'}
+                : 'Create a recruiting cycle. It starts as a draft with the roles of this branch’s latest cycle of the same type — edit them on the cycle, and open it when applications should go live.'}
             </DialogDescription>
           </DialogHeader>
 

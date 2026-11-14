@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
-import type { InterviewScriptQuestion, Role } from '@/lib/api/types'
+import type { InterviewScriptQuestion } from '@/lib/api/types'
 import { useInterviewScript } from '@/lib/queries/interview-script'
 
 function SectionHeading({ children }: { children: React.ReactNode }) {
@@ -60,7 +60,7 @@ export function InterviewScriptContent({
   role,
 }: {
   cycleId: string
-  role: Role
+  role: string
 }) {
   const { data: script, isLoading } = useInterviewScript(cycleId, role)
 

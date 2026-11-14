@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Pencil, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import type { Branch, Cycle } from '@/lib/api/types'
+import type { Branch, Cycle, Role } from '@/lib/api/types'
 import { BranchDialog } from './BranchDialog'
 import { CycleDialog } from './CycleDialog'
 import { CycleRow } from './CycleRow'
@@ -11,9 +11,12 @@ import { CycleRow } from './CycleRow'
 export function BranchSection({
   branch,
   cycles,
+  roles,
 }: {
   branch: Branch
   cycles: Cycle[]
+  // Roles of this branch's cycles, in order.
+  roles: Role[]
 }) {
   const [showRename, setShowRename] = useState(false)
   const [showNewCycle, setShowNewCycle] = useState(false)
@@ -54,7 +57,11 @@ export function BranchSection({
       ) : (
         <div className="flex flex-col gap-3">
           {cycles.map((cycle) => (
-            <CycleRow key={cycle.id} cycle={cycle} />
+            <CycleRow
+              key={cycle.id}
+              cycle={cycle}
+              roles={roles.filter((r) => r.cycle_id === cycle.id)}
+            />
           ))}
         </div>
       )}

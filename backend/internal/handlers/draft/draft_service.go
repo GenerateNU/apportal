@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 	"github.com/danielgtaylor/huma/v2"
@@ -15,32 +16,21 @@ import (
 // chief-only.
 type draftService struct {
 	draftDB *DraftDB
+	roleDB  *role.RoleDB
 }
 
 // maxDraftRounds bounds the board so one bad number can't render thousands of
 // empty slots.
 const maxDraftRounds = 50
 
-// parseDraftRole rejects a missing or unknown role rather than silently
-// picking one — the two boards are independent and a wrong guess would show
-// the other role's picks.
-func parseDraftRole(raw string) (models.Role, error) {
-	role := models.Role(raw)
-	if !role.Valid() {
-		return "", huma.Error422UnprocessableEntity("role must be 'software_engineer' or 'software_designer'")
-	}
-	return role, nil
-}
-
 func (s *draftService) board(ctx context.Context, in *DraftScopedInput) (*DraftBoardOutput, error) {
 	if err := utils.RequireReviewer(ctx); err != nil {
 		return nil, err
 	}
-	role, err := parseDraftRole(in.Role)
-	if err != nil {
+	if err := role.ParseRoleID(in.RoleID); err != nil {
 		return nil, err
 	}
-	draft, err := s.draftDB.GetDraft(ctx, in.ID, role)
+	draft, err := s.draftDB.GetDraft(ctx, in.ID, in.RoleID)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
@@ -55,8 +45,8 @@ func (s *draftService) open(ctx context.Context, in *OpenDraftInput) (*DraftOutp
 	if err := utils.RequireChief(ctx); err != nil {
 		return nil, err
 	}
-	if !in.Body.Role.Valid() {
-		return nil, huma.Error422UnprocessableEntity("role must be 'software_engineer' or 'software_designer'")
+	if err := role.ParseRoleID(in.Body.RoleID); err != nil {
+		return nil, err
 	}
 	rounds := in.Body.Rounds
 	if rounds == 0 {
@@ -65,7 +55,10 @@ func (s *draftService) open(ctx context.Context, in *OpenDraftInput) (*DraftOutp
 	if rounds > maxDraftRounds {
 		return nil, huma.Error422UnprocessableEntity("rounds is too large")
 	}
-	draft, err := s.draftDB.CreateDraft(ctx, in.ID, in.Body.Role, rounds, utils.CurrentActor(ctx).NUID)
+	if err := role.RequireCycleRole(ctx, s.roleDB, in.ID, in.Body.RoleID); err != nil {
+		return nil, err
+	}
+	draft, err := s.draftDB.CreateDraft(ctx, in.ID, in.Body.RoleID, rounds, utils.CurrentActor(ctx).NUID)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}

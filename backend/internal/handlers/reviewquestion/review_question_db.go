@@ -20,7 +20,7 @@ func NewReviewQuestionDB(db *gorm.DB) *ReviewQuestionDB {
 func (r *ReviewQuestionDB) CreateReviewQuestion(ctx context.Context, in ReviewQuestionCreate) (models.ReviewQuestion, error) {
 	question := models.ReviewQuestion{
 		CycleID:      in.CycleID,
-		Role:         in.Role,
+		RoleID:       in.RoleID,
 		QuestionText: in.QuestionText,
 		QuestionType: in.QuestionType,
 		IsRequired:   in.IsRequired,
@@ -28,17 +28,17 @@ func (r *ReviewQuestionDB) CreateReviewQuestion(ctx context.Context, in ReviewQu
 		Options:      in.Options,
 		Description:  in.Description,
 	}
-	err := utils.Insert(r.db.WithContext(ctx), &question, "cycle_id", "application_role", "question_text",
+	err := utils.Insert(r.db.WithContext(ctx), &question, "cycle_id", "role_id", "question_text",
 		"question_type", "is_required", "display_order", "options", "description")
 	return question, err
 }
 
 // ListReviewQuestions returns a cycle's review questions in display order. A
-// non-nil role narrows to that role's questions plus the global ones.
-func (r *ReviewQuestionDB) ListReviewQuestions(ctx context.Context, cycleID string, role *models.Role) ([]models.ReviewQuestion, error) {
+// non-nil roleID narrows to that role's questions plus the global ones.
+func (r *ReviewQuestionDB) ListReviewQuestions(ctx context.Context, cycleID string, roleID *string) ([]models.ReviewQuestion, error) {
 	q := r.db.WithContext(ctx).Where("cycle_id = ?", cycleID)
-	if role != nil {
-		q = q.Where("application_role = ? OR application_role IS NULL", *role)
+	if roleID != nil {
+		q = q.Where("role_id = ? OR role_id IS NULL", *roleID)
 	}
 	questions := []models.ReviewQuestion{}
 	return questions, q.Order("display_order").Order("created_at").Find(&questions).Error
@@ -74,13 +74,13 @@ func (r *ReviewQuestionDB) DeleteReviewQuestion(ctx context.Context, id string) 
 
 // ListReviewQuestionAverages averages each lead's scores per review question
 // across a cycle × role, to spot leads who score systematically high or low.
-func (r *ReviewQuestionDB) ListReviewQuestionAverages(ctx context.Context, cycleID string, role models.Role) ([]ReviewQuestionAverageRow, error) {
+func (r *ReviewQuestionDB) ListReviewQuestionAverages(ctx context.Context, cycleID, roleID string) ([]ReviewQuestionAverageRow, error) {
 	rows := []ReviewQuestionAverageRow{}
 	err := r.db.WithContext(ctx).Table("written_review_answers wra").
 		Select("wr.reviewer_nuid AS lead_nuid, wra.review_question_id, AVG(wra.score)::float8 AS avg_score, COUNT(*)::int AS count").
 		Joins("JOIN written_reviews wr ON wr.id = wra.review_id").
 		Joins("JOIN applications a ON a.id = wr.application_id").
-		Where("a.cycle_id = ? AND a.application_role = ? AND wra.score IS NOT NULL", cycleID, role).
+		Where("a.cycle_id = ? AND a.role_id = ? AND wra.score IS NOT NULL", cycleID, roleID).
 		Group("wr.reviewer_nuid").Group("wra.review_question_id").
 		Order("wr.reviewer_nuid").
 		Scan(&rows).Error

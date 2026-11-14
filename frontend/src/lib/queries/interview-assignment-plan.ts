@@ -16,7 +16,6 @@ import type {
   ReviewerPreviewInputBody,
 } from '@/generated/model'
 import type { RequestOptions } from '@/lib/api/orval-mutator'
-import type { Role } from '@/lib/api/types'
 import { queryKeys } from './keys'
 
 // Same pattern as assignment-plan.ts: capacity and preview are read-only, but
@@ -25,16 +24,19 @@ import { queryKeys } from './keys'
 
 export function useInterviewerPool(
   cycleId: string,
-  role: Role,
+  roleId: string,
   opts?: RequestOptions
 ) {
   return useQuery({
-    queryKey: queryKeys.interviewAssignmentPlan.interviewerPool(cycleId, role),
+    queryKey: queryKeys.interviewAssignmentPlan.interviewerPool(
+      cycleId,
+      roleId
+    ),
     queryFn: async () => {
-      const pool = await getInterviewerPool(cycleId, { role }, opts)
+      const pool = await getInterviewerPool(cycleId, { role_id: roleId }, opts)
       return { ...pool, applicants: pool.applicants ?? [] }
     },
-    enabled: !!cycleId,
+    enabled: !!cycleId && !!roleId,
   })
 }
 
@@ -83,16 +85,20 @@ export function useCommitInterviewerPlan() {
 
 export function useInterviewReviewerPool(
   cycleId: string,
-  role: Role,
+  roleId: string,
   opts?: RequestOptions
 ) {
   return useQuery({
-    queryKey: queryKeys.interviewAssignmentPlan.reviewerPool(cycleId, role),
+    queryKey: queryKeys.interviewAssignmentPlan.reviewerPool(cycleId, roleId),
     queryFn: async () => {
-      const pool = await getInterviewReviewerPool(cycleId, { role }, opts)
+      const pool = await getInterviewReviewerPool(
+        cycleId,
+        { role_id: roleId },
+        opts
+      )
       return { ...pool, applicants: pool.applicants ?? [] }
     },
-    enabled: !!cycleId,
+    enabled: !!cycleId && !!roleId,
   })
 }
 

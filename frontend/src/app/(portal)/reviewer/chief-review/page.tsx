@@ -15,9 +15,9 @@ import type { Cycle } from '@/lib/api/types'
 import { pickDefaultCycleId } from '@/lib/queries/cycles'
 import { queryKeys } from '@/lib/queries/keys'
 import { fetchReviewerProgress } from '@/lib/queries/reviewer-progress'
-import { ROLE_COLUMNS } from '@/lib/roles'
 import { ChiefReviewQueueClient } from './components/ChiefReviewQueueClient'
 import { getServerCurrentUser } from '@/lib/auth/server-user'
+import { cycleRoleIds, prefetchRoles } from '@/lib/queries/server-prefetch'
 
 // Auth-gated, live data fetched per request from the backend — never prerender
 // this at build time (the backend isn't running then).
@@ -46,13 +46,14 @@ export default async function ChiefReviewQueuePage() {
   // The chief check and the cycle list don't depend on each other — run them
   // together rather than paying for two sequential round trips before
   // anything else can start.
-  const [chiefOk, cycles] = await Promise.all([
+  const [chiefOk, cycles, roles] = await Promise.all([
     isChief(),
     queryClient.fetchQuery({
       queryKey: queryKeys.cycles.list({}),
       queryFn: async () =>
         ((await listCycles({}, requestOptions)) ?? []) as Cycle[],
     }),
+    prefetchRoles(queryClient, requestOptions),
   ])
   if (!chiefOk) notFound()
 
@@ -77,7 +78,7 @@ export default async function ChiefReviewQueuePage() {
         queryKey: queryKeys.applications.list(params),
         queryFn: () => fetchApplicationPage(params, requestOptions),
       }),
-      ...ROLE_COLUMNS.map((role) =>
+      ...cycleRoleIds(roles, cycleId).map((role) =>
         queryClient.prefetchQuery({
           queryKey: queryKeys.reviewerProgress.list(cycleId, role),
           queryFn: () => fetchReviewerProgress(cycleId, role, requestOptions),

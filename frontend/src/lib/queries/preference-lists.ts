@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query'
 import {
   addPreferenceListMember,
   createPreferenceList,
@@ -34,7 +39,6 @@ import type {
   PreferenceListPersonalEntryDetail,
   PreferenceListSummary,
   PreferenceListStatus,
-  Role,
 } from '@/lib/api/types'
 import { useCurrentUser } from './users'
 import { queryKeys } from './keys'
@@ -410,19 +414,46 @@ export function useReorderPersonalPreferenceListEntries() {
 
 export function usePreferenceListDeadline(
   cycleId: string,
-  role: Role,
+  roleId: string,
   opts?: RequestOptions
 ) {
   return useQuery({
-    queryKey: queryKeys.preferenceListDeadline.detail(cycleId, role),
+    queryKey: queryKeys.preferenceListDeadline.detail(cycleId, roleId),
     queryFn: () =>
       getPreferenceListDeadline(
         cycleId,
-        { role },
+        { role_id: roleId },
         opts
       ) as Promise<PreferenceListDeadline>,
-    enabled: !!cycleId,
+    enabled: !!cycleId && !!roleId,
   })
+}
+
+// Each role's closes_at for a cycle, keyed by role ID (undefined while
+// loading or unset). Shares cache entries with usePreferenceListDeadline.
+export function usePreferenceListDeadlines(
+  cycleId: string,
+  roleIds: string[],
+  opts?: RequestOptions
+): Record<string, string | undefined> {
+  const results = useQueries({
+    queries: roleIds.map((roleId) => ({
+      queryKey: queryKeys.preferenceListDeadline.detail(cycleId, roleId),
+      queryFn: () =>
+        getPreferenceListDeadline(
+          cycleId,
+          { role_id: roleId },
+          opts
+        ) as Promise<PreferenceListDeadline>,
+      enabled: !!cycleId,
+    })),
+  })
+  return Object.fromEntries(
+    roleIds.map((roleId, i) => [
+      roleId,
+      results[i]?.data?.closes_at ?? undefined,
+    ])
+  )
 }
 
 export function useSetPreferenceListDeadline() {
@@ -430,14 +461,14 @@ export function useSetPreferenceListDeadline() {
   return useMutation({
     mutationFn: (vars: {
       cycleId: string
-      role: Role
+      roleId: string
       closesAt: string | null
       opts?: RequestOptions
     }) =>
       setPreferenceListDeadline(
         vars.cycleId,
         { closes_at: vars.closesAt ?? undefined },
-        { role: vars.role },
+        { role_id: vars.roleId },
         vars.opts
       ) as Promise<PreferenceListDeadline>,
     // Optimistic because the picker reads the deadline straight back out of
@@ -446,7 +477,7 @@ export function useSetPreferenceListDeadline() {
     onMutate: async (vars) => {
       const key = queryKeys.preferenceListDeadline.detail(
         vars.cycleId,
-        vars.role
+        vars.roleId
       )
       await queryClient.cancelQueries({ queryKey: key })
       const previous = queryClient.getQueryData<PreferenceListDeadline>(key)
@@ -461,14 +492,14 @@ export function useSetPreferenceListDeadline() {
     onError: (_err, vars, context) => {
       if (context?.previous) {
         queryClient.setQueryData(
-          queryKeys.preferenceListDeadline.detail(vars.cycleId, vars.role),
+          queryKeys.preferenceListDeadline.detail(vars.cycleId, vars.roleId),
           context.previous
         )
       }
     },
     onSuccess: (data, vars) => {
       queryClient.setQueryData(
-        queryKeys.preferenceListDeadline.detail(vars.cycleId, vars.role),
+        queryKeys.preferenceListDeadline.detail(vars.cycleId, vars.roleId),
         data
       )
     },

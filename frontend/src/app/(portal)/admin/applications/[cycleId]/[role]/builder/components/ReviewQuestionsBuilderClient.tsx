@@ -16,7 +16,7 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
-import type { ReviewQuestion, Role } from '@/lib/api/types'
+import type { ReviewQuestion } from '@/lib/api/types'
 import {
   useDeleteReviewQuestion,
   useReorderReviewQuestions,
@@ -39,7 +39,7 @@ export function ReviewQuestionsBuilderClient({
   role,
 }: {
   cycleId: string
-  role: Role
+  role: string
 }) {
   const { data: questions = [] } = useReviewQuestions(cycleId, role)
   const updateReviewQuestion = useUpdateReviewQuestion()

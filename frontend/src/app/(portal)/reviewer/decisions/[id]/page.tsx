@@ -15,7 +15,6 @@ import type {
   DecisionRow,
   DecisionTemplate,
   ReviewQuestion,
-  Role,
 } from '@/lib/api/types'
 import { getServerRequestOptions } from '@/lib/api/server-request-options'
 import { fetchDecisionContext } from '@/lib/queries/decisions'
@@ -52,7 +51,7 @@ export default async function DecisionDraftPage({
     notFound()
   }
   const cycleId = application.cycle_id
-  const role = application.role as Role
+  const role = application.role_id
 
   await Promise.all([
     contextPrefetch,
@@ -66,14 +65,20 @@ export default async function DecisionDraftPage({
     queryClient.prefetchQuery({
       queryKey: queryKeys.decisions.templates(cycleId, role),
       queryFn: async () =>
-        ((await listDecisionTemplates(cycleId, { role }, requestOptions)) ??
-          []) as DecisionTemplate[],
+        ((await listDecisionTemplates(
+          cycleId,
+          { role_id: role },
+          requestOptions
+        )) ?? []) as DecisionTemplate[],
     }),
     queryClient.prefetchQuery({
       queryKey: queryKeys.reviewQuestions.list(cycleId, role),
       queryFn: async () =>
-        ((await listCycleReviewQuestions(cycleId, { role }, requestOptions)) ??
-          []) as ReviewQuestion[],
+        ((await listCycleReviewQuestions(
+          cycleId,
+          { role_id: role },
+          requestOptions
+        )) ?? []) as ReviewQuestion[],
     }),
   ])
 

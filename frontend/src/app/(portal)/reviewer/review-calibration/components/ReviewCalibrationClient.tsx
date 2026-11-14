@@ -9,15 +9,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import type {
-  ReviewQuestion,
-  ReviewQuestionAverage,
-  Role,
-} from '@/lib/api/types'
+import type { ReviewQuestion, ReviewQuestionAverage } from '@/lib/api/types'
 import { pickDefaultCycleId, useCycles } from '@/lib/queries/cycles'
 import { useReviewQuestionAverages } from '@/lib/queries/review-question-averages'
 import { useReviewQuestions } from '@/lib/queries/review-questions'
-import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
+import { useRoleLookup } from '@/lib/queries/roles'
+import {} from '@/hooks/useRoleSelection'
+import { useCycleRoleFilter } from '@/hooks/useRoleSelection'
 
 // How far a lead's average has to sit from the question's overall average
 // before it's called out as scoring that question notably high/low.
@@ -33,9 +31,11 @@ export function ReviewCalibrationClient() {
     const defaultId = pickDefaultCycleId(cycles)
     if (defaultId) setCycleId(defaultId)
   }
-  const [activeRole, setActiveRole] = useState<Role | 'all'>('all')
+  // A role ID, or 'all'.
+  const { activeRole, setActiveRole, roleIds, roleLabel } =
+    useCycleRoleFilter(cycleId)
 
-  const roles = activeRole === 'all' ? ROLE_COLUMNS : [activeRole]
+  const roles = activeRole === 'all' ? roleIds : [activeRole]
 
   return (
     <PageContainer>
@@ -53,16 +53,16 @@ export function ReviewCalibrationClient() {
         <div className="flex flex-wrap items-center gap-3">
           <Select
             value={activeRole}
-            onValueChange={(val) => setActiveRole(val as Role | 'all')}
+            onValueChange={(val) => setActiveRole(val)}
           >
             <SelectTrigger className="w-56" aria-label="Filter by role">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All roles</SelectItem>
-              {ROLE_COLUMNS.map((r) => (
+              {roleIds.map((r) => (
                 <SelectItem key={r} value={r}>
-                  {ROLE_LABEL[r]}
+                  {roleLabel(r)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -96,7 +96,8 @@ function cellClass(diff: number | null) {
   return 'text-text-default'
 }
 
-function RoleTable({ cycleId, role }: { cycleId: string; role: Role }) {
+function RoleTable({ cycleId, role }: { cycleId: string; role: string }) {
+  const { roleLabel } = useRoleLookup()
   const { data: questions = [], isLoading: questionsLoading } =
     useReviewQuestions(cycleId, role)
   const { data: averages = [], isLoading: averagesLoading } =
@@ -127,7 +128,7 @@ function RoleTable({ cycleId, role }: { cycleId: string; role: Role }) {
   return (
     <div className="flex flex-col gap-2">
       <h2 className="text-text-faint text-xs font-semibold tracking-wide uppercase">
-        {ROLE_LABEL[role]}
+        {roleLabel(role)}
       </h2>
 
       {isLoading ? (

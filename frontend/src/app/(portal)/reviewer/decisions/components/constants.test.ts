@@ -5,7 +5,7 @@ import { feedbackState, isDecided } from './constants'
 const base: DecisionRow = {
   application_id: 'a1',
   cycle_id: 'c1',
-  application_role: 'software_engineer',
+  role_id: 'role-swe',
   applicant_nuid: '001',
   full_name: 'Dao Ho',
   email: 'dao@example.com',

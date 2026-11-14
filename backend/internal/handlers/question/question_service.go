@@ -3,6 +3,7 @@ package question
 import (
 	"context"
 
+	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 	"github.com/danielgtaylor/huma/v2"
@@ -10,6 +11,7 @@ import (
 
 type questionService struct {
 	questionDB *QuestionDB
+	roleDB     *role.RoleDB
 }
 
 func (s *questionService) create(ctx context.Context, in *CreateQuestionInput) (*QuestionOutput, error) {
@@ -23,10 +25,12 @@ func (s *questionService) create(ctx context.Context, in *CreateQuestionInput) (
 	if !qType.Valid() {
 		return nil, huma.Error422UnprocessableEntity("invalid question_type")
 	}
-	if in.Body.Role != nil && !in.Body.Role.Valid() {
-		return nil, huma.Error422UnprocessableEntity("invalid role")
+	if in.Body.RoleID != nil {
+		if err := role.RequireCycleRole(ctx, s.roleDB, in.ID, *in.Body.RoleID); err != nil {
+			return nil, err
+		}
 	}
-	if in.Body.PageTitle != nil && in.Body.Role == nil {
+	if in.Body.PageTitle != nil && in.Body.RoleID == nil {
 		return nil, huma.Error422UnprocessableEntity("only role-specific questions may start a page")
 	}
 	required := true
@@ -36,7 +40,7 @@ func (s *questionService) create(ctx context.Context, in *CreateQuestionInput) (
 
 	q, err := s.questionDB.CreateQuestion(ctx, QuestionCreate{
 		CycleID:      in.ID,
-		Role:         in.Body.Role,
+		RoleID:       in.Body.RoleID,
 		QuestionText: in.Body.QuestionText,
 		QuestionType: qType,
 		IsRequired:   required,
@@ -51,16 +55,15 @@ func (s *questionService) create(ctx context.Context, in *CreateQuestionInput) (
 }
 
 func (s *questionService) list(ctx context.Context, in *ListQuestionsInput) (*QuestionsOutput, error) {
-	var role *models.Role
-	if in.Role != "" {
-		parsed := models.Role(in.Role)
-		if !parsed.Valid() {
-			return nil, huma.Error422UnprocessableEntity("invalid role")
+	var roleID *string
+	if in.RoleID != "" {
+		if err := role.ParseRoleID(in.RoleID); err != nil {
+			return nil, err
 		}
-		role = &parsed
+		roleID = &in.RoleID
 	}
 
-	questions, err := s.questionDB.ListQuestions(ctx, in.ID, role)
+	questions, err := s.questionDB.ListQuestions(ctx, in.ID, roleID)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}

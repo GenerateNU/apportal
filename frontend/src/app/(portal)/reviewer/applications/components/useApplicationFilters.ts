@@ -2,11 +2,10 @@
 
 import { useEffect, useMemo } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
-import type { Question, Role } from '@/lib/api/types'
+import type { Question } from '@/lib/api/types'
 import { useQuestionsByCycleRoles } from '@/lib/queries/questions'
 import { useCycleTags } from '@/lib/queries/tags'
 import { RATING_OPTIONS } from '@/lib/interview-ratings'
-import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 import { ORDERED_STAGES, stageLabel } from './constants'
 import type { AnswerFilter } from './FilterButton'
 import { FIRST_TIME_OPTION, RETURNER_OPTION } from './FilterButton'
@@ -14,6 +13,7 @@ import {
   AVAILABILITY_DAY_OPTIONS,
   findAvailabilityQuestionId,
 } from './meetingAvailability'
+import { useCycleRoles } from '@/lib/queries/roles'
 
 // Chips are tied to a question by text, not by id. Each applicant role gets
 // its own copy of a shared question ("First Name") with its own id, so a chip
@@ -64,23 +64,28 @@ export function useApplicationFilters({
   cycleId: string
   // The roles in view when no Role chip is set. One role keeps the query
   // keyed exactly as it was before the chip existed.
-  defaultRoles: Role[]
+  defaultRoles: string[]
   filters: AnswerFilter[]
   setFilters: Dispatch<SetStateAction<AnswerFilter[]>>
 }) {
+  const { roleIds, roleLabel } = useCycleRoles(cycleId)
   const roles = useMemo(() => {
     const chip = filters.find((f) => f.special === 'role')
     if (!chip) return defaultRoles
     const labels = Array.isArray(chip.values) ? chip.values : [chip.values]
-    const picked = ROLE_COLUMNS.filter((r) => labels.includes(ROLE_LABEL[r]))
+    const picked = roleIds.filter((r) => labels.includes(roleLabel(r)))
     return picked.length > 0 ? picked : defaultRoles
-  }, [filters, defaultRoles])
+  }, [filters, defaultRoles, roleIds, roleLabel])
+  const roleOptions = useMemo(
+    () => roleIds.map(roleLabel),
+    [roleIds, roleLabel]
+  )
 
   // Taken from the selected cycle+roles rather than from the results, since a
   // filter that matches nothing would otherwise empty the question list the
   // filter UI itself is built from.
   const pairs = useMemo(
-    () => (cycleId ? roles.map((role) => ({ cycleId, role })) : []),
+    () => (cycleId ? roles.map((roleId) => ({ cycleId, roleId })) : []),
     [cycleId, roles]
   )
   const questionQueries = useQuestionsByCycleRoles(pairs)
@@ -92,7 +97,7 @@ export function useApplicationFilters({
     const map: Record<string, Question[]> = {}
     pairs.forEach((pair, i) => {
       const data = questionQueries[i]?.data
-      if (data) map[`${pair.cycleId}:${pair.role}`] = data
+      if (data) map[`${pair.cycleId}:${pair.roleId}`] = data
     })
     return map
   }, [pairs, questionQueries])
@@ -130,7 +135,7 @@ export function useApplicationFilters({
   // field, so each role in view has its own copy. Kept per role: a row's day
   // tags have to read the answer to its own role's question.
   const availabilityQuestionIdByRole = useMemo(() => {
-    const map: Partial<Record<Role, string>> = {}
+    const map: Record<string, string> = {}
     for (const role of roles) {
       const id = findAvailabilityQuestionId(
         questionsByCycleRole[`${cycleId}:${role}`]
@@ -250,9 +255,11 @@ export function useApplicationFilters({
       .filter(Boolean)
 
     return {
-      // Single role travels as `role`, which is what every caller sent before
-      // the Role chip existed — same key, same warm cache.
-      ...(roles.length === 1 ? { role: roles[0] } : { roles: roles.join(',') }),
+      // Single role travels as `role_id`, which is what the server prefetch
+      // sends — same key, same warm cache.
+      ...(roles.length === 1
+        ? { role_id: roles[0] }
+        : { role_ids: roles.join(',') }),
       ...(answerFilters.length > 0 && { answer_filters: answerFilters }),
       ...(ratingValues.length > 0 && {
         rating_filters: ratingValues.join(','),
@@ -265,6 +272,7 @@ export function useApplicationFilters({
 
   return {
     roles,
+    roleOptions,
     columns,
     questionsByCycleRole,
     availabilityQuestionIdByRole,

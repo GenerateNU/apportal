@@ -1,5 +1,4 @@
 import type { DecisionRow, DecisionTemplate } from '@/lib/api/types'
-import { ROLE_LABEL } from '@/lib/roles'
 
 // Placeholders a template may use. The backend stores the letter and the
 // applicant's paragraphs separately and never renders — this is the only place
@@ -47,11 +46,12 @@ export interface RenderedDecision {
 export function renderDecision(
   row: DecisionRow,
   template: DecisionTemplate | undefined,
-  cycleName: string
+  cycleName: string,
+  roleName: string
 ): RenderedDecision {
   const vars: Partial<Record<DecisionVar, string>> = {
     applicant_name: firstName(row.full_name),
-    role: ROLE_LABEL[row.application_role],
+    role: roleName,
     cycle: cycleName,
     feedback: row.feedback,
     compliments: row.compliments,

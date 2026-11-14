@@ -29,7 +29,7 @@ func withExcludedStages(args ...any) []any {
 }
 
 func TestDecisionsFromFilters(t *testing.T) {
-	role := models.RoleSoftwareEngineer
+	role := "6f1c2a52-6d2c-4a8e-9a57-2b8f3b1c9d10"
 	kind := models.DecisionRejectionPostInterview
 
 	cases := []struct {
@@ -50,10 +50,10 @@ func TestDecisionsFromFilters(t *testing.T) {
 		},
 		{
 			name:   "every filter",
-			filter: DecisionFilter{CycleID: "c1", Role: &role, Kind: &kind, InterviewerNUID: "l1", Search: "dao"},
+			filter: DecisionFilter{CycleID: "c1", RoleID: &role, Kind: &kind, InterviewerNUID: "l1", Search: "dao"},
 			wantSQL: []string{
 				`a.cycle_id = $4`,
-				`a.application_role = $5`,
+				`a.role_id = $5`,
 				`END) = $6`,
 				`$7 = ANY(ivs.nuids)`,
 				`(u.full_name ILIKE $8 ESCAPE '\'`,

@@ -12,7 +12,7 @@ func registerInterviewScript(api huma.API, s *interviewScriptService) {
 		Method:      http.MethodGet,
 		Path:        "/cycles/{id}/interview-script",
 		Summary:     "Get a cycle's per-role interview script",
-		Description: "Reviewer only. ?role= selects which role's script to fetch (required). Creates a default-content row on first access.",
+		Description: "Reviewer only. ?role_id= selects which role's script to fetch (required). Creates a default-content row on first access.",
 		Tags:        []string{"Interview script"},
 		Errors:      []int{http.StatusUnauthorized, http.StatusUnprocessableEntity},
 	}, s.get)
@@ -22,7 +22,7 @@ func registerInterviewScript(api huma.API, s *interviewScriptService) {
 		Method:      http.MethodPut,
 		Path:        "/cycles/{id}/interview-script",
 		Summary:     "Replace a cycle's per-role interview script",
-		Description: "Chief only. ?role= selects which role's script to update (required). Replaces the whole script — there's no partial update.",
+		Description: "Chief only. ?role_id= selects which role's script to update (required). Replaces the whole script — there's no partial update.",
 		Tags:        []string{"Interview script"},
 		Errors:      []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusUnprocessableEntity, http.StatusNotFound},
 	}, s.update)

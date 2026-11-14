@@ -6,6 +6,7 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/handlers/interview"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/interviewassignment"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/reviewrelease"
+	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/writtenreview"
 	"github.com/danielgtaylor/huma/v2"
 	"gorm.io/gorm"
@@ -17,14 +18,14 @@ func Route(api huma.API, db *gorm.DB) {
 	interviewAssignmentDB := interviewassignment.NewInterviewAssignmentDB(db)
 	reviewReleaseDB := reviewrelease.NewReviewReleaseDB(db)
 	writtenReviewDB := writtenreview.NewWrittenReviewDB(db)
-	s := &decisionService{decisionDB: decisionDB, interviewDB: interviewDB, interviewAssignmentDB: interviewAssignmentDB, reviewReleaseDB: reviewReleaseDB, writtenReviewDB: writtenReviewDB}
+	s := &decisionService{decisionDB: decisionDB, interviewDB: interviewDB, interviewAssignmentDB: interviewAssignmentDB, reviewReleaseDB: reviewReleaseDB, writtenReviewDB: writtenReviewDB, roleDB: role.NewRoleDB(db)}
 
 	huma.Register(api, huma.Operation{
 		OperationID: "list-decision-templates",
 		Method:      http.MethodGet,
 		Path:        "/cycles/{id}/decision-templates",
 		Summary:     "A cycle's rejection letter templates for one role",
-		Description: "Reviewer only. ?role= selects the role (required). Returns both kinds, creating default-content rows on first access.",
+		Description: "Reviewer only. ?role_id= selects the role (required). Returns both kinds, creating default-content rows on first access.",
 		Tags:        []string{"Decisions"},
 		Errors:      []int{http.StatusUnauthorized, http.StatusUnprocessableEntity},
 	}, s.listTemplates)
@@ -34,7 +35,7 @@ func Route(api huma.API, db *gorm.DB) {
 		Method:      http.MethodPut,
 		Path:        "/cycles/{id}/decision-templates",
 		Summary:     "Replace one rejection letter template",
-		Description: "Chief only. ?role= and ?kind= select which letter (both required). Replaces subject and body together — there is no partial update.",
+		Description: "Chief only. ?role_id= and ?kind= select which letter (both required). Replaces subject and body together — there is no partial update.",
 		Tags:        []string{"Decisions"},
 		Errors:      []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound, http.StatusUnprocessableEntity},
 	}, s.updateTemplate)

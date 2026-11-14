@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { PageContainer } from '@/components/PageContainer'
-import type { ApplicationStage, Role } from '@/lib/api/types'
+import type { ApplicationStage } from '@/lib/api/types'
 import { ApplicantOverview } from '../../components/ApplicantOverview'
 
 export function ApplicationDetailClient({
@@ -14,7 +14,7 @@ export function ApplicationDetailClient({
 }: {
   applicationId: string
   cycleId: string
-  role: Role
+  role: string
   applicantNuid: string
   stage?: ApplicationStage
 }) {

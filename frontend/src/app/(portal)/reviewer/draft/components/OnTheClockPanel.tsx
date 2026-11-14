@@ -62,7 +62,7 @@ export function OnTheClockPanel({
   const round = roundOf(board.on_the_clock, board.teams.length)
   // Entries for this board's role only; the group ranks every role in one list.
   const entries = (teamList?.entries ?? [])
-    .filter((e) => e.application_role === board.application_role)
+    .filter((e) => e.role_id === board.role_id)
     .sort((a, b) => a.rank - b.rank)
   const available = pool.filter((a) => !takenByApplicationId[a.id])
 

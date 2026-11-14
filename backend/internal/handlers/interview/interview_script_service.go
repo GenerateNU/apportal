@@ -4,23 +4,24 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 	"github.com/danielgtaylor/huma/v2"
 )
 
 type interviewScriptService struct {
 	interviewDB *InterviewDB
+	roleDB      *role.RoleDB
 }
 
 func (s *interviewScriptService) get(ctx context.Context, in *GetInterviewScriptInput) (*InterviewScriptOutput, error) {
 	if err := utils.RequireReviewer(ctx); err != nil {
 		return nil, err
 	}
-	role, err := utils.ParseTemplateRole(in.Role)
-	if err != nil {
+	if err := role.RequireCycleRole(ctx, s.roleDB, in.ID, in.RoleID); err != nil {
 		return nil, err
 	}
-	script, err := s.interviewDB.GetOrCreateInterviewScript(ctx, in.ID, role)
+	script, err := s.interviewDB.GetOrCreateInterviewScript(ctx, in.ID, in.RoleID)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
@@ -31,8 +32,7 @@ func (s *interviewScriptService) update(ctx context.Context, in *UpdateInterview
 	if err := utils.RequireChief(ctx); err != nil {
 		return nil, err
 	}
-	role, err := utils.ParseTemplateRole(in.Role)
-	if err != nil {
+	if err := role.ParseRoleID(in.RoleID); err != nil {
 		return nil, err
 	}
 	if !json.Valid(in.Body.Questions) {
@@ -45,7 +45,7 @@ func (s *interviewScriptService) update(ctx context.Context, in *UpdateInterview
 		return nil, huma.Error422UnprocessableEntity("post_interview_checklist must be valid JSON")
 	}
 
-	script, err := s.interviewDB.UpdateInterviewScript(ctx, in.ID, role, InterviewScriptUpdate{
+	script, err := s.interviewDB.UpdateInterviewScript(ctx, in.ID, in.RoleID, InterviewScriptUpdate{
 		IntroSpeech:            in.Body.IntroSpeech,
 		RecordingReminder:      in.Body.RecordingReminder,
 		Questions:              in.Body.Questions,

@@ -12,20 +12,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import type {
-  DecisionKind,
-  DecisionRow,
-  DecisionStatus,
-  Role,
-} from '@/lib/api/types'
+import type { DecisionKind, DecisionRow, DecisionStatus } from '@/lib/api/types'
 import { defaultPipelineCycleId } from '@/lib/cycles'
 import { useDecisionTemplates, useDecisions } from '@/lib/queries/decisions'
 import { useCycles } from '@/lib/queries/cycles'
-import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 import { KIND_LABEL, STATUS_LABEL } from './constants'
 import { DecisionListRow } from './DecisionListRow'
 import { TemplateDialog } from './TemplateDialog'
 import { useCopy } from './useCopy'
+import { useCycleRolePicker } from '@/hooks/useRoleSelection'
 
 type KindFilter = DecisionKind | 'all'
 type StatusFilter = DecisionStatus | 'all'
@@ -42,7 +37,7 @@ export function DecisionsClient({ currentNUID }: { currentNUID: string }) {
     if (defaultId) setCycleId(defaultId)
   }
 
-  const [role, setRole] = useState<Role>('software_engineer')
+  const { role, setRole, roleIds, roleLabel } = useCycleRolePicker(cycleId)
   const [kind, setKind] = useState<KindFilter>('all')
   const [status, setStatus] = useState<StatusFilter>('all')
   // Chiefs see the whole cycle by default; the toggle is for a chief who also
@@ -56,7 +51,7 @@ export function DecisionsClient({ currentNUID }: { currentNUID: string }) {
   const [openId, setOpenId] = useState<string | null>(null)
 
   const { data: rows = [], isLoading } = useDecisions(cycleId, {
-    role,
+    role_id: role || undefined,
     kind: kind === 'all' ? undefined : kind,
     interviewer_nuid: mineOnly ? currentNUID : undefined,
     search: search.trim() || undefined,
@@ -119,14 +114,14 @@ export function DecisionsClient({ currentNUID }: { currentNUID: string }) {
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <Select value={role} onValueChange={(v) => setRole(v as Role)}>
+        <Select value={role} onValueChange={setRole}>
           <SelectTrigger className="w-48" aria-label="Filter by role">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {ROLE_COLUMNS.map((r) => (
+            {roleIds.map((r) => (
               <SelectItem key={r} value={r}>
-                {ROLE_LABEL[r]}
+                {roleLabel(r)}
               </SelectItem>
             ))}
           </SelectContent>

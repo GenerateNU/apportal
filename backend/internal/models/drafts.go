@@ -24,16 +24,17 @@ func (s DraftStatus) Valid() bool {
 // runs down the order, the next back up it, so the last team picks twice in a
 // row at the turn.
 type Draft struct {
-	ID              string      `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
-	CycleID         string      `json:"cycle_id" gorm:"type:uuid;not null;uniqueIndex:drafts_cycle_id_application_role_key,priority:1"`
-	ApplicationRole Role        `json:"application_role" gorm:"type:application_role;not null;uniqueIndex:drafts_cycle_id_application_role_key,priority:2"`
-	Status          DraftStatus `json:"status" gorm:"not null;default:setup;check:drafts_status_check,status IN ('setup','active','complete')"`
-	Rounds          int         `json:"rounds" gorm:"type:integer;not null;default:1;check:drafts_rounds_check,rounds > 0"`
-	CreatedBy       string      `json:"created_by" gorm:"not null"`
-	CreatedAt       time.Time   `json:"created_at" gorm:"not null;default:now()"`
-	UpdatedAt       time.Time   `json:"updated_at" gorm:"not null;default:now()"`
-	Cycle           Cycle       `json:"-" gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
-	Creator         User        `json:"-" gorm:"foreignKey:CreatedBy;references:NUID"`
+	ID        string      `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	CycleID   string      `json:"cycle_id" gorm:"type:uuid;not null;uniqueIndex:drafts_cycle_id_role_id_key,priority:1"`
+	RoleID    string      `json:"role_id" gorm:"type:uuid;not null;uniqueIndex:drafts_cycle_id_role_id_key,priority:2"`
+	Status    DraftStatus `json:"status" gorm:"not null;default:setup;check:drafts_status_check,status IN ('setup','active','complete')"`
+	Rounds    int         `json:"rounds" gorm:"type:integer;not null;default:1;check:drafts_rounds_check,rounds > 0"`
+	CreatedBy string      `json:"created_by" gorm:"not null"`
+	CreatedAt time.Time   `json:"created_at" gorm:"not null;default:now()"`
+	UpdatedAt time.Time   `json:"updated_at" gorm:"not null;default:now()"`
+	Cycle     Cycle       `json:"-" gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
+	Creator   User        `json:"-" gorm:"foreignKey:CreatedBy;references:NUID"`
+	Role      Role        `json:"-" gorm:"foreignKey:RoleID;references:ID;constraint:OnDelete:RESTRICT"`
 }
 
 // DraftTeam is one seat in the order, backed by the preference_lists group

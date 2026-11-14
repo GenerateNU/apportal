@@ -8,7 +8,6 @@
 import type { InterviewerCapacityInputBodyExcludedApplicationIds } from './interviewerCapacityInputBodyExcludedApplicationIds';
 import type { InterviewerCapacityInputBodyGroups } from './interviewerCapacityInputBodyGroups';
 import type { InterviewerCapacityInputBodyLeads } from './interviewerCapacityInputBodyLeads';
-import type { InterviewerCapacityInputBodyRole } from './interviewerCapacityInputBodyRole';
 
 export interface InterviewerCapacityInputBody {
   /** A URL to the JSON Schema for this object. */
@@ -16,5 +15,5 @@ export interface InterviewerCapacityInputBody {
   excluded_application_ids?: InterviewerCapacityInputBodyExcludedApplicationIds;
   groups?: InterviewerCapacityInputBodyGroups;
   leads?: InterviewerCapacityInputBodyLeads;
-  role: InterviewerCapacityInputBodyRole;
+  role_id: string;
 }

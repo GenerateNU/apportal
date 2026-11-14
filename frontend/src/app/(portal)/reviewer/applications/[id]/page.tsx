@@ -8,7 +8,7 @@ import { listAnswers } from '@/generated/answers/answers'
 import { getApplicant } from '@/generated/applicants/applicants'
 import { getApplication } from '@/generated/applications/applications'
 import { listCycleQuestions } from '@/generated/questions/questions'
-import type { Application, Role } from '@/lib/api/types'
+import type { Application } from '@/lib/api/types'
 import { getServerRequestOptions } from '@/lib/api/server-request-options'
 import { queryKeys } from '@/lib/queries/keys'
 import { ApplicationDetailClient } from './components/ApplicationDetailClient'
@@ -36,7 +36,7 @@ export default async function ApplicationPage({
     notFound()
   }
 
-  const role = application.role as Role
+  const role = application.role_id as string
 
   await Promise.all([
     queryClient.prefetchQuery({
@@ -46,7 +46,11 @@ export default async function ApplicationPage({
     queryClient.prefetchQuery({
       queryKey: queryKeys.questions.list(application.cycle_id, role),
       queryFn: () =>
-        listCycleQuestions(application.cycle_id, { role }, requestOptions),
+        listCycleQuestions(
+          application.cycle_id,
+          { role_id: role },
+          requestOptions
+        ),
     }),
     queryClient.prefetchQuery({
       queryKey: queryKeys.applicants.detail(application.user_nuid),

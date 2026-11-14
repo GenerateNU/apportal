@@ -27,7 +27,7 @@ export function ApplicationRoleCard({
   application,
 }: ApplicationRoleCardProps) {
   const router = useRouter()
-  const role = template.application_role
+  const role = template.role_id
   const isDraft = application?.stage === 'draft'
   const status =
     application && !isDraft ? APPLICANT_STATUS[application.stage] : null

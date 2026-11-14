@@ -9,6 +9,7 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/assign"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/application"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/leadassignment"
+	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/user"
 	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
@@ -47,11 +48,11 @@ func (s *assignmentPlannerService) capacity(ctx context.Context, in *CapacityInp
 	if err := utils.RequireChief(ctx); err != nil {
 		return nil, err
 	}
-	if !in.Body.Role.Valid() {
-		return nil, huma.Error422UnprocessableEntity("role is invalid")
+	if err := role.ParseRoleID(in.Body.RoleID); err != nil {
+		return nil, err
 	}
 
-	pool, err := s.reviewPool(ctx, in.ID, in.Body.Role)
+	pool, err := s.reviewPool(ctx, in.ID, in.Body.RoleID)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
@@ -89,19 +90,19 @@ func (s *assignmentPlannerService) preview(ctx context.Context, in *PreviewPlanI
 // pairs: the server stays the authority on who may review what, and the plan
 // is recomputed against the pool as it stands at write time.
 func (s *assignmentPlannerService) buildPlan(ctx context.Context, in *PreviewPlanInput) (plannedRun, error) {
-	if !in.Body.Role.Valid() {
-		return plannedRun{}, huma.Error422UnprocessableEntity("role is invalid")
+	if err := role.ParseRoleID(in.Body.RoleID); err != nil {
+		return plannedRun{}, err
 	}
 	if len(in.Body.Teams) == 0 {
 		return plannedRun{}, huma.Error422UnprocessableEntity("at least one team is required")
 	}
 
-	pool, err := s.reviewPool(ctx, in.ID, in.Body.Role)
+	pool, err := s.reviewPool(ctx, in.ID, in.Body.RoleID)
 	if err != nil {
 		return plannedRun{}, utils.StoreErr(err)
 	}
 	pool = excludeApplications(pool, in.Body.ExcludedApplicationIDs)
-	existing, err := s.leadAssignmentDB.ListLeadAssignmentsForCycle(ctx, in.ID, in.Body.Role)
+	existing, err := s.leadAssignmentDB.ListLeadAssignmentsForCycle(ctx, in.ID, in.Body.RoleID)
 	if err != nil {
 		return plannedRun{}, utils.StoreErr(err)
 	}
@@ -129,7 +130,7 @@ func (s *assignmentPlannerService) buildPlan(ctx context.Context, in *PreviewPla
 		Cap:            in.Body.Cap,
 		CapOverrides:   in.Body.CapOverrides,
 		Coverage:       in.Body.Coverage,
-		Seed:           assign.SeedFrom(in.ID, string(in.Body.Role)),
+		Seed:           assign.SeedFrom(in.ID, in.Body.RoleID),
 	})
 	if err != nil {
 		return plannedRun{}, huma.Error422UnprocessableEntity(err.Error())
@@ -270,11 +271,11 @@ func (s *assignmentPlannerService) pool(ctx context.Context, in *PoolInput) (*Po
 	if err := utils.RequireChief(ctx); err != nil {
 		return nil, err
 	}
-	if !in.Role.Valid() {
-		return nil, huma.Error422UnprocessableEntity("role is invalid")
+	if err := role.ParseRoleID(in.RoleID); err != nil {
+		return nil, err
 	}
 
-	pool, err := s.reviewPool(ctx, in.ID, in.Role)
+	pool, err := s.reviewPool(ctx, in.ID, in.RoleID)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
@@ -299,10 +300,10 @@ func (s *assignmentPlannerService) pool(ctx context.Context, in *PoolInput) (*Po
 
 // reviewPool is the set of applications a plan would cover: submitted or
 // mid-lead-review, for one role in one cycle.
-func (s *assignmentPlannerService) reviewPool(ctx context.Context, cycleID string, role models.Role) ([]models.ApplicationSummary, error) {
+func (s *assignmentPlannerService) reviewPool(ctx context.Context, cycleID string, role string) ([]models.ApplicationSummary, error) {
 	return s.applicationDB.ListApplications(ctx, application.ApplicationFilter{
 		CycleID: cycleID,
-		Role:    &role,
+		RoleID:  &role,
 		Stages:  reviewPoolStages,
 	})
 }

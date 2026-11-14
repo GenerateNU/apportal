@@ -5,11 +5,13 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"gorm.io/gorm"
+
+	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 )
 
 func Route(api huma.API, db *gorm.DB) {
 	reviewReleaseDB := NewReviewReleaseDB(db)
-	s := &reviewReleaseService{reviewReleaseDB: reviewReleaseDB}
+	s := &reviewReleaseService{reviewReleaseDB: reviewReleaseDB, roleDB: role.NewRoleDB(db)}
 
 	huma.Register(api, huma.Operation{
 		OperationID: "list-review-gates",

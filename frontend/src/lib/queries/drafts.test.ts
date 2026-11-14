@@ -53,7 +53,7 @@ function board(picks: DraftPickDetail[], over: Partial<DraftBoard> = {}) {
   return {
     id: 'd1',
     cycle_id: 'c1',
-    application_role: 'software_engineer',
+    role_id: 'role-1',
     created_at: '2026-01-01T00:00:00Z',
     created_by: 'u1',
     updated_at: '2026-01-01T00:00:00Z',

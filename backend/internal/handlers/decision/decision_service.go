@@ -7,6 +7,7 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/handlers/interview"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/interviewassignment"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/reviewrelease"
+	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/writtenreview"
 	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
@@ -23,6 +24,7 @@ type decisionService struct {
 	interviewAssignmentDB *interviewassignment.InterviewAssignmentDB
 	reviewReleaseDB       *reviewrelease.ReviewReleaseDB
 	writtenReviewDB       *writtenreview.WrittenReviewDB
+	roleDB                *role.RoleDB
 }
 
 func parseDecisionKind(raw string) (models.DecisionKind, error) {
@@ -37,11 +39,10 @@ func (s *decisionService) listTemplates(ctx context.Context, in *ListDecisionTem
 	if err := utils.RequireReviewer(ctx); err != nil {
 		return nil, err
 	}
-	role, err := utils.ParseTemplateRole(in.Role)
-	if err != nil {
+	if err := role.RequireCycleRole(ctx, s.roleDB, in.ID, in.RoleID); err != nil {
 		return nil, err
 	}
-	templates, err := s.decisionDB.GetOrCreateDecisionTemplates(ctx, in.ID, role)
+	templates, err := s.decisionDB.GetOrCreateDecisionTemplates(ctx, in.ID, in.RoleID)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
@@ -52,20 +53,19 @@ func (s *decisionService) updateTemplate(ctx context.Context, in *UpdateDecision
 	if err := utils.RequireChief(ctx); err != nil {
 		return nil, err
 	}
-	role, err := utils.ParseTemplateRole(in.Role)
-	if err != nil {
-		return nil, err
-	}
 	kind, err := parseDecisionKind(in.Kind)
 	if err != nil {
 		return nil, err
 	}
+	if err := role.RequireCycleRole(ctx, s.roleDB, in.ID, in.RoleID); err != nil {
+		return nil, err
+	}
 	// Seed first so editing a letter nobody has opened yet updates rather than
 	// 404s.
-	if _, err := s.decisionDB.GetOrCreateDecisionTemplates(ctx, in.ID, role); err != nil {
+	if _, err := s.decisionDB.GetOrCreateDecisionTemplates(ctx, in.ID, in.RoleID); err != nil {
 		return nil, utils.StoreErr(err)
 	}
-	t, err := s.decisionDB.UpdateDecisionTemplate(ctx, in.ID, role, kind, DecisionTemplateUpdate{
+	t, err := s.decisionDB.UpdateDecisionTemplate(ctx, in.ID, in.RoleID, kind, DecisionTemplateUpdate{
 		Subject:   in.Body.Subject,
 		Body:      in.Body.Body,
 		UpdatedBy: utils.CurrentActor(ctx).NUID,
@@ -91,12 +91,11 @@ func (s *decisionService) list(ctx context.Context, in *ListDecisionsInput) (*De
 	if !utils.CurrentActor(ctx).HasAnyRole(models.UserRoleChief, models.UserRoleAdmin) {
 		filter.InterviewerNUID = utils.CurrentActor(ctx).NUID
 	}
-	if in.Role != "" {
-		role, err := utils.ParseTemplateRole(in.Role)
-		if err != nil {
+	if in.RoleID != "" {
+		if err := role.ParseRoleID(in.RoleID); err != nil {
 			return nil, err
 		}
-		filter.Role = &role
+		filter.RoleID = &in.RoleID
 	}
 	if in.Kind != "" {
 		kind, err := parseDecisionKind(in.Kind)

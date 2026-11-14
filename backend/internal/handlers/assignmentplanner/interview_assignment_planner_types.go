@@ -65,8 +65,8 @@ type InterviewerPlanPreview struct {
 
 // --- interviewer pool ---
 type InterviewPoolInput struct {
-	ID   string      `path:"id" doc:"Cycle ID"`
-	Role models.Role `query:"role" doc:"Applicant role"`
+	ID     string `path:"id" doc:"Cycle ID"`
+	RoleID string `query:"role_id" doc:"Applicant role"`
 }
 
 type InterviewPoolOutput struct {
@@ -81,7 +81,7 @@ type InterviewPoolOutput struct {
 type InterviewerCapacityInput struct {
 	ID   string `path:"id" doc:"Cycle ID"`
 	Body struct {
-		Role                   models.Role    `json:"role"`
+		RoleID                 string         `json:"role_id"`
 		Leads                  []PlanLeadDay  `json:"leads,omitempty"`
 		Groups                 []PlanGroupDay `json:"groups,omitempty"`
 		ExcludedApplicationIDs []string       `json:"excluded_application_ids,omitempty"`
@@ -96,7 +96,7 @@ type InterviewerCapacityOutput struct {
 type InterviewerPreviewInput struct {
 	ID   string `path:"id" doc:"Cycle ID"`
 	Body struct {
-		Role                   models.Role    `json:"role"`
+		RoleID                 string         `json:"role_id"`
 		Leads                  []PlanLeadDay  `json:"leads,omitempty"`
 		Groups                 []PlanGroupDay `json:"groups,omitempty"`
 		Conflicts              []PlanConflict `json:"conflicts,omitempty" doc:"Leads ineligible to interview a specific applicant"`
@@ -129,7 +129,7 @@ type CommitInterviewerPlanOutput struct {
 type ReviewerCapacityInput struct {
 	ID   string `path:"id" doc:"Cycle ID"`
 	Body struct {
-		Role                   models.Role   `json:"role"`
+		RoleID                 string        `json:"role_id"`
 		Leads                  []PlanLeadDay `json:"leads"`
 		Coverage               int           `json:"coverage" minimum:"1"`
 		ExcludedApplicationIDs []string      `json:"excluded_application_ids,omitempty"`
@@ -144,7 +144,7 @@ type ReviewerCapacityOutput struct {
 type ReviewerPreviewInput struct {
 	ID   string `path:"id" doc:"Cycle ID"`
 	Body struct {
-		Role                   models.Role    `json:"role"`
+		RoleID                 string         `json:"role_id"`
 		Leads                  []PlanLeadDay  `json:"leads"`
 		Conflicts              []PlanConflict `json:"conflicts,omitempty" doc:"Leads ineligible to review a specific applicant's interview"`
 		Coverage               int            `json:"coverage" minimum:"1"`

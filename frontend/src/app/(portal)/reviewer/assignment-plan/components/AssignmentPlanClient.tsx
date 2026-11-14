@@ -29,7 +29,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import type { Role } from '@/lib/api/types'
 import {
   useAssignmentPool,
   useCommitAssignmentPlan,
@@ -38,9 +37,9 @@ import {
 } from '@/lib/queries/assignment-plan'
 import { pickDefaultCycleId, useCycles } from '@/lib/queries/cycles'
 import { useLeads } from '@/lib/queries/users'
-import { ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 import { PlanPreview } from './PlanPreview'
 import { TeamBuilder, type DraftTeam } from './TeamBuilder'
+import { useCycleRolePicker } from '@/hooks/useRoleSelection'
 
 // Teams live in component state rather than the database — a chief regroups
 // leads per run, so they are request input rather than stored state. Sizing and
@@ -56,7 +55,7 @@ export function AssignmentPlanClient() {
     const defaultId = pickDefaultCycleId(cycles)
     if (defaultId) setCycleId(defaultId)
   }
-  const [role, setRole] = useState<Role>('software_engineer')
+  const { role, setRole, roleIds, roleLabel } = useCycleRolePicker(cycleId)
   const [teams, setTeams] = useState<DraftTeam[]>([])
   const [coverage, setCoverage] = useState(2)
   const [cap, setCap] = useState(20)
@@ -118,7 +117,7 @@ export function AssignmentPlanClient() {
       {
         cycleId,
         body: {
-          role,
+          role_id: role,
           teams: apiTeams,
           coverage,
           cap,
@@ -135,7 +134,7 @@ export function AssignmentPlanClient() {
       {
         cycleId,
         body: {
-          role,
+          role_id: role,
           teams: apiTeams,
           coverage,
           excluded_application_ids: excludedApplicationIds,
@@ -149,7 +148,7 @@ export function AssignmentPlanClient() {
     preview.mutate({
       cycleId,
       body: {
-        role,
+        role_id: role,
         teams: apiTeams,
         coverage,
         cap,
@@ -181,7 +180,7 @@ export function AssignmentPlanClient() {
           <Select
             value={role}
             onValueChange={(val) => {
-              setRole(val as Role)
+              setRole(val)
               setExcludedIds(new Set())
               resetResults()
             }}
@@ -190,9 +189,9 @@ export function AssignmentPlanClient() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {ROLE_COLUMNS.map((r) => (
+              {roleIds.map((r) => (
                 <SelectItem key={r} value={r}>
-                  {ROLE_LABEL[r]}
+                  {roleLabel(r)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -223,8 +222,7 @@ export function AssignmentPlanClient() {
         <div className="flex flex-col">
           <span className="text-text-faint text-xs">Awaiting review</span>
           <span className="text-text-default text-sm font-semibold">
-            {poolAppliedSize ?? '—'} {ROLE_LABEL[role].toLowerCase()}{' '}
-            application
+            {poolAppliedSize ?? '—'} {roleLabel(role)} application
             {poolAppliedSize === 1 ? '' : 's'}
           </span>
           {excludedIds.size > 0 && (
@@ -442,11 +440,11 @@ export function AssignmentPlanClient() {
             <DialogTitle>Assign reviewers?</DialogTitle>
             <DialogDescription>
               This writes up to {shownPlan?.total_added ?? 0} lead assignment
-              {shownPlan?.total_added === 1 ? '' : 's'} for{' '}
-              {ROLE_LABEL[role].toLowerCase()} applicants. Existing assignments
-              are left untouched, and running this again later only fills gaps —
-              but assignments are not removed by re-running, so unassign from
-              the Assign Reviewers page if you need to undo.
+              {shownPlan?.total_added === 1 ? '' : 's'} for {roleLabel(role)}{' '}
+              applicants. Existing assignments are left untouched, and running
+              this again later only fills gaps — but assignments are not removed
+              by re-running, so unassign from the Assign Reviewers page if you
+              need to undo.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

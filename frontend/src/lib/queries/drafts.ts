@@ -12,12 +12,7 @@ import {
   updateDraft,
 } from '@/generated/draft/draft'
 import type { RequestOptions } from '@/lib/api/orval-mutator'
-import type {
-  DraftBoard,
-  DraftPickDetail,
-  DraftStatus,
-  Role,
-} from '@/lib/api/types'
+import type { DraftBoard, DraftPickDetail, DraftStatus } from '@/lib/api/types'
 import { queryKeys } from './keys'
 
 // The board is driven by one operator in a room full of people watching it, so
@@ -27,15 +22,15 @@ const DRAFT_POLL_MS = 8000
 
 export function useDraftBoard(
   cycleId: string,
-  role: Role,
+  roleId: string,
   { poll = false }: { poll?: boolean } = {},
   opts?: RequestOptions
 ) {
   return useQuery({
-    queryKey: queryKeys.drafts.board(cycleId, role),
+    queryKey: queryKeys.drafts.board(cycleId, roleId),
     queryFn: () =>
-      getDraftBoard(cycleId, { role }, opts) as Promise<DraftBoard>,
-    enabled: !!cycleId,
+      getDraftBoard(cycleId, { role_id: roleId }, opts) as Promise<DraftBoard>,
+    enabled: !!cycleId && !!roleId,
     refetchInterval: poll ? DRAFT_POLL_MS : false,
     // A board that hasn't been opened yet 404s, which is a normal state here
     // (the setup screen offers to open it), not something to retry into.
@@ -119,7 +114,7 @@ export function patchDrafted(
 // The pick mutations additionally pass a `predict`, which rewrites the cached
 // board so the pick is on screen before the round trip finishes — this board
 // is projected in a room, and the wait was visible from the back of it.
-function useDraftMutation<TVars extends { cycleId: string; role: Role }>(
+function useDraftMutation<TVars extends { cycleId: string; roleId: string }>(
   mutationFn: (vars: TVars) => Promise<unknown>,
   predict?: (board: DraftBoard, vars: TVars) => DraftBoard
 ) {
@@ -128,7 +123,7 @@ function useDraftMutation<TVars extends { cycleId: string; role: Role }>(
     mutationFn,
     onMutate: predict
       ? async (vars: TVars) => {
-          const boardKey = queryKeys.drafts.board(vars.cycleId, vars.role)
+          const boardKey = queryKeys.drafts.board(vars.cycleId, vars.roleId)
           const draftedKey = queryKeys.drafts.drafted(vars.cycleId)
           // Both poll every 8s; an in-flight refetch would land on top of the
           // prediction and undo it.
@@ -163,7 +158,7 @@ function useDraftMutation<TVars extends { cycleId: string; role: Role }>(
     // then out of date.
     onSettled: (_data, _error, vars) => {
       queryClient.invalidateQueries({
-        queryKey: queryKeys.drafts.board(vars.cycleId, vars.role),
+        queryKey: queryKeys.drafts.board(vars.cycleId, vars.roleId),
       })
       queryClient.invalidateQueries({ queryKey: queryKeys.drafts.all })
       // A pick moves the applicant to accepted (and undoing it moves them
@@ -177,13 +172,13 @@ export function useOpenDraft() {
   return useDraftMutation(
     (vars: {
       cycleId: string
-      role: Role
+      roleId: string
       rounds?: number
       opts?: RequestOptions
     }) =>
       openDraft(
         vars.cycleId,
-        { role: vars.role, ...(vars.rounds && { rounds: vars.rounds }) },
+        { role_id: vars.roleId, ...(vars.rounds && { rounds: vars.rounds }) },
         vars.opts
       )
   )
@@ -193,7 +188,7 @@ export function useUpdateDraft() {
   return useDraftMutation(
     (vars: {
       cycleId: string
-      role: Role
+      roleId: string
       draftId: string
       status?: DraftStatus
       rounds?: number
@@ -214,7 +209,7 @@ export function useSetDraftTeams() {
   return useDraftMutation(
     (vars: {
       cycleId: string
-      role: Role
+      roleId: string
       draftId: string
       preferenceListIds: string[]
       opts?: RequestOptions
@@ -260,7 +255,7 @@ export function useMakeDraftPick() {
   return useDraftMutation(
     (vars: {
       cycleId: string
-      role: Role
+      roleId: string
       draftId: string
       applicationId: string
       pickNumber?: number
@@ -304,7 +299,7 @@ export function useRemoveDraftPick() {
   return useDraftMutation(
     (vars: {
       cycleId: string
-      role: Role
+      roleId: string
       draftId: string
       pickNumber: number
       opts?: RequestOptions
@@ -325,7 +320,7 @@ export function useResetDraft() {
   return useDraftMutation(
     (vars: {
       cycleId: string
-      role: Role
+      roleId: string
       draftId: string
       opts?: RequestOptions
     }) => resetDraft(vars.draftId, vars.opts)
@@ -337,7 +332,7 @@ export function useDeleteDraft() {
   return useDraftMutation(
     (vars: {
       cycleId: string
-      role: Role
+      roleId: string
       draftId: string
       opts?: RequestOptions
     }) => deleteDraft(vars.draftId, vars.opts)
@@ -350,7 +345,7 @@ export function useReplaceDraftPick() {
   return useDraftMutation(
     (vars: {
       cycleId: string
-      role: Role
+      roleId: string
       draftId: string
       pickNumber: number
       applicationId: string

@@ -5,12 +5,14 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"gorm.io/gorm"
+
+	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 )
 
 func Route(api huma.API, db *gorm.DB) {
 	cycleDB := NewCycleDB(db)
 
-	registerCycle(api, &cycleService{cycleDB: cycleDB})
+	registerCycle(api, &cycleService{cycleDB: cycleDB, roleDB: role.NewRoleDB(db)})
 	registerCycleStage(api, &cycleStageService{cycleDB: cycleDB})
 }
 
@@ -38,7 +40,7 @@ func registerCycle(api huma.API, s *cycleService) {
 		Method:      http.MethodGet,
 		Path:        "/cycles/{id}/template-summary",
 		Summary:     "Per-role template counts for a cycle",
-		Description: "One entry per applicant role: question count (role-specific plus global), code challenge count, and submitted application count — computed via COUNT queries instead of requiring the full row sets.",
+		Description: "One entry per role of the cycle: question count (role-specific plus global), code challenge count, and submitted application count — computed via COUNT queries instead of requiring the full row sets.",
 		Tags:        []string{"Cycles"},
 	}, s.templateSummary)
 
@@ -47,7 +49,7 @@ func registerCycle(api huma.API, s *cycleService) {
 		Method:        http.MethodPost,
 		Path:          "/cycles",
 		Summary:       "Create a cycle",
-		Description:   "Chief only.",
+		Description:   "Chief only. Starts with a copy of the roles of the branch's latest cycle of the same application type.",
 		Tags:          []string{"Cycles"},
 		DefaultStatus: http.StatusCreated,
 		Errors:        []int{http.StatusUnauthorized, http.StatusForbidden},

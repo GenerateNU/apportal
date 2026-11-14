@@ -25,8 +25,8 @@ func NewPreferenceListDB(db *gorm.DB) *PreferenceListDB {
 }
 
 const (
-	entryDetailColumns    = "e.*, u.full_name, u.email, a.application_role, u.returner"
-	personalDetailColumns = "pe.*, ou.full_name AS owner_name, au.full_name, au.email, a.application_role, au.returner"
+	entryDetailColumns    = "e.*, u.full_name, u.email, a.role_id, u.returner"
+	personalDetailColumns = "pe.*, ou.full_name AS owner_name, au.full_name, au.email, a.role_id, au.returner"
 )
 
 func (p *PreferenceListDB) entryDetails(db *gorm.DB) *gorm.DB {
@@ -241,16 +241,16 @@ func (p *PreferenceListDB) RemovePreferenceListMember(ctx context.Context, listI
 
 // GetOrCreatePreferenceListDeadline fetches the (cycle, role) deadline,
 // creating an unset one (editable indefinitely) on first access.
-func (p *PreferenceListDB) GetOrCreatePreferenceListDeadline(ctx context.Context, cycleID string, role models.Role) (models.PreferenceListDeadline, error) {
+func (p *PreferenceListDB) GetOrCreatePreferenceListDeadline(ctx context.Context, cycleID string, role string) (models.PreferenceListDeadline, error) {
 	db := p.db.WithContext(ctx)
 	var deadline models.PreferenceListDeadline
-	err := db.Where("cycle_id = ? AND application_role = ?", cycleID, role).Take(&deadline).Error
+	err := db.Where("cycle_id = ? AND role_id = ?", cycleID, role).Take(&deadline).Error
 	if !errors.Is(err, gorm.ErrRecordNotFound) {
 		return deadline, err
 	}
 
-	deadline = models.PreferenceListDeadline{CycleID: cycleID, ApplicationRole: role}
-	res := db.Select("cycle_id", "application_role").
+	deadline = models.PreferenceListDeadline{CycleID: cycleID, RoleID: role}
+	res := db.Select("cycle_id", "role_id").
 		Clauses(clause.OnConflict{DoNothing: true}, clause.Returning{}).Create(&deadline)
 	if res.Error != nil || res.RowsAffected > 0 {
 		return deadline, res.Error
@@ -258,17 +258,17 @@ func (p *PreferenceListDB) GetOrCreatePreferenceListDeadline(ctx context.Context
 
 	// Lost a race with a concurrent create; read what the other writer inserted.
 	deadline = models.PreferenceListDeadline{}
-	err = db.Where("cycle_id = ? AND application_role = ?", cycleID, role).Take(&deadline).Error
+	err = db.Where("cycle_id = ? AND role_id = ?", cycleID, role).Take(&deadline).Error
 	return deadline, err
 }
 
 // UpsertPreferenceListDeadline sets or clears (nil) the (cycle, role) deadline.
-func (p *PreferenceListDB) UpsertPreferenceListDeadline(ctx context.Context, cycleID string, role models.Role, closesAt *time.Time, updatedBy string) (models.PreferenceListDeadline, error) {
-	deadline := models.PreferenceListDeadline{CycleID: cycleID, ApplicationRole: role, ClosesAt: closesAt, UpdatedBy: &updatedBy}
-	err := p.db.WithContext(ctx).Select("cycle_id", "application_role", "closes_at", "updated_by").
+func (p *PreferenceListDB) UpsertPreferenceListDeadline(ctx context.Context, cycleID string, role string, closesAt *time.Time, updatedBy string) (models.PreferenceListDeadline, error) {
+	deadline := models.PreferenceListDeadline{CycleID: cycleID, RoleID: role, ClosesAt: closesAt, UpdatedBy: &updatedBy}
+	err := p.db.WithContext(ctx).Select("cycle_id", "role_id", "closes_at", "updated_by").
 		Clauses(
 			clause.OnConflict{
-				Columns: []clause.Column{{Name: "cycle_id"}, {Name: "application_role"}},
+				Columns: []clause.Column{{Name: "cycle_id"}, {Name: "role_id"}},
 				DoUpdates: append(
 					clause.AssignmentColumns([]string{"closes_at", "updated_by"}),
 					clause.Assignment{Column: clause.Column{Name: "updated_at"}, Value: gorm.Expr("NOW()")},
@@ -303,7 +303,7 @@ func (p *PreferenceListDB) UpsertPreferenceListEntry(ctx context.Context, in Pre
 		}
 		err := tx.Table("preference_list_entries e").
 			Joins("JOIN applications a ON a.id = e.application_id").
-			Where("e.preference_list_id = ? AND a.application_role = ?", in.PreferenceListID, in.Role).
+			Where("e.preference_list_id = ? AND a.role_id = ?", in.PreferenceListID, in.RoleID).
 			Select("COALESCE(MAX(e.rank), 0) + 1").Scan(&entry.Rank).Error
 		if err != nil {
 			return err
@@ -332,11 +332,11 @@ func (p *PreferenceListDB) DeletePreferenceListEntry(ctx context.Context, listID
 
 // ListPreferenceListEntryApplicationIDs returns one role's entry ids, so the
 // handler can check a reorder is an exact permutation of them.
-func (p *PreferenceListDB) ListPreferenceListEntryApplicationIDs(ctx context.Context, listID string, role models.Role) ([]string, error) {
+func (p *PreferenceListDB) ListPreferenceListEntryApplicationIDs(ctx context.Context, listID string, role string) ([]string, error) {
 	var ids []string
 	err := p.db.WithContext(ctx).Table("preference_list_entries e").
 		Joins("JOIN applications a ON a.id = e.application_id").
-		Where("e.preference_list_id = ? AND a.application_role = ?", listID, role).
+		Where("e.preference_list_id = ? AND a.role_id = ?", listID, role).
 		Pluck("e.application_id", &ids).Error
 	return ids, err
 }
@@ -380,7 +380,7 @@ func (p *PreferenceListDB) UpsertPersonalPreferenceListEntry(ctx context.Context
 		}
 		err := tx.Table("preference_list_personal_entries pe").
 			Joins("JOIN applications a ON a.id = pe.application_id").
-			Where("pe.preference_list_id = ? AND pe.owner_nuid = ? AND a.application_role = ?", in.PreferenceListID, in.OwnerNUID, in.Role).
+			Where("pe.preference_list_id = ? AND pe.owner_nuid = ? AND a.role_id = ?", in.PreferenceListID, in.OwnerNUID, in.RoleID).
 			Select("COALESCE(MAX(pe.rank), 0) + 1").Scan(&entry.Rank).Error
 		if err != nil {
 			return err
@@ -409,11 +409,11 @@ func (p *PreferenceListDB) DeletePersonalPreferenceListEntry(ctx context.Context
 
 // ListPersonalPreferenceListEntryApplicationIDs returns one owner's entry ids
 // for one role, to validate a personal reorder.
-func (p *PreferenceListDB) ListPersonalPreferenceListEntryApplicationIDs(ctx context.Context, listID, ownerNUID string, role models.Role) ([]string, error) {
+func (p *PreferenceListDB) ListPersonalPreferenceListEntryApplicationIDs(ctx context.Context, listID, ownerNUID string, role string) ([]string, error) {
 	var ids []string
 	err := p.db.WithContext(ctx).Table("preference_list_personal_entries pe").
 		Joins("JOIN applications a ON a.id = pe.application_id").
-		Where("pe.preference_list_id = ? AND pe.owner_nuid = ? AND a.application_role = ?", listID, ownerNUID, role).
+		Where("pe.preference_list_id = ? AND pe.owner_nuid = ? AND a.role_id = ?", listID, ownerNUID, role).
 		Pluck("pe.application_id", &ids).Error
 	return ids, err
 }

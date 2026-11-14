@@ -5,11 +5,10 @@
  * Generate application portal — applications, reviews, and the hiring pipeline.
  * OpenAPI spec version: 0.1.0
  */
-import type { ListReviewerProgressRole } from './listReviewerProgressRole';
 
 export type ListReviewerProgressParams = {
 /**
  * Applicant role
  */
-role?: ListReviewerProgressRole;
+role_id?: string;
 };

@@ -12,12 +12,11 @@ import type {
   DecisionKind,
   DecisionRow,
   DecisionTemplate,
-  Role,
 } from '@/lib/api/types'
 import { queryKeys } from './keys'
 
 export interface DecisionListParams {
-  role?: Role
+  role_id?: string
   kind?: DecisionKind
   // A lead's own queue: only applicants they interviewed.
   interviewer_nuid?: string
@@ -44,15 +43,15 @@ export function useDecisions(
 // access, so this never returns an empty pair for a real cycle.
 export function useDecisionTemplates(
   cycleId: string,
-  role: Role,
+  roleId: string,
   opts?: RequestOptions
 ) {
   return useQuery({
-    queryKey: queryKeys.decisions.templates(cycleId, role),
+    queryKey: queryKeys.decisions.templates(cycleId, roleId),
     queryFn: async () =>
-      ((await listDecisionTemplates(cycleId, { role }, opts)) ??
+      ((await listDecisionTemplates(cycleId, { role_id: roleId }, opts)) ??
         []) as DecisionTemplate[],
-    enabled: !!cycleId,
+    enabled: !!cycleId && !!roleId,
   })
 }
 
@@ -125,7 +124,7 @@ export function useUpsertDecision(cycleId: string, opts?: RequestOptions) {
 
 export function useUpdateDecisionTemplate(
   cycleId: string,
-  role: Role,
+  roleId: string,
   opts?: RequestOptions
 ) {
   const queryClient = useQueryClient()
@@ -138,12 +137,12 @@ export function useUpdateDecisionTemplate(
       (await updateDecisionTemplate(
         cycleId,
         { subject: vars.subject, body: vars.body },
-        { role, kind: vars.kind },
+        { role_id: roleId, kind: vars.kind },
         opts
       )) as DecisionTemplate,
     onSuccess: (template) => {
       queryClient.setQueryData<DecisionTemplate[]>(
-        queryKeys.decisions.templates(cycleId, role),
+        queryKeys.decisions.templates(cycleId, roleId),
         (templates) =>
           templates?.map((t) => (t.kind === template.kind ? template : t)) ??
           templates

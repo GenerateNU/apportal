@@ -2,10 +2,6 @@ package utils
 
 import (
 	"strings"
-
-	"github.com/danielgtaylor/huma/v2"
-
-	"github.com/GenerateNU/apportal/backend/internal/models"
 )
 
 // MaxBulkApplications bounds both the query string and the fan-out of the
@@ -37,12 +33,4 @@ func SplitIDs(raw string) []string {
 		}
 	}
 	return ids
-}
-
-func ParseTemplateRole(raw string) (models.Role, error) {
-	role := models.Role(raw)
-	if raw == "" || !role.Valid() {
-		return "", huma.Error422UnprocessableEntity("missing or invalid role")
-	}
-	return role, nil
 }

@@ -6,6 +6,7 @@ import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useBranches } from '@/lib/queries/branches'
 import { useCycles } from '@/lib/queries/cycles'
+import { useRoles } from '@/lib/queries/roles'
 import { groupCyclesByBranch } from '../lib/group-cycles'
 import { BranchDialog } from './BranchDialog'
 import { BranchSection } from './BranchSection'
@@ -13,6 +14,7 @@ import { BranchSection } from './BranchSection'
 export function CyclesClient() {
   const { data: branches = [] } = useBranches()
   const { data: cycles = [] } = useCycles({})
+  const { data: roles = [] } = useRoles()
   const [showCreate, setShowCreate] = useState(false)
 
   const groups = groupCyclesByBranch(branches, cycles)
@@ -25,8 +27,8 @@ export function CyclesClient() {
             Branches & cycles
           </h1>
           <p className="text-text-muted mt-1 text-sm">
-            Create branches and the recruiting cycles under them, and open or
-            close cycles for applicants.
+            Create branches, the roles they recruit for and the cycles under
+            them, and open or close cycles for applicants.
           </p>
         </div>
         <Button className="shrink-0" onClick={() => setShowCreate(true)}>
@@ -47,7 +49,12 @@ export function CyclesClient() {
       ) : (
         <div className="flex flex-col gap-8">
           {groups.map(({ branch, cycles }) => (
-            <BranchSection key={branch.id} branch={branch} cycles={cycles} />
+            <BranchSection
+              key={branch.id}
+              branch={branch}
+              cycles={cycles}
+              roles={roles}
+            />
           ))}
         </div>
       )}

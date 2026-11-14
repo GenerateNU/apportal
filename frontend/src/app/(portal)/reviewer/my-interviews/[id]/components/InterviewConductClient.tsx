@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useMemo, useState } from 'react'
+import { useRoleLookup } from '@/lib/queries/roles'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
@@ -27,7 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import type { InterviewComment, InterviewRating, Role } from '@/lib/api/types'
+import type { InterviewComment, InterviewRating } from '@/lib/api/types'
 import { ChallengeCard } from '@/app/(portal)/reviewer/applications/components/ChallengeCard'
 import { useAnswers } from '@/lib/queries/answers'
 import { useApplicant } from '@/lib/queries/applicants'
@@ -57,7 +58,6 @@ import {
   RATING_LABEL,
   RATING_OPTIONS,
 } from '@/lib/interview-ratings'
-import { ROLE_CHIP_CLASS, ROLE_COLUMNS, ROLE_LABEL } from '@/lib/roles'
 import {
   REVIEW_STATE_BADGE,
   REVIEWED_TEXT,
@@ -90,7 +90,7 @@ export function InterviewConductClient({
 }: {
   applicationId: string
   cycleId: string
-  role: Role
+  role: string
   applicantNuid: string
 }) {
   const router = useRouter()
@@ -151,12 +151,14 @@ export function InterviewConductClient({
     undefined,
     { enabled: !!currentUser?.nuid }
   )
+  // All roles, in the same order the queue page groups them.
+  const { roleIds, roleLabel, roleChipClass } = useRoleLookup()
   const orderedQueue = useMemo(
     () =>
-      ROLE_COLUMNS.flatMap((r) =>
-        assignedApplications.filter((a) => a.role === r)
+      roleIds.flatMap((r) =>
+        assignedApplications.filter((a) => a.role_id === r)
       ),
-    [assignedApplications]
+    [assignedApplications, roleIds]
   )
   const queueIds = useMemo(() => orderedQueue.map((a) => a.id), [orderedQueue])
   const { data: interviewByApplicationId } =
@@ -305,9 +307,9 @@ export function InterviewConductClient({
               {applicant?.full_name ?? 'Applicant'}
             </h1>
             <span
-              className={`w-fit rounded-md px-2 py-0.5 text-xs font-medium ${ROLE_CHIP_CLASS[role]}`}
+              className={`w-fit rounded-md px-2 py-0.5 text-xs font-medium ${roleChipClass(role)}`}
             >
-              {ROLE_LABEL[role]}
+              {roleLabel(role)}
             </span>
             <CandidateTags
               applicationId={applicationId}
@@ -390,6 +392,7 @@ export function InterviewConductClient({
           <ChallengeCard
             applicantNuid={applicantNuid}
             applicationId={applicationId}
+            cycleId={cycleId}
             role={role}
           />
 

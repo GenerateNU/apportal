@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/GenerateNU/apportal/backend/internal/handlers/application"
+	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 	"github.com/danielgtaylor/huma/v2"
 )
@@ -55,10 +56,10 @@ func (s *leadAssignmentService) deleteAll(ctx context.Context, in *DeleteAllLead
 	if err := utils.RequireChief(ctx); err != nil {
 		return nil, err
 	}
-	if !in.Role.Valid() {
-		return nil, huma.Error422UnprocessableEntity("role is invalid")
+	if err := role.ParseRoleID(in.RoleID); err != nil {
+		return nil, err
 	}
-	deleted, err := s.leadAssignmentDB.DeleteLeadAssignmentsForCycle(ctx, in.ID, in.Role)
+	deleted, err := s.leadAssignmentDB.DeleteLeadAssignmentsForCycle(ctx, in.ID, in.RoleID)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}

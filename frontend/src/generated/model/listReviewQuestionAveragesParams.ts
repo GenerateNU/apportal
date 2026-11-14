@@ -5,11 +5,10 @@
  * Generate application portal — applications, reviews, and the hiring pipeline.
  * OpenAPI spec version: 0.1.0
  */
-import type { ListReviewQuestionAveragesRole } from './listReviewQuestionAveragesRole';
 
 export type ListReviewQuestionAveragesParams = {
 /**
  * Applicant role
  */
-role?: ListReviewQuestionAveragesRole;
+role_id?: string;
 };

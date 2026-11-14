@@ -5,7 +5,6 @@
  * Generate application portal — applications, reviews, and the hiring pipeline.
  * OpenAPI spec version: 0.1.0
  */
-import type { DraftBoardApplicationRole } from './draftBoardApplicationRole';
 import type { DraftBoardPicks } from './draftBoardPicks';
 import type { DraftBoardSlots } from './draftBoardSlots';
 import type { DraftBoardTeams } from './draftBoardTeams';
@@ -13,7 +12,6 @@ import type { DraftBoardTeams } from './draftBoardTeams';
 export interface DraftBoard {
   /** A URL to the JSON Schema for this object. */
   readonly $schema?: string;
-  application_role: DraftBoardApplicationRole;
   created_at: string;
   created_by: string;
   cycle_id: string;
@@ -21,6 +19,7 @@ export interface DraftBoard {
   on_the_clock: number;
   on_the_clock_team_id?: string;
   picks: DraftBoardPicks;
+  role_id: string;
   rounds: number;
   slots: DraftBoardSlots;
   status: string;

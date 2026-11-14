@@ -3,12 +3,14 @@ package applicationtemplate
 import (
 	"context"
 
+	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 	"github.com/danielgtaylor/huma/v2"
 )
 
 type applicationTemplateService struct {
 	applicationTemplateDB *ApplicationTemplateDB
+	roleDB                *role.RoleDB
 }
 
 func (s *applicationTemplateService) listOpen(ctx context.Context, _ *ListOpenApplicationTemplatesInput) (*ApplicationTemplatesOutput, error) {
@@ -20,11 +22,10 @@ func (s *applicationTemplateService) listOpen(ctx context.Context, _ *ListOpenAp
 }
 
 func (s *applicationTemplateService) get(ctx context.Context, in *GetApplicationTemplateInput) (*ApplicationTemplateOutput, error) {
-	role, err := utils.ParseTemplateRole(in.Role)
-	if err != nil {
+	if err := role.RequireCycleRole(ctx, s.roleDB, in.ID, in.RoleID); err != nil {
 		return nil, err
 	}
-	t, err := s.applicationTemplateDB.GetOrCreateApplicationTemplate(ctx, in.ID, role)
+	t, err := s.applicationTemplateDB.GetOrCreateApplicationTemplate(ctx, in.ID, in.RoleID)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
@@ -35,8 +36,7 @@ func (s *applicationTemplateService) update(ctx context.Context, in *UpdateAppli
 	if err := utils.RequireChief(ctx); err != nil {
 		return nil, err
 	}
-	role, err := utils.ParseTemplateRole(in.Role)
-	if err != nil {
+	if err := role.ParseRoleID(in.RoleID); err != nil {
 		return nil, err
 	}
 	if in.Body.Status != nil && !in.Body.Status.Valid() {
@@ -46,7 +46,7 @@ func (s *applicationTemplateService) update(ctx context.Context, in *UpdateAppli
 		return nil, huma.Error422UnprocessableEntity("invalid review_status")
 	}
 
-	t, err := s.applicationTemplateDB.UpdateApplicationTemplate(ctx, in.ID, role, ApplicationTemplateUpdate{
+	t, err := s.applicationTemplateDB.UpdateApplicationTemplate(ctx, in.ID, in.RoleID, ApplicationTemplateUpdate{
 		Title:          in.Body.Title,
 		Description:    in.Body.Description,
 		Instructions:   in.Body.Instructions,
