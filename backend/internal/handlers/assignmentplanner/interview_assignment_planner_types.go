@@ -9,7 +9,7 @@ import (
 // supplied per request rather than stored, same as PlanTeam.
 type PlanLeadDay struct {
 	LeadNUID string `json:"lead_nuid"`
-	Day      string `json:"day" minLength:"1" doc:"The lead's meeting-day key for this run (matches an applicant availability key)"`
+	Day      string `json:"day" doc:"The lead's meeting-day key for this run (matches an applicant availability key); empty matches any day"`
 }
 
 // PlanConflict declares a lead ineligible to interview or review a specific
@@ -18,6 +18,23 @@ type PlanLeadDay struct {
 type PlanConflict struct {
 	LeadNUID      string `json:"lead_nuid"`
 	ApplicationID string `json:"application_id"`
+}
+
+type PlanGroupDay struct {
+	GroupID string `json:"group_id"`
+	Day     string `json:"day" doc:"Empty matches any day"`
+}
+
+type PlannedGroup struct {
+	GroupID      string                              `json:"group_id"`
+	Name         string                              `json:"name"`
+	Day          string                              `json:"day"`
+	Cap          int                                 `json:"cap"`
+	Existing     int                                 `json:"existing"`
+	Added        int                                 `json:"added"`
+	Total        int                                 `json:"total"`
+	Members      []models.InterviewGroupMemberDetail `json:"members"`
+	Applications []PlannedApplication                `json:"applications"`
 }
 
 // PlannedInterviewer is one lead's proposed interview queue.
@@ -36,6 +53,7 @@ type PlannedInterviewer struct {
 type InterviewerPlanPreview struct {
 	PoolSize     int                  `json:"pool_size"`
 	Interviewers []PlannedInterviewer `json:"interviewers"`
+	Groups       []PlannedGroup       `json:"groups"`
 	// Unassigned lists applicants no lead had spare capacity for.
 	Unassigned []PlannedApplication `json:"unassigned"`
 	// NoDayMatch lists applicants assigned despite no interviewer sharing
@@ -63,9 +81,10 @@ type InterviewPoolOutput struct {
 type InterviewerCapacityInput struct {
 	ID   string `path:"id" doc:"Cycle ID"`
 	Body struct {
-		Role                   models.Role   `json:"role"`
-		Leads                  []PlanLeadDay `json:"leads"`
-		ExcludedApplicationIDs []string      `json:"excluded_application_ids,omitempty"`
+		Role                   models.Role    `json:"role"`
+		Leads                  []PlanLeadDay  `json:"leads,omitempty"`
+		Groups                 []PlanGroupDay `json:"groups,omitempty"`
+		ExcludedApplicationIDs []string       `json:"excluded_application_ids,omitempty"`
 	}
 }
 
@@ -78,10 +97,11 @@ type InterviewerPreviewInput struct {
 	ID   string `path:"id" doc:"Cycle ID"`
 	Body struct {
 		Role                   models.Role    `json:"role"`
-		Leads                  []PlanLeadDay  `json:"leads"`
+		Leads                  []PlanLeadDay  `json:"leads,omitempty"`
+		Groups                 []PlanGroupDay `json:"groups,omitempty"`
 		Conflicts              []PlanConflict `json:"conflicts,omitempty" doc:"Leads ineligible to interview a specific applicant"`
 		Cap                    int            `json:"cap" minimum:"1"`
-		CapOverrides           map[string]int `json:"cap_overrides,omitempty"`
+		CapOverrides           map[string]int `json:"cap_overrides,omitempty" doc:"Per-unit cap overrides, keyed by lead NUID or, when planning by group, group ID"`
 		ExcludedApplicationIDs []string       `json:"excluded_application_ids,omitempty"`
 	}
 }
@@ -91,6 +111,7 @@ type interviewerRun struct {
 	prior  map[string][]string
 	byID   map[string]models.ApplicationSummary
 	appIDs []string
+	units  map[string]planUnit
 }
 
 type PreviewInterviewerPlanOutput struct {

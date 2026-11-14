@@ -247,6 +247,37 @@ type ApplicationCommentDetail struct {
 	AuthorName string `json:"author_name,omitempty"`
 }
 
+type InterviewGroup struct {
+	ID          string     `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	CycleID     string     `json:"cycle_id" gorm:"type:uuid;not null;uniqueIndex:interview_groups_cycle_id_name_key,priority:1"`
+	Name        string     `json:"name" gorm:"not null;uniqueIndex:interview_groups_cycle_id_name_key,priority:2"`
+	MeetingSlot *time.Time `json:"meeting_slot,omitempty"`
+	CreatedBy   string     `json:"created_by" gorm:"not null"`
+	CreatedAt   time.Time  `json:"created_at" gorm:"not null;default:now()"`
+	UpdatedAt   time.Time  `json:"updated_at" gorm:"not null;default:now()"`
+	Cycle       Cycle      `json:"-" gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
+	Creator     User       `json:"-" gorm:"foreignKey:CreatedBy;references:NUID"`
+}
+
+type InterviewGroupMember struct {
+	GroupID    string         `json:"group_id" gorm:"primaryKey;type:uuid"`
+	MemberNUID string         `json:"member_nuid" gorm:"primaryKey;index:idx_interview_group_members_member"`
+	AddedAt    time.Time      `json:"added_at" gorm:"not null;default:now()"`
+	Group      InterviewGroup `json:"-" gorm:"foreignKey:GroupID;references:ID;constraint:OnDelete:CASCADE"`
+	Member     User           `json:"-" gorm:"foreignKey:MemberNUID;references:NUID"`
+}
+
+type InterviewGroupDetail struct {
+	InterviewGroup
+	Members []InterviewGroupMemberDetail `json:"members" gorm:"-"`
+}
+
+type InterviewGroupMemberDetail struct {
+	GroupID    string `json:"-"`
+	MemberNUID string `json:"member_nuid"`
+	FullName   string `json:"full_name"`
+}
+
 // LeadSelection: a lead marking an application as wanted for their team.
 type LeadSelection struct {
 	ID            string      `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
