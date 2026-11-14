@@ -3,7 +3,6 @@
 import { useCallback, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useQueryClient } from '@tanstack/react-query'
 import {
   ArrowDown,
   ArrowLeft,
@@ -44,9 +43,7 @@ import {
   useInterviewsByApplicationIds,
   useUpsertInterview,
 } from '@/lib/queries/interviews'
-import { queryKeys } from '@/lib/queries/keys'
 import { useQuestions } from '@/lib/queries/questions'
-import { useCollaborativeInterview } from '@/lib/realtime/useCollaborativeInterview'
 import {
   useRecordingReviews,
   useUpsertRecordingReview,
@@ -190,49 +187,23 @@ export function InterviewConductClient({
     [answers]
   )
 
-  const queryClient = useQueryClient()
-  const {
-    ready: collabReady,
-    live: collabLive,
-    text: comments,
-    fields: collabFields,
-    peers,
-    typingPeers,
-    textareaRef,
-    onTextChange,
-    setField,
-    notifySaved,
-  } = useCollaborativeInterview({
-    room: interview ? applicationId : null,
-    initial: interview
-      ? {
-          text: interview.writeup ?? '',
-          fields: {
-            recording_url: interview.recording_url ?? '',
-            notes_url: interview.notes_url ?? '',
-            rating: interview.rating ?? '',
-          },
-        }
-      : null,
-    me: currentUser
-      ? { nuid: currentUser.nuid, name: currentUser.full_name }
-      : null,
-    onRemoteSaved: () =>
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.interviews.detail(applicationId),
-      }),
-  })
-  const recordingUrl = collabFields.recording_url
-  const notesUrl = collabFields.notes_url
-  const rating = collabFields.rating as InterviewRating | ''
+  const [recordingUrl, setRecordingUrl] = useState('')
+  const [notesUrl, setNotesUrl] = useState('')
+  const [comments, setComments] = useState('')
+  const [rating, setRating] = useState<InterviewRating | ''>('')
+  const [seeded, setSeeded] = useState(false)
+  if (!seeded && interview) {
+    setRecordingUrl(interview.recording_url ?? '')
+    setNotesUrl(interview.notes_url ?? '')
+    setComments(interview.writeup ?? '')
+    setRating(interview.rating ?? '')
+    setSeeded(true)
+  }
   const [savedInterview, setSavedInterview] = useState(false)
 
   const missingInterviewRequired = !comments.trim() || !rating
 
-  const someoneTyping = typingPeers.length > 0
-
   async function saveInterview(submit: boolean) {
-    if (someoneTyping) return
     setSavedInterview(false)
     try {
       await upsertInterview.mutateAsync({
@@ -245,7 +216,6 @@ export function InterviewConductClient({
           submit,
         },
       })
-      notifySaved()
       setSavedInterview(true)
     } catch {}
   }
@@ -550,11 +520,9 @@ export function InterviewConductClient({
                   <div className="flex items-center gap-2">
                     <Input
                       value={recordingUrl}
-                      onChange={(e) =>
-                        setField('recording_url', e.target.value)
-                      }
+                      onChange={(e) => setRecordingUrl(e.target.value)}
                       placeholder="https://…"
-                      disabled={!collabReady}
+                      disabled={upsertInterview.isPending}
                     />
                     {interview?.recording_url && (
                       <a
@@ -589,9 +557,9 @@ export function InterviewConductClient({
                   <div className="flex items-center gap-2">
                     <Input
                       value={notesUrl}
-                      onChange={(e) => setField('notes_url', e.target.value)}
+                      onChange={(e) => setNotesUrl(e.target.value)}
                       placeholder="https://…"
-                      disabled={!collabReady}
+                      disabled={upsertInterview.isPending}
                     />
                     {interview?.notes_url && (
                       <a
@@ -621,44 +589,18 @@ export function InterviewConductClient({
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <Label>Write-up</Label>
-                  {peers.length > 0 && (
-                    <span className="text-text-muted inline-flex items-center gap-1.5 text-xs">
-                      <span className="size-2 rounded-full bg-green-500" />
-                      Also here: {peers.map((p) => p.name).join(', ')}
-                    </span>
-                  )}
-                </div>
-                {collabReady && !collabLive && isInterviewer && (
-                  <p className="text-text-faint text-xs">
-                    Live editing is unavailable right now. You can still edit
-                    and save, but others won&apos;t see your changes until you
-                    save.
-                  </p>
-                )}
-                {typingPeers.length > 0 && (
-                  <p className="text-text-muted inline-flex items-center gap-1.5 text-xs">
-                    <Loader2 className="animate-spin" size={12} />
-                    {typingPeers.map((p) => p.name).join(', ')}{' '}
-                    {typingPeers.length === 1 ? 'is' : 'are'} typing. You can
-                    edit once they pause.
-                  </p>
-                )}
+                <Label>Write-up</Label>
                 {isInterviewer ? (
                   <textarea
-                    ref={textareaRef}
-                    className={`${TEXTAREA_CLASS} ${typingPeers.length > 0 ? 'bg-muted/40 cursor-not-allowed' : ''}`}
+                    className={TEXTAREA_CLASS}
                     value={comments}
-                    onChange={onTextChange}
+                    onChange={(e) => setComments(e.target.value)}
                     placeholder="Summarize how the interview went…"
-                    disabled={!collabReady}
-                    readOnly={typingPeers.length > 0}
-                    aria-readonly={typingPeers.length > 0}
+                    disabled={upsertInterview.isPending}
                   />
                 ) : (
                   <p className="text-text-default text-sm whitespace-pre-wrap">
-                    {(collabReady ? comments : interview?.writeup) || (
+                    {interview?.writeup || (
                       <span className="text-text-faint">Not added yet.</span>
                     )}
                   </p>
@@ -670,8 +612,7 @@ export function InterviewConductClient({
                 {canEditInterview ? (
                   <Select
                     value={rating}
-                    onValueChange={(v) => setField('rating', v)}
-                    disabled={!collabReady}
+                    onValueChange={(v) => setRating(v as InterviewRating)}
                   >
                     <SelectTrigger aria-label="Rating">
                       <SelectValue placeholder="Choose a rating" />
@@ -710,7 +651,7 @@ export function InterviewConductClient({
                   <Button
                     variant="outline"
                     onClick={() => saveInterview(false)}
-                    disabled={upsertInterview.isPending || someoneTyping}
+                    disabled={upsertInterview.isPending}
                     className="w-full sm:w-auto"
                   >
                     Save draft
@@ -722,8 +663,7 @@ export function InterviewConductClient({
                   }
                   disabled={
                     upsertInterview.isPending ||
-                    (isInterviewer && missingInterviewRequired) ||
-                    someoneTyping
+                    (isInterviewer && missingInterviewRequired)
                   }
                   className="w-full sm:w-auto"
                 >
