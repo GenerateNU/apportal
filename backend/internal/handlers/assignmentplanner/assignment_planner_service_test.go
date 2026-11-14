@@ -6,14 +6,12 @@ import (
 	"testing"
 
 	"github.com/GenerateNU/apportal/backend/internal/middleware"
-	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/testutil"
 )
 
 func chiefContext() context.Context {
 	return testutil.WithActor(middleware.Actor{
-		NUID:  "chief1",
-		Roles: []models.UserRole{models.UserRoleChief},
+		NUID: "chief1",
 	})
 }
 
@@ -67,18 +65,6 @@ func TestAssignmentPlanCommitRequiresChief(t *testing.T) {
 	s := &assignmentPlannerService{}
 	_, err := s.commit(context.Background(), &PreviewPlanInput{ID: "cycle"})
 	testutil.WantStatus(t, err, http.StatusUnauthorized)
-}
-
-// A lead must not be able to write assignments, even though they can read
-// plenty of the review surface.
-func TestAssignmentPlanCommitRejectsLead(t *testing.T) {
-	s := &assignmentPlannerService{}
-	ctx := testutil.WithActor(middleware.Actor{
-		NUID:  "lead1",
-		Roles: []models.UserRole{models.UserRoleLead},
-	})
-	_, err := s.commit(ctx, &PreviewPlanInput{ID: "cycle"})
-	testutil.WantStatus(t, err, http.StatusForbidden)
 }
 
 // Validation must reject before the handler reaches the database, so a malformed

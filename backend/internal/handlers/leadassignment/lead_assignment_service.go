@@ -7,15 +7,18 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 	"github.com/danielgtaylor/huma/v2"
+
+	"github.com/GenerateNU/apportal/backend/internal/access"
 )
 
 type leadAssignmentService struct {
+	access           *access.Checker
 	applicationDB    *application.ApplicationDB
 	leadAssignmentDB *LeadAssignmentDB
 }
 
 func (s *leadAssignmentService) create(ctx context.Context, in *CreateLeadAssignmentInput) (*LeadAssignmentOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := s.access.CanApplication(ctx, access.ManageApplication, in.ID); err != nil {
 		return nil, err
 	}
 	if in.Body.LeadNUID == "" {
@@ -32,7 +35,7 @@ func (s *leadAssignmentService) create(ctx context.Context, in *CreateLeadAssign
 }
 
 func (s *leadAssignmentService) list(ctx context.Context, in *utils.ApplicationScopedInput) (*LeadAssignmentsOutput, error) {
-	if err := utils.RequireReviewer(ctx); err != nil {
+	if err := s.access.CanApplication(ctx, access.ReviewApplication, in.ID); err != nil {
 		return nil, err
 	}
 	items, err := s.leadAssignmentDB.ListLeadAssignments(ctx, in.ID)
@@ -43,7 +46,7 @@ func (s *leadAssignmentService) list(ctx context.Context, in *utils.ApplicationS
 }
 
 func (s *leadAssignmentService) delete(ctx context.Context, in *utils.IDInput) (*struct{}, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := s.access.CanApplicationOf(ctx, access.ManageApplication, "lead_assignments", in.ID); err != nil {
 		return nil, err
 	}
 	if err := s.leadAssignmentDB.DeleteLeadAssignment(ctx, in.ID); err != nil {
@@ -53,10 +56,10 @@ func (s *leadAssignmentService) delete(ctx context.Context, in *utils.IDInput) (
 }
 
 func (s *leadAssignmentService) deleteAll(ctx context.Context, in *DeleteAllLeadAssignmentsInput) (*DeleteAllLeadAssignmentsOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := role.ParseRoleID(in.RoleID); err != nil {
 		return nil, err
 	}
-	if err := role.ParseRoleID(in.RoleID); err != nil {
+	if err := s.access.CanCycle(ctx, access.ManageCycle, in.ID); err != nil {
 		return nil, err
 	}
 	deleted, err := s.leadAssignmentDB.DeleteLeadAssignmentsForCycle(ctx, in.ID, in.RoleID)

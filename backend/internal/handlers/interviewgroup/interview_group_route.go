@@ -6,11 +6,13 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"gorm.io/gorm"
 
+	"github.com/GenerateNU/apportal/backend/internal/access"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/interviewassignment"
 )
 
 func Route(api huma.API, db *gorm.DB) {
 	s := &interviewGroupService{
+		access:                access.NewChecker(db),
 		groupDB:               NewInterviewGroupDB(db),
 		interviewAssignmentDB: interviewassignment.NewInterviewAssignmentDB(db),
 	}

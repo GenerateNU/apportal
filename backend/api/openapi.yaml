@@ -1276,9 +1276,6 @@ components:
           items:
             enum:
               - applicant
-              - member
-              - lead
-              - chief
               - admin
             type: string
           type:
@@ -1354,6 +1351,58 @@ components:
         - question_count
         - challenge_count
         - submission_count
+      type: object
+    CycleStaff:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/CycleStaff.json
+          format: uri
+          readOnly: true
+          type: string
+        created_at:
+          format: date-time
+          type: string
+        cycle_id:
+          type: string
+        role:
+          enum:
+            - lead
+            - chief
+          type: string
+        user_nuid:
+          type: string
+      required:
+        - cycle_id
+        - user_nuid
+        - role
+        - created_at
+      type: object
+    CycleStaffMember:
+      additionalProperties: false
+      properties:
+        created_at:
+          format: date-time
+          type: string
+        email:
+          type: string
+        full_name:
+          type: string
+        role:
+          enum:
+            - lead
+            - chief
+          type: string
+        user_nuid:
+          type: string
+      required:
+        - user_nuid
+        - full_name
+        - email
+        - role
+        - created_at
       type: object
     CycleStage:
       additionalProperties: false
@@ -3750,6 +3799,25 @@ components:
         - kind
         - released
       type: object
+    SetStaffInputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/SetStaffInputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        role:
+          description: lead or chief
+          enum:
+            - lead
+            - chief
+          type: string
+      required:
+        - role
+      type: object
     UnassignAllOutputBody:
       additionalProperties: false
       properties:
@@ -4167,9 +4235,6 @@ components:
           items:
             enum:
               - applicant
-              - member
-              - lead
-              - chief
               - admin
             type: string
           type:
@@ -4443,9 +4508,6 @@ components:
           items:
             enum:
               - applicant
-              - member
-              - lead
-              - chief
               - admin
             type: string
           type:
@@ -6542,7 +6604,7 @@ paths:
       tags:
         - Branches
     post:
-      description: Chief only. Names are unique.
+      description: Admin only. Names are unique.
       operationId: create-branch
       requestBody:
         content:
@@ -6628,7 +6690,7 @@ paths:
       tags:
         - Branches
     patch:
-      description: Chief only.
+      description: Admin only.
       operationId: update-branch
       parameters:
         - in: path
@@ -6790,7 +6852,7 @@ paths:
         - Application comments
   /cycle-stages/{id}:
     patch:
-      description: Chief only.
+      description: Admin only.
       operationId: update-cycle-stage
       parameters:
         - description: Cycle stage ID
@@ -6848,7 +6910,7 @@ paths:
         - Cycle stages
   /cycles:
     get:
-      description: Optional ?status= filters to one status (draft, open, closed, archived); ?branch_id= to one branch.
+      description: Admins see every cycle; others see open cycles, ones they applied to, and ones they staff. Optional ?status= filters to one status (draft, open, closed, archived); ?branch_id= to one branch.
       operationId: list-cycles
       parameters:
         - description: "Optional status filter: draft, open, closed, archived"
@@ -6886,7 +6948,7 @@ paths:
       tags:
         - Cycles
     post:
-      description: Chief only. Starts with a copy of the roles of the branch's latest cycle of the same application type.
+      description: Admin only. Starts with a copy of the roles and staff of the branch's latest cycle of the same application type.
       operationId: create-cycle
       requestBody:
         content:
@@ -6966,7 +7028,7 @@ paths:
       tags:
         - Cycles
     patch:
-      description: Chief only.
+      description: Admin only.
       operationId: update-cycle
       parameters:
         - in: path
@@ -8810,7 +8872,7 @@ paths:
         - Review releases
   /cycles/{id}/review-question-averages:
     get:
-      description: Chief only. One entry per lead with a role='lead' account, listing their average score on each of the cycle/role's score-type review questions.
+      description: Chief only. One entry per lead on the cycle's staff, listing their average score on each of the cycle/role's score-type review questions.
       operationId: list-review-question-averages
       parameters:
         - description: Cycle ID
@@ -8969,7 +9031,7 @@ paths:
         - Review questions
   /cycles/{id}/reviewer-progress:
     get:
-      description: Chief only. One entry per lead with any assignment or role='lead' account, listing every application assigned to them and whether their written review is submitted.
+      description: Chief only. One entry per lead with any assignment or lead on the cycle's staff, listing every application assigned to them and whether their written review is submitted.
       operationId: list-reviewer-progress
       parameters:
         - description: Cycle ID
@@ -9075,6 +9137,171 @@ paths:
       summary: List a cycle's lead selections
       tags:
         - Selections
+  /cycles/{id}/staff:
+    get:
+      description: Admins, or a chief who manages the cycle. Chiefs first, then by name.
+      operationId: list-cycle-staff
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/CycleStaffMember"
+                type:
+                  - array
+                  - "null"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: List a cycle's leads and chiefs
+      tags:
+        - Cycle staff
+  /cycles/{id}/staff/{nuid}:
+    delete:
+      description: Admin only.
+      operationId: remove-cycle-staff
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: nuid
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Remove someone from a cycle's staff
+      tags:
+        - Cycle staff
+    put:
+      description: Admin only. role is lead or chief; one role per person per cycle.
+      operationId: set-cycle-staff
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: nuid
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetStaffInputBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CycleStaff"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Add someone to a cycle's staff, or change their role
+      tags:
+        - Cycle staff
   /cycles/{id}/stages:
     get:
       operationId: list-cycle-stages
@@ -9107,7 +9334,7 @@ paths:
       tags:
         - Cycle stages
     post:
-      description: Chief only.
+      description: Admin only.
       operationId: create-cycle-stage
       parameters:
         - description: Cycle ID
@@ -10025,7 +10252,7 @@ paths:
         - Interview groups
   /interview-reviewers:
     get:
-      description: Reviewer only. Write-ups are omitted except the caller's own; read them from list-interview-reviewers.
+      description: "Reviewer only. Blind review applies: other reviewers' write-ups are omitted until a chief releases the cycle's recording reviews; chiefs always see them."
       operationId: list-interview-reviewers-bulk
       parameters:
         - description: Comma-separated application IDs
@@ -11738,7 +11965,7 @@ paths:
         - Tags
   /users:
     get:
-      description: Reviewer only. Any lead/chief/admin can browse the reviewer directory (e.g. to invite a fellow lead onto a preference list); creating or editing a user stays chief-only.
+      description: Admins, or anyone on some cycle's staff (e.g. to invite a fellow lead onto a preference list); creating or editing a user is admin only. Per-cycle leads and chiefs come from list-cycle-staff.
       operationId: list-users
       parameters:
         - description: Optional role filter
@@ -11799,7 +12026,7 @@ paths:
       tags:
         - Users
     post:
-      description: Chief only.
+      description: Admin only.
       operationId: create-user
       requestBody:
         content:
@@ -11881,7 +12108,7 @@ paths:
         - Users
   /users/{nuid}:
     get:
-      description: Chief only.
+      description: Admin only.
       operationId: get-user
       parameters:
         - in: path
@@ -11930,7 +12157,7 @@ paths:
       tags:
         - Users
     patch:
-      description: Chief only.
+      description: Admin only.
       operationId: update-user
       parameters:
         - in: path

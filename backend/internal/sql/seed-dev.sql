@@ -79,21 +79,28 @@ BEGIN
 
   -- Users
   INSERT INTO users (nuid, email, full_name, roles, graduation_year, major, github_username) VALUES
-    (chief1, 'seed.chief1@northeastern.edu', 'Morgan Chief', '{chief,member}', 2027, 'Computer Science', 'seed-morgan'),
-    (chief2, 'seed.chief2@northeastern.edu', 'Riley Chief', '{chief,member}', 2027, 'Design', 'seed-riley');
+    (chief1, 'seed.chief1@northeastern.edu', 'Morgan Chief', '{applicant}', 2027, 'Computer Science', 'seed-morgan'),
+    (chief2, 'seed.chief2@northeastern.edu', 'Riley Chief', '{applicant}', 2027, 'Design', 'seed-riley');
   INSERT INTO users (nuid, email, full_name, roles, graduation_year, major, github_username, returner)
   SELECT leads[i], 'seed.lead' || i || '@northeastern.edu', firsts[i + 10] || ' ' || lasts[i + 4] || ' (Lead)',
-         '{lead,member}', 2027 + i % 2, majors[1 + i % 6], 'seed-lead-' || i, true
+         '{applicant}', 2027 + i % 2, majors[1 + i % 6], 'seed-lead-' || i, true
   FROM generate_series(1, 6) i;
   INSERT INTO users (nuid, email, full_name, roles, graduation_year, major, returner)
   SELECT '90000002' || i, 'seed.member' || i || '@northeastern.edu', firsts[i + 2] || ' ' || lasts[i + 12],
-         '{member}', 2028, majors[i], true
+         '{applicant}', 2028, majors[i], true
   FROM generate_series(1, 2) i;
   INSERT INTO users (nuid, email, full_name, roles, graduation_year, major, github_username, returner)
   SELECT '9000010' || lpad(i::text, 2, '0'), 'seed.applicant' || i || '@northeastern.edu',
          firsts[1 + (i - 1) % 20] || ' ' || lasts[1 + (i * 7) % 20],
          '{applicant}', 2027 + i % 3, majors[1 + i % 6], 'seed-applicant-' || i, i % 9 = 0
   FROM generate_series(1, 40) i;
+
+  -- Leads and chiefs are per cycle. Chief 1 runs Software, chief 2 Design.
+  INSERT INTO cycle_staff (cycle_id, user_nuid, role) VALUES
+    (cur, chief1, 'chief'), (past, chief1, 'chief'), (leads_cycle, chief1, 'chief'),
+    (cur, chief2, 'chief'), (design_cycle, chief2, 'chief');
+  INSERT INTO cycle_staff (cycle_id, user_nuid, role)
+  SELECT c, l, 'lead' FROM unnest(ARRAY[cur, past]) c CROSS JOIN unnest(leads) l;
 
   -- Current cycle setup
   INSERT INTO application_templates (cycle_id, role_id, title, description, instructions, opens_at, closes_at, status, review_status, review_closes_at) VALUES

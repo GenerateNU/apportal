@@ -6,12 +6,14 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/handlers/reviewrelease"
 	"github.com/danielgtaylor/huma/v2"
 	"gorm.io/gorm"
+
+	"github.com/GenerateNU/apportal/backend/internal/access"
 )
 
 func Route(api huma.API, db *gorm.DB) {
 	reviewReleaseDB := reviewrelease.NewReviewReleaseDB(db)
 	writtenReviewDB := NewWrittenReviewDB(db)
-	s := &writtenReviewService{reviewReleaseDB: reviewReleaseDB, writtenReviewDB: writtenReviewDB}
+	s := &writtenReviewService{access: access.NewChecker(db), reviewReleaseDB: reviewReleaseDB, writtenReviewDB: writtenReviewDB}
 
 	huma.Register(api, huma.Operation{
 		OperationID: "upsert-written-review",

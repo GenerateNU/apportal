@@ -12,7 +12,7 @@ func registerReviewQuestionAverage(api huma.API, s *reviewQuestionAverageService
 		Method:      http.MethodGet,
 		Path:        "/cycles/{id}/review-question-averages",
 		Summary:     "Per-lead average score on each review question for a cycle",
-		Description: "Chief only. One entry per lead with a role='lead' account, " +
+		Description: "Chief only. One entry per lead on the cycle's staff, " +
 			"listing their average score on each of the cycle/role's score-type " +
 			"review questions.",
 		Tags:   []string{"Review releases"},

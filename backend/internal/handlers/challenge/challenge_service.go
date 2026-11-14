@@ -5,15 +5,18 @@ import (
 
 	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
+
+	"github.com/GenerateNU/apportal/backend/internal/access"
 )
 
 type challengeService struct {
+	access      *access.Checker
 	challengeDB *ChallengeDB
 	roleDB      *role.RoleDB
 }
 
 func (s *challengeService) create(ctx context.Context, in *CreateChallengeInput) (*ChallengeOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := s.access.CanCycle(ctx, access.ManageCycle, in.ID); err != nil {
 		return nil, err
 	}
 	if err := role.RequireCycleRole(ctx, s.roleDB, in.ID, in.Body.RoleID); err != nil {
@@ -41,6 +44,9 @@ func (s *challengeService) list(ctx context.Context, in *ListChallengesInput) (*
 			return nil, err
 		}
 		roleID = &in.RoleID
+	}
+	if err := s.access.RequireForm(ctx, in.ID, in.RoleID); err != nil {
+		return nil, err
 	}
 
 	challenges, err := s.challengeDB.ListChallenges(ctx, in.ID, roleID)

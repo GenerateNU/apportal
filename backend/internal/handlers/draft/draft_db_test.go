@@ -1,8 +1,10 @@
 package draft
 
 import (
+	"strings"
 	"testing"
 
+	appdb "github.com/GenerateNU/apportal/backend/internal/db"
 	"github.com/GenerateNU/apportal/backend/internal/models"
 )
 
@@ -152,5 +154,18 @@ func TestSlotOwnersCoversEverySlotOnce(t *testing.T) {
 			t.Errorf("slot %d has no owner", o.PickNumber)
 		}
 		seen[o.PickNumber] = true
+	}
+}
+
+func TestTeamsInDraftCycleSQL(t *testing.T) {
+	db, err := appdb.OpenDryRun()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var n int64
+	st := teamsInDraftCycle(db, "d1", []string{"p1", "p2"}).Count(&n).Statement
+	want := `id IN ($1,$2) AND cycle_id = (SELECT cycle_id FROM drafts WHERE id = $3)`
+	if !strings.Contains(st.SQL.String(), want) {
+		t.Errorf("sql missing %q:\n%s", want, st.SQL.String())
 	}
 }

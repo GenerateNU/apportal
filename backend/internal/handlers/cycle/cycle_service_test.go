@@ -10,7 +10,7 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/testutil"
 )
 
-var chief = middleware.Actor{NUID: "c1", Roles: []models.UserRole{models.UserRoleChief}}
+var admin = middleware.Actor{NUID: "a1", Roles: []models.UserRole{models.UserRoleAdmin}}
 
 func TestCycleCreateRequiresActor(t *testing.T) {
 	s := &cycleService{}
@@ -27,6 +27,6 @@ func TestCycleCreateRequiresBranch(t *testing.T) {
 	in := &CreateCycleInput{}
 	in.Body.Name = "Fall 2026"
 
-	_, err := s.create(testutil.WithActor(chief), in)
+	_, err := s.create(testutil.WithActor(admin), in)
 	testutil.WantStatus(t, err, http.StatusUnprocessableEntity)
 }

@@ -92,6 +92,7 @@ type PreviewPlanOutput struct {
 // plannedRun bundles a computed plan with the context needed to describe or
 // persist it, so preview and commit can share one planning path.
 type plannedRun struct {
+	cycleID  string
 	plan     assign.Plan
 	prior    []assign.Pair
 	byID     map[string]models.ApplicationSummary

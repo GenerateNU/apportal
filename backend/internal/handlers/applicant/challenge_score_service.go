@@ -4,15 +4,18 @@ import (
 	"context"
 
 	"github.com/GenerateNU/apportal/backend/internal/utils"
+
+	"github.com/GenerateNU/apportal/backend/internal/access"
 )
 
 type challengeScoreService struct {
+	access      *access.Checker
 	applicantDB *ApplicantDB
 	challenge   *ChallengeClient
 }
 
 func (s *challengeScoreService) get(ctx context.Context, in *ApplicantNUIDInput) (*ChallengeScoreOutput, error) {
-	if err := utils.RequireReviewer(ctx); err != nil {
+	if err := s.access.RequireApplicant(ctx, in.NUID, access.Review); err != nil {
 		return nil, err
 	}
 	// The challenge server's lookup endpoint only accepts id/email, not

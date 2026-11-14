@@ -9,6 +9,10 @@ import (
 	"gorm.io/gorm/clause"
 
 	"github.com/GenerateNU/apportal/backend/internal/models"
+
+	"github.com/GenerateNU/apportal/backend/internal/access"
+
+	"github.com/GenerateNU/apportal/backend/internal/utils"
 )
 
 type ReviewReleaseDB struct {
@@ -101,28 +105,8 @@ func (r *ReviewReleaseDB) SetReviewRelease(ctx context.Context, cycleID string, 
 	return r.ReviewGate(ctx, cycleID, role, kind)
 }
 
-// WrittenReviewsReleased reports whether the application's cycle × role has
-// had its written reviews released.
-func (r *ReviewReleaseDB) WrittenReviewsReleased(ctx context.Context, applicationID string) (bool, error) {
-	var n int64
-	err := r.db.WithContext(ctx).Table("review_releases r").
-		Joins("JOIN applications a ON a.cycle_id = r.cycle_id AND a.role_id = r.role_id").
-		Where("a.id = ? AND r.review_kind = ?", applicationID, models.ReviewKindWritten).
-		Count(&n).Error
-	return n > 0, err
-}
-
-func (r *ReviewReleaseDB) RecordingReviewsReleased(ctx context.Context, applicationID string) (bool, error) {
-	var n int64
-	err := r.db.WithContext(ctx).Table("review_releases r").
-		Joins("JOIN applications a ON a.cycle_id = r.cycle_id AND a.role_id = r.role_id").
-		Where("a.id = ? AND r.review_kind = ?", applicationID, models.ReviewKindRecording).
-		Count(&n).Error
-	return n > 0, err
-}
-
 // ReleasedApplications reports which applications sit in a cycle × role whose
-// reviews of this kind are released: the batch form of the checks above.
+// reviews of this kind are released.
 func (r *ReviewReleaseDB) ReleasedApplications(ctx context.Context, kind models.ReviewKind, applicationIDs []string) (map[string]bool, error) {
 	released := map[string]bool{}
 	if len(applicationIDs) == 0 {
@@ -137,4 +121,44 @@ func (r *ReviewReleaseDB) ReleasedApplications(ctx context.Context, kind models.
 		released[id] = true
 	}
 	return released, err
+}
+
+// PeerReviewsVisible reports, per application, whether the caller may see
+// other reviewers' work of this kind: managers always, others once released.
+func (r *ReviewReleaseDB) PeerReviewsVisible(ctx context.Context, chk *access.Checker, kind models.ReviewKind, applicationIDs []string) (map[string]bool, error) {
+	managed, err := chk.VisibleApplicationIDs(ctx, applicationIDs, access.Manage)
+	if err != nil {
+		return nil, err
+	}
+	visible := make(map[string]bool, len(applicationIDs))
+	for _, id := range managed {
+		visible[id] = true
+	}
+	rest := make([]string, 0, len(applicationIDs))
+	for _, id := range applicationIDs {
+		if !visible[id] {
+			rest = append(rest, id)
+		}
+	}
+	released, err := r.ReleasedApplications(ctx, kind, rest)
+	if err != nil {
+		return nil, utils.StoreErr(err)
+	}
+	for id := range released {
+		visible[id] = true
+	}
+	return visible, nil
+}
+
+// HidePeerWriteups clears other reviewers' write-ups on applications whose peer
+// reviews aren't visible, and reports whether it hid any.
+func HidePeerWriteups(items []models.InterviewReviewerDetail, nuid string, visible map[string]bool) bool {
+	hid := false
+	for i := range items {
+		if !visible[items[i].ApplicationID] && items[i].ReviewerNUID != nuid && items[i].Writeup != nil {
+			items[i].Writeup = nil
+			hid = true
+		}
+	}
+	return hid
 }

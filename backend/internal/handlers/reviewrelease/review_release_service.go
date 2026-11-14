@@ -7,18 +7,21 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 	"github.com/danielgtaylor/huma/v2"
+
+	"github.com/GenerateNU/apportal/backend/internal/access"
 )
 
 // reviewReleaseService exposes the blind-review gate: per-cycle progress for
 // each review kind and a chief-only toggle to release (or hide) them for all
 // reviewers at once.
 type reviewReleaseService struct {
+	access          *access.Checker
 	reviewReleaseDB *ReviewReleaseDB
 	roleDB          *role.RoleDB
 }
 
 func (s *reviewReleaseService) list(ctx context.Context, in *utils.CycleScopedInput) (*ReviewGatesOutput, error) {
-	if err := utils.RequireReviewer(ctx); err != nil {
+	if err := s.access.CanCycle(ctx, access.ReviewCycle, in.ID); err != nil {
 		return nil, err
 	}
 	roles, err := s.roleDB.ListCycleRoles(ctx, in.ID)
@@ -40,7 +43,7 @@ func (s *reviewReleaseService) list(ctx context.Context, in *utils.CycleScopedIn
 }
 
 func (s *reviewReleaseService) set(ctx context.Context, in *SetReviewReleaseInput) (*ReviewGateOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := s.access.CanCycle(ctx, access.ManageCycle, in.ID); err != nil {
 		return nil, err
 	}
 	if err := role.RequireCycleRole(ctx, s.roleDB, in.ID, in.Body.RoleID); err != nil {

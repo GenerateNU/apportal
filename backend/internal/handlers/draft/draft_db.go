@@ -148,6 +148,13 @@ func (d *DraftDB) UpdateDraft(ctx context.Context, id string, in DraftUpdate) (m
 	return utils.UpdateReturning[models.Draft](d.db.WithContext(ctx), updates, "id = ?", id)
 }
 
+// teamsInDraftCycle counts the lists that belong to the draft's own cycle, so
+// a team can't be seated from another cycle.
+func teamsInDraftCycle(db *gorm.DB, draftID string, preferenceListIDs []string) *gorm.DB {
+	return db.Model(&models.PreferenceList{}).
+		Where("id IN ? AND cycle_id = (SELECT cycle_id FROM drafts WHERE id = ?)", preferenceListIDs, draftID)
+}
+
 // SetDraftTeams replaces the order with the given preference lists. Teams
 // that drop out take their picks with them (cascade), which is why the
 // handler fixes the team set once picking starts.
@@ -162,6 +169,13 @@ func (d *DraftDB) SetDraftTeams(ctx context.Context, draftID string, preferenceL
 		}
 		if len(preferenceListIDs) == 0 {
 			return nil
+		}
+		var inCycle int64
+		if err := teamsInDraftCycle(tx, draftID, preferenceListIDs).Count(&inCycle).Error; err != nil {
+			return err
+		}
+		if int(inCycle) != len(preferenceListIDs) {
+			return utils.ErrNotFound
 		}
 		teams := make([]models.DraftTeam, len(preferenceListIDs))
 		for i, id := range preferenceListIDs {

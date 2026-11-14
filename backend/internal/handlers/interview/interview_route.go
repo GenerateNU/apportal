@@ -8,6 +8,8 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/danielgtaylor/huma/v2"
 	"gorm.io/gorm"
+
+	"github.com/GenerateNU/apportal/backend/internal/access"
 )
 
 func Route(api huma.API, db *gorm.DB) {
@@ -15,8 +17,8 @@ func Route(api huma.API, db *gorm.DB) {
 	interviewAssignmentDB := interviewassignment.NewInterviewAssignmentDB(db)
 	interviewDB := NewInterviewDB(db)
 
-	registerInterviewScript(api, &interviewScriptService{interviewDB: interviewDB, roleDB: role.NewRoleDB(db)})
-	registerInterview(api, &interviewService{applicationDB: applicationDB, interviewDB: interviewDB, interviewAssignmentDB: interviewAssignmentDB})
+	registerInterviewScript(api, &interviewScriptService{access: access.NewChecker(db), interviewDB: interviewDB, roleDB: role.NewRoleDB(db)})
+	registerInterview(api, &interviewService{access: access.NewChecker(db), applicationDB: applicationDB, interviewDB: interviewDB, interviewAssignmentDB: interviewAssignmentDB})
 }
 
 func registerInterview(api huma.API, s *interviewService) {

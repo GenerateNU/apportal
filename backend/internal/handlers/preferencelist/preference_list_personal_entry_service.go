@@ -9,9 +9,6 @@ import (
 )
 
 func (s *preferenceListService) upsertPersonalEntry(ctx context.Context, in *UpsertPreferenceListPersonalEntryInput) (*PreferenceListPersonalEntryOutput, error) {
-	if err := utils.RequireReviewer(ctx); err != nil {
-		return nil, err
-	}
 	if err := s.requireAccess(ctx, in.ID); err != nil {
 		return nil, err
 	}
@@ -40,9 +37,6 @@ func (s *preferenceListService) upsertPersonalEntry(ctx context.Context, in *Ups
 }
 
 func (s *preferenceListService) deletePersonalEntry(ctx context.Context, in *PreferenceListEntryScopedInput) (*struct{}, error) {
-	if err := utils.RequireReviewer(ctx); err != nil {
-		return nil, err
-	}
 	if err := s.requireAccess(ctx, in.ID); err != nil {
 		return nil, err
 	}
@@ -53,9 +47,6 @@ func (s *preferenceListService) deletePersonalEntry(ctx context.Context, in *Pre
 }
 
 func (s *preferenceListService) reorderPersonalEntries(ctx context.Context, in *ReorderPreferenceListPersonalEntriesInput) (*PreferenceListPersonalEntriesDetailOutput, error) {
-	if err := utils.RequireReviewer(ctx); err != nil {
-		return nil, err
-	}
 	if err := s.requireAccess(ctx, in.ID); err != nil {
 		return nil, err
 	}

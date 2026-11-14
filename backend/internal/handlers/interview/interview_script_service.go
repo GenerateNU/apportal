@@ -7,15 +7,18 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 	"github.com/danielgtaylor/huma/v2"
+
+	"github.com/GenerateNU/apportal/backend/internal/access"
 )
 
 type interviewScriptService struct {
+	access      *access.Checker
 	interviewDB *InterviewDB
 	roleDB      *role.RoleDB
 }
 
 func (s *interviewScriptService) get(ctx context.Context, in *GetInterviewScriptInput) (*InterviewScriptOutput, error) {
-	if err := utils.RequireReviewer(ctx); err != nil {
+	if err := s.access.CanCycle(ctx, access.ReviewCycle, in.ID); err != nil {
 		return nil, err
 	}
 	if err := role.RequireCycleRole(ctx, s.roleDB, in.ID, in.RoleID); err != nil {
@@ -29,10 +32,10 @@ func (s *interviewScriptService) get(ctx context.Context, in *GetInterviewScript
 }
 
 func (s *interviewScriptService) update(ctx context.Context, in *UpdateInterviewScriptInput) (*InterviewScriptOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := role.ParseRoleID(in.RoleID); err != nil {
 		return nil, err
 	}
-	if err := role.ParseRoleID(in.RoleID); err != nil {
+	if err := s.access.CanCycle(ctx, access.ManageCycle, in.ID); err != nil {
 		return nil, err
 	}
 	if !json.Valid(in.Body.Questions) {

@@ -24,6 +24,27 @@ type User struct {
 	Returner bool `json:"returner" gorm:"not null;default:false"`
 }
 
+// CycleStaff makes a user a lead or chief on one cycle.
+type CycleStaff struct {
+	CycleID   string         `json:"cycle_id" gorm:"primaryKey;type:uuid"`
+	UserNUID  string         `json:"user_nuid" gorm:"primaryKey;index:idx_cycle_staff_user"`
+	Role      CycleStaffRole `json:"role" gorm:"type:cycle_staff_role;not null"`
+	CreatedAt time.Time      `json:"created_at" gorm:"not null;default:now()"`
+	Cycle     Cycle          `json:"-" gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:RESTRICT"`
+	User      User           `json:"-" gorm:"foreignKey:UserNUID;references:NUID;constraint:OnDelete:CASCADE"`
+}
+
+func (CycleStaff) TableName() string { return "cycle_staff" }
+
+// CycleStaffMember is a staff row with the person's name, for listing.
+type CycleStaffMember struct {
+	UserNUID  string         `json:"user_nuid"`
+	FullName  string         `json:"full_name"`
+	Email     string         `json:"email"`
+	Role      CycleStaffRole `json:"role"`
+	CreatedAt time.Time      `json:"created_at"`
+}
+
 // Branch is a Generate branch (e.g. Software); every cycle recruits for one.
 type Branch struct {
 	ID        string    `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`

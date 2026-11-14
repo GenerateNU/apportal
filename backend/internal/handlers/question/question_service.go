@@ -7,15 +7,18 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 	"github.com/danielgtaylor/huma/v2"
+
+	"github.com/GenerateNU/apportal/backend/internal/access"
 )
 
 type questionService struct {
+	access     *access.Checker
 	questionDB *QuestionDB
 	roleDB     *role.RoleDB
 }
 
 func (s *questionService) create(ctx context.Context, in *CreateQuestionInput) (*QuestionOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := s.access.CanCycle(ctx, access.ManageCycle, in.ID); err != nil {
 		return nil, err
 	}
 	qType := in.Body.QuestionType
@@ -62,6 +65,9 @@ func (s *questionService) list(ctx context.Context, in *ListQuestionsInput) (*Qu
 		}
 		roleID = &in.RoleID
 	}
+	if err := s.access.RequireForm(ctx, in.ID, in.RoleID); err != nil {
+		return nil, err
+	}
 
 	questions, err := s.questionDB.ListQuestions(ctx, in.ID, roleID)
 	if err != nil {
@@ -71,7 +77,7 @@ func (s *questionService) list(ctx context.Context, in *ListQuestionsInput) (*Qu
 }
 
 func (s *questionService) update(ctx context.Context, in *UpdateQuestionInput) (*QuestionOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := s.access.CanCycleOf(ctx, access.ManageCycle, "questions", in.ID); err != nil {
 		return nil, err
 	}
 	if in.Body.QuestionType != nil && !in.Body.QuestionType.Valid() {
@@ -94,7 +100,7 @@ func (s *questionService) update(ctx context.Context, in *UpdateQuestionInput) (
 }
 
 func (s *questionService) delete(ctx context.Context, in *DeleteQuestionInput) (*struct{}, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := s.access.CanCycleOf(ctx, access.ManageCycle, "questions", in.ID); err != nil {
 		return nil, err
 	}
 	if err := s.questionDB.DeleteQuestion(ctx, in.ID); err != nil {

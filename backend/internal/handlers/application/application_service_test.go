@@ -66,36 +66,15 @@ func TestDeadlinePassed(t *testing.T) {
 }
 
 func TestApplicationListAuthorization(t *testing.T) {
-	applicant := middleware.Actor{NUID: "a1", Roles: []models.UserRole{models.UserRoleApplicant}}
-	lead := middleware.Actor{NUID: "l1", Roles: []models.UserRole{models.UserRoleLead}}
+	// Every path needs a caller; past that, listing someone else's
+	// applications is checked against the database.
+	for _, nuid := range []string{"", "a1"} {
+		_, err := (&applicationService{}).list(context.Background(), &ListApplicationsInput{UserNUID: nuid})
+		testutil.WantStatus(t, err, http.StatusUnauthorized)
+	}
+}
 
-	cases := []struct {
-		name     string
-		ctx      context.Context
-		userNUID string
-		wantCode int
-	}{
-		{"unscoped, no actor", context.Background(), "", http.StatusUnauthorized},
-		{"unscoped, applicant", testutil.WithActor(applicant), "", http.StatusUnauthorized},
-		{"scoped to self, no actor", context.Background(), "a1", http.StatusForbidden},
-		{"scoped to someone else, applicant", testutil.WithActor(applicant), "someone-else", http.StatusForbidden},
-		{"scoped to someone else, no actor", context.Background(), "l1", http.StatusForbidden},
-		{"scoped to someone else's nuid but caller is that lead", testutil.WithActor(lead), "someone-else", 0},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			s := &applicationService{}
-			if tc.wantCode == 0 {
-				// A reviewer querying an arbitrary user_nuid passes the
-				// authorization gate and proceeds to the database, which needs a
-				// real database — not exercised here.
-				t.Skip("acceptance path requires a database; see integration tests")
-			}
-			_, err := s.list(tc.ctx, &ListApplicationsInput{UserNUID: tc.userNUID})
-			var se huma.StatusError
-			if !errors.As(err, &se) || se.GetStatus() != tc.wantCode {
-				t.Fatalf("got %v, want status %d", err, tc.wantCode)
-			}
-		})
-	}
+func TestApplicationGetRequiresActor(t *testing.T) {
+	_, err := (&applicationService{}).get(context.Background(), &ApplicationIDInput{ID: "app-1"})
+	testutil.WantStatus(t, err, http.StatusUnauthorized)
 }

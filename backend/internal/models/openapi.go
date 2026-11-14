@@ -24,10 +24,11 @@ func (ApplicationStage) Schema(huma.Registry) *huma.Schema {
 }
 
 func (UserRole) Schema(huma.Registry) *huma.Schema {
-	return enumSchema(
-		string(UserRoleApplicant), string(UserRoleMember), string(UserRoleLead),
-		string(UserRoleChief), string(UserRoleAdmin),
-	)
+	return enumSchema(string(UserRoleApplicant), string(UserRoleAdmin))
+}
+
+func (CycleStaffRole) Schema(huma.Registry) *huma.Schema {
+	return enumSchema(string(CycleStaffLead), string(CycleStaffChief))
 }
 
 func (ApplicationType) Schema(huma.Registry) *huma.Schema {

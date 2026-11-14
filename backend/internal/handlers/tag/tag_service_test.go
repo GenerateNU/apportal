@@ -6,23 +6,24 @@ import (
 	"testing"
 
 	"github.com/GenerateNU/apportal/backend/internal/middleware"
-	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/testutil"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 )
 
 // Only the rejection paths, which return before the database is touched.
 
-var (
-	leadCtx      = testutil.WithActor(middleware.Actor{NUID: "l1", Roles: []models.UserRole{models.UserRoleLead}})
-	applicantCtx = testutil.WithActor(middleware.Actor{NUID: "a1", Roles: []models.UserRole{models.UserRoleApplicant}})
-)
+var leadCtx = testutil.WithActor(middleware.Actor{NUID: "l1"})
 
-func TestTagRoutesRequireReviewer(t *testing.T) {
+func TestTagRoutesRequireActor(t *testing.T) {
 	s := &tagService{}
 	for name, call := range map[string]func(ctx context.Context) error{
-		"list":   func(ctx context.Context) error { _, err := s.list(ctx, &utils.CycleScopedInput{}); return err },
-		"create": func(ctx context.Context) error { _, err := s.create(ctx, &CreateTagInput{}); return err },
+		"list": func(ctx context.Context) error { _, err := s.list(ctx, &utils.CycleScopedInput{}); return err },
+		"create": func(ctx context.Context) error {
+			in := &CreateTagInput{}
+			in.Body.Name = "Mentor"
+			_, err := s.create(ctx, in)
+			return err
+		},
 		"update": func(ctx context.Context) error { _, err := s.update(ctx, &UpdateTagInput{}); return err },
 		"delete": func(ctx context.Context) error { _, err := s.delete(ctx, &utils.IDInput{}); return err },
 		"set": func(ctx context.Context) error {
@@ -32,7 +33,6 @@ func TestTagRoutesRequireReviewer(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			testutil.WantStatus(t, call(context.Background()), http.StatusUnauthorized)
-			testutil.WantStatus(t, call(applicantCtx), http.StatusUnauthorized)
 		})
 	}
 }

@@ -5,20 +5,22 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"gorm.io/gorm"
+
+	"github.com/GenerateNU/apportal/backend/internal/access"
 )
 
 func Route(api huma.API, db *gorm.DB) {
 	userDB := NewUserDB(db)
-	s := &userService{userDB: userDB}
+	s := &userService{access: access.NewChecker(db), userDB: userDB}
 
 	huma.Register(api, huma.Operation{
 		OperationID: "list-users",
 		Method:      http.MethodGet,
 		Path:        "/users",
 		Summary:     "List reviewers",
-		Description: "Reviewer only. Any lead/chief/admin can browse the reviewer " +
-			"directory (e.g. to invite a fellow lead onto a preference list); " +
-			"creating or editing a user stays chief-only.",
+		Description: "Admins, or anyone on some cycle's staff (e.g. to invite a " +
+			"fellow lead onto a preference list); creating or editing a user is " +
+			"admin only. Per-cycle leads and chiefs come from list-cycle-staff.",
 		Tags:   []string{"Users"},
 		Errors: []int{http.StatusUnauthorized, http.StatusForbidden},
 	}, s.list)
@@ -38,7 +40,7 @@ func Route(api huma.API, db *gorm.DB) {
 		Method:      http.MethodGet,
 		Path:        "/users/{nuid}",
 		Summary:     "Get a reviewer",
-		Description: "Chief only.",
+		Description: "Admin only.",
 		Tags:        []string{"Users"},
 		Errors:      []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound},
 	}, s.get)
@@ -48,7 +50,7 @@ func Route(api huma.API, db *gorm.DB) {
 		Method:        http.MethodPost,
 		Path:          "/users",
 		Summary:       "Create a reviewer",
-		Description:   "Chief only.",
+		Description:   "Admin only.",
 		Tags:          []string{"Users"},
 		DefaultStatus: http.StatusCreated,
 		Errors:        []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusConflict},
@@ -59,7 +61,7 @@ func Route(api huma.API, db *gorm.DB) {
 		Method:      http.MethodPatch,
 		Path:        "/users/{nuid}",
 		Summary:     "Update a reviewer",
-		Description: "Chief only.",
+		Description: "Admin only.",
 		Tags:        []string{"Users"},
 		Errors:      []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound, http.StatusConflict},
 	}, s.update)

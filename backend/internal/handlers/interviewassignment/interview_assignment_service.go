@@ -7,14 +7,22 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 	"github.com/danielgtaylor/huma/v2"
+
+	"github.com/GenerateNU/apportal/backend/internal/access"
+
+	"github.com/GenerateNU/apportal/backend/internal/handlers/reviewrelease"
+
+	"github.com/GenerateNU/apportal/backend/internal/models"
 )
 
 type interviewAssignmentService struct {
+	access                *access.Checker
 	interviewAssignmentDB *InterviewAssignmentDB
+	reviewReleaseDB       *reviewrelease.ReviewReleaseDB
 }
 
 func (s *interviewAssignmentService) addInterviewer(ctx context.Context, in *AddInterviewerInput) (*InterviewerOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := s.access.CanApplication(ctx, access.ManageApplication, in.ID); err != nil {
 		return nil, err
 	}
 	row, err := s.interviewAssignmentDB.AddInterviewer(ctx, in.ID, in.Body.InterviewerNUID, utils.CurrentActor(ctx).NUID)
@@ -25,7 +33,7 @@ func (s *interviewAssignmentService) addInterviewer(ctx context.Context, in *Add
 }
 
 func (s *interviewAssignmentService) removeInterviewer(ctx context.Context, in *utils.IDInput) (*struct{}, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := s.access.CanInterviewRow(ctx, access.ManageApplication, "interviewers", in.ID); err != nil {
 		return nil, err
 	}
 	if err := s.interviewAssignmentDB.RemoveInterviewer(ctx, in.ID); err != nil {
@@ -38,7 +46,7 @@ func (s *interviewAssignmentService) removeInterviewer(ctx context.Context, in *
 }
 
 func (s *interviewAssignmentService) addReviewer(ctx context.Context, in *AddReviewerInput) (*InterviewReviewerOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := s.access.CanApplication(ctx, access.ManageApplication, in.ID); err != nil {
 		return nil, err
 	}
 	row, err := s.interviewAssignmentDB.AddReviewer(ctx, in.ID, in.Body.ReviewerNUID, utils.CurrentActor(ctx).NUID)
@@ -49,7 +57,7 @@ func (s *interviewAssignmentService) addReviewer(ctx context.Context, in *AddRev
 }
 
 func (s *interviewAssignmentService) removeReviewer(ctx context.Context, in *utils.IDInput) (*struct{}, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := s.access.CanInterviewRow(ctx, access.ManageApplication, "interview_reviewers", in.ID); err != nil {
 		return nil, err
 	}
 	if err := s.interviewAssignmentDB.RemoveReviewer(ctx, in.ID); err != nil {
@@ -62,23 +70,23 @@ func (s *interviewAssignmentService) removeReviewer(ctx context.Context, in *uti
 }
 
 func (s *interviewAssignmentService) listReviewersBulk(ctx context.Context, in *ListBulkInput) (*InterviewReviewersOutput, error) {
-	if err := utils.RequireReviewer(ctx); err != nil {
-		return nil, err
-	}
 	ids := utils.SplitIDs(in.ApplicationIDs)
 	if len(ids) > utils.MaxBulkApplications {
 		return nil, huma.Error422UnprocessableEntity("too many application_ids")
+	}
+	ids, err := s.access.VisibleApplicationIDs(ctx, ids, access.Review)
+	if err != nil {
+		return nil, err
 	}
 	items, err := s.interviewAssignmentDB.ListReviewers(ctx, ids)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
-	actor := utils.CurrentActor(ctx)
-	for i := range items {
-		if items[i].ReviewerNUID != actor.NUID {
-			items[i].Writeup = nil
-		}
+	visible, err := s.reviewReleaseDB.PeerReviewsVisible(ctx, s.access, models.ReviewKindRecording, ids)
+	if err != nil {
+		return nil, err
 	}
+	reviewrelease.HidePeerWriteups(items, utils.CurrentActor(ctx).NUID, visible)
 	return &InterviewReviewersOutput{Body: items}, nil
 }
 
@@ -91,10 +99,10 @@ func (s *interviewAssignmentService) unassignAllReviewers(ctx context.Context, i
 }
 
 func (s *interviewAssignmentService) unassignAll(ctx context.Context, in *UnassignAllInput, del func(context.Context, string, string) (int, error)) (*UnassignAllOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := role.ParseRoleID(in.RoleID); err != nil {
 		return nil, err
 	}
-	if err := role.ParseRoleID(in.RoleID); err != nil {
+	if err := s.access.CanCycle(ctx, access.ManageCycle, in.ID); err != nil {
 		return nil, err
 	}
 	deleted, err := del(ctx, in.ID, in.RoleID)

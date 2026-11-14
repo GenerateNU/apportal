@@ -13,7 +13,7 @@ func registerReviewerProgress(api huma.API, s *reviewerProgressService) {
 		Path:        "/cycles/{id}/reviewer-progress",
 		Summary:     "Per-reviewer written-review progress for a cycle",
 		Description: "Chief only. One entry per lead with any assignment or " +
-			"role='lead' account, listing every application assigned to them " +
+			"lead on the cycle's staff, listing every application assigned to them " +
 			"and whether their written review is submitted.",
 		Tags:   []string{"Review releases"},
 		Errors: []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusUnprocessableEntity},

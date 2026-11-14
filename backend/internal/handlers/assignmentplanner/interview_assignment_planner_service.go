@@ -6,15 +6,17 @@ import (
 	"strconv"
 
 	"github.com/GenerateNU/apportal/backend/internal/handlers/application"
+	"github.com/GenerateNU/apportal/backend/internal/handlers/cyclestaff"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/interviewassignment"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/interviewgroup"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/leadassignment"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
-	"github.com/GenerateNU/apportal/backend/internal/handlers/user"
 	"github.com/GenerateNU/apportal/backend/internal/interviewassign"
 	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 	"github.com/danielgtaylor/huma/v2"
+
+	"github.com/GenerateNU/apportal/backend/internal/access"
 )
 
 // Interview assignment planning: a chief declares each lead's meeting day for
@@ -32,11 +34,12 @@ import (
 // database, so it only sees applicants whose interviewer has already been
 // committed — not merely previewed.
 type interviewAssignmentPlannerService struct {
+	access                *access.Checker
 	applicationDB         *application.ApplicationDB
 	interviewAssignmentDB *interviewassignment.InterviewAssignmentDB
 	interviewGroupDB      *interviewgroup.InterviewGroupDB
 	leadAssignmentDB      *leadassignment.LeadAssignmentDB
-	userDB                *user.UserDB
+	staffDB               *cyclestaff.CycleStaffDB
 }
 
 func toInterviewassignLeads(in []PlanLeadDay) []interviewassign.Lead {
@@ -61,10 +64,13 @@ func toConflictMap(in []PlanConflict) map[string]map[string]bool {
 }
 
 func (s *interviewAssignmentPlannerService) interviewerPool(ctx context.Context, in *InterviewPoolInput) (*InterviewPoolOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := access.RequireActor(ctx); err != nil {
 		return nil, err
 	}
 	if err := role.ParseRoleID(in.RoleID); err != nil {
+		return nil, err
+	}
+	if err := s.access.CanCycle(ctx, access.ManageCycle, in.ID); err != nil {
 		return nil, err
 	}
 
@@ -72,7 +78,7 @@ func (s *interviewAssignmentPlannerService) interviewerPool(ctx context.Context,
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
-	names, err := s.leadNames(ctx)
+	names, err := s.leadNames(ctx, in.ID)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
@@ -85,7 +91,7 @@ func (s *interviewAssignmentPlannerService) interviewerPool(ctx context.Context,
 }
 
 func (s *interviewAssignmentPlannerService) interviewerCapacity(ctx context.Context, in *InterviewerCapacityInput) (*InterviewerCapacityOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := access.RequireActor(ctx); err != nil {
 		return nil, err
 	}
 	if err := role.ParseRoleID(in.Body.RoleID); err != nil {
@@ -93,6 +99,9 @@ func (s *interviewAssignmentPlannerService) interviewerCapacity(ctx context.Cont
 	}
 	if len(in.Body.Leads) > 0 && len(in.Body.Groups) > 0 {
 		return nil, huma.Error422UnprocessableEntity("send leads or groups, not both")
+	}
+	if err := s.access.CanCycle(ctx, access.ManageCycle, in.ID); err != nil {
+		return nil, err
 	}
 
 	pool, err := s.interviewPool(ctx, in.ID, in.Body.RoleID)
@@ -121,6 +130,9 @@ func (s *interviewAssignmentPlannerService) buildInterviewerPlan(ctx context.Con
 	}
 	if len(in.Body.Leads) == 0 && len(in.Body.Groups) == 0 {
 		return interviewerRun{}, huma.Error422UnprocessableEntity("at least one lead or group is required")
+	}
+	if err := s.access.CanCycle(ctx, access.ManageCycle, in.ID); err != nil {
+		return interviewerRun{}, err
 	}
 
 	pool, err := s.interviewPool(ctx, in.ID, in.Body.RoleID)
@@ -183,7 +195,7 @@ func (s *interviewAssignmentPlannerService) buildInterviewerPlan(ctx context.Con
 		return interviewerRun{}, huma.Error422UnprocessableEntity(err.Error())
 	}
 
-	return interviewerRun{plan: plan, prior: planIn.Existing, byID: byID, appIDs: appIDs, units: unitsByID(units)}, nil
+	return interviewerRun{cycleID: in.ID, plan: plan, prior: planIn.Existing, byID: byID, appIDs: appIDs, units: unitsByID(units)}, nil
 }
 
 func (s *interviewAssignmentPlannerService) loadPlanGroups(ctx context.Context, cycleID string, in []PlanGroupDay) (map[string]models.InterviewGroupDetail, error) {
@@ -310,7 +322,7 @@ func (run interviewerRun) newPairs() []interviewassignment.AssignmentPair {
 }
 
 func (s *interviewAssignmentPlannerService) interviewerPreview(ctx context.Context, in *InterviewerPreviewInput) (*PreviewInterviewerPlanOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := access.RequireActor(ctx); err != nil {
 		return nil, err
 	}
 	run, err := s.buildInterviewerPlan(ctx, in)
@@ -325,7 +337,7 @@ func (s *interviewAssignmentPlannerService) interviewerPreview(ctx context.Conte
 }
 
 func (s *interviewAssignmentPlannerService) interviewerCommit(ctx context.Context, in *InterviewerPreviewInput) (*CommitInterviewerPlanOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := access.RequireActor(ctx); err != nil {
 		return nil, err
 	}
 	run, err := s.buildInterviewerPlan(ctx, in)
@@ -350,7 +362,7 @@ func (s *interviewAssignmentPlannerService) interviewerCommit(ctx context.Contex
 }
 
 func (s *interviewAssignmentPlannerService) decorateInterviewerPlan(ctx context.Context, run interviewerRun) (InterviewerPlanPreview, error) {
-	names, err := s.leadNames(ctx)
+	names, err := s.leadNames(ctx, run.cycleID)
 	if err != nil {
 		return InterviewerPlanPreview{}, err
 	}
@@ -439,10 +451,13 @@ func (s *interviewAssignmentPlannerService) decorateInterviewerPlan(ctx context.
 
 // --- reviewer pool ---
 func (s *interviewAssignmentPlannerService) reviewerPool(ctx context.Context, in *InterviewPoolInput) (*InterviewPoolOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := access.RequireActor(ctx); err != nil {
 		return nil, err
 	}
 	if err := role.ParseRoleID(in.RoleID); err != nil {
+		return nil, err
+	}
+	if err := s.access.CanCycle(ctx, access.ManageCycle, in.ID); err != nil {
 		return nil, err
 	}
 
@@ -450,7 +465,7 @@ func (s *interviewAssignmentPlannerService) reviewerPool(ctx context.Context, in
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
-	names, err := s.leadNames(ctx)
+	names, err := s.leadNames(ctx, in.ID)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
@@ -486,10 +501,13 @@ func (s *interviewAssignmentPlannerService) reviewablePool(ctx context.Context, 
 }
 
 func (s *interviewAssignmentPlannerService) reviewerCapacity(ctx context.Context, in *ReviewerCapacityInput) (*ReviewerCapacityOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := access.RequireActor(ctx); err != nil {
 		return nil, err
 	}
 	if err := role.ParseRoleID(in.Body.RoleID); err != nil {
+		return nil, err
+	}
+	if err := s.access.CanCycle(ctx, access.ManageCycle, in.ID); err != nil {
 		return nil, err
 	}
 
@@ -516,6 +534,9 @@ func (s *interviewAssignmentPlannerService) buildReviewerPlan(ctx context.Contex
 	}
 	if len(in.Body.Leads) == 0 {
 		return reviewerRun{}, huma.Error422UnprocessableEntity("at least one lead is required")
+	}
+	if err := s.access.CanCycle(ctx, access.ManageCycle, in.ID); err != nil {
+		return reviewerRun{}, err
 	}
 
 	pool, interviewerOf, err := s.reviewablePool(ctx, in.ID, in.Body.RoleID)
@@ -563,11 +584,11 @@ func (s *interviewAssignmentPlannerService) buildReviewerPlan(ctx context.Contex
 		return reviewerRun{}, huma.Error422UnprocessableEntity(err.Error())
 	}
 
-	return reviewerRun{plan: plan, prior: prior, byID: byID, appIDs: appIDs, coverage: in.Body.Coverage}, nil
+	return reviewerRun{cycleID: in.ID, plan: plan, prior: prior, byID: byID, appIDs: appIDs, coverage: in.Body.Coverage}, nil
 }
 
 func (s *interviewAssignmentPlannerService) reviewerPreview(ctx context.Context, in *ReviewerPreviewInput) (*PreviewInterviewReviewerPlanOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := access.RequireActor(ctx); err != nil {
 		return nil, err
 	}
 	run, err := s.buildReviewerPlan(ctx, in)
@@ -582,7 +603,7 @@ func (s *interviewAssignmentPlannerService) reviewerPreview(ctx context.Context,
 }
 
 func (s *interviewAssignmentPlannerService) reviewerCommit(ctx context.Context, in *ReviewerPreviewInput) (*CommitInterviewReviewerPlanOutput, error) {
-	if err := utils.RequireChief(ctx); err != nil {
+	if err := access.RequireActor(ctx); err != nil {
 		return nil, err
 	}
 	run, err := s.buildReviewerPlan(ctx, in)
@@ -611,7 +632,7 @@ func (s *interviewAssignmentPlannerService) reviewerCommit(ctx context.Context, 
 }
 
 func (s *interviewAssignmentPlannerService) decorateReviewerPlan(ctx context.Context, run reviewerRun) (InterviewReviewPlanPreview, error) {
-	names, err := s.leadNames(ctx)
+	names, err := s.leadNames(ctx, run.cycleID)
 	if err != nil {
 		return InterviewReviewPlanPreview{}, err
 	}
@@ -717,15 +738,14 @@ func (s *interviewAssignmentPlannerService) wroteReviewByApplication(ctx context
 // leadNames maps every lead's NUID to their full name — reused to decorate
 // both stages' plans, and its key set is the pool of eligible interviewers
 // (chiefs are never included, since they aren't fetched here).
-func (s *interviewAssignmentPlannerService) leadNames(ctx context.Context) (map[string]string, error) {
-	role := models.UserRoleLead
-	users, _, err := s.userDB.ListUsers(ctx, &role, nil, 0)
+func (s *interviewAssignmentPlannerService) leadNames(ctx context.Context, cycleID string) (map[string]string, error) {
+	leads, err := s.staffDB.ListStaff(ctx, cycleID, models.CycleStaffLead)
 	if err != nil {
 		return nil, err
 	}
-	out := make(map[string]string, len(users))
-	for _, u := range users {
-		out[u.NUID] = u.FullName
+	out := make(map[string]string, len(leads))
+	for _, l := range leads {
+		out[l.UserNUID] = l.FullName
 	}
 	return out, nil
 }

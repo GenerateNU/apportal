@@ -102,7 +102,7 @@ type InvalidMembersError struct {
 func (e *InvalidMembersError) Error() string {
 	var parts []string
 	if len(e.NotInterviewers) > 0 {
-		parts = append(parts, fmt.Sprintf("not a lead or chief: %s", strings.Join(e.NotInterviewers, ", ")))
+		parts = append(parts, fmt.Sprintf("not on this cycle's staff: %s", strings.Join(e.NotInterviewers, ", ")))
 	}
 	if len(e.AlreadyGrouped) > 0 {
 		parts = append(parts, fmt.Sprintf("already in another group this cycle: %s", strings.Join(e.AlreadyGrouped, ", ")))
@@ -130,8 +130,9 @@ func checkMembers(tx *gorm.DB, cycleID string, skipGroupIDs []string, writes []G
 		FullName    string
 		Interviewer bool
 	}
-	err := tx.Raw(`SELECT nuid, full_name, roles && ARRAY['lead','chief']::user_role[] AS interviewer
-		FROM users WHERE nuid IN ?`, nuids).Scan(&users).Error
+	err := tx.Raw(`SELECT u.nuid, u.full_name,
+			EXISTS (SELECT 1 FROM cycle_staff cs WHERE cs.cycle_id = ? AND cs.user_nuid = u.nuid) AS interviewer
+		FROM users u WHERE u.nuid IN ?`, cycleID, nuids).Scan(&users).Error
 	if err != nil {
 		return err
 	}

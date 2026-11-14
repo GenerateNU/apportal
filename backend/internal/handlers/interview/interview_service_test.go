@@ -10,7 +10,6 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 
 	"github.com/GenerateNU/apportal/backend/internal/middleware"
-	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/testutil"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 )
@@ -32,7 +31,7 @@ func TestInterviewsBulkRequiresReviewer(t *testing.T) {
 
 func TestInterviewsBulkParsesIDs(t *testing.T) {
 	s := &interviewService{}
-	lead := middleware.Actor{NUID: "l1", Roles: []models.UserRole{models.UserRoleLead}}
+	lead := middleware.Actor{NUID: "l1"}
 
 	// Blank entries are dropped, and an empty list short-circuits to no rows
 	// rather than querying for none.

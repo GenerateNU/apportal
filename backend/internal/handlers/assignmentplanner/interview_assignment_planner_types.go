@@ -107,11 +107,12 @@ type InterviewerPreviewInput struct {
 }
 
 type interviewerRun struct {
-	plan   interviewassign.InterviewerPlan
-	prior  map[string][]string
-	byID   map[string]models.ApplicationSummary
-	appIDs []string
-	units  map[string]planUnit
+	cycleID string
+	plan    interviewassign.InterviewerPlan
+	prior   map[string][]string
+	byID    map[string]models.ApplicationSummary
+	appIDs  []string
+	units   map[string]planUnit
 }
 
 type PreviewInterviewerPlanOutput struct {
@@ -155,6 +156,7 @@ type ReviewerPreviewInput struct {
 }
 
 type reviewerRun struct {
+	cycleID  string
 	plan     interviewassign.ReviewerPlan
 	prior    []interviewassign.ReviewerPair
 	byID     map[string]models.ApplicationSummary
