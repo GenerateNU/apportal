@@ -270,7 +270,7 @@ BEGIN
          CASE WHEN a.depth >= 7 THEN now() - interval '12 hours' END
   FROM s_app a JOIN interviews iv ON iv.application_id = a.id, unnest(ARRAY[a.lead_b, a.lead_c]) r;
 
-  INSERT INTO interview_comments (application_id, author_nuid, body)
+  INSERT INTO application_comments (application_id, author_nuid, body)
   SELECT id, lead_b, 'Watched the recording — great energy on the challenge walkthrough.'
   FROM s_app WHERE depth >= 6;
 
