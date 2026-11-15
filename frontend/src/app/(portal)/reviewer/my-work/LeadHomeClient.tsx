@@ -303,6 +303,7 @@ export function LeadHomeClient() {
     const feedbackTasks: Task[] = decisions
       .filter(
         (row) =>
+          row.stage === 'rejected' &&
           row.kind === 'rejection_post_interview' &&
           (row.interviewers ?? []).some((i) => i.nuid === me)
       )
