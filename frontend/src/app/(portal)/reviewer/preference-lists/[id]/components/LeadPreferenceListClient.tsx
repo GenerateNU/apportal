@@ -6,13 +6,13 @@ import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import { EmptyState } from '@/components/ui/empty-state'
 import { LoadingText } from '@/components/ui/loading-text'
 import { PageHeader } from '@/components/ui/page-header'
-import { PAGE_TOP, PAGE_X } from '@/components/ui/page-shell'
+import { PAGE_SHELL } from '@/components/ui/page-shell'
 import { SegmentedTabs } from '@/components/ui/segmented-tabs'
 import { ApplicationDetail } from '@/app/(portal)/reviewer/applications/components/ApplicationDetail'
+import { myWorkCrumbs } from '@/app/(portal)/reviewer/my-work/crumbs'
 import { APIError } from '@/lib/api/client'
 import { useApplication, useApplications } from '@/lib/queries/applications'
 import { useCycle } from '@/lib/queries/cycles'
-import { useInterviewReviewersBulk } from '@/lib/queries/interview-assignments'
 import { useInterviewsByApplicationIds } from '@/lib/queries/interviews'
 import {
   usePreferenceList,
@@ -22,37 +22,26 @@ import {
 } from '@/lib/queries/preference-lists'
 import { useCycleRoles } from '@/lib/queries/roles'
 import { useCurrentUser, useReviewerNames } from '@/lib/queries/users'
-import { cn } from '@/lib/utils'
-import { LeadTeamTab, type ApplicantFacts } from './LeadTeamTab'
-
-const CRUMBS = [
-  { label: 'My work', href: '/reviewer/my-work' },
-  { label: 'Preference list', href: '/reviewer/my-work?phase=preference' },
-]
+import { LeadTeamTab } from './LeadTeamTab'
 
 export function LeadPreferenceListClient({ id }: { id: string }) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const {
-    data: list,
-    isLoading,
-    isError,
-    error,
-  } = usePreferenceList(id, { poll: true })
+  const { data: list, isLoading, isError, error } = usePreferenceList(id)
   const cycleId = list?.cycle_id ?? ''
   const { data: currentUser } = useCurrentUser()
   const nameByNuid = useReviewerNames()
   const { data: cycle } = useCycle(cycleId)
   const { roleIds, roleLabel } = useCycleRoles(cycleId)
-  const { data: fetchedGroups = [] } = usePreferenceListDetails(
-    cycleId,
-    undefined,
-    { poll: true }
+  const { data: fetchedGroups = [] } = usePreferenceListDetails(cycleId)
+  const groups = useMemo(
+    () =>
+      list
+        ? fetchedGroups.map((g) => (g.id === list.id ? list : g))
+        : fetchedGroups,
+    [fetchedGroups, list]
   )
-  const groups = list
-    ? fetchedGroups.map((g) => (g.id === list.id ? list : g))
-    : fetchedGroups
   const { data: summaries = [] } = usePreferenceLists(cycleId)
   const memberNames = summaries.find((l) => l.id === id)?.member_names ?? []
   const closesAtByRole = usePreferenceListDeadlines(cycleId, roleIds)
@@ -85,20 +74,13 @@ export function LeadPreferenceListClient({ id }: { id: string }) {
   }, [pool, list, role])
   const { data: interviews = {} } =
     useInterviewsByApplicationIds(applicationIds)
-  const { data: reviewers = {} } = useInterviewReviewersBulk(applicationIds)
-
-  const facts = useMemo(() => {
-    const out: Record<string, ApplicantFacts> = {}
-    for (const appId of applicationIds) {
-      const assigned = reviewers[appId] ?? []
-      out[appId] = {
-        rating: interviews[appId]?.rating,
-        reviewsDone: assigned.filter((r) => r.writeup_submitted_at).length,
-        reviewsTotal: assigned.length,
-      }
-    }
-    return out
-  }, [applicationIds, interviews, reviewers])
+  const ratings = useMemo(
+    () =>
+      Object.fromEntries(
+        applicationIds.map((appId) => [appId, interviews[appId]?.rating])
+      ),
+    [applicationIds, interviews]
+  )
 
   const [openApplicationId, setOpenApplicationId] = useState<string | null>(
     null
@@ -112,8 +94,8 @@ export function LeadPreferenceListClient({ id }: { id: string }) {
   if (isError) {
     const missing = error instanceof APIError && error.status === 404
     return (
-      <div className={cn('flex w-full flex-col gap-8 pb-12', PAGE_X, PAGE_TOP)}>
-        <Breadcrumbs items={[...CRUMBS, { label: 'Group' }]} />
+      <div className={PAGE_SHELL}>
+        <Breadcrumbs items={myWorkCrumbs('preference', 'Group')} />
         <EmptyState
           title={missing ? 'Preference list not found' : 'Something went wrong'}
           description={
@@ -128,7 +110,7 @@ export function LeadPreferenceListClient({ id }: { id: string }) {
 
   if (isLoading || !list) {
     return (
-      <div className={cn('flex w-full flex-col gap-8 pb-12', PAGE_X, PAGE_TOP)}>
+      <div className={PAGE_SHELL}>
         <LoadingText />
       </div>
     )
@@ -148,9 +130,9 @@ export function LeadPreferenceListClient({ id }: { id: string }) {
     list.entries.filter((e) => e.role_id === r).length
 
   return (
-    <div className={cn('flex w-full flex-col gap-8 pb-12', PAGE_X, PAGE_TOP)}>
+    <div className={PAGE_SHELL}>
       <div className="flex flex-col gap-3">
-        <Breadcrumbs items={[...CRUMBS, { label: list.name }]} />
+        <Breadcrumbs items={myWorkCrumbs('preference', list.name)} />
         <PageHeader
           title="Preference list"
           subtitle={subtitle}
@@ -184,7 +166,7 @@ export function LeadPreferenceListClient({ id }: { id: string }) {
             roleIds={roleIds}
             pool={pool}
             groups={groups}
-            facts={facts}
+            ratings={ratings}
             closesAtByRole={closesAtByRole}
             currentUserNuid={currentUser?.nuid}
             currentUserName={currentUser?.full_name}
@@ -201,12 +183,12 @@ export function LeadPreferenceListClient({ id }: { id: string }) {
           applicant={{
             id: openSummary.id,
             nuid: openSummary.user_nuid,
-            fullName: openPerson.full_name,
-            email: openPerson.email,
             role: openSummary.role_id,
             cycleId: openSummary.cycle_id,
             stage: openSummary.stage,
             submittedAt: openSummary.submitted_at,
+            fullName: openPerson.full_name,
+            email: openPerson.email,
             returner: openPerson.returner,
           }}
           onClose={() => setOpenApplicationId(null)}

@@ -1,18 +1,21 @@
 'use client'
 
 import { useState } from 'react'
-import { useQueries } from '@tanstack/react-query'
 import { ChevronRight } from 'lucide-react'
 import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import { EmptyState } from '@/components/ui/empty-state'
 import { LoadingText } from '@/components/ui/loading-text'
 import { PageHeader } from '@/components/ui/page-header'
-import { PAGE_TOP, PAGE_X } from '@/components/ui/page-shell'
+import { LiveDot } from '@/components/ui/live-dot'
+import { PAGE_SHELL } from '@/components/ui/page-shell'
 import { PanelHeading } from '@/components/ui/panel-heading'
 import { SearchInput } from '@/components/ui/search-input'
-import { ApplicationDetail } from '@/app/(portal)/reviewer/applications/components/ApplicationDetail'
+import {
+  ApplicationDetail,
+  toApplicantDetail,
+} from '@/app/(portal)/reviewer/applications/components/ApplicationDetail'
+import { myWorkCrumbs } from '@/app/(portal)/reviewer/my-work/crumbs'
 import { roundOf } from '@/app/(portal)/reviewer/draft/components/snake'
-import { getDraftBoard } from '@/generated/draft/draft'
 import type {
   ApplicationSummary,
   DraftBoard,
@@ -20,70 +23,38 @@ import type {
   PreferenceListDetail,
 } from '@/lib/api/types'
 import { useApplications } from '@/lib/queries/applications'
-import { useMyCycles } from '@/lib/queries/cycle-staff'
-import { useCycles } from '@/lib/queries/cycles'
-import { useDraftedApplications, useDraftRealtime } from '@/lib/queries/drafts'
-import { queryKeys } from '@/lib/queries/keys'
+import { useLeadCycle } from '@/lib/queries/cycle-staff'
+import { useDraftBoards, useDraftedApplications } from '@/lib/queries/drafts'
 import { usePreferenceListDetails } from '@/lib/queries/preference-lists'
 import { useCycleRoles } from '@/lib/queries/roles'
 import { useCurrentUser } from '@/lib/queries/users'
 import { cn } from '@/lib/utils'
 
-const SHELL = cn('flex w-full flex-col gap-8 pb-12', PAGE_X, PAGE_TOP)
-const CRUMBS = [
-  { label: 'My work', href: '/reviewer/my-work' },
-  { label: 'Draft' },
-]
-const POLL_MS = 30000
+const CRUMBS = myWorkCrumbs('draft')
 
 type RoleBoard = { roleId: string; board?: DraftBoard }
-
-function LiveDot({ label }: { label: string }) {
-  return (
-    <span className="relative flex size-2 shrink-0">
-      <span className="bg-status-open absolute inline-flex size-full animate-ping rounded-full opacity-60" />
-      <span className="bg-status-open relative inline-flex size-2 rounded-full" />
-      <span className="sr-only">{label}</span>
-    </span>
-  )
-}
 
 const isOpen = (b?: DraftBoard): b is DraftBoard =>
   !!b && (b.status === 'active' || b.status === 'complete')
 
 export function LeadDraftClient() {
   const { data: user } = useCurrentUser()
-  const { data: mine = [], isLoading: cyclesLoading } = useMyCycles()
-  const { data: cycles = [] } = useCycles({})
-  const staffed = mine
-    .map((m) => cycles.find((c) => c.id === m.cycle_id))
-    .filter((c) => !!c)
-  const cycle = staffed.find((c) => c.status === 'open') ?? staffed[0]
+  const { cycle, isLoading: cyclesLoading } = useLeadCycle()
   const cycleId = cycle?.id ?? ''
 
   const { roleIds, roleLabel } = useCycleRoles(cycleId)
-  useDraftRealtime(cycleId)
-  const { data: drafted = {} } = useDraftedApplications(cycleId, { poll: true })
+  const { data: drafted = {} } = useDraftedApplications(cycleId)
   const { data: groups = [] } = usePreferenceListDetails(cycleId)
   const myGroup = groups.find((g) =>
     (g.members ?? []).some((m) => m.lead_nuid === user?.nuid)
   )
-  const boards: RoleBoard[] = useQueries({
-    queries: roleIds.map((roleId) => ({
-      queryKey: queryKeys.drafts.board(cycleId, roleId),
-      queryFn: () =>
-        getDraftBoard(cycleId, { role_id: roleId }) as Promise<DraftBoard>,
-      enabled: !!cycleId,
-      retry: false,
-      refetchInterval: POLL_MS,
-    })),
-    combine: (results) =>
-      results.map((q, i) => ({ roleId: roleIds[i], board: q.data })),
-  })
+  const boards: RoleBoard[] = useDraftBoards(cycleId, roleIds, (results) =>
+    results.map((q, i) => ({ roleId: roleIds[i], board: q.data }))
+  )
 
   if (cyclesLoading) {
     return (
-      <div className={SHELL}>
+      <div className={PAGE_SHELL}>
         <LoadingText />
       </div>
     )
@@ -92,7 +63,7 @@ export function LeadDraftClient() {
   const live = boards.filter((b) => isOpen(b.board))
 
   return (
-    <div className={SHELL}>
+    <div className={PAGE_SHELL}>
       <div className="flex flex-col gap-3">
         <Breadcrumbs items={CRUMBS} />
         <PageHeader
@@ -550,17 +521,7 @@ function PoolSidebar({
       )}
       {openApp && (
         <ApplicationDetail
-          applicant={{
-            id: openApp.id,
-            nuid: openApp.user_nuid,
-            fullName: openApp.full_name,
-            email: openApp.email,
-            role: openApp.role_id,
-            cycleId: openApp.cycle_id,
-            stage: openApp.stage,
-            submittedAt: openApp.submitted_at,
-            returner: openApp.returner,
-          }}
+          applicant={toApplicantDetail(openApp)}
           onClose={() => setOpenApp(null)}
         />
       )}

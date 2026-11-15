@@ -1,66 +1,55 @@
 'use client'
 
-import { useState } from 'react'
+import { memo, useMemo, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import type { PreferenceListDetail } from '@/lib/api/types'
 import { cn } from '@/lib/utils'
 
-export function MostWanted({
+export const MostWanted = memo(function MostWanted({
   groups,
-  myListIds,
-  roleIds,
-  roleLabel,
+  myListId,
+  roleId,
 }: {
   groups: PreferenceListDetail[]
-  myListIds: Set<string>
-  roleIds: string[]
-  roleLabel: (id: string) => string
+  myListId: string
+  roleId: string
 }) {
   const [showAll, setShowAll] = useState(false)
-  if (groups.length < 2) return null
-  const rows = new Map<
-    string,
-    {
-      name: string
-      roleId: string
-      ranks: number[]
-      teams: string[]
-      ours?: number
-    }
-  >()
-  for (const g of groups) {
-    for (const roleId of roleIds) {
+  const all = useMemo(() => {
+    const rows = new Map<
+      string,
+      { name: string; ranks: number[]; teams: string[]; ours?: number }
+    >()
+    for (const g of groups) {
       ;(g.entries ?? [])
         .filter((e) => e.role_id === roleId)
         .sort((a, b) => a.rank - b.rank)
         .forEach((e, i) => {
-          const key = `${e.application_id}:${roleId}`
-          const row = rows.get(key) ?? {
+          const row = rows.get(e.application_id) ?? {
             name: e.full_name,
-            roleId,
             ranks: [],
             teams: [],
           }
           row.ranks.push(i + 1)
           row.teams.push(g.name)
-          if (myListIds.has(g.id)) row.ours = i + 1
-          rows.set(key, row)
+          if (g.id === myListId) row.ours = i + 1
+          rows.set(e.application_id, row)
         })
     }
-  }
-  const all = [...rows.entries()]
-    .map(([key, r]) => ({
-      key,
-      ...r,
-      avg: r.ranks.reduce((a, b) => a + b, 0) / r.ranks.length,
-    }))
-    .sort(
-      (a, b) =>
-        b.ranks.length - a.ranks.length ||
-        a.avg - b.avg ||
-        a.name.localeCompare(b.name)
-    )
-  if (all.length === 0) return null
+    return [...rows.entries()]
+      .map(([key, r]) => ({
+        key,
+        ...r,
+        avg: r.ranks.reduce((a, b) => a + b, 0) / r.ranks.length,
+      }))
+      .sort(
+        (a, b) =>
+          b.ranks.length - a.ranks.length ||
+          a.avg - b.avg ||
+          a.name.localeCompare(b.name)
+      )
+  }, [groups, myListId, roleId])
+  if (groups.length < 2 || all.length === 0) return null
   const contestedAt = Math.max(2, Math.ceil(groups.length / 2))
   const shown = showAll ? all : all.slice(0, 10)
 
@@ -94,11 +83,6 @@ export function MostWanted({
                   <span className="text-ink block font-semibold wrap-anywhere">
                     {row.name}
                   </span>
-                  {roleIds.length > 1 && (
-                    <span className="text-text-muted text-xs">
-                      {roleLabel(row.roleId)}
-                    </span>
-                  )}
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
@@ -157,4 +141,4 @@ export function MostWanted({
       )}
     </section>
   )
-}
+})

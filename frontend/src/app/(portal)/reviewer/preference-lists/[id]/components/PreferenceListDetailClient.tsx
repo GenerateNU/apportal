@@ -101,7 +101,7 @@ const STATUS_LABEL: Record<PreferenceListStatus, string> = {
   submitted: 'Submitted',
 }
 
-function deadlinePassed(closesAt: string | undefined | null): boolean {
+export function deadlinePassed(closesAt: string | undefined | null): boolean {
   return !!closesAt && new Date(closesAt) < new Date()
 }
 

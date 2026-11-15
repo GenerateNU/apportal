@@ -3,7 +3,7 @@
 import { TagPill } from '@/components/ui/tag-select'
 import { useCycleTags } from '@/lib/queries/tags'
 import type { CycleTag } from '@/lib/api/types'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   closestCenter,
   DndContext,
@@ -22,6 +22,7 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { GripVertical, Lock, MessageSquare, Plus, X } from 'lucide-react'
 import { ReturnerBadge } from '@/components/ReturnerBadge'
+import { initials } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -59,12 +60,6 @@ import { CommentThread } from './CommentThread'
 import { MostWanted } from './MostWanted'
 import { deadlinePassed } from './deadline'
 
-export type ApplicantFacts = {
-  rating?: InterviewRating
-  reviewsDone: number
-  reviewsTotal: number
-}
-
 const RATING_CHIP: Record<InterviewRating, string> = {
   must_hire: 'bg-green-50 text-green-700',
   great: 'bg-green-50 text-green-700',
@@ -88,16 +83,9 @@ export function RatingChip({ rating }: { rating?: InterviewRating }) {
   )
 }
 
-function initials(name: string) {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((p) => p[0]!.toUpperCase())
-    .join('')
-}
-
 type Mode = 'team' | 'mine'
+
+const NO_TAGS: CycleTag[] = []
 
 type RankedEntry = {
   id: string
@@ -113,7 +101,7 @@ export function LeadTeamTab({
   roleIds,
   pool,
   groups,
-  facts,
+  ratings,
   closesAtByRole,
   currentUserNuid,
   currentUserName,
@@ -127,7 +115,7 @@ export function LeadTeamTab({
   roleIds: string[]
   pool: ApplicationSummary[]
   groups: PreferenceListDetail[]
-  facts: Record<string, ApplicantFacts>
+  ratings: Record<string, InterviewRating | undefined>
   closesAtByRole: Record<string, string | undefined>
   currentUserNuid?: string
   currentUserName?: string
@@ -138,21 +126,37 @@ export function LeadTeamTab({
 }) {
   const { roleLabel } = useRoleLookup()
   const { data: cycleTags = [] } = useCycleTags(list.cycle_id)
-  const tagsFor = (applicationId: string) => {
-    const ids = pool.find((a) => a.id === applicationId)?.tag_ids ?? []
-    return cycleTags.filter((t) => ids.includes(t.id))
-  }
+  const tagsByApp = useMemo(
+    () =>
+      new Map(
+        pool.map((a) => {
+          const ids = new Set(a.tag_ids ?? [])
+          return [a.id, cycleTags.filter((t) => ids.has(t.id))]
+        })
+      ),
+    [pool, cycleTags]
+  )
+  const tagsFor = (applicationId: string) =>
+    tagsByApp.get(applicationId) ?? NO_TAGS
   const [mode, setMode] = useState<Mode>('team')
   const [viewingId, setViewingId] = useState(initialTeamId ?? list.id)
-  const otherTeams = groups
-    .filter((g) => g.id !== list.id)
-    .sort((a, b) => a.name.localeCompare(b.name))
+  const otherTeams = useMemo(
+    () =>
+      groups
+        .filter((g) => g.id !== list.id)
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    [groups, list.id]
+  )
   const viewing = otherTeams.find((g) => g.id === viewingId)
-  const ourRank = new Map(
-    list.entries
-      .filter((e) => e.role_id === role)
-      .sort((a, b) => a.rank - b.rank)
-      .map((e, i) => [e.application_id, i + 1])
+  const ourRank = useMemo(
+    () =>
+      new Map(
+        list.entries
+          .filter((e) => e.role_id === role)
+          .sort((a, b) => a.rank - b.rank)
+          .map((e, i) => [e.application_id, i + 1])
+      ),
+    [list.entries, role]
   )
   const viewingEntries = (viewing?.entries ?? [])
     .filter((e) => e.role_id === role)
@@ -181,46 +185,53 @@ export function LeadTeamTab({
   const isTeam = mode === 'team'
   const locked = isTeam ? roleLocked : false
 
-  const entries: RankedEntry[] = isTeam
-    ? list.entries.filter((e) => e.role_id === role)
-    : list.personal_entries.filter(
-        (e) => e.role_id === role && e.owner_nuid === currentUserNuid
-      )
-  const onList = new Set(entries.map((e) => e.application_id))
+  const entries: RankedEntry[] = useMemo(
+    () =>
+      isTeam
+        ? list.entries.filter((e) => e.role_id === role)
+        : list.personal_entries.filter(
+            (e) => e.role_id === role && e.owner_nuid === currentUserNuid
+          ),
+    [isTeam, list.entries, list.personal_entries, role, currentUserNuid]
+  )
+  const onList = useMemo(
+    () => new Set(entries.map((e) => e.application_id)),
+    [entries]
+  )
 
-  const alsoOn = new Map<string, { team: string; rank: number }[]>()
-  for (const g of groups) {
-    if (g.id === list.id) continue
-    ;(g.entries ?? [])
-      .filter((e) => e.role_id === role)
-      .sort((a, b) => a.rank - b.rank)
-      .forEach((e, i) =>
-        alsoOn.set(e.application_id, [
-          ...(alsoOn.get(e.application_id) ?? []),
-          { team: g.name, rank: i + 1 },
-        ])
-      )
-  }
-  const othersRanking = new Map<string, number>()
-  for (const g of groups) {
-    if (g.id === list.id) continue
-    for (const e of g.entries ?? []) {
-      if (e.role_id !== role) continue
-      othersRanking.set(
-        e.application_id,
-        (othersRanking.get(e.application_id) ?? 0) + 1
-      )
+  const alsoOn = useMemo(() => {
+    const out = new Map<string, { team: string; rank: number }[]>()
+    for (const g of groups) {
+      if (g.id === list.id) continue
+      ;(g.entries ?? [])
+        .filter((e) => e.role_id === role)
+        .sort((a, b) => a.rank - b.rank)
+        .forEach((e, i) => {
+          const teams = out.get(e.application_id)
+          const entry = { team: g.name, rank: i + 1 }
+          if (teams) teams.push(entry)
+          else out.set(e.application_id, [entry])
+        })
     }
-  }
+    return out
+  }, [groups, list.id, role])
 
   const q = query.trim().toLowerCase()
-  const available = pool
-    .filter((a) => !onList.has(a.id))
-    .filter((a) => !q || (a.full_name || a.user_nuid).toLowerCase().includes(q))
-    .sort((a, b) =>
-      (a.full_name || a.user_nuid).localeCompare(b.full_name || b.user_nuid)
-    )
-  const poolRemaining = pool.filter((a) => !onList.has(a.id)).length
+  const unlisted = useMemo(
+    () =>
+      pool
+        .filter((a) => !onList.has(a.id))
+        .sort((a, b) =>
+          (a.full_name || a.user_nuid).localeCompare(b.full_name || b.user_nuid)
+        ),
+    [pool, onList]
+  )
+  const available = q
+    ? unlisted.filter((a) =>
+        (a.full_name || a.user_nuid).toLowerCase().includes(q)
+      )
+    : unlisted
+  const poolRemaining = unlisted.length
 
   function add(applicationId: string) {
     const vars = { listId: list.id, applicationId }
@@ -344,8 +355,7 @@ export function LeadTeamTab({
           ) : (
             <ul className="border border-gray-200">
               {available.map((a) => {
-                const fact = facts[a.id]
-                const others = othersRanking.get(a.id) ?? 0
+                const others = alsoOn.get(a.id)?.length ?? 0
                 return (
                   <li
                     key={a.id}
@@ -363,7 +373,7 @@ export function LeadTeamTab({
                         {a.returner && <ReturnerBadge />}
                       </div>
                       <div className="text-text-muted mt-1 flex flex-wrap items-center gap-1.5 text-xs">
-                        <RatingChip rating={fact?.rating} />
+                        <RatingChip rating={ratings[a.id]} />
                         {tagsFor(a.id).map((t) => (
                           <TagPill key={t.id} tag={t} />
                         ))}
@@ -456,7 +466,7 @@ export function LeadTeamTab({
                         {e.full_name}
                       </button>
                       <div className="text-text-muted mt-1 flex flex-wrap items-center gap-1.5 text-xs">
-                        <RatingChip rating={facts[e.application_id]?.rating} />
+                        <RatingChip rating={ratings[e.application_id]} />
                         {tagsFor(e.application_id).map((t) => (
                           <TagPill key={t.id} tag={t} />
                         ))}
@@ -502,7 +512,7 @@ export function LeadTeamTab({
                       entry={entry}
                       index={i}
                       locked={locked}
-                      fact={facts[entry.application_id]}
+                      rating={ratings[entry.application_id]}
                       tags={tagsFor(entry.application_id)}
                       alsoOn={alsoOn.get(entry.application_id) ?? []}
                       comments={
@@ -550,12 +560,7 @@ export function LeadTeamTab({
         </section>
       </div>
 
-      <MostWanted
-        groups={groups}
-        myListIds={new Set([list.id])}
-        roleIds={[role]}
-        roleLabel={roleLabel}
-      />
+      <MostWanted groups={groups} myListId={list.id} roleId={role} />
     </div>
   )
 }
@@ -564,7 +569,7 @@ function RankRow({
   entry,
   index,
   locked,
-  fact,
+  rating,
   tags,
   alsoOn,
   comments,
@@ -580,7 +585,7 @@ function RankRow({
   entry: RankedEntry
   index: number
   locked: boolean
-  fact?: ApplicantFacts
+  rating?: InterviewRating
   tags: CycleTag[]
   alsoOn: { team: string; rank: number }[]
   comments?: PreferenceListComment[]
@@ -637,7 +642,7 @@ function RankRow({
             {entry.returner && <ReturnerBadge />}
           </div>
           <div className="text-text-muted mt-1 flex flex-wrap items-center gap-1.5 text-xs">
-            <RatingChip rating={fact?.rating} />
+            <RatingChip rating={rating} />
             {tags.map((t) => (
               <TagPill key={t.id} tag={t} />
             ))}

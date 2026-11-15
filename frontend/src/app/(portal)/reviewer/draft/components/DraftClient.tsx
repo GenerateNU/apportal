@@ -30,7 +30,6 @@ import { APIError } from '@/lib/api/client'
 import { useApplications } from '@/lib/queries/applications'
 import { pickDefaultCycleId, useCycles } from '@/lib/queries/cycles'
 import {
-  useDraftRealtime,
   useDeleteDraft,
   useDraftBoard,
   useDraftedApplications,
@@ -69,7 +68,6 @@ export function DraftClient() {
   // Separate boards per role, switched here — engineers and designers draft
   // independently, the same way their preference ranks are scoped.
   const { role, setRole, roleIds, roleLabel } = useCycleRolePicker(cycleId)
-  useDraftRealtime(cycleId)
 
   const {
     data: board,
