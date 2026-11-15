@@ -1,4 +1,6 @@
 'use client'
+
+import { PageSkeleton } from '@/components/ui/skeleton'
 import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import { SegmentedTabs } from '@/components/ui/segmented-tabs'
 import {
@@ -10,8 +12,6 @@ import { MyApplicationsList } from './MyApplicationsList'
 
 import { useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Loader2 } from 'lucide-react'
-import { HelpContact } from '@/components/HelpContact'
 import { EmptyState } from '@/components/ui/empty-state'
 import { PageHeader } from '@/components/ui/page-header'
 import { SectionLabel } from '@/components/ui/section-label'
@@ -33,19 +33,14 @@ export function ApplicationsClient() {
   const { data: currentUser, isLoading } = useCurrentUser()
 
   if (isLoading) {
-    return (
-      <div className="text-text-muted flex items-center gap-2 px-4 py-10 text-sm sm:px-8">
-        <Loader2 className="animate-spin" size={16} />
-        Loading…
-      </div>
-    )
+    return <PageSkeleton />
   }
 
   if (!currentUser) {
     return (
       <ApplicantPage>
         <PageHeader
-          title="Applications"
+          title="My applications"
           subtitle="Sign in to apply to open roles."
         />
       </ApplicantPage>
@@ -108,8 +103,8 @@ function Dashboard({ user }: { user: User }) {
     <ApplicantPage>
       <div className="flex flex-col gap-8">
         <PageHeader
-          back={<Breadcrumbs items={[{ label: 'Applications' }]} />}
-          title="Applications"
+          back={<Breadcrumbs items={[{ label: 'My applications' }]} />}
+          title="My applications"
           subtitle="Apply to open roles and keep track of the applications you've sent."
         />
 
@@ -158,8 +153,6 @@ function Dashboard({ user }: { user: User }) {
             </section>
           ))
         )}
-
-        <HelpContact className="text-left" />
       </div>
     </ApplicantPage>
   )

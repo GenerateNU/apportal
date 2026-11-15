@@ -18,6 +18,6 @@ export interface UpsertDecisionInputBody {
   feedback?: string;
   /** Chief only. Overrides which letter applies. */
   kind?: UpsertDecisionInputBodyKind;
-  /** Chief only. Records that the message was emailed, and moves the applicant to the rejected stage with it. Setting it false restores the stage they were in before. */
+  /** Records that the message was emailed, and moves the applicant to the rejected stage with it. The assigned interviewer may set it true once the letter is ready; setting it false (restoring the stage they were in before) is chief only. */
   mark_sent?: boolean;
 }

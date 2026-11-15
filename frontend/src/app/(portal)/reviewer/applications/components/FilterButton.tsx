@@ -276,18 +276,18 @@ export function FilterChips({
               setFilterValues({})
               setSearchTerm('')
             }}
-            className={`text-text-muted inline-flex h-7 items-center justify-center rounded-md border border-gray-200 bg-white transition-colors hover:bg-gray-50 ${
-              filters.length === 0 ? 'gap-1.5 px-2 text-sm' : 'w-7'
+            className={`text-text-muted inline-flex items-center justify-center rounded-md border border-gray-200 bg-white transition-colors hover:bg-gray-50 ${
+              filters.length === 0 ? 'h-8 gap-1.5 px-2.5 text-xs' : 'size-6'
             }`}
             title="Add filter"
           >
             {filters.length === 0 && (
               <>
-                <ListFilter className="h-3.5 w-3.5" />
+                <ListFilter className="h-3 w-3" />
                 Filter
               </>
             )}
-            <Plus className="h-3.5 w-3.5" />
+            <Plus className="h-3 w-3" />
           </button>
         </DropdownMenuTrigger>
 
@@ -423,16 +423,16 @@ function FilterChip({
 
   const segments = (
     <>
-      <span className="flex items-center gap-1.5 px-2">
-        {getFilterIcon(filter.special, filter.question_type, 'h-3.5 w-3.5')}
+      <span className="flex items-center gap-1 px-1.5">
+        {getFilterIcon(filter.special, filter.question_type, 'h-3 w-3')}
         <span className="text-text-default max-w-[6rem] truncate sm:max-w-[11rem]">
           {filter.question_text}
         </span>
       </span>
-      <span className="text-text-muted flex items-center border-l border-gray-200 px-2">
+      <span className="text-text-muted flex items-center border-l border-gray-200 px-1.5">
         {middleText}
       </span>
-      <span className="text-text-default flex max-w-[6rem] items-center border-l border-gray-200 px-2 sm:max-w-[12rem]">
+      <span className="text-text-default flex max-w-[6rem] items-center border-l border-gray-200 px-1.5 sm:max-w-[12rem]">
         <span className="truncate">{getDisplayValue(filter)}</span>
       </span>
     </>
@@ -448,7 +448,7 @@ function FilterChip({
     // Segments size to their content and are separated by hairlines, so a chip
     // stays as narrow as what it says. Long question text and long values
     // truncate rather than stretching the row.
-    <div className="inline-flex h-7 items-stretch overflow-hidden rounded-md border border-gray-200 bg-gray-50 text-sm">
+    <div className="inline-flex h-6 items-stretch overflow-hidden rounded-md border border-gray-200 bg-gray-50 text-[11px] font-normal">
       {question ? (
         <DropdownMenu
           open={isOpen}
@@ -486,10 +486,10 @@ function FilterChip({
       )}
       <button
         onClick={onRemove}
-        className="text-text-muted hover:text-text-default flex items-center border-l border-gray-200 px-1.5 transition-colors hover:bg-gray-100"
+        className="text-text-muted hover:text-text-default flex items-center border-l border-gray-200 px-1 transition-colors hover:bg-gray-100"
         title="Remove filter"
       >
-        <X className="h-3.5 w-3.5" />
+        <X className="h-3 w-3" />
       </button>
     </div>
   )

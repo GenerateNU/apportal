@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge'
 import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import { EmptyState } from '@/components/ui/empty-state'
 import { PageHeader } from '@/components/ui/page-header'
+import { Skeleton } from '@/components/ui/skeleton'
 import { TABLE_FRAME, TABLE_ROW } from '@/components/ui/table-styles'
 import { useApplications } from '@/lib/queries/applications'
 import { useBranches } from '@/lib/queries/branches'
@@ -312,11 +313,13 @@ export function LeadHomeClient() {
           title: row.full_name,
           roleId: row.role_id,
           status:
-            state === 'submitted'
-              ? STATE.done
-              : state === 'draft'
-                ? STATE.draft
-                : { ...STATE.todo, label: 'To be written' },
+            row.status === 'sent'
+              ? { ...STATE.done, label: 'Sent' }
+              : state === 'submitted'
+                ? { ...STATE.done, label: 'Written' }
+                : state === 'draft'
+                  ? STATE.draft
+                  : { ...STATE.todo, label: 'To be written' },
           done: state === 'submitted',
           href: `/reviewer/decisions/${row.application_id}`,
           action: state === 'submitted' ? 'View' : 'Write',
@@ -439,7 +442,7 @@ export function LeadHomeClient() {
       ? `${waiting} ${NOUNS[current.id][waiting === 1 ? 0 : 1]} waiting on you`
       : nextLocked
         ? `You're all caught up. ${nextLocked.locked}`
-        : 'All done for this cycle.'
+        : 'All done for this cycle. Thank you!'
   const requestedPhase = useSearchParams().get('phase')
   const [picked, setPicked] = useState(requestedPhase)
   const selected =
@@ -691,13 +694,11 @@ export function LeadHomeClient() {
 function LeadHomeSkeleton() {
   return (
     <LeadPage>
-      <PageHeader
-        back={<Breadcrumbs items={[{ label: 'My work' }]} />}
-        title="My work"
-        subtitle={
-          <span className="inline-block h-4 w-72 animate-pulse bg-gray-100" />
-        }
-      />
+      <div className="flex flex-col gap-3">
+        <Skeleton className="h-3 w-24" />
+        <Skeleton className="h-9 w-64" />
+        <Skeleton className="h-4 w-80 max-w-full" />
+      </div>
       <div className="flex flex-wrap items-center gap-2">
         {Array.from({ length: 6 }, (_, i) => (
           <span key={i} className="h-8 w-28 animate-pulse bg-gray-100" />

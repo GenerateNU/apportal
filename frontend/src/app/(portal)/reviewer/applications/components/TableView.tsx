@@ -6,7 +6,13 @@ import { FILTER_STAGES } from './constants'
 import { isAvailabilityQuestion } from './meetingAvailability'
 import { ApplicantRow } from './ApplicantRow'
 import { FilterChips } from './FilterButton'
-import { SegmentedTabs } from '@/components/ui/segmented-tabs'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { TABLE_FRAME, TABLE_HEAD } from '@/components/ui/table-styles'
 import { cn } from '@/lib/utils'
 import {
@@ -153,27 +159,36 @@ export function TableView({
 
   return (
     <div className={cn(TABLE_FRAME, 'flex min-h-0 flex-1 flex-col')}>
-      <div className="space-y-3 border-b border-gray-100 px-4 py-3">
-        {bulkBar ?? (
-          <FilterChips
-            filters={filters}
-            columns={columns}
-            onFilterChange={onFilterChange}
-            hasAvailability={hasAvailability}
-            roleOptions={roleOptions}
-            tagNames={tagNames}
-          />
-        )}
-        <div className="overflow-x-auto">
-          <SegmentedTabs
-            tabs={FILTER_STAGES.map(({ label, value }) => ({
-              id: value,
-              label,
-              count: countByStage(value),
-            }))}
-            value={activeStage}
-            onChange={onStageChange}
-          />
+      <div className="flex flex-wrap items-center gap-3 border-b border-gray-100 px-4 py-3">
+        <Select
+          value={activeStage}
+          onValueChange={(v) => onStageChange(v as ApplicationStage | 'all')}
+        >
+          <SelectTrigger
+            className="h-8 w-52 border-gray-200 text-xs font-normal"
+            aria-label="Filter by stage"
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {FILTER_STAGES.map(({ label, value }) => (
+              <SelectItem key={value} value={value}>
+                {label} ({countByStage(value)})
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <div className="min-w-0 flex-1">
+          {bulkBar ?? (
+            <FilterChips
+              filters={filters}
+              columns={columns}
+              onFilterChange={onFilterChange}
+              hasAvailability={hasAvailability}
+              roleOptions={roleOptions}
+              tagNames={tagNames}
+            />
+          )}
         </div>
       </div>
 

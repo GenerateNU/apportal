@@ -15,7 +15,7 @@ export function applicationsHref(tab: ApplicationsTab) {
 // and back navigation return to that tab.
 export function useOriginCrumb() {
   const tab = useSearchParams().get('from') === 'mine' ? 'mine' : 'open'
-  return { label: 'Applications', href: applicationsHref(tab) }
+  return { label: 'My applications', href: applicationsHref(tab) }
 }
 
 export function ApplicantPage({ children }: { children: React.ReactNode }) {

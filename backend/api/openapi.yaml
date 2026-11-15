@@ -4355,7 +4355,7 @@ components:
             - rejection_generic
           type: string
         mark_sent:
-          description: Chief only. Records that the message was emailed, and moves the applicant to the rejected stage with it. Setting it false restores the stage they were in before.
+          description: Records that the message was emailed, and moves the applicant to the rejected stage with it. The assigned interviewer may set it true once the letter is ready; setting it false (restoring the stage they were in before) is chief only.
           type: boolean
       type: object
     UpsertInterviewInputBody:

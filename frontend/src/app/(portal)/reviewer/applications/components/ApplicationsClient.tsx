@@ -1,5 +1,8 @@
 'use client'
-import { PageContainer } from '@/components/PageContainer'
+
+import { cn } from '@/lib/utils'
+import { Breadcrumbs } from '@/components/ui/breadcrumbs'
+import { PAGE_TOP, PAGE_X } from '@/components/ui/page-shell'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { List, Columns } from 'lucide-react'
@@ -19,6 +22,7 @@ import {
   useUpdateApplication,
 } from '@/lib/queries/applications'
 import { pickDefaultCycleId, useCycles } from '@/lib/queries/cycles'
+import { useMyCycles } from '@/lib/queries/cycle-staff'
 import { useCurrentUser } from '@/lib/queries/users'
 import { ORDERED_STAGES, PAGE_SIZE } from './constants'
 import { BulkActionBar } from './BulkActionBar'
@@ -89,7 +93,16 @@ export function ApplicationsClient() {
     return () => clearTimeout(timer)
   }, [search])
 
-  const { data: cycles = [] } = useCycles({})
+  const { data: allCycles = [] } = useCycles({})
+  const { data: myCycles = [] } = useMyCycles()
+  const isAdmin = !!currentUser?.roles.includes('admin')
+  const cycles = useMemo(
+    () =>
+      isAdmin || myCycles.length === 0
+        ? allCycles
+        : allCycles.filter((c) => myCycles.some((m) => m.cycle_id === c.id)),
+    [allCycles, myCycles, isAdmin]
+  )
 
   // Default the cycle filter so reviewers land on a specific cycle instead
   // of every cycle ever run. Shared with the server prefetch in ../page.tsx,
@@ -341,23 +354,33 @@ export function ApplicationsClient() {
   // table's full height and the ancestor in (portal)/layout.tsx scrolls
   // instead — which leaves the sticky header with no scrollport to pin against.
   return (
-    <PageContainer className="min-h-0 flex-1 overflow-hidden">
+    <div
+      className={cn(
+        'flex min-h-0 w-full flex-1 flex-col gap-8 overflow-hidden pb-6',
+        PAGE_X,
+        PAGE_TOP
+      )}
+    >
       <PageHeader
-        title="Applications"
+        back={<Breadcrumbs items={[{ label: 'Applicants' }]} />}
+        title="Applicants"
+        subtitle={cycles.length === 1 ? cycles[0].name : undefined}
         actions={
           <div className="flex flex-wrap items-center gap-3">
-            <Select value={activeCycle} onValueChange={setActiveCycle}>
-              <SelectTrigger className="w-40" aria-label="Filter by cycle">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {cycles.map((cycle) => (
-                  <SelectItem key={cycle.id} value={cycle.id}>
-                    {cycle.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {cycles.length > 1 && (
+              <Select value={activeCycle} onValueChange={setActiveCycle}>
+                <SelectTrigger className="w-40" aria-label="Filter by cycle">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {cycles.map((cycle) => (
+                    <SelectItem key={cycle.id} value={cycle.id}>
+                      {cycle.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
 
             <SearchInput
               value={search}
@@ -367,6 +390,7 @@ export function ApplicationsClient() {
             />
 
             <SegmentedTabs<View>
+              className="h-9"
               tabs={[
                 {
                   id: 'table',
@@ -442,6 +466,7 @@ export function ApplicationsClient() {
             applicants={filtered}
             availabilityByApplicationId={availabilityByApplicationId}
             editable={isChief}
+            onOpen={setSelectedApplicationId}
           />
         )}
       </div>
@@ -456,6 +481,6 @@ export function ApplicationsClient() {
             />
           ) : null
         })()}
-    </PageContainer>
+    </div>
   )
 }

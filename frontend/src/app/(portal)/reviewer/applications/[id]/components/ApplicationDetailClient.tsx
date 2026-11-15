@@ -1,7 +1,10 @@
 'use client'
-import { BackLink } from '@/components/ui/back-link'
-import { PageContainer } from '@/components/PageContainer'
+
+import { Breadcrumbs } from '@/components/ui/breadcrumbs'
+import { PAGE_TOP, PAGE_X } from '@/components/ui/page-shell'
 import type { ApplicationStage } from '@/lib/api/types'
+import { useApplicant } from '@/lib/queries/applicants'
+import { cn } from '@/lib/utils'
 import { ApplicantOverview } from '../../components/ApplicantOverview'
 
 export function ApplicationDetailClient({
@@ -17,19 +20,28 @@ export function ApplicationDetailClient({
   applicantNuid: string
   stage?: ApplicationStage
 }) {
+  const { data: applicant } = useApplicant(applicantNuid)
   return (
-    <PageContainer className="min-h-0 flex-1 overflow-y-auto">
-      <div className="mx-auto flex max-w-2xl flex-col gap-6">
-        <BackLink href="/reviewer/applications">Back to Applications</BackLink>
-
-        <ApplicantOverview
-          applicationId={applicationId}
-          cycleId={cycleId}
-          role={role}
-          applicantNuid={applicantNuid}
-          stage={stage}
-        />
-      </div>
-    </PageContainer>
+    <div
+      className={cn(
+        'flex min-h-0 w-full flex-1 flex-col gap-6 overflow-y-auto pb-12',
+        PAGE_X,
+        PAGE_TOP
+      )}
+    >
+      <Breadcrumbs
+        items={[
+          { label: 'Applicants', href: '/reviewer/applications' },
+          { label: applicant?.full_name ?? 'Applicant' },
+        ]}
+      />
+      <ApplicantOverview
+        applicationId={applicationId}
+        cycleId={cycleId}
+        role={role}
+        applicantNuid={applicantNuid}
+        stage={stage}
+      />
+    </div>
   )
 }

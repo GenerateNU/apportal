@@ -1,8 +1,9 @@
 'use client'
 
+import { SkeletonLines } from '@/components/ui/skeleton'
+
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2 } from 'lucide-react'
 import { HelpContact } from '@/components/HelpContact'
 import { Button } from '@/components/ui/button'
 import { APIError } from '@/lib/api/client'
@@ -56,10 +57,7 @@ export function RootFallback() {
 
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center gap-6 px-4">
-      <div className="text-text-muted flex items-center gap-2 text-sm">
-        <Loader2 className="animate-spin" size={16} />
-        Loading…
-      </div>
+      <SkeletonLines lines={3} className="w-full max-w-sm" />
       <HelpContact className="max-w-sm" />
     </div>
   )

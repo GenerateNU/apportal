@@ -1,5 +1,7 @@
 'use client'
 
+import { PageSkeleton } from '@/components/ui/skeleton'
+
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, ArrowRight, ChevronDown, Loader2 } from 'lucide-react'
@@ -74,12 +76,7 @@ function apiErrorDetail(err: unknown): string {
 }
 
 function Loading() {
-  return (
-    <div className="text-text-muted flex items-center gap-2 px-4 py-10 text-sm sm:px-8">
-      <Loader2 className="animate-spin" size={16} />
-      Loading…
-    </div>
-  )
+  return <PageSkeleton rows={4} />
 }
 
 export function NewApplicationForm({

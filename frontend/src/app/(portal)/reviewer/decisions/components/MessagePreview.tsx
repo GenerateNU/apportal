@@ -59,7 +59,7 @@ export function MessagePreview({
         <p className="text-text-muted border-b border-gray-200 px-3 py-2 text-xs">
           {rendered.subject}
         </p>
-        <pre className="text-text-default px-3 py-3 font-sans text-sm wrap-anywhere whitespace-pre-wrap lg:max-h-[28rem] lg:overflow-y-auto">
+        <pre className="text-text-default px-3 py-3 font-sans text-sm break-words whitespace-pre-wrap lg:max-h-[28rem] lg:overflow-y-auto">
           {rendered.body}
         </pre>
       </Card>

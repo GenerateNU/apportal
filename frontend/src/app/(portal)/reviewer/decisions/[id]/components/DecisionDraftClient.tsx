@@ -2,39 +2,35 @@
 
 import { useMemo } from 'react'
 import Link from 'next/link'
-import { ArrowRight, ChevronLeft } from 'lucide-react'
-import { PageContainer } from '@/components/PageContainer'
-import { Breadcrumbs } from '@/components/ui/breadcrumbs'
+import { ArrowRight, ChevronLeft, Lock } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { Breadcrumbs } from '@/components/ui/breadcrumbs'
+import { Button } from '@/components/ui/button'
+import { EmptyState } from '@/components/ui/empty-state'
 import { LoadingText } from '@/components/ui/loading-text'
 import { PageHeader } from '@/components/ui/page-header'
 import { PAGE_L, PAGE_R, PAGE_TOP, PAGE_X } from '@/components/ui/page-shell'
 import { ResizableSplit } from '@/components/ui/resizable-split'
-import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
-import type {
-  DecisionContext,
-  DecisionRow,
-  DecisionTemplate,
-  ReviewQuestion,
-} from '@/lib/api/types'
+import { ApplicantOverview } from '@/app/(portal)/reviewer/applications/components/ApplicantOverview'
+import type { DecisionRow, DecisionTemplate } from '@/lib/api/types'
 import { useCycles } from '@/lib/queries/cycles'
-import { useDecisionContext, useDecisions } from '@/lib/queries/decisions'
-import { useDecisionTemplates } from '@/lib/queries/decisions'
-import { useReviewQuestions } from '@/lib/queries/review-questions'
+import { useDecisions, useDecisionTemplates } from '@/lib/queries/decisions'
+import { useCycleRoles, useRoleLookup } from '@/lib/queries/roles'
 import { useCurrentUser } from '@/lib/queries/users'
-import { DecisionContextPanel } from '../../components/DecisionContextPanel'
+import { cn, formatDate } from '@/lib/utils'
+import {
+  stageBadge,
+  stageLabel,
+} from '@/app/(portal)/reviewer/applications/components/constants'
+import { REVIEW_STATE_BADGE } from '../../../my-reviews/constants'
 import { FeedbackFields } from '../../components/FeedbackFields'
 import { MessagePreview } from '../../components/MessagePreview'
 import { feedbackState } from '../../components/constants'
 import { renderDecision } from '../../components/render'
 import { useFeedbackDraft } from '../../components/useFeedbackDraft'
-import { useCycleRoles } from '@/lib/queries/roles'
-import { useRoleLookup } from '@/lib/queries/roles'
 
-// One applicant: everything already said about them on the left, the two
-// paragraphs and the letter they land in on the right. Same shape as the lead
-// review and interview write-up screens, with next/back walking the queue.
+const SHELL = cn('flex w-full flex-col gap-8 pb-12', PAGE_X, PAGE_TOP)
+
 export function DecisionDraftClient({
   applicationId,
   cycleId,
@@ -49,17 +45,12 @@ export function DecisionDraftClient({
   const { data: rows = [], isLoading } = useDecisions(cycleId)
   const { roleIds } = useCycleRoles(cycleId)
   const { data: templates = [] } = useDecisionTemplates(cycleId, role)
-  const { data: reviewQuestions = [] } = useReviewQuestions(cycleId, role)
-  const { data: contextById = {}, isLoading: contextLoading } =
-    useDecisionContext([applicationId])
 
-  const row = rows.find((r) => r.application_id === applicationId)
   const isChief = !!currentUser?.roles.some(
     (r) => r === 'chief' || r === 'admin'
   )
+  const row = rows.find((r) => r.application_id === applicationId)
 
-  // The queue in the order the list page shows it, so next/back move the way
-  // the list reads rather than however the server happened to sort.
   const queue = useMemo(
     () =>
       roleIds.flatMap((r) =>
@@ -67,37 +58,38 @@ export function DecisionDraftClient({
           .filter((x) => x.role_id === r)
           .filter(
             (x) =>
+              x.application_id === applicationId ||
               isChief ||
               (x.kind === 'rejection_post_interview' &&
                 x.interviewers.some((iv) => iv.nuid === currentUser?.nuid))
           )
           .sort((a, b) => a.full_name.localeCompare(b.full_name))
       ),
-    [rows, roleIds, isChief, currentUser?.nuid]
+    [rows, roleIds, isChief, currentUser?.nuid, applicationId]
   )
   const index = queue.findIndex((r) => r.application_id === applicationId)
-  const nextUnwritten = queue
-    .slice(index + 1)
-    .find((r) => feedbackState(r) !== 'submitted')
   const previous = index > 0 ? queue[index - 1] : undefined
+  const next =
+    index >= 0 && index < queue.length - 1 ? queue[index + 1] : undefined
+  const written = queue.filter((r) => feedbackState(r) === 'submitted').length
 
   if (isLoading) {
     return (
-      <PageContainer>
+      <div className={SHELL}>
         <LoadingText />
-      </PageContainer>
+      </div>
     )
   }
 
   if (!row) {
     return (
-      <PageContainer>
-        <BackToQueue />
-        <p className="text-text-faint text-sm">
-          This applicant isn’t in your decision queue — either they aren’t
-          awaiting a message, or you didn’t interview them.
-        </p>
-      </PageContainer>
+      <div className={SHELL}>
+        <PageHeader back={<Crumbs />} title="Feedback" />
+        <EmptyState
+          title="Not in your feedback queue"
+          description="Either they aren't awaiting a message, or you didn't interview them."
+        />
+      </div>
     )
   }
 
@@ -108,52 +100,40 @@ export function DecisionDraftClient({
       cycleId={cycleId}
       cycleName={cycles.find((c) => c.id === cycleId)?.name ?? ''}
       template={templates.find((t) => t.kind === row.kind)}
-      context={contextById[applicationId]}
-      contextLoading={contextLoading}
-      reviewQuestions={reviewQuestions}
       canWrite={
-        row.interviewers.some((iv) => iv.nuid === currentUser?.nuid) ||
-        !!currentUser?.roles.some((r) => r === 'chief' || r === 'admin')
-      }
-      nextHref={
-        nextUnwritten
-          ? `/reviewer/decisions/${nextUnwritten.application_id}`
-          : undefined
+        isChief ||
+        (!row.sent_at &&
+          row.interviewers.some((iv) => iv.nuid === currentUser?.nuid))
       }
       previousHref={
         previous ? `/reviewer/decisions/${previous.application_id}` : undefined
       }
-      position={index >= 0 ? { index, total: queue.length } : undefined}
+      nextHref={next ? `/reviewer/decisions/${next.application_id}` : undefined}
+      position={
+        index >= 0 ? { index, total: queue.length, written } : undefined
+      }
     />
   )
 }
 
-// Split out so the draft state is keyed on the row and resets when next/back
-// moves to another applicant.
 function DraftBody({
   row,
   cycleId,
   cycleName,
   template,
-  context,
-  contextLoading,
-  reviewQuestions,
   canWrite,
-  nextHref,
   previousHref,
+  nextHref,
   position,
 }: {
   row: DecisionRow
   cycleId: string
   cycleName: string
   template?: DecisionTemplate
-  context?: DecisionContext
-  contextLoading: boolean
-  reviewQuestions: ReviewQuestion[]
   canWrite: boolean
-  nextHref?: string
   previousHref?: string
-  position?: { index: number; total: number }
+  nextHref?: string
+  position?: { index: number; total: number; written: number }
 }) {
   const { roleLabel, roleChipClass } = useRoleLookup()
   const draft = useFeedbackDraft(row, cycleId, canWrite)
@@ -164,16 +144,36 @@ function DraftBody({
     roleLabel(row.role_id)
   )
 
+  const filled = [draft.feedback.trim(), draft.compliments.trim()].filter(
+    Boolean
+  ).length
+  const status = row.sent_at
+    ? {
+        label: `Sent ${formatDate(row.sent_at)}`,
+        className: REVIEW_STATE_BADGE.submitted,
+      }
+    : filled === 2 || row.status === 'ready'
+      ? { label: 'Ready to send', className: REVIEW_STATE_BADGE.submitted }
+      : filled === 1
+        ? { label: 'In progress', className: 'bg-chip-9-bg text-chip-9-text' }
+        : { label: 'Not written', className: REVIEW_STATE_BADGE.none }
+
   return (
     <div className="flex min-h-full flex-col lg:h-full">
       <div className={cn('bg-white pb-6', PAGE_X, PAGE_TOP)}>
         <PageHeader
-          back={<BackToQueue name={row.full_name} />}
+          back={<Crumbs name={row.full_name} />}
           title={row.full_name}
           subtitle={
             <span className="flex flex-wrap items-center gap-2">
               <Badge className={roleChipClass(row.role_id)}>
                 {roleLabel(row.role_id)}
+              </Badge>
+              <Badge className={stageBadge[row.stage]}>
+                {stageLabel[row.stage]}
+              </Badge>
+              <Badge className={status.className}>
+                Feedback: {status.label}
               </Badge>
               <span className="text-text-muted text-sm break-all">
                 {row.email}
@@ -184,7 +184,8 @@ function DraftBody({
             <>
               {position && (
                 <span className="font-display text-text-subtle mr-3 text-[11px] tracking-wider uppercase">
-                  Feedback {position.index + 1} of {position.total}
+                  Feedback {position.index + 1} of {position.total} ·{' '}
+                  {position.written} written
                 </span>
               )}
               {previousHref && (
@@ -198,7 +199,7 @@ function DraftBody({
               {nextHref && (
                 <Button asChild variant="outline" size="sm">
                   <Link href={nextHref}>
-                    Next to write
+                    Next
                     <ArrowRight data-icon="inline-end" size={14} />
                   </Link>
                 </Button>
@@ -219,10 +220,13 @@ function DraftBody({
               'pr-6 sm:pr-8'
             )}
           >
-            <DecisionContextPanel
-              context={context}
-              reviewQuestions={reviewQuestions}
-              isLoading={contextLoading}
+            <ApplicantOverview
+              applicationId={row.application_id}
+              cycleId={row.cycle_id}
+              role={row.role_id}
+              applicantNuid={row.applicant_nuid}
+              stage={row.stage}
+              hideHeader
             />
           </div>
         }
@@ -233,6 +237,13 @@ function DraftBody({
               PAGE_R
             )}
           >
+            {row.sent_at && (
+              <p className="text-text-muted flex items-center gap-2 border border-gray-200 bg-gray-50 px-4 py-3 text-sm">
+                <Lock size={14} className="shrink-0" />
+                Sent {formatDate(row.sent_at)}. This letter can&apos;t be
+                changed.
+              </p>
+            )}
             <FeedbackFields
               row={row}
               feedback={draft.feedback}
@@ -255,7 +266,7 @@ function DraftBody({
   )
 }
 
-function BackToQueue({ name }: { name?: string }) {
+function Crumbs({ name }: { name?: string }) {
   const { data: user } = useCurrentUser()
   const isChief = !!user?.roles.some((r) => r === 'chief' || r === 'admin')
   const current = { label: name ?? 'Applicant' }

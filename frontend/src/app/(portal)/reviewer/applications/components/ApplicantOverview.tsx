@@ -51,12 +51,14 @@ export function ApplicantOverview({
   role,
   applicantNuid,
   stage,
+  hideHeader = false,
 }: {
   applicationId: string
   cycleId: string
   role: string
   applicantNuid: string
   stage?: ApplicationStage
+  hideHeader?: boolean
 }) {
   const { roleLabel, roleChipClass } = useRoleLookup()
   const { data: applicant } = useApplicant(applicantNuid)
@@ -84,29 +86,31 @@ export function ApplicantOverview({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-start gap-4">
-        <Avatar name={applicant?.full_name ?? ''} size="lg" />
-        <div className="min-w-0">
-          <PageHeader
-            title={applicant?.full_name ?? 'Applicant'}
-            subtitle={applicant?.email}
-          />
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <Badge className={roleChipClass(role)}>{roleLabel(role)}</Badge>
-            {stage && (
-              <Badge className={stageBadge[stage]}>{stageLabel[stage]}</Badge>
-            )}
-            {interview?.rating && (
-              <Badge
-                className={`${RATING_COLORS[interview.rating].bg} ${RATING_COLORS[interview.rating].text}`}
-              >
-                {RATING_LABEL[interview.rating]}
-              </Badge>
-            )}
-            {applicant?.returner && <ReturnerBadge showLabel />}
+      {!hideHeader && (
+        <div className="flex items-start gap-4">
+          <Avatar name={applicant?.full_name ?? ''} size="lg" />
+          <div className="min-w-0">
+            <PageHeader
+              title={applicant?.full_name ?? 'Applicant'}
+              subtitle={applicant?.email}
+            />
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <Badge className={roleChipClass(role)}>{roleLabel(role)}</Badge>
+              {stage && (
+                <Badge className={stageBadge[stage]}>{stageLabel[stage]}</Badge>
+              )}
+              {interview?.rating && (
+                <Badge
+                  className={`${RATING_COLORS[interview.rating].bg} ${RATING_COLORS[interview.rating].text}`}
+                >
+                  {RATING_LABEL[interview.rating]}
+                </Badge>
+              )}
+              {applicant?.returner && <ReturnerBadge showLabel />}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Directly under the name: for a draft call this is what people open
           the drawer to read, and the write-ups run long enough that putting it

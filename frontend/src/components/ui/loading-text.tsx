@@ -1,11 +1,10 @@
-import { cn } from '@/lib/utils'
+import { SkeletonLines } from '@/components/ui/skeleton'
 
 export function LoadingText({
-  label = 'Loading…',
   className,
 }: {
   label?: string
   className?: string
 }) {
-  return <p className={cn('text-text-faint text-sm', className)}>{label}</p>
+  return <SkeletonLines className={className} />
 }

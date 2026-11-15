@@ -32,11 +32,13 @@ export function FormField({
   field,
   label,
   required,
+  hint,
   children,
 }: {
   field: AnyFieldApi
   label: string
   required?: boolean
+  hint?: React.ReactNode
   children: (invalid: boolean) => React.ReactNode
 }) {
   const value = String(field.state.value ?? '')
@@ -54,6 +56,7 @@ export function FormField({
       </div>
       {children(!!error)}
       {error && <p className="text-destructive text-xs">{error}</p>}
+      {hint}
     </div>
   )
 }
@@ -165,6 +168,7 @@ export function SubmitConfirmDialog({
   onConfirm,
   description = "Once submitted, you can't change it.",
   title = 'Submit your write-up?',
+  confirmLabel = 'Submit',
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -172,6 +176,7 @@ export function SubmitConfirmDialog({
   onConfirm: () => void
   description?: string
   title?: string
+  confirmLabel?: string
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -191,7 +196,7 @@ export function SubmitConfirmDialog({
               onConfirm()
             }}
           >
-            Submit
+            {confirmLabel}
           </Button>
         </DialogFooter>
       </DialogContent>

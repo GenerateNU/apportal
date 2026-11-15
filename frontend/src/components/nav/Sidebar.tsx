@@ -1,5 +1,7 @@
 'use client'
 
+import { HelpContact } from '@/components/HelpContact'
+
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
@@ -8,8 +10,8 @@ import {
   UserPlus,
   FileText,
   Calendar,
-  ChevronsLeft,
-  ChevronsRight,
+  PanelLeftClose,
+  PanelLeftOpen,
   ClipboardCheck,
   ListChecks,
   ListOrdered,
@@ -69,7 +71,7 @@ const sectionsByRole: Record<Role, NavSection[]> = {
       items: [
         {
           href: '/applicant/applications',
-          label: 'Applications',
+          label: 'My applications',
           icon: FileText,
         },
       ],
@@ -87,7 +89,7 @@ const sectionsByRole: Record<Role, NavSection[]> = {
         },
         {
           href: '/reviewer/applications',
-          label: 'Applications',
+          label: 'Applicants',
           icon: Users,
           forLeads: true,
         },
@@ -323,15 +325,15 @@ function SidebarUser({
       type="button"
       onClick={handleSignOut}
       aria-label="Sign out"
-      className="text-ink/60 hover:text-ink flex-shrink-0 p-2 transition-colors hover:bg-gray-100"
+      className={`text-ink/60 hover:text-ink flex flex-shrink-0 items-center justify-center transition-colors hover:bg-gray-100 ${collapsed ? 'size-10' : 'p-2'}`}
     >
-      <LogOut size={16} />
+      <LogOut size={collapsed ? 18 : 16} />
     </button>
   )
 
   if (collapsed) {
     return (
-      <div className="flex flex-col items-center gap-2 px-2 pt-2 pb-5">
+      <div className="flex flex-col items-center gap-1 border-t border-gray-200 px-2 pt-3 pb-5">
         <Tooltip label={fullName}>
           <Avatar name={fullName} size="sm" />
         </Tooltip>
@@ -365,8 +367,8 @@ export default function Sidebar({
   const pathname = usePathname()
   const { collapsedIds, toggleSection, expandSection } = useCollapsedSections()
 
-  const sections = roleOrder
-    .filter((role) => roles.includes(role))
+  const staffSections = roleOrder
+    .filter((role) => role !== 'applicant' && roles.includes(role))
     .flatMap((role) => sectionsByRole[role])
     .map((section) => ({
       ...section,
@@ -375,6 +377,15 @@ export default function Sidebar({
       ),
     }))
     .filter((section) => section.items.length > 0)
+  const applyItems = sectionsByRole.applicant.flatMap((s) => s.items)
+  const sections =
+    staffSections.length === 0
+      ? sectionsByRole.applicant
+      : staffSections.map((section, i) =>
+          i === 0
+            ? { ...section, items: [...section.items, ...applyItems] }
+            : section
+        )
 
   // Navigating into a collapsed section expands it, so the active item is
   // never hidden. Easy to hit from the icon-only rail, which shows every item
@@ -396,36 +407,54 @@ export default function Sidebar({
       {/* Logo, with the rail toggle sharing the row. The collapsed rail is too
           narrow to fit both, so there the toggle stacks underneath. */}
       <div
-        className={`flex flex-shrink-0 items-center ${collapsed ? 'flex-col gap-2 px-2 py-4' : 'gap-2.5 px-5 pt-6 pb-4'}`}
+        className={`flex flex-shrink-0 items-center ${collapsed ? 'justify-center px-2 pt-6 pb-4' : 'gap-2.5 px-5 pt-6 pb-4'}`}
       >
-        <Image
-          src="/GenerateNU Logo.png"
-          alt="GenerateNU"
-          width={28}
-          height={28}
-          className="object-contain"
-        />
+        {collapsed && onToggleCollapsed ? (
+          <Tooltip label="Expand sidebar · ⌘K / Ctrl+K">
+            <button
+              type="button"
+              onClick={onToggleCollapsed}
+              aria-label="Expand sidebar"
+              aria-keyshortcuts="Meta+K Control+K"
+              className="group relative flex size-10 items-center justify-center transition-colors hover:bg-gray-100"
+            >
+              <Image
+                src="/GenerateNU Logo.png"
+                alt=""
+                width={28}
+                height={28}
+                className="object-contain transition-opacity group-hover:opacity-0 group-focus-visible:opacity-0"
+              />
+              <PanelLeftOpen
+                size={18}
+                className="text-ink absolute opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
+              />
+            </button>
+          </Tooltip>
+        ) : (
+          <Image
+            src="/GenerateNU Logo.png"
+            alt="GenerateNU"
+            width={28}
+            height={28}
+            className="object-contain"
+          />
+        )}
         {!collapsed && (
           <span className="font-display text-ink flex-1 text-lg font-bold tracking-tight uppercase">
             Generate
           </span>
         )}
-        {onToggleCollapsed && (
-          <Tooltip
-            label={`${collapsed ? 'Expand' : 'Collapse'} sidebar · ⌘K / Ctrl+K`}
-          >
+        {onToggleCollapsed && !collapsed && (
+          <Tooltip label="Collapse sidebar · ⌘K / Ctrl+K">
             <button
               type="button"
               onClick={onToggleCollapsed}
-              aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              aria-label="Collapse sidebar"
               aria-keyshortcuts="Meta+K Control+K"
               className="text-ink/60 hover:text-ink p-1.5 transition-colors hover:bg-gray-100"
             >
-              {collapsed ? (
-                <ChevronsRight size={16} />
-              ) : (
-                <ChevronsLeft size={16} />
-              )}
+              <PanelLeftClose size={18} />
             </button>
           </Tooltip>
         )}
@@ -446,6 +475,9 @@ export default function Sidebar({
         ))}
       </nav>
 
+      {!collapsed && (
+        <HelpContact className="px-5 pb-4 text-left leading-relaxed" />
+      )}
       {/* User */}
       {fullName && <SidebarUser fullName={fullName} collapsed={collapsed} />}
     </aside>

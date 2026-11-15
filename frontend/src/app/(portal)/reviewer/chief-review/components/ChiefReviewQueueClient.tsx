@@ -1,4 +1,6 @@
 'use client'
+
+import { SkeletonLines } from '@/components/ui/skeleton'
 import { PageContainer } from '@/components/PageContainer'
 
 import { useEffect, useMemo, useState } from 'react'
@@ -525,10 +527,7 @@ export function ChiefReviewQueueClient() {
       )}
 
       {isLoading ? (
-        <div className="text-text-muted flex items-center gap-2 px-2 py-10 text-sm">
-          <Loader2 className="animate-spin" size={16} />
-          Loading…
-        </div>
+        <SkeletonLines lines={6} className="px-2 py-6" />
       ) : applications.length === 0 ? (
         <EmptyState
           title={
