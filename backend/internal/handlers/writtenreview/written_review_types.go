@@ -14,6 +14,10 @@ type WrittenReviewsOutput struct {
 	Body []models.WrittenReviewDetail
 }
 
+type ListBulkInput struct {
+	ApplicationIDs string `query:"application_ids" doc:"Comma-separated application IDs"`
+}
+
 // ReviewAnswerSubmission is a reviewer's answer to one of the cycle/role's
 // review_questions.
 type ReviewAnswerSubmission struct {

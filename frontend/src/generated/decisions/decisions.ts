@@ -406,7 +406,7 @@ export function useListDecisions<TData = Awaited<ReturnType<typeof listDecisions
 
 
 /**
- * Reviewer only. ?application_ids= is comma-separated. Returns each applicant's interview write-up, recording reviews, and lead written reviews — the material an interviewer draws on to write feedback. Blind review still applies: a lead sees only their own written review, and peers' recording comments are withheld, until a chief releases the cycle's reviews. Leads only get applicants they interviewed.
+ * Reviewer only. ?application_ids= is comma-separated. Returns each applicant's interview write-up, recording reviews, and lead written reviews — the material an interviewer draws on to write feedback. A lead sees only their own written review until a chief releases the cycle's written reviews; peers' recording reviews show once submitted. Leads only get applicants they interviewed.
  * @summary The review history behind a batch of decisions
  */
 export const listDecisionContext = (

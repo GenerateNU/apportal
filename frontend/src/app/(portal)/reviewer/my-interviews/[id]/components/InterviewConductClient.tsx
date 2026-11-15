@@ -126,9 +126,6 @@ export function InterviewConductClient({
     recordingReviews.some((r) => r.reviewer_nuid === currentUser.nuid)
   const writeupDone = interviewSubmitted(interview)
 
-  // The rest of my interview queue, so a "next" button can jump to the next
-  // assigned applicant who still needs to be interviewed — same ordering
-  // (grouped by role) as the my-interviews list.
   const { data: assignedApplications = [] } = useApplications(
     { interviewer_nuid: currentUser?.nuid ?? '' },
     undefined,
@@ -521,6 +518,11 @@ export function InterviewConductClient({
                 ) : (
                   <div className={scrollPane}>
                     <RecordingReviewThread
+                      key={
+                        recordingReviews.find(
+                          (r) => r.reviewer_nuid === currentUser?.nuid
+                        )?.id ?? 'none'
+                      }
                       applicationId={applicationId}
                       reviews={recordingReviews}
                       currentNuid={currentUser?.nuid}

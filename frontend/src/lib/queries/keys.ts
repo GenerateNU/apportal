@@ -157,6 +157,9 @@ export const queryKeys = {
     lists: () => [...queryKeys.writtenReviews.all, 'list'] as const,
     list: (applicationId: string) =>
       [...queryKeys.writtenReviews.lists(), applicationId] as const,
+    bulks: () => [...queryKeys.writtenReviews.all, 'bulk'] as const,
+    bulk: (applicationIds: string[]) =>
+      [...queryKeys.writtenReviews.bulks(), applicationIds] as const,
   },
 
   chiefReviews: {

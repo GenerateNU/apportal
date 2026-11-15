@@ -221,6 +221,8 @@ export * from './listRoles200';
 export * from './listRolesParams';
 export * from './listUsersParams';
 export * from './listWrittenReviews200';
+export * from './listWrittenReviewsBulk200';
+export * from './listWrittenReviewsBulkParams';
 export * from './makeDraftPickInputBody';
 export * from './openDraftInputBody';
 export * from './planConflict';

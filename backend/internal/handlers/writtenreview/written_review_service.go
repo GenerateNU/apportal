@@ -3,6 +3,7 @@ package writtenreview
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/GenerateNU/apportal/backend/internal/handlers/reviewrelease"
@@ -70,31 +71,88 @@ func (s *writtenReviewService) list(ctx context.Context, in *utils.ApplicationSc
 	if err := s.access.CanApplication(ctx, access.ReviewApplication, in.ID); err != nil {
 		return nil, err
 	}
-	// Blind review: until released, a lead sees only their own.
-	visible, err := s.reviewReleaseDB.PeerReviewsVisible(ctx, s.access, models.ReviewKindWritten, []string{in.ID})
+	grouped, err := s.visibleReviews(ctx, []string{in.ID})
 	if err != nil {
 		return nil, err
 	}
-	me := utils.CurrentActor(ctx).NUID
-	onlyReviewer := ""
-	if !visible[in.ID] {
-		onlyReviewer = me
-	} else if s.access.CanApplication(ctx, access.ManageApplication, in.ID) != nil {
-		// After release, a lead still sees others only once their own is in.
-		submitted, err := s.writtenReviewDB.ReviewSubmitted(ctx, in.ID, me)
-		if err != nil {
-			return nil, utils.StoreErr(err)
-		}
-		if !submitted {
-			onlyReviewer = me
-		}
+	items := grouped[in.ID]
+	if items == nil {
+		items = []models.WrittenReviewDetail{}
 	}
+	return &WrittenReviewsOutput{Body: items}, nil
+}
 
-	items, err := s.writtenReviewDB.ListWrittenReviews(ctx, in.ID, onlyReviewer)
+func (s *writtenReviewService) listBulk(ctx context.Context, in *ListBulkInput) (*WrittenReviewsOutput, error) {
+	ids := utils.SplitIDs(in.ApplicationIDs)
+	if len(ids) > utils.MaxBulkApplications {
+		return nil, huma.Error422UnprocessableEntity("too many application_ids")
+	}
+	ids, err := s.access.VisibleApplicationIDs(ctx, ids, access.Review)
+	if err != nil {
+		return nil, err
+	}
+	grouped, err := s.visibleReviews(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+	items := []models.WrittenReviewDetail{}
+	for _, id := range ids {
+		items = append(items, grouped[id]...)
+	}
+	return &WrittenReviewsOutput{Body: items}, nil
+}
+
+func (s *writtenReviewService) visibleReviews(ctx context.Context, ids []string) (map[string][]models.WrittenReviewDetail, error) {
+	me := utils.CurrentActor(ctx).NUID
+	var sets peerSets
+	var err error
+	if sets.visible, err = s.reviewReleaseDB.PeerReviewsVisible(ctx, s.access, models.ReviewKindWritten, ids); err != nil {
+		return nil, err
+	}
+	managed, err := s.access.VisibleApplicationIDs(ctx, ids, access.Manage)
+	if err != nil {
+		return nil, err
+	}
+	sets.managed = make(map[string]bool, len(managed))
+	for _, id := range managed {
+		sets.managed[id] = true
+	}
+	if sets.assigned, err = s.writtenReviewDB.AssignedApplications(ctx, ids, me); err != nil {
+		return nil, utils.StoreErr(err)
+	}
+	if sets.submitted, err = s.writtenReviewDB.SubmittedApplications(ctx, ids, me); err != nil {
+		return nil, utils.StoreErr(err)
+	}
+	grouped, err := s.writtenReviewDB.ListWrittenReviewsForApplications(ctx, ids)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
-	return &WrittenReviewsOutput{Body: items}, nil
+	return scopeReviews(grouped, me, sets), nil
+}
+
+type peerSets struct {
+	visible, managed, assigned, submitted map[string]bool
+}
+
+func scopeReviews(grouped map[string][]models.WrittenReviewDetail, me string, sets peerSets) map[string][]models.WrittenReviewDetail {
+	for id, reviews := range grouped {
+		if !onlyOwn(sets.visible[id], sets.managed[id], sets.assigned[id], sets.submitted[id]) {
+			continue
+		}
+		grouped[id] = slices.DeleteFunc(reviews, func(r models.WrittenReviewDetail) bool { return r.ReviewerNUID != me })
+	}
+	return grouped
+}
+
+func onlyOwn(released, manager, assigned, submitted bool) bool {
+	switch {
+	case manager:
+		return false
+	case !released:
+		return true
+	default:
+		return assigned && !submitted
+	}
 }
 
 func missingRequired(required []string, answers []ReviewAnswerInput) int {

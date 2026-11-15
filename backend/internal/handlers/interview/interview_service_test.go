@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/danielgtaylor/huma/v2"
 
@@ -72,5 +73,32 @@ func TestMissingForSubmit(t *testing.T) {
 	}
 	if msg := missingForSubmit(&UpsertInterviewInput{}, models.Interview{}); msg != "a recording link is required to submit" {
 		t.Fatalf("empty interview should block submit, got %q", msg)
+	}
+}
+
+func TestNeedsSubmitCheck(t *testing.T) {
+	text := "x"
+	when := time.Now()
+	submit := &UpsertInterviewInput{}
+	submit.Body.Submit = true
+	writeup := &UpsertInterviewInput{}
+	writeup.Body.Writeup = &text
+	schedule := &UpsertInterviewInput{}
+	schedule.Body.ScheduledAt = &when
+	cases := []struct {
+		name      string
+		in        *UpsertInterviewInput
+		submitted bool
+		want      bool
+	}{
+		{"submitting always checks", submit, false, true},
+		{"draft edit skips", writeup, false, false},
+		{"editing a submitted write-up checks", writeup, true, true},
+		{"rescheduling a submitted interview skips", schedule, true, false},
+	}
+	for _, c := range cases {
+		if got := needsSubmitCheck(c.in, c.submitted); got != c.want {
+			t.Errorf("%s: got %v, want %v", c.name, got, c.want)
+		}
 	}
 }

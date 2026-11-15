@@ -16,7 +16,7 @@ export function PanelHeading({
   return (
     <div
       className={cn(
-        'flex min-h-8 items-center justify-between gap-4 border-b border-gray-200 pb-2',
+        'flex min-h-10 items-center justify-between gap-4 border-b border-gray-200 pb-2',
         className
       )}
     >

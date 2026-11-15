@@ -410,7 +410,7 @@ export function LeadTeamTab({
                   <Select value={viewingId} onValueChange={setViewingId}>
                     <SelectTrigger
                       aria-label="Whose ranking to show"
-                      className="h-8 w-44"
+                      className="h-8 w-44 text-xs font-normal"
                     >
                       <SelectValue />
                     </SelectTrigger>

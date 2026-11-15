@@ -203,24 +203,18 @@ func (s *decisionService) context(ctx context.Context, in *ListDecisionContextIn
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
+	reviewrelease.HidePeerDrafts(reviewers, actor.NUID)
 	recordingReviews := map[string][]models.InterviewReviewerDetail{}
 	for _, r := range reviewers {
 		recordingReviews[r.ApplicationID] = append(recordingReviews[r.ApplicationID], r)
 	}
 
-	// Fetched unscoped and narrowed below, because release is per cycle × role
-	// and one batch can span both roles — a single SQL-level onlyReviewer (what
-	// the one-application route uses) can't express that.
-	writtenReviews, err := s.writtenReviewDB.ListWrittenReviewsForApplications(ctx, allowed, "")
+	writtenReviews, err := s.writtenReviewDB.ListWrittenReviewsForApplications(ctx, allowed)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
 
 	writtenVisible, err := s.reviewReleaseDB.PeerReviewsVisible(ctx, s.access, models.ReviewKindWritten, allowed)
-	if err != nil {
-		return nil, err
-	}
-	recordingVisible, err := s.reviewReleaseDB.PeerReviewsVisible(ctx, s.access, models.ReviewKindRecording, allowed)
 	if err != nil {
 		return nil, err
 	}
@@ -239,7 +233,6 @@ func (s *decisionService) context(ctx context.Context, in *ListDecisionContextIn
 		if !writtenVisible[applicationID] {
 			entry.WrittenReviews, entry.WrittenReviewsBlind = ownWrittenReviews(entry.WrittenReviews, actor.NUID)
 		}
-		entry.RecordingReviewsBlind = reviewrelease.HidePeerWriteups(entry.RecordingReviews, actor.NUID, recordingVisible)
 
 		if entry.WrittenReviews == nil {
 			entry.WrittenReviews = []models.WrittenReviewDetail{}

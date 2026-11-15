@@ -4355,7 +4355,7 @@ components:
             - rejection_generic
           type: string
         mark_sent:
-          description: Records that the message was emailed, and moves the applicant to the rejected stage with it. The assigned interviewer may set it true once the letter is ready; setting it false (restoring the stage they were in before) is chief only.
+          description: Chief only. Records that the message was emailed, and moves the applicant to the rejected stage with it. Setting it false restores the stage they were in before.
           type: boolean
       type: object
     UpsertInterviewInputBody:
@@ -6538,7 +6538,7 @@ paths:
         - Written reviews
   /applications/{id}/written-reviews:
     get:
-      description: Leads see only their own review until a chief releases the cycle's written reviews; chiefs and admins always see every review.
+      description: Leads see only their own review until a chief releases the cycle's written reviews, and after release an assigned lead sees others only once their own is submitted; chiefs and admins always see every review.
       operationId: list-written-reviews
       parameters:
         - description: Application ID
@@ -9621,7 +9621,7 @@ paths:
         - Cycles
   /decisions/context:
     get:
-      description: "Reviewer only. ?application_ids= is comma-separated. Returns each applicant's interview write-up, recording reviews, and lead written reviews — the material an interviewer draws on to write feedback. Blind review still applies: a lead sees only their own written review, and peers' recording comments are withheld, until a chief releases the cycle's reviews. Leads only get applicants they interviewed."
+      description: Reviewer only. ?application_ids= is comma-separated. Returns each applicant's interview write-up, recording reviews, and lead written reviews — the material an interviewer draws on to write feedback. A lead sees only their own written review until a chief releases the cycle's written reviews; peers' recording reviews show once submitted. Leads only get applicants they interviewed.
       operationId: list-decision-context
       parameters:
         - description: Comma-separated application IDs
@@ -10252,7 +10252,7 @@ paths:
         - Interview groups
   /interview-reviewers:
     get:
-      description: "Reviewer only. Blind review applies: other reviewers' write-ups are omitted until a chief releases the cycle's recording reviews; chiefs always see them."
+      description: "Reviewer only. Other reviewers' submitted write-ups are included; their unsubmitted drafts are omitted."
       operationId: list-interview-reviewers-bulk
       parameters:
         - description: Comma-separated application IDs
@@ -12246,3 +12246,47 @@ paths:
       summary: Update a reviewer
       tags:
         - Users
+  /written-reviews:
+    get:
+      description: Reviewer only. Same visibility as the single-application route.
+      operationId: list-written-reviews-bulk
+      parameters:
+        - description: Comma-separated application IDs
+          explode: false
+          in: query
+          name: application_ids
+          schema:
+            description: Comma-separated application IDs
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/WrittenReviewDetail"
+                type:
+                  - array
+                  - "null"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: List written reviews for several applications
+      tags:
+        - Written reviews

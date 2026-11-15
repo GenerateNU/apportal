@@ -31,6 +31,7 @@ import NavItem, { isNavItemActive } from './NavItem'
 import { Avatar } from '@/components/ui/avatar'
 import { Tooltip } from '@/components/Tooltip'
 import { useAuth } from '@/lib/auth/auth-context'
+import { useMyCycles } from '@/lib/queries/cycle-staff'
 import type { Role } from '@/types/roles'
 
 interface SidebarProps {
@@ -375,13 +376,15 @@ export default function Sidebar({
   const pathname = usePathname()
   const { collapsedIds, toggleSection, expandSection } = useCollapsedSections()
 
+  const { data: myCycles, isFetched: myCyclesFetched } = useMyCycles()
+  const offCycle = !isChief && myCyclesFetched && (myCycles ?? []).length === 0
   const staffSections = roleOrder
     .filter((role) => role !== 'applicant' && roles.includes(role))
     .flatMap((role) => sectionsByRole[role])
     .map((section) => ({
       ...section,
       items: section.items.filter((item) =>
-        isChief ? !item.leadOnly : item.forLeads || item.leadOnly
+        isChief ? !item.leadOnly : !offCycle && (item.forLeads || item.leadOnly)
       ),
     }))
     .filter((section) => section.items.length > 0)

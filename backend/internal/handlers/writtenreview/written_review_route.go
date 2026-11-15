@@ -30,8 +30,18 @@ func Route(api huma.API, db *gorm.DB) {
 		Method:      http.MethodGet,
 		Path:        "/applications/{id}/written-reviews",
 		Summary:     "List an application's written reviews",
-		Description: "Leads see only their own review until a chief releases the cycle's written reviews; chiefs and admins always see every review.",
+		Description: "Leads see only their own review until a chief releases the cycle's written reviews, and after release an assigned lead sees others only once their own is submitted; chiefs and admins always see every review.",
 		Tags:        []string{"Written reviews"},
 		Errors:      []int{http.StatusUnauthorized},
 	}, s.list)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "list-written-reviews-bulk",
+		Method:      http.MethodGet,
+		Path:        "/written-reviews",
+		Summary:     "List written reviews for several applications",
+		Description: "Reviewer only. Same visibility as the single-application route.",
+		Tags:        []string{"Written reviews"},
+		Errors:      []int{http.StatusUnauthorized, http.StatusUnprocessableEntity},
+	}, s.listBulk)
 }

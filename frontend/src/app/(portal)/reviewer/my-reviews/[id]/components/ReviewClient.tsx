@@ -51,9 +51,6 @@ export function ReviewClient({
     useWrittenReviews(applicationId)
   const { data: application } = useApplication(applicationId)
 
-  // The rest of my review queue, so a "next" button can jump to the next
-  // assigned application that still needs a review from me — same ordering
-  // (grouped by role) as the queue page.
   const { data: assignedApplications = [], isFetched: queueFetched } =
     useApplications({ assigned_to: currentUser?.nuid ?? '' }, undefined, {
       enabled: !!currentUser?.nuid,
@@ -258,7 +255,7 @@ export function ReviewClient({
                 </div>
               ) : (
                 <ReviewForm
-                  key={`${applicationId}-${own?.id ?? 'new'}`}
+                  key={applicationId}
                   applicationId={applicationId}
                   reviewQuestions={reviewQuestions}
                   own={own}

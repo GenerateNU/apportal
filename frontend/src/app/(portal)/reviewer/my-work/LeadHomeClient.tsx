@@ -5,7 +5,7 @@ import { useQueries } from '@tanstack/react-query'
 import { getDraftBoard } from '@/generated/draft/draft'
 import type { DraftBoard } from '@/lib/api/types'
 import { queryKeys } from '@/lib/queries/keys'
-import { useSearchParams } from 'next/navigation'
+import { redirect, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowRight, Check, Lock } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
@@ -455,20 +455,7 @@ export function LeadHomeClient() {
       (!me || reviewAppsPending || writtenReviews.some((q) => q.isPending)))
   if (loadingWork) return <LeadHomeSkeleton />
 
-  if (!cycle) {
-    return (
-      <LeadPage>
-        <PageHeader
-          back={<Breadcrumbs items={[{ label: 'My work' }]} />}
-          title="My work"
-        />
-        <EmptyState
-          title="You're not on a cycle's team yet"
-          description="Once a chief adds you to a cycle, your reviews and interviews show up here."
-        />
-      </LeadPage>
-    )
-  }
+  if (!cycle) redirect('/applicant/applications')
 
   return (
     <LeadPage>
@@ -536,11 +523,11 @@ export function LeadHomeClient() {
         </ol>
       </nav>
 
-      {selected && <PhasePanel phase={selected} />}
+      {selected && renderPhasePanel(selected)}
     </LeadPage>
   )
 
-  function PhasePanel({ phase }: { phase: Phase }) {
+  function renderPhasePanel(phase: Phase) {
     if (!phase.open) {
       return <EmptyState title="Not open yet" description={phase.locked} />
     }

@@ -48,6 +48,31 @@ func (w *WrittenReviewDB) ReviewSubmitted(ctx context.Context, applicationID, re
 	return count > 0, err
 }
 
+func (w *WrittenReviewDB) SubmittedApplications(ctx context.Context, applicationIDs []string, reviewerNUID string) (map[string]bool, error) {
+	return applicationSet(w.db.WithContext(ctx).Model(&models.WrittenReview{}).
+		Where("application_id IN ? AND reviewer_nuid = ? AND submitted_at IS NOT NULL", applicationIDs, reviewerNUID), applicationIDs)
+}
+
+func (w *WrittenReviewDB) AssignedApplications(ctx context.Context, applicationIDs []string, leadNUID string) (map[string]bool, error) {
+	return applicationSet(w.db.WithContext(ctx).Model(&models.LeadAssignment{}).
+		Where("application_id IN ? AND lead_nuid = ?", applicationIDs, leadNUID), applicationIDs)
+}
+
+func applicationSet(q *gorm.DB, applicationIDs []string) (map[string]bool, error) {
+	set := map[string]bool{}
+	if len(applicationIDs) == 0 {
+		return set, nil
+	}
+	var ids []string
+	if err := q.Pluck("application_id", &ids).Error; err != nil {
+		return nil, err
+	}
+	for _, id := range ids {
+		set[id] = true
+	}
+	return set, nil
+}
+
 // RequiredReviewQuestionIDs lists the required review questions that apply to
 // an application: its cycle's, for its role or for every role.
 func (w *WrittenReviewDB) RequiredReviewQuestionIDs(ctx context.Context, applicationID string) ([]string, error) {
@@ -137,45 +162,6 @@ func (w *WrittenReviewDB) UpsertWrittenReview(ctx context.Context, in WrittenRev
 	return detail, nil
 }
 
-// ListWrittenReviews returns an application's reviews with their answers. A
-// non-empty onlyReviewer returns just that reviewer's, for blind review.
-func (w *WrittenReviewDB) ListWrittenReviews(ctx context.Context, applicationID, onlyReviewer string) ([]models.WrittenReviewDetail, error) {
-	q := w.db.WithContext(ctx).Where("application_id = ?", applicationID)
-	if onlyReviewer != "" {
-		q = q.Where("reviewer_nuid = ?", onlyReviewer)
-	}
-	var reviews []models.WrittenReview
-	if err := q.Order("created_at").Find(&reviews).Error; err != nil {
-		return nil, err
-	}
-
-	ids := make([]string, len(reviews))
-	reviewerNUIDs := make([]string, len(reviews))
-	for i, r := range reviews {
-		ids[i] = r.ID
-		reviewerNUIDs[i] = r.ReviewerNUID
-	}
-	answers, err := w.listReviewAnswers(ctx, ids)
-	if err != nil {
-		return nil, err
-	}
-	names, err := w.users.NamesByNUIDs(ctx, reviewerNUIDs)
-	if err != nil {
-		return nil, err
-	}
-
-	details := make([]models.WrittenReviewDetail, len(reviews))
-	for i, r := range reviews {
-		details[i].WrittenReview = r
-		details[i].Answers = answers[r.ID]
-		if details[i].Answers == nil {
-			details[i].Answers = []models.WrittenReviewAnswer{}
-		}
-		details[i].ReviewerName = names[r.ReviewerNUID]
-	}
-	return details, nil
-}
-
 // listReviewAnswers fetches the answers for the given reviews, grouped by review.
 func (w *WrittenReviewDB) listReviewAnswers(ctx context.Context, reviewIDs []string) (map[string][]models.WrittenReviewAnswer, error) {
 	grouped := map[string][]models.WrittenReviewAnswer{}
@@ -192,18 +178,14 @@ func (w *WrittenReviewDB) listReviewAnswers(ctx context.Context, reviewIDs []str
 	return grouped, nil
 }
 
-// ListWrittenReviewsForApplications is ListWrittenReviews for many
-// applications, keyed by application. onlyReviewer scopes to one reviewer's
-// own reviews, as blind review requires.
-func (w *WrittenReviewDB) ListWrittenReviewsForApplications(ctx context.Context, applicationIDs []string, onlyReviewer string) (map[string][]models.WrittenReviewDetail, error) {
+// ListWrittenReviewsForApplications returns the reviews, with their answers,
+// for many applications, keyed by application.
+func (w *WrittenReviewDB) ListWrittenReviewsForApplications(ctx context.Context, applicationIDs []string) (map[string][]models.WrittenReviewDetail, error) {
 	grouped := map[string][]models.WrittenReviewDetail{}
 	if len(applicationIDs) == 0 {
 		return grouped, nil
 	}
 	q := w.db.WithContext(ctx).Where("application_id IN ?", applicationIDs)
-	if onlyReviewer != "" {
-		q = q.Where("reviewer_nuid = ?", onlyReviewer)
-	}
 	var reviews []models.WrittenReview
 	if err := q.Order("application_id").Order("created_at").Find(&reviews).Error; err != nil {
 		return nil, err

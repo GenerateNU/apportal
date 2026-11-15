@@ -87,9 +87,8 @@ type DecisionInterviewer struct {
 // an interviewer draws on to write the feedback paragraph, and what a chief
 // reads to sanity-check it. Not a table.
 //
-// Both Blind flags exist so the UI can say "withheld" rather than showing an
-// empty panel that reads as "nobody reviewed them": blind review is still in
-// force until a chief releases the cycle × role.
+// WrittenReviewsBlind lets the UI say "withheld" rather than showing an empty
+// panel that reads as "nobody reviewed them". RecordingReviewsBlind is always false.
 type DecisionContext struct {
 	ApplicationID         string                    `json:"application_id"`
 	Interview             *InterviewDetail          `json:"interview,omitempty"`

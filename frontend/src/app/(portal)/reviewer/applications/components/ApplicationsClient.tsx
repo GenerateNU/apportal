@@ -1,5 +1,6 @@
 'use client'
 
+import { redirect } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import { PAGE_TOP, PAGE_X } from '@/components/ui/page-shell'
@@ -94,15 +95,19 @@ export function ApplicationsClient() {
   }, [search])
 
   const { data: allCycles = [] } = useCycles({})
-  const { data: myCycles = [] } = useMyCycles()
+  const { data: myCycles = [], isFetched: myCyclesFetched } = useMyCycles()
   const isAdmin = !!currentUser?.roles.includes('admin')
   const cycles = useMemo(
     () =>
-      isAdmin || myCycles.length === 0
+      isAdmin
         ? allCycles
         : allCycles.filter((c) => myCycles.some((m) => m.cycle_id === c.id)),
     [allCycles, myCycles, isAdmin]
   )
+  const cyclesReady = isAdmin || myCyclesFetched
+  if (myCyclesFetched && !isAdmin && !isChief && myCycles.length === 0) {
+    redirect('/applicant/applications')
+  }
 
   // Default the cycle filter so reviewers land on a specific cycle instead
   // of every cycle ever run. Shared with the server prefetch in ../page.tsx,
@@ -112,7 +117,10 @@ export function ApplicationsClient() {
     [cycles]
   )
 
-  if (!cycleDefaulted && currentCycleId) {
+  if (cyclesReady && activeCycle && !cycles.some((c) => c.id === activeCycle)) {
+    setActiveCycle(currentCycleId ?? '')
+  }
+  if (cyclesReady && !cycleDefaulted && currentCycleId) {
     setActiveCycle(currentCycleId)
     setCycleDefaulted(true)
   }

@@ -150,19 +150,6 @@ func (r *ReviewReleaseDB) PeerReviewsVisible(ctx context.Context, chk *access.Ch
 	return visible, nil
 }
 
-// HidePeerWriteups clears other reviewers' write-ups on applications whose peer
-// reviews aren't visible, and reports whether it hid any.
-func HidePeerWriteups(items []models.InterviewReviewerDetail, nuid string, visible map[string]bool) bool {
-	hid := false
-	for i := range items {
-		if !visible[items[i].ApplicationID] && items[i].ReviewerNUID != nuid && items[i].Writeup != nil {
-			items[i].Writeup = nil
-			hid = true
-		}
-	}
-	return hid
-}
-
 func HidePeerDrafts(items []models.InterviewReviewerDetail, nuid string) {
 	for i := range items {
 		if items[i].ReviewerNUID != nuid && items[i].WriteupSubmittedAt == nil {

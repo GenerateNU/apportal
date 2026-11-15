@@ -57,7 +57,7 @@ func (s *interviewService) upsert(ctx context.Context, in *UpsertInterviewInput)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
-	if in.Body.Submit || current.SubmittedAt != nil {
+	if needsSubmitCheck(in, current.SubmittedAt != nil) {
 		if msg := missingForSubmit(in, current.Interview); msg != "" {
 			return nil, huma.Error422UnprocessableEntity(msg)
 		}
@@ -98,6 +98,13 @@ func (s *interviewService) get(ctx context.Context, in *utils.ApplicationScopedI
 		return nil, utils.StoreErr(err)
 	}
 	return &InterviewOutput{Body: iv}, nil
+}
+
+func needsSubmitCheck(in *UpsertInterviewInput, submitted bool) bool {
+	if in.Body.Submit {
+		return true
+	}
+	return submitted && (in.Body.Writeup != nil || in.Body.RecordingURL != nil || in.Body.NotesURL != nil)
 }
 
 func missingForSubmit(in *UpsertInterviewInput, current models.Interview) string {
