@@ -11,6 +11,7 @@ interface NavItemProps {
   icon: LucideIcon
   // Icon-only, with the label as a hover tooltip instead of inline text.
   collapsed?: boolean
+  also?: string[]
 }
 
 export function isNavItemActive(pathname: string, href: string) {
@@ -22,9 +23,10 @@ export default function NavItem({
   label,
   icon: Icon,
   collapsed,
+  also = [],
 }: NavItemProps) {
   const pathname = usePathname()
-  const isActive = isNavItemActive(pathname, href)
+  const isActive = [href, ...also].some((h) => isNavItemActive(pathname, h))
 
   const link = (
     <Link

@@ -54,6 +54,7 @@ type NavItemConfig = {
   // Leads only see their own cycle's home and the applications list.
   forLeads?: boolean
   leadOnly?: boolean
+  also?: string[]
 }
 
 type NavSection = {
@@ -86,6 +87,12 @@ const sectionsByRole: Record<Role, NavSection[]> = {
           label: 'My work',
           icon: LayoutList,
           leadOnly: true,
+          also: [
+            '/reviewer/my-reviews',
+            '/reviewer/my-interviews',
+            '/reviewer/preference-lists',
+            '/reviewer/decisions',
+          ],
         },
         {
           href: '/reviewer/applications',
@@ -290,12 +297,13 @@ function NavSectionGroup({
         id={contentId}
         className={`flex-col gap-0.5 ${showItems ? 'flex' : 'hidden'}`}
       >
-        {section.items.map(({ href, label, icon }) => (
+        {section.items.map(({ href, label, icon, also }) => (
           <NavItem
             key={href}
             href={href}
             label={label}
             icon={icon}
+            also={also}
             collapsed={railCollapsed}
           />
         ))}
