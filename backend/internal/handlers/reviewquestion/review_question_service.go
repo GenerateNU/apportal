@@ -2,6 +2,7 @@ package reviewquestion
 
 import (
 	"context"
+	"errors"
 
 	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/GenerateNU/apportal/backend/internal/models"
@@ -102,52 +103,24 @@ func (s *reviewQuestionService) update(ctx context.Context, in *UpdateReviewQues
 		ClearDescription: in.Body.ClearDescription,
 		Ranked:           in.Body.Ranked,
 	}
+	var scale ScaleResolver
 	if in.Body.QuestionType != nil || in.Body.ScoreMin != nil || in.Body.ScoreMax != nil {
-		if err := s.updateScale(ctx, in, &upd); err != nil {
-			return nil, err
+		scale = func(cur models.ReviewQuestion) (*int, *int, error) {
+			return mergeScale(cur, in.Body.QuestionType, in.Body.ScoreMin, in.Body.ScoreMax)
 		}
 	}
 
-	q, err := s.reviewQuestionDB.UpdateReviewQuestion(ctx, in.ID, upd)
-	if err != nil {
+	q, err := s.reviewQuestionDB.UpdateReviewQuestion(ctx, in.ID, upd, scale)
+	var se huma.StatusError
+	switch {
+	case errors.As(err, &se):
+		return nil, err
+	case errors.Is(err, ErrScaleLocked):
+		return nil, huma.Error409Conflict("this question's scale can't change after reviews have scored it")
+	case err != nil:
 		return nil, utils.StoreErr(err)
 	}
 	return &ReviewQuestionOutput{Body: q}, nil
-}
-
-func (s *reviewQuestionService) updateScale(ctx context.Context, in *UpdateReviewQuestionInput, upd *ReviewQuestionUpdate) error {
-	cur, err := s.reviewQuestionDB.GetReviewQuestion(ctx, in.ID)
-	if err != nil {
-		return utils.StoreErr(err)
-	}
-	qType := cur.QuestionType
-	if in.Body.QuestionType != nil {
-		qType = *in.Body.QuestionType
-	}
-	reqMin, reqMax := in.Body.ScoreMin, in.Body.ScoreMax
-	if qType == models.QuestionScore && cur.QuestionType == models.QuestionScore {
-		if reqMin == nil {
-			reqMin = cur.ScoreMin
-		}
-		if reqMax == nil {
-			reqMax = cur.ScoreMax
-		}
-	}
-	scoreMin, scoreMax, err := resolveScale(qType, reqMin, reqMax)
-	if err != nil {
-		return err
-	}
-	if !sameInt(scoreMin, cur.ScoreMin) || !sameInt(scoreMax, cur.ScoreMax) {
-		scored, err := s.reviewQuestionDB.HasScoredAnswers(ctx, in.ID)
-		if err != nil {
-			return utils.StoreErr(err)
-		}
-		if scored {
-			return huma.Error409Conflict("this question's scale can't change after reviews have scored it")
-		}
-	}
-	upd.SetScale, upd.ScoreMin, upd.ScoreMax = true, scoreMin, scoreMax
-	return nil
 }
 
 func (s *reviewQuestionService) delete(ctx context.Context, in *DeleteReviewQuestionInput) (*struct{}, error) {

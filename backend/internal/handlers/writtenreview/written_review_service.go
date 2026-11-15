@@ -2,6 +2,7 @@ package writtenreview
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -35,20 +36,11 @@ func (s *writtenReviewService) upsert(ctx context.Context, in *UpsertWrittenRevi
 		return nil, huma.Error409Conflict("This review was already submitted and can't be changed.")
 	}
 	answers := make([]ReviewAnswerInput, 0, len(in.Body.Answers))
-	questionIDs := make([]string, 0, len(in.Body.Answers))
 	for _, a := range in.Body.Answers {
 		if _, err := uuid.Parse(a.ReviewQuestionID); err != nil {
 			return nil, huma.Error422UnprocessableEntity("each answer requires a valid review_question_id")
 		}
 		answers = append(answers, ReviewAnswerInput(a))
-		questionIDs = append(questionIDs, a.ReviewQuestionID)
-	}
-	questions, err := s.writtenReviewDB.ReviewQuestionsForApplication(ctx, in.ID, questionIDs)
-	if err != nil {
-		return nil, utils.StoreErr(err)
-	}
-	if err := validateAnswers(answers, questions); err != nil {
-		return nil, err
 	}
 
 	if in.Body.Submit {
@@ -66,7 +58,13 @@ func (s *writtenReviewService) upsert(ctx context.Context, in *UpsertWrittenRevi
 		ReviewerNUID:  utils.CurrentActor(ctx).NUID,
 		Submit:        in.Body.Submit,
 		Answers:       answers,
+	}, func(questions map[string]models.ReviewQuestion) error {
+		return validateAnswers(answers, questions)
 	})
+	var se huma.StatusError
+	if errors.As(err, &se) {
+		return nil, err
+	}
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}

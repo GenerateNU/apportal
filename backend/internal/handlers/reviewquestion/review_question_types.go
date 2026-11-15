@@ -77,9 +77,6 @@ type ReviewQuestionUpdate struct {
 	Options          json.RawMessage
 	Description      *string
 	ClearDescription bool
-	SetScale         bool
-	ScoreMin         *int
-	ScoreMax         *int
 	Ranked           *bool
 }
 

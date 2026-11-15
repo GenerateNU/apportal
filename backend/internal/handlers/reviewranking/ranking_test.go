@@ -91,10 +91,26 @@ func TestRankWeighsReviewersEqually(t *testing.T) {
 	}
 }
 
-func TestRankSingleScoreIsNeutral(t *testing.T) {
+func TestRankFallsBackToQuestionWhenReviewerHasNoSpread(t *testing.T) {
+	scores := []ScoreRow{
+		sc("a", "solo", "q", 10, 1, 10),
+		sc("b", "r1", "q", 6, 1, 10), sc("c", "r1", "q", 2, 1, 10),
+		sc("d", "flat", "q", 3, 1, 10), sc("e", "flat", "q", 3, 1, 10),
+	}
+	got := Rank(apps("a", "b", "c", "d", "e"), scores, nil, nil)
+	if got[0].ApplicationID != "a" || *got[0].NormalizedScore <= 0 {
+		t.Fatalf("a perfect score from a one-review reviewer should rank first: %v", order(got))
+	}
+	m := byID(got)
+	if *m["d"].NormalizedScore >= 0 {
+		t.Fatalf("a flat reviewer's low scores should compare against the question cohort: %v", *m["d"].NormalizedScore)
+	}
+}
+
+func TestRankNoSpreadAnywhereIsNeutral(t *testing.T) {
 	got := Rank(apps("a"), []ScoreRow{sc("a", "r1", "q", 7, 1, 10)}, nil, nil)
 	if *got[0].NormalizedScore != 0 {
-		t.Fatalf("a reviewer with one score has no spread: %v", *got[0].NormalizedScore)
+		t.Fatalf("a lone score has nothing to compare against: %v", *got[0].NormalizedScore)
 	}
 }
 

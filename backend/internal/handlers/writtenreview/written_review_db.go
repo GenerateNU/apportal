@@ -84,17 +84,16 @@ func (w *WrittenReviewDB) RequiredReviewQuestionIDs(ctx context.Context, applica
 	return ids, err
 }
 
-func (w *WrittenReviewDB) ReviewQuestionsForApplication(ctx context.Context, applicationID string, questionIDs []string) (map[string]models.ReviewQuestion, error) {
+func reviewQuestionsForApplication(tx *gorm.DB, applicationID string, questionIDs []string) (map[string]models.ReviewQuestion, error) {
 	out := map[string]models.ReviewQuestion{}
 	if len(questionIDs) == 0 {
 		return out, nil
 	}
 	var questions []models.ReviewQuestion
-	err := w.db.WithContext(ctx).Table("review_questions rq").
-		Select("rq.*").
-		Joins("JOIN applications a ON a.cycle_id = rq.cycle_id AND (rq.role_id IS NULL OR rq.role_id = a.role_id)").
-		Where("a.id = ? AND rq.id IN ?", applicationID, questionIDs).
-		Scan(&questions).Error
+	err := tx.Joins("JOIN applications a ON a.cycle_id = review_questions.cycle_id AND (review_questions.role_id IS NULL OR review_questions.role_id = a.role_id)").
+		Where("a.id = ? AND review_questions.id IN ?", applicationID, questionIDs).
+		Clauses(clause.Locking{Strength: clause.LockingStrengthShare, Table: clause.Table{Name: "review_questions"}}).
+		Find(&questions).Error
 	if err != nil {
 		return nil, err
 	}
@@ -106,12 +105,24 @@ func (w *WrittenReviewDB) ReviewQuestionsForApplication(ctx context.Context, app
 
 // UpsertWrittenReview upserts the review, keyed on application + reviewer, and
 // its answers in one transaction.
-func (w *WrittenReviewDB) UpsertWrittenReview(ctx context.Context, in WrittenReviewUpsert) (models.WrittenReviewDetail, error) {
+func (w *WrittenReviewDB) UpsertWrittenReview(ctx context.Context, in WrittenReviewUpsert, check func(map[string]models.ReviewQuestion) error) (models.WrittenReviewDetail, error) {
 	var detail models.WrittenReviewDetail
 	review := models.WrittenReview{ApplicationID: in.ApplicationID, ReviewerNUID: in.ReviewerNUID}
 
 	err := w.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		err := tx.Select("application_id", "reviewer_nuid").
+		questionIDs := make([]string, len(in.Answers))
+		for i, a := range in.Answers {
+			questionIDs[i] = a.ReviewQuestionID
+		}
+		questions, err := reviewQuestionsForApplication(tx, in.ApplicationID, questionIDs)
+		if err != nil {
+			return err
+		}
+		if err := check(questions); err != nil {
+			return err
+		}
+
+		err = tx.Select("application_id", "reviewer_nuid").
 			Clauses(
 				clause.OnConflict{
 					Columns:   []clause.Column{{Name: "application_id"}, {Name: "reviewer_nuid"}},

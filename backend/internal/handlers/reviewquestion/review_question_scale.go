@@ -32,6 +32,22 @@ func resolveScale(qType models.QuestionType, scoreMin, scoreMax *int) (*int, *in
 	return scoreMin, scoreMax, nil
 }
 
+func mergeScale(cur models.ReviewQuestion, qType *models.QuestionType, scoreMin, scoreMax *int) (*int, *int, error) {
+	t := cur.QuestionType
+	if qType != nil {
+		t = *qType
+	}
+	if t == models.QuestionScore && cur.QuestionType == models.QuestionScore {
+		if scoreMin == nil {
+			scoreMin = cur.ScoreMin
+		}
+		if scoreMax == nil {
+			scoreMax = cur.ScoreMax
+		}
+	}
+	return resolveScale(t, scoreMin, scoreMax)
+}
+
 func sameInt(a, b *int) bool {
 	if a == nil || b == nil {
 		return a == b

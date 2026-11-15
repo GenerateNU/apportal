@@ -20,30 +20,44 @@ func (m *runningMean) add(v float64) { m.sum += v; m.n++ }
 
 func (m runningMean) mean() float64 { return m.sum / float64(m.n) }
 
+type stat struct{ mean, sd float64 }
+
+func newStat(vs []float64) stat {
+	var sum float64
+	for _, v := range vs {
+		sum += v
+	}
+	mean := sum / float64(len(vs))
+	var sq float64
+	for _, v := range vs {
+		sq += (v - mean) * (v - mean)
+	}
+	return stat{mean, math.Sqrt(sq / float64(len(vs)))}
+}
+
 func zScores(scores []ScoreRow) []float64 {
-	groups := map[reviewerQuestion][]float64{}
+	byReviewer := map[reviewerQuestion][]float64{}
+	byQuestion := map[string][]float64{}
 	for _, s := range scores {
 		k := reviewerQuestion{s.ReviewerNUID, s.ReviewQuestionID}
-		groups[k] = append(groups[k], float64(s.Score))
+		byReviewer[k] = append(byReviewer[k], float64(s.Score))
+		byQuestion[s.ReviewQuestionID] = append(byQuestion[s.ReviewQuestionID], float64(s.Score))
 	}
-	type stat struct{ mean, sd float64 }
-	stats := make(map[reviewerQuestion]stat, len(groups))
-	for k, vs := range groups {
-		var sum float64
-		for _, v := range vs {
-			sum += v
-		}
-		mean := sum / float64(len(vs))
-		var sq float64
-		for _, v := range vs {
-			sq += (v - mean) * (v - mean)
-		}
-		stats[k] = stat{mean, math.Sqrt(sq / float64(len(vs)))}
+	reviewerStats := make(map[reviewerQuestion]stat, len(byReviewer))
+	for k, vs := range byReviewer {
+		reviewerStats[k] = newStat(vs)
+	}
+	questionStats := make(map[string]stat, len(byQuestion))
+	for k, vs := range byQuestion {
+		questionStats[k] = newStat(vs)
 	}
 
 	z := make([]float64, len(scores))
 	for i, s := range scores {
-		st := stats[reviewerQuestion{s.ReviewerNUID, s.ReviewQuestionID}]
+		st := reviewerStats[reviewerQuestion{s.ReviewerNUID, s.ReviewQuestionID}]
+		if st.sd == 0 {
+			st = questionStats[s.ReviewQuestionID]
+		}
 		if st.sd > 0 {
 			z[i] = (float64(s.Score) - st.mean) / st.sd
 		}
@@ -63,9 +77,7 @@ func Rank(apps []AppRow, scores []ScoreRow, cutoff *models.ReviewCutoff, overrid
 			reviewOrder = append(reviewOrder, k)
 		}
 		reviewZ[k].add(z[i])
-		if s.ScoreMax > s.ScoreMin {
-			reviewScaled[k].add(float64(s.Score-s.ScoreMin) / float64(s.ScoreMax-s.ScoreMin))
-		}
+		reviewScaled[k].add(float64(s.Score-s.ScoreMin) / float64(s.ScoreMax-s.ScoreMin))
 	}
 
 	appZ := map[string]*runningMean{}
@@ -75,9 +87,7 @@ func Rank(apps []AppRow, scores []ScoreRow, cutoff *models.ReviewCutoff, overrid
 			appZ[k.application], appScaled[k.application] = &runningMean{}, &runningMean{}
 		}
 		appZ[k.application].add(reviewZ[k].mean())
-		if reviewScaled[k].n > 0 {
-			appScaled[k.application].add(reviewScaled[k].mean())
-		}
+		appScaled[k.application].add(reviewScaled[k].mean())
 	}
 
 	entries := make([]models.ReviewRankingEntry, len(apps))
@@ -86,9 +96,7 @@ func Rank(apps []AppRow, scores []ScoreRow, cutoff *models.ReviewCutoff, overrid
 		if m := appZ[a.ID]; m != nil {
 			e.ReviewCount = m.n
 			e.NormalizedScore = ptr(m.mean())
-			if sm := appScaled[a.ID]; sm.n > 0 {
-				e.ScaledAverage = ptr(sm.mean())
-			}
+			e.ScaledAverage = ptr(appScaled[a.ID].mean())
 		}
 		entries[i] = e
 	}
