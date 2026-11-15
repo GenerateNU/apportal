@@ -1,5 +1,8 @@
 export type ApplicationStage =
-  'application' | 'interview' | 'offered' | 'rejected'
+  | 'application'
+  | 'interview'
+  | 'offered'
+  | 'rejected'
 
 export type Rating = 'no_hire' | 'good_hire' | 'great_hire' | 'must_hire'
 
