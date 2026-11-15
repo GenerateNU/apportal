@@ -110,9 +110,8 @@ export function InterviewConductClient({
   const interviewerNames = interviewers
     .map((iv) => iv.interviewer_name ?? nameFor(iv.interviewer_nuid))
     .join(', ')
-  const { data: recordingReviews = [] } = useRecordingReviews(
-    interview ? applicationId : ''
-  )
+  const { data: recordingReviews = [], isFetched: recordingFetched } =
+    useRecordingReviews(interview ? applicationId : '')
 
   const isInterviewer = interviewers.some(
     (iv) => iv.interviewer_nuid === currentUser?.nuid
@@ -252,6 +251,25 @@ export function InterviewConductClient({
   )
   const paneClass = (tab: RightTab) =>
     cn(rightTab === tab ? 'flex' : 'hidden', 'flex-col lg:min-h-0 lg:flex-1')
+
+  const assignmentKnown =
+    !!currentUser && !interviewLoading && (!interview || recordingFetched)
+  if (assignmentKnown && !isChief && !isInterviewer && !canReview) {
+    return (
+      <div className={cn('flex w-full flex-col gap-8 pb-12', PAGE_X, PAGE_TOP)}>
+        <Breadcrumbs
+          items={[
+            { label: 'My work', href: '/reviewer/my-work' },
+            { label: 'Not assigned' },
+          ]}
+        />
+        <EmptyState
+          title="You're not assigned to this interview"
+          description="Only the people assigned to it can open this page. You can still see this applicant from Applicants."
+        />
+      </div>
+    )
+  }
 
   return (
     <div className="flex min-h-full flex-col lg:h-full">

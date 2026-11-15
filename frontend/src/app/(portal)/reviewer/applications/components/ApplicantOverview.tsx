@@ -16,7 +16,8 @@ import { useInterview } from '@/lib/queries/interviews'
 import { useQuestions } from '@/lib/queries/questions'
 import { useRecordingReviews } from '@/lib/queries/recording-reviews'
 import { useReviewQuestions } from '@/lib/queries/review-questions'
-import { useChiefs, useLeads } from '@/lib/queries/users'
+import { useChiefs, useCurrentUser, useLeads } from '@/lib/queries/users'
+import { useApplications } from '@/lib/queries/applications'
 import { useWrittenReviews } from '@/lib/queries/written-reviews'
 import { formatDate } from '@/lib/utils'
 import { RATING_COLORS, RATING_LABEL } from '@/lib/interview-ratings'
@@ -81,6 +82,19 @@ export function ApplicantOverview({
     interview ? applicationId : ''
   )
   const { data: comments = [] } = useInterviewComments(applicationId)
+  const { data: me } = useCurrentUser()
+  const { data: myReviewQueue = [] } = useApplications(
+    { assigned_to: me?.nuid ?? '' },
+    undefined,
+    { enabled: !!me?.nuid }
+  )
+  const isChief = !!me?.roles.some((r) => r === 'chief' || r === 'admin')
+  const canOpenInterview =
+    isChief ||
+    !!interview?.interviewers.some((iv) => iv.interviewer_nuid === me?.nuid) ||
+    recordingReviews.some((r) => r.reviewer_nuid === me?.nuid)
+  const canOpenReview =
+    isChief || myReviewQueue.some((a) => a.id === applicationId)
 
   const leadAvg = scoreAverage(writtenReviews.flatMap((r) => r.answers))
 
@@ -118,12 +132,14 @@ export function ApplicantOverview({
       <Card className={SECTION_CLASS}>
         <div className="flex items-center justify-between gap-2">
           <SectionLabel>Interview review</SectionLabel>
-          <Link
-            href={`/reviewer/my-interviews/${applicationId}`}
-            className="text-ink text-xs hover:underline"
-          >
-            Open interview page →
-          </Link>
+          {canOpenInterview && (
+            <Link
+              href={`/reviewer/my-interviews/${applicationId}`}
+              className="text-ink text-xs hover:underline"
+            >
+              Open interview page →
+            </Link>
+          )}
         </div>
         {!interview ? (
           <p className="text-text-faint text-sm">Not yet interviewed.</p>
@@ -280,12 +296,14 @@ export function ApplicantOverview({
               </Badge>
             )}
           </div>
-          <Link
-            href={`/reviewer/my-reviews/${applicationId}`}
-            className="text-ink text-xs hover:underline"
-          >
-            Open review page →
-          </Link>
+          {canOpenReview && (
+            <Link
+              href={`/reviewer/my-reviews/${applicationId}`}
+              className="text-ink text-xs hover:underline"
+            >
+              Open review page →
+            </Link>
+          )}
         </div>
         {writtenReviews.length === 0 ? (
           <p className="text-text-faint text-sm">No lead reviews yet.</p>

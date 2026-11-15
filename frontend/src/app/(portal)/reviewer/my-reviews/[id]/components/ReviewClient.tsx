@@ -13,6 +13,7 @@ import { PageHeader } from '@/components/ui/page-header'
 import { PAGE_L, PAGE_R, PAGE_TOP, PAGE_X } from '@/components/ui/page-shell'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
+import { EmptyState } from '@/components/ui/empty-state'
 import { Card } from '@/components/ui/card'
 import { SectionLabel } from '@/components/ui/section-label'
 import { CandidateTags } from '@/components/CandidateTags'
@@ -53,9 +54,10 @@ export function ReviewClient({
   // The rest of my review queue, so a "next" button can jump to the next
   // assigned application that still needs a review from me — same ordering
   // (grouped by role) as the queue page.
-  const { data: assignedApplications = [] } = useApplications({
-    assigned_to: currentUser?.nuid ?? '',
-  })
+  const { data: assignedApplications = [], isFetched: queueFetched } =
+    useApplications({ assigned_to: currentUser?.nuid ?? '' }, undefined, {
+      enabled: !!currentUser?.nuid,
+    })
   // All roles, in the same order the queue page groups them.
   const { roleIds, roleLabel, roleChipClass } = useRoleLookup()
   const orderedQueue = useMemo(
@@ -91,6 +93,28 @@ export function ReviewClient({
     applicant?.graduation_year && `Class of ${applicant.graduation_year}`,
     applicant?.major,
   ].filter(Boolean) as string[]
+
+  if (
+    currentUser &&
+    queueFetched &&
+    !isChief &&
+    !assignedApplications.some((a) => a.id === applicationId)
+  ) {
+    return (
+      <div className={cn('flex w-full flex-col gap-8 pb-12', PAGE_X, PAGE_TOP)}>
+        <Breadcrumbs
+          items={[
+            { label: 'My work', href: '/reviewer/my-work' },
+            { label: 'Not assigned' },
+          ]}
+        />
+        <EmptyState
+          title="You're not assigned to this review"
+          description="Only the people assigned to it can open this page. You can still see this applicant from Applicants."
+        />
+      </div>
+    )
+  }
 
   return (
     <div className="flex min-h-full flex-col lg:h-full">
