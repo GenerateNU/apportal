@@ -68,3 +68,15 @@ func LevelFor(admin bool, staff models.CycleStaffRole, status models.CycleStatus
 	}
 	return None
 }
+
+// StaffRolesFor lists the staff roles that get any access to a cycle of type t,
+// chiefs first. Staffing anyone else there would grant nothing.
+func StaffRolesFor(t models.ApplicationType) []models.CycleStaffRole {
+	var roles []models.CycleStaffRole
+	for _, s := range staffRules {
+		if slices.Contains(s.types, t) {
+			roles = append(roles, s.role)
+		}
+	}
+	return roles
+}

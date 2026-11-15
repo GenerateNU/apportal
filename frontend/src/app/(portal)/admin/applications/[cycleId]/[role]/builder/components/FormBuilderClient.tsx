@@ -55,10 +55,12 @@ export function FormBuilderClient({
   cycleId,
   cycleName,
   role,
+  back = <BackLink href="/admin/applications">Back to Applications</BackLink>,
 }: {
   cycleId: string
   cycleName: string
   role: string
+  back?: React.ReactNode
 }) {
   const { roleLabel, roleChipClass } = useRoleLookup()
   const { data: questions = [] } = useQuestions(cycleId, role)
@@ -148,10 +150,8 @@ export function FormBuilderClient({
     <div className="flex h-full flex-col">
       <PageHeader
         size="md"
-        className="border-b-2 border-gray-100 px-4 py-4 sm:px-8 sm:py-6"
-        back={
-          <BackLink href="/admin/applications">Back to Applications</BackLink>
-        }
+        className="border-b-2 border-gray-100 p-4 sm:px-8 sm:pt-8 sm:pb-6"
+        back={back}
         title={cycleName}
         subtitle={
           <span

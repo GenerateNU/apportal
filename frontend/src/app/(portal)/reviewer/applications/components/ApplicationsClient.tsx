@@ -32,6 +32,7 @@ import { ApplicationDetail } from './ApplicationDetail'
 import { PageHeader } from '@/components/ui/page-header'
 import { SearchInput } from '@/components/ui/search-input'
 import { useCycleRoles } from '@/lib/queries/roles'
+import { hasChiefAccess } from '@/types/roles'
 
 type View = 'table' | 'kanban'
 
@@ -57,9 +58,7 @@ type StoredFilters = {
 
 export function ApplicationsClient() {
   const { data: currentUser } = useCurrentUser()
-  const isChief = !!currentUser?.roles.some(
-    (r) => r === 'chief' || r === 'admin'
-  )
+  const isChief = hasChiefAccess(currentUser)
 
   const [view, setView] = useState<View>('table')
   const [activeStage, setActiveStage] = useState<ApplicationStage | 'all'>(

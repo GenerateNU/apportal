@@ -67,6 +67,7 @@ import {
 } from '../../../my-reviews/constants'
 import { ResponseField } from '@/app/(portal)/reviewer/applications/components/ResponseField'
 import { InterviewScriptContent } from '@/app/(portal)/reviewer/interview-script/components/InterviewScriptContent'
+import { hasChiefAccess } from '@/types/roles'
 
 const TEXTAREA_CLASS =
   'border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 min-h-40 lg:min-h-28 w-full rounded-lg border bg-transparent px-3.5 py-2.5 text-base transition-all outline-none focus-visible:ring-3 hover:border-gray-300 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 resize-none'
@@ -136,9 +137,7 @@ export function InterviewConductClient({
   const isInterviewer = interviewers.some(
     (iv) => iv.interviewer_nuid === currentUser?.nuid
   )
-  const isChief = !!currentUser?.roles.some(
-    (r) => r === 'chief' || r === 'admin'
-  )
+  const isChief = hasChiefAccess(currentUser)
   const writeupSubmitted = !!interview?.submitted_at
   const canEditInterview = !!interview && (isInterviewer || isChief)
   const canReview =

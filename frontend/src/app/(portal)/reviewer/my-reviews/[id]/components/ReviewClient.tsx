@@ -36,6 +36,7 @@ import {
   QuestionField,
   type AnswerValue,
 } from '@/app/(portal)/applicant/applications/components/QuestionField'
+import { hasChiefAccess } from '@/types/roles'
 
 export function ReviewClient({
   applicationId,
@@ -102,9 +103,7 @@ export function ReviewClient({
     return null
   }, [orderedQueue, needsReviewAt, applicationId])
 
-  const isChief = !!currentUser?.roles.some(
-    (r) => r === 'chief' || r === 'admin'
-  )
+  const isChief = hasChiefAccess(currentUser)
 
   const own = reviews.find((r) => r.reviewer_nuid === currentUser?.nuid)
   const others = reviews.filter((r) => r.reviewer_nuid !== currentUser?.nuid)

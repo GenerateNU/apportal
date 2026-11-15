@@ -24,6 +24,17 @@ func (s *applicationTemplateService) listOpen(ctx context.Context, _ *ListOpenAp
 	return &ApplicationTemplatesOutput{Body: templates}, nil
 }
 
+func (s *applicationTemplateService) listForCycle(ctx context.Context, in *ListCycleApplicationTemplatesInput) (*ApplicationTemplatesOutput, error) {
+	if err := s.access.CanCycle(ctx, access.ReviewCycle, in.ID); err != nil {
+		return nil, err
+	}
+	templates, err := s.applicationTemplateDB.ListCycleApplicationTemplates(ctx, in.ID)
+	if err != nil {
+		return nil, utils.StoreErr(err)
+	}
+	return &ApplicationTemplatesOutput{Body: templates}, nil
+}
+
 func (s *applicationTemplateService) get(ctx context.Context, in *GetApplicationTemplateInput) (*ApplicationTemplateOutput, error) {
 	if err := role.ParseRoleID(in.RoleID); err != nil {
 		return nil, err

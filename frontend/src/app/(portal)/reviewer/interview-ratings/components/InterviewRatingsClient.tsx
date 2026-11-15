@@ -71,6 +71,7 @@ import { INTERVIEW_STATE_LABEL } from '../../my-interviews/constants'
 import { useRoleLookup } from '@/lib/queries/roles'
 import {} from '@/hooks/useRoleSelection'
 import { useCycleRoleFilter } from '@/hooks/useRoleSelection'
+import { hasChiefAccess } from '@/types/roles'
 
 // Applicants who are actually in the interview pipeline — everyone else
 // (still in lead/chief review, say) doesn't belong on this page yet.
@@ -220,9 +221,7 @@ export function InterviewRatingsClient() {
     { enabled: !!cycleId }
   )
 
-  const isChief = !!currentUser?.roles.some(
-    (r) => r === 'chief' || r === 'admin'
-  )
+  const isChief = hasChiefAccess(currentUser)
   const showSwimlanes = groupByInterviewer && isChief
 
   // A saved tag can be deleted (or belong to another cycle), so only the ones

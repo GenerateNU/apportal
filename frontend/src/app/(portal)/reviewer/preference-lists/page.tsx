@@ -13,6 +13,7 @@ import { queryKeys } from '@/lib/queries/keys'
 import { fetchPreferenceLists } from '@/lib/queries/preference-lists'
 import { prefetchCycles } from '@/lib/queries/server-prefetch'
 import { PreferenceListsPageClient } from './components/PreferenceListsPageClient'
+import { hasChiefAccess } from '@/types/roles'
 
 // Auth-gated, live data fetched per request from the backend — never prerender
 // this at build time (the backend isn't running then).
@@ -22,9 +23,7 @@ async function currentReviewer(): Promise<{ isChief: boolean } | null> {
   try {
     const user = await getServerCurrentUser()
     return {
-      isChief: (user.roles ?? []).some(
-        (role) => role === 'chief' || role === 'admin'
-      ),
+      isChief: hasChiefAccess(user),
     }
   } catch {
     return null

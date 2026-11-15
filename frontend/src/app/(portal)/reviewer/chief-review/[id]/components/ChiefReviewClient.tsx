@@ -49,6 +49,7 @@ import {
 } from '@/lib/chief-votes'
 import { ResponseField } from '@/app/(portal)/reviewer/applications/components/ResponseField'
 import { useRoleLookup } from '@/lib/queries/roles'
+import { hasChiefAccess } from '@/types/roles'
 
 export function ChiefReviewClient({
   applicationId,
@@ -85,9 +86,7 @@ export function ChiefReviewClient({
   const updateComment = useUpdateChiefReviewComment()
   const updateApplication = useUpdateApplication()
 
-  const isChief = !!currentUser?.roles.some(
-    (r) => r === 'chief' || r === 'admin'
-  )
+  const isChief = hasChiefAccess(currentUser)
 
   // Retraces the exact filtered, ordered list the queue page showed when
   // this applicant was opened (see chiefReviewQueueSearchParams/

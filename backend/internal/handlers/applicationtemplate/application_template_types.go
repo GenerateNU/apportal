@@ -18,6 +18,10 @@ type ApplicationTemplatesOutput struct {
 
 type ListOpenApplicationTemplatesInput struct{}
 
+type ListCycleApplicationTemplatesInput struct {
+	ID string `path:"id" doc:"Cycle ID"`
+}
+
 type GetApplicationTemplateInput struct {
 	ID     string `path:"id" doc:"Cycle ID"`
 	RoleID string `query:"role_id" doc:"Applicant role"`

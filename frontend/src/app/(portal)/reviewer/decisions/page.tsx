@@ -21,6 +21,7 @@ import {
 } from '@/lib/queries/server-prefetch'
 import { DecisionQueueClient } from './components/DecisionQueueClient'
 import { DecisionsClient } from './components/DecisionsClient'
+import { hasChiefAccess, hasReviewerAccess } from '@/types/roles'
 
 // Auth-gated, live data fetched per request from the backend — never prerender
 // this at build time (the backend isn't running then).
@@ -34,13 +35,12 @@ export const dynamic = 'force-dynamic'
 async function currentReviewer() {
   try {
     const user = await getServerCurrentUser()
-    const roles = user.roles ?? []
-    if (!roles.some((r) => r === 'lead' || r === 'chief' || r === 'admin')) {
+    if (!hasReviewerAccess(user)) {
       return null
     }
     return {
       nuid: user.nuid,
-      isChief: roles.some((r) => r === 'chief' || r === 'admin'),
+      isChief: hasChiefAccess(user),
     }
   } catch {
     return null

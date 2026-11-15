@@ -2,11 +2,14 @@ package cyclestaff
 
 import (
 	"context"
+	"fmt"
+	"slices"
 
 	"github.com/danielgtaylor/huma/v2"
 
 	"github.com/GenerateNU/apportal/backend/internal/access"
 	"github.com/GenerateNU/apportal/backend/internal/middleware"
+	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 )
 
@@ -40,11 +43,30 @@ func (s *cycleStaffService) set(ctx context.Context, in *SetStaffInput) (*StaffM
 	if !in.Body.Role.Valid() {
 		return nil, huma.Error422UnprocessableEntity("role must be lead or chief")
 	}
+	cycleType, err := s.staffDB.CycleType(ctx, in.ID)
+	if err != nil {
+		return nil, utils.StoreErr(err)
+	}
+	if err := checkStaffRoleForType(cycleType, in.Body.Role); err != nil {
+		return nil, err
+	}
 	row, err := s.staffDB.SetStaff(ctx, in.ID, in.NUID, in.Body.Role)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
 	return &StaffMemberOutput{Body: row}, nil
+}
+
+// A role that grants nothing on this type of cycle is refused rather than saved.
+func checkStaffRoleForType(t models.ApplicationType, role models.CycleStaffRole) error {
+	allowed := access.StaffRolesFor(t)
+	if slices.Contains(allowed, role) {
+		return nil
+	}
+	if len(allowed) == 0 {
+		return huma.Error422UnprocessableEntity(fmt.Sprintf("%s cycles have no staff; only admins review them", t))
+	}
+	return huma.Error422UnprocessableEntity(fmt.Sprintf("a %s can't be staff on a %s cycle", role, t))
 }
 
 func (s *cycleStaffService) remove(ctx context.Context, in *StaffMemberInput) (*struct{}, error) {

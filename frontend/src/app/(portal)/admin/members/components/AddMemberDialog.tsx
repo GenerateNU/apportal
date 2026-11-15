@@ -33,7 +33,7 @@ export function AddMemberDialog({
   const [step, setStep] = useState<Step>('search')
   const [search, setSearch] = useState('')
   const [selectedUsers, setSelectedUsers] = useState<User[]>([])
-  const [roles, setRoles] = useState<UserRole[]>(['member'])
+  const [roles, setRoles] = useState<UserRole[]>(['admin'])
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const results = useMemo(() => {
@@ -53,7 +53,7 @@ export function AddMemberDialog({
     setStep('search')
     setSearch('')
     setSelectedUsers([])
-    setRoles(['member'])
+    setRoles(['admin'])
   }
 
   function toggleUser(user: User) {

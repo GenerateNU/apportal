@@ -27,6 +27,7 @@ import { ReviewRow } from '../../my-reviews/components/ReviewRow'
 import { REVIEWING_STATE, type ReviewingState } from '../constants'
 import { InterviewRow } from './InterviewRow'
 import { useCycleRoleFilter } from '@/hooks/useRoleSelection'
+import { hasChiefAccess } from '@/types/roles'
 
 // Sentinel for "my own queue" in the viewer-selector below, since Radix
 // Select can't use an empty string as a value.
@@ -41,9 +42,7 @@ export function MyInterviewsClient() {
   const { data: leads = [] } = useLeads()
   const { data: chiefs = [] } = useChiefs()
 
-  const isChief = !!currentUser?.roles.some(
-    (r) => r === 'chief' || r === 'admin'
-  )
+  const isChief = hasChiefAccess(currentUser)
 
   // A personal queue, so role stays "all" rather than forcing a pick. Cycle
   // defaults to the pinned cycle when it's in the list, but can be widened.

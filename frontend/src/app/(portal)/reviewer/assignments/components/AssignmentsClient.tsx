@@ -33,6 +33,7 @@ import { useCurrentUser, useLeads } from '@/lib/queries/users'
 import { useRoleLookup } from '@/lib/queries/roles'
 import {} from '@/hooks/useRoleSelection'
 import { useCycleRoleFilter } from '@/hooks/useRoleSelection'
+import { hasChiefAccess } from '@/types/roles'
 
 export function AssignmentsClient() {
   const { data: currentUser } = useCurrentUser()
@@ -40,9 +41,7 @@ export function AssignmentsClient() {
   const { data: allApplications = [] } = useApplications({})
   const { data: leads = [] } = useLeads()
 
-  const isChief = !!currentUser?.roles.some(
-    (r) => r === 'chief' || r === 'admin'
-  )
+  const isChief = hasChiefAccess(currentUser)
 
   // Scope the page to one cycle so release (which is per cycle × role) is
   // unambiguous.

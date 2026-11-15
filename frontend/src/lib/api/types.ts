@@ -60,6 +60,7 @@ import type {
   InterviewDetailRating,
   QuestionQuestionType,
   UserRolesAnyOfItem,
+  StaffRole as GenStaffRole,
 } from '@/generated/model'
 
 // Enum aliases — same string values as the backend, friendlier names for the app.
@@ -95,6 +96,12 @@ export interface AnswerFilterParam {
 export type User = Omit<GenUser, '$schema' | 'roles'> & {
   roles: UserRole[]
 }
+
+// One cycle the signed-in user is a lead or chief on.
+export type StaffRole = GenStaffRole
+
+// /users/me: the user plus the cycles they staff.
+export type CurrentUser = User & { staff: StaffRole[] }
 
 export type Branch = Omit<GenBranch, '$schema'>
 

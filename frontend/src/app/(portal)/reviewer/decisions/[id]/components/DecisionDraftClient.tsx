@@ -28,6 +28,7 @@ import { renderDecision } from '../../components/render'
 import { useFeedbackDraft } from '../../components/useFeedbackDraft'
 import { useCycleRoles } from '@/lib/queries/roles'
 import { useRoleLookup } from '@/lib/queries/roles'
+import { hasChiefAccess } from '@/types/roles'
 
 // One applicant: everything already said about them on the left, the two
 // paragraphs and the letter they land in on the right. Same shape as the lead
@@ -101,7 +102,7 @@ export function DecisionDraftClient({
       reviewQuestions={reviewQuestions}
       canWrite={
         row.interviewers.some((iv) => iv.nuid === currentUser?.nuid) ||
-        !!currentUser?.roles.some((r) => r === 'chief' || r === 'admin')
+        hasChiefAccess(currentUser)
       }
       nextHref={
         nextUnwritten

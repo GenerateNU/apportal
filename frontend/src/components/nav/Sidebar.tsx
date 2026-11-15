@@ -5,24 +5,11 @@ import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   Users,
-  UserPlus,
   FileText,
-  Calendar,
   ChevronsLeft,
   ChevronsRight,
-  ClipboardCheck,
-  ListChecks,
-  ListOrdered,
-  Shuffle,
-  Mic,
-  ScrollText,
-  Scale,
-  Star,
-  Video,
-  Wand2,
+  GitBranch,
   LogOut,
-  CalendarClock,
-  MailCheck,
 } from 'lucide-react'
 import NavItem, { isNavItemActive } from './NavItem'
 import { Avatar } from '@/components/ui/avatar'
@@ -58,114 +45,26 @@ type NavSection = {
   items: NavItemConfig[]
 }
 
+const applicationsSection: NavSection = {
+  id: 'apply',
+  items: [
+    {
+      href: '/applicant/applications',
+      label: 'Applications',
+      icon: FileText,
+    },
+  ],
+}
+
 const sectionsByRole: Record<Role, NavSection[]> = {
-  applicant: [
-    {
-      id: 'apply',
-      items: [
-        {
-          href: '/applicant/applications',
-          label: 'Applications',
-          icon: FileText,
-        },
-      ],
-    },
-  ],
-  reviewer: [
-    {
-      id: 'my-work',
-      items: [
-        { href: '/reviewer/applications', label: 'Applications', icon: Users },
-        { href: '/reviewer/my-reviews', label: 'Lead Review', icon: FileText },
-        { href: '/reviewer/my-interviews', label: 'My Interviews', icon: Mic },
-        {
-          href: '/reviewer/interview-script',
-          label: 'Interview Script',
-          icon: ScrollText,
-        },
-        {
-          href: '/reviewer/interview-ratings',
-          label: 'Interview Ratings',
-          icon: Star,
-        },
-        {
-          href: '/reviewer/preference-lists',
-          label: 'Preference Lists',
-          icon: ListOrdered,
-        },
-        {
-          href: '/reviewer/draft',
-          label: 'Draft',
-          icon: Shuffle,
-        },
-        {
-          href: '/reviewer/decisions',
-          label: 'Decisions',
-          icon: MailCheck,
-        },
-      ],
-    },
-    {
-      id: 'reviews',
-      label: 'Reviews',
-      items: [
-        {
-          href: '/reviewer/assignment-plan',
-          label: 'Plan Assignments',
-          icon: Wand2,
-          chiefOnly: true,
-        },
-        {
-          href: '/reviewer/assignments',
-          label: 'Assign Reviewers',
-          icon: UserPlus,
-          chiefOnly: true,
-        },
-        {
-          href: '/reviewer/review-progress',
-          label: 'Review Progress',
-          icon: ListChecks,
-          chiefOnly: true,
-        },
-        {
-          href: '/reviewer/review-calibration',
-          label: 'Review Calibration',
-          icon: Scale,
-          chiefOnly: true,
-        },
-        {
-          href: '/reviewer/chief-review',
-          label: 'Chief Review',
-          icon: ClipboardCheck,
-          chiefOnly: true,
-        },
-      ],
-    },
-    {
-      id: 'interviews',
-      label: 'Interviews',
-      items: [
-        {
-          href: '/reviewer/interview-assignment-plan',
-          label: 'Plan Interviews',
-          icon: CalendarClock,
-          chiefOnly: true,
-        },
-        {
-          href: '/reviewer/interview-assignments',
-          label: 'Interview Assignments',
-          icon: Video,
-          chiefOnly: true,
-        },
-      ],
-    },
-  ],
+  applicant: [applicationsSection],
+  reviewer: [applicationsSection],
   admin: [
     {
       id: 'admin',
       label: 'Admin',
       items: [
-        { href: '/admin/cycles', label: 'Branches & cycles', icon: Calendar },
+        { href: '/admin/branches', label: 'Branches', icon: GitBranch },
         {
           href: '/admin/applications',
           label: 'Application Forms',
@@ -353,6 +252,8 @@ export default function Sidebar({
   const sections = roleOrder
     .filter((role) => roles.includes(role))
     .flatMap((role) => sectionsByRole[role])
+    // Applicants who are also reviewers would otherwise get it twice.
+    .filter((section, i, all) => all.indexOf(section) === i)
     .map((section) => ({
       ...section,
       items: section.items.filter((item) => !item.chiefOnly || isChief),

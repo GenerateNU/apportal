@@ -6,6 +6,19 @@ type UserOutput struct {
 	Body models.User
 }
 
+// StaffRole is one cycle the caller is on, and their role there.
+type StaffRole struct {
+	CycleID string                `json:"cycle_id"`
+	Role    models.CycleStaffRole `json:"role"`
+}
+
+type MeOutput struct {
+	Body struct {
+		models.User
+		Staff []StaffRole `json:"staff" doc:"Cycles the caller is a lead or chief on"`
+	}
+}
+
 type UsersOutput struct {
 	Body struct {
 		Users   []models.User `json:"users"`
@@ -26,7 +39,7 @@ type CreateUserInput struct {
 }
 
 type ListUsersInput struct {
-	Role   string `query:"role" doc:"Optional role filter"`
+	Role   string `query:"role" doc:"Optional filter: a global role (applicant, admin), or lead/chief for anyone with that role on some cycle"`
 	Limit  int    `query:"limit" doc:"Max results per page; omit (or 0) to return all matching users"`
 	Offset int    `query:"offset" doc:"Number of results to skip"`
 }

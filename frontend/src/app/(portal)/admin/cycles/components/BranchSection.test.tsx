@@ -2,13 +2,16 @@ import type { ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { describe, expect, it } from 'vitest'
+import { ToastProvider } from '@/components/ui/toast'
 import type { Branch, Cycle, Role } from '@/lib/api/types'
 import { BranchSection } from './BranchSection'
 
 // Static markup only — no DOM here, so this covers structure, not clicks.
 function render(node: ReactNode) {
   return renderToStaticMarkup(
-    <QueryClientProvider client={new QueryClient()}>{node}</QueryClientProvider>
+    <QueryClientProvider client={new QueryClient()}>
+      <ToastProvider>{node}</ToastProvider>
+    </QueryClientProvider>
   )
 }
 

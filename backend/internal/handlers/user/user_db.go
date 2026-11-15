@@ -37,14 +37,29 @@ func (u *UserDB) CreateUser(ctx context.Context, in UserCreate) (models.User, er
 	return user, err
 }
 
-// ListUsers returns users, optionally filtered to those holding a role. A nil
-// limit returns every match (the lead dropdown needs them all); otherwise one
-// extra row is fetched to report whether more pages remain.
-func (u *UserDB) ListUsers(ctx context.Context, role *models.UserRole, limit *int, offset int) ([]models.User, bool, error) {
-	q := u.db.WithContext(ctx).Order("full_name")
-	if role != nil {
-		q = q.Where("? = ANY(roles)", string(*role))
+// userFilter narrows a user list to a global role, or to people holding a
+// staff role on any cycle. At most one is set.
+type userFilter struct {
+	UserRole  *models.UserRole
+	StaffRole *models.CycleStaffRole
+}
+
+func usersQuery(db *gorm.DB, f userFilter) *gorm.DB {
+	q := db.Model(&models.User{}).Order("full_name")
+	switch {
+	case f.UserRole != nil:
+		q = q.Where("? = ANY(roles)", string(*f.UserRole))
+	case f.StaffRole != nil:
+		q = q.Where("EXISTS (SELECT 1 FROM cycle_staff cs WHERE cs.user_nuid = users.nuid AND cs.role = ?)", *f.StaffRole)
 	}
+	return q
+}
+
+// ListUsers returns users matching the filter. A nil limit returns every match
+// (the lead dropdown needs them all); otherwise one extra row is fetched to
+// report whether more pages remain.
+func (u *UserDB) ListUsers(ctx context.Context, f userFilter, limit *int, offset int) ([]models.User, bool, error) {
+	q := usersQuery(u.db.WithContext(ctx), f)
 	if limit != nil {
 		q = q.Limit(*limit + 1).Offset(offset)
 	}
@@ -112,4 +127,15 @@ func (u *UserDB) NamesByNUIDs(ctx context.Context, nuids []string) (map[string]s
 		names[r.NUID] = r.FullName
 	}
 	return names, err
+}
+
+func staffRolesQuery(db *gorm.DB, nuid string) *gorm.DB {
+	return db.Table("cycle_staff").Select("cycle_id, role").
+		Where("user_nuid = ?", nuid).Order("cycle_id")
+}
+
+// StaffRoles lists the cycles the user is on, with their role on each.
+func (u *UserDB) StaffRoles(ctx context.Context, nuid string) ([]StaffRole, error) {
+	roles := []StaffRole{}
+	return roles, staffRolesQuery(u.db.WithContext(ctx), nuid).Find(&roles).Error
 }

@@ -1,19 +1,10 @@
 import type { UserRole } from '@/lib/api/types'
 
 // Highest-privilege first.
-export const USER_ROLE_ORDER: UserRole[] = [
-  'admin',
-  'chief',
-  'lead',
-  'member',
-  'applicant',
-]
+export const USER_ROLE_ORDER: UserRole[] = ['admin', 'applicant']
 
 export const USER_ROLE_LABEL: Record<UserRole, string> = {
   admin: 'Admin',
-  chief: 'Chief',
-  lead: 'Lead',
-  member: 'Member',
   applicant: 'Applicant',
 }
 

@@ -9,6 +9,7 @@ import Sidebar from '@/components/nav/Sidebar'
 import { useCurrentUser } from '@/lib/queries/users'
 import { SIDEBAR_COLLAPSED_COOKIE } from '@/lib/sidebar'
 import { getRoles } from '@/types/roles'
+import { hasChiefAccess } from '@/types/roles'
 
 export function PortalShell({
   initialSidebarCollapsed,
@@ -19,9 +20,7 @@ export function PortalShell({
 }) {
   const { data: currentUser } = useCurrentUser()
   const roles = currentUser ? getRoles(currentUser) : []
-  const isChief = !!currentUser?.roles.some(
-    (role) => role === 'chief' || role === 'admin'
-  )
+  const isChief = hasChiefAccess(currentUser)
 
   const pathname = usePathname()
   const [navOpen, setNavOpen] = useState(false)

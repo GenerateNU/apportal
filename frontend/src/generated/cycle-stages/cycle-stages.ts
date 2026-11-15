@@ -67,7 +67,7 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
 /**
- * Chief only.
+ * Admin only.
  * @summary Update a cycle stage
  */
 export const updateCycleStage = (
@@ -223,7 +223,7 @@ export function useListCycleStages<TData = Awaited<ReturnType<typeof listCycleSt
 
 
 /**
- * Chief only.
+ * Admin only.
  * @summary Add a stage to a cycle's flow template
  */
 export const createCycleStage = (

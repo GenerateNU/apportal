@@ -52,12 +52,11 @@ import { DraftBoardGrid } from './DraftBoardGrid'
 import { DraftSetup } from './DraftSetup'
 import { OnTheClockPanel } from './OnTheClockPanel'
 import { ReorderTeamsDialog } from './ReorderTeamsDialog'
+import { hasChiefAccess } from '@/types/roles'
 
 export function DraftClient() {
   const { data: currentUser } = useCurrentUser()
-  const isChief = !!currentUser?.roles.some(
-    (r) => r === 'chief' || r === 'admin'
-  )
+  const isChief = hasChiefAccess(currentUser)
 
   const { data: cycles = [] } = useCycles({})
   const [cycleId, setCycleId] = useState('')

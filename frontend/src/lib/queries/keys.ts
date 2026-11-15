@@ -100,11 +100,18 @@ export const queryKeys = {
       [...queryKeys.cycles.all, 'template-summary', id] as const,
   },
 
+  cycleStaff: {
+    all: ['cycle-staff'] as const,
+    list: (cycleId: string) => [...queryKeys.cycleStaff.all, cycleId] as const,
+  },
+
   applicationTemplates: {
     all: ['application-templates'] as const,
     details: () => [...queryKeys.applicationTemplates.all, 'detail'] as const,
     detail: (cycleId: string, roleId: string) =>
       [...queryKeys.applicationTemplates.details(), cycleId, roleId] as const,
+    cycleList: (cycleId: string) =>
+      [...queryKeys.applicationTemplates.all, 'cycle-list', cycleId] as const,
     openList: () =>
       [...queryKeys.applicationTemplates.all, 'open-list'] as const,
   },

@@ -47,6 +47,35 @@ func (a *ApplicationTemplateDB) GetOrCreateApplicationTemplate(ctx context.Conte
 	return template, err
 }
 
+// ListCycleApplicationTemplates returns one template per role of the cycle,
+// creating the default-titled draft for any role that has none yet.
+func (a *ApplicationTemplateDB) ListCycleApplicationTemplates(ctx context.Context, cycleID string) ([]models.ApplicationTemplate, error) {
+	templates := []models.ApplicationTemplate{}
+	err := a.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := createMissingCycleTemplates(tx, cycleID).Error; err != nil {
+			return err
+		}
+		return cycleTemplatesQuery(tx, cycleID).Find(&templates).Error
+	})
+	return templates, err
+}
+
+func cycleTemplatesQuery(db *gorm.DB, cycleID string) *gorm.DB {
+	return db.Table("application_templates AS at").
+		Select("at.*").
+		Joins("JOIN roles r ON r.id = at.role_id").
+		Where("at.cycle_id = ?", cycleID).
+		Order("r.created_at")
+}
+
+func createMissingCycleTemplates(db *gorm.DB, cycleID string) *gorm.DB {
+	return db.Exec(`INSERT INTO application_templates (cycle_id, role_id, title)
+SELECT r.cycle_id, r.id, r.name || ' Application'
+FROM roles r
+WHERE r.cycle_id = ?
+ON CONFLICT DO NOTHING`, cycleID)
+}
+
 // ListOpenApplicationTemplates returns the templates live for applicants: the
 // template and its cycle are both open and the template hasn't closed.
 func (a *ApplicationTemplateDB) ListOpenApplicationTemplates(ctx context.Context) ([]models.ApplicationTemplate, error) {

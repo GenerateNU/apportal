@@ -6,12 +6,37 @@ import {
 } from '@tanstack/react-query'
 import {
   getApplicationTemplate,
+  listCycleApplicationTemplates,
   listOpenApplicationTemplates,
   updateApplicationTemplate,
 } from '@/generated/application-templates/application-templates'
 import type { RequestOptions } from '@/lib/api/orval-mutator'
 import type { ApplicationTemplate } from '@/lib/api/types'
 import { queryKeys } from './keys'
+
+// Every role's template for one cycle in one request; the backend creates any
+// missing drafts. Each is written back to its per-role cache entry.
+export function useCycleApplicationTemplates(
+  cycleId: string,
+  opts?: RequestOptions
+) {
+  const queryClient = useQueryClient()
+  return useQuery({
+    queryKey: queryKeys.applicationTemplates.cycleList(cycleId),
+    queryFn: async () => {
+      const templates = ((await listCycleApplicationTemplates(cycleId, opts)) ??
+        []) as ApplicationTemplate[]
+      for (const t of templates) {
+        queryClient.setQueryData(
+          queryKeys.applicationTemplates.detail(t.cycle_id, t.role_id),
+          t
+        )
+      }
+      return templates
+    },
+    enabled: !!cycleId,
+  })
+}
 
 // Templates currently visible to applicants: the "cycle open AND template
 // open" join happens server-side (list-open-application-templates), not here.
@@ -81,6 +106,9 @@ export function useUpdateApplicationTemplate() {
         queryKeys.applicationTemplates.detail(vars.cycleId, vars.roleId),
         data
       )
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.applicationTemplates.cycleList(vars.cycleId),
+      })
     },
   })
 }

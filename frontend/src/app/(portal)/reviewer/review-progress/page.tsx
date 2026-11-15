@@ -12,6 +12,7 @@ import { queryKeys } from '@/lib/queries/keys'
 import { ReviewProgressClient } from './components/ReviewProgressClient'
 import { getServerCurrentUser } from '@/lib/auth/server-user'
 import { cycleRoleIds, prefetchRoles } from '@/lib/queries/server-prefetch'
+import { hasChiefAccess } from '@/types/roles'
 
 // Auth-gated, live data fetched per request from the backend — never prerender
 // this at build time (the backend isn't running then).
@@ -25,9 +26,7 @@ export const dynamic = 'force-dynamic'
 async function isChief(): Promise<boolean> {
   try {
     const user = await getServerCurrentUser()
-    return (user.roles ?? []).some(
-      (role) => role === 'chief' || role === 'admin'
-    )
+    return hasChiefAccess(user)
   } catch {
     return false
   }
