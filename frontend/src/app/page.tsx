@@ -15,5 +15,8 @@ export default async function RootPage() {
     // would bounce it straight back here — let the client sign out instead.
     return <RootFallback />
   }
-  redirect(defaultDashboard(getRoles(user)))
+  const roles = getRoles(user)
+  const isChief = user.roles.some((r) => r === 'chief' || r === 'admin')
+  if (roles.includes('reviewer') && !isChief) redirect('/reviewer/my-work')
+  redirect(defaultDashboard(roles))
 }

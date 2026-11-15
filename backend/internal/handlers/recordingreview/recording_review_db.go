@@ -39,3 +39,12 @@ func (r *RecordingReviewDB) SaveRecordingReview(ctx context.Context, in Recordin
 			UpdateColumns(updates).Error
 	})
 }
+
+func (r *RecordingReviewDB) ReviewSubmitted(ctx context.Context, applicationID, nuid string) (bool, error) {
+	var n int64
+	err := r.db.WithContext(ctx).Table("interview_reviewers x").
+		Joins("JOIN interviews i ON i.id = x.interview_id").
+		Where("i.application_id = ? AND x.reviewer_nuid = ? AND x.writeup_submitted_at IS NOT NULL", applicationID, nuid).
+		Count(&n).Error
+	return n > 0, err
+}

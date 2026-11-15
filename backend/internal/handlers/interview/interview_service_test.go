@@ -10,6 +10,7 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 
 	"github.com/GenerateNU/apportal/backend/internal/middleware"
+	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/testutil"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 )
@@ -53,5 +54,23 @@ func TestInterviewsBulkParsesIDs(t *testing.T) {
 	var se huma.StatusError
 	if !errors.As(err, &se) || se.GetStatus() != http.StatusUnprocessableEntity {
 		t.Fatalf("got %v, want 422", err)
+	}
+}
+
+func TestMissingForSubmit(t *testing.T) {
+	link, text := "https://x.com", "notes"
+	rating := models.InterviewRating("great")
+	full := models.Interview{RecordingURL: &link, NotesURL: &link, Writeup: &text, Rating: &rating}
+	if msg := missingForSubmit(&UpsertInterviewInput{}, full); msg != "" {
+		t.Fatalf("saved fields should satisfy submit, got %q", msg)
+	}
+	blank := ""
+	in := &UpsertInterviewInput{}
+	in.Body.NotesURL = &blank
+	if msg := missingForSubmit(in, full); msg != "a notes link is required to submit" {
+		t.Fatalf("cleared notes link should block submit, got %q", msg)
+	}
+	if msg := missingForSubmit(&UpsertInterviewInput{}, models.Interview{}); msg != "a recording link is required to submit" {
+		t.Fatalf("empty interview should block submit, got %q", msg)
 	}
 }

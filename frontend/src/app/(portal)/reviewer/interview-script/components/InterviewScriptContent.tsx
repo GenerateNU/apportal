@@ -1,129 +1,302 @@
 'use client'
 
-import { useState } from 'react'
-import { ChevronDown, ChevronRight } from 'lucide-react'
+import { useMemo, useState, useSyncExternalStore } from 'react'
+import { Check, ChevronDown, ChevronRight } from 'lucide-react'
 import { LoadingText } from '@/components/ui/loading-text'
-import { SectionLabel } from '@/components/ui/section-label'
 import type { InterviewScriptQuestion } from '@/lib/api/types'
+import { useChallenges } from '@/lib/queries/challenges'
 import { useInterviewScript } from '@/lib/queries/interview-script'
+import { cn } from '@/lib/utils'
+
+const listeners = new Set<() => void>()
+
+function subscribe(cb: () => void) {
+  listeners.add(cb)
+  window.addEventListener('storage', cb)
+  return () => {
+    listeners.delete(cb)
+    window.removeEventListener('storage', cb)
+  }
+}
+
+function readStored(key: string): string {
+  try {
+    return localStorage.getItem(key) ?? '[]'
+  } catch {
+    return '[]'
+  }
+}
+
+function useChecklist(storageKey?: string) {
+  const key = storageKey ? `interview-script:${storageKey}` : ''
+  const raw = useSyncExternalStore(
+    subscribe,
+    () => (key ? readStored(key) : '[]'),
+    () => '[]'
+  )
+  const checked = useMemo(() => {
+    try {
+      return new Set(JSON.parse(raw) as string[])
+    } catch {
+      return new Set<string>()
+    }
+  }, [raw])
+  const toggle = (id: string) => {
+    if (!key) return
+    const next = new Set(checked)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    try {
+      localStorage.setItem(key, JSON.stringify([...next]))
+    } catch {}
+    listeners.forEach((cb) => cb())
+  }
+  return { checked, toggle, enabled: !!key }
+}
+
+function CheckBox({
+  checked,
+  onToggle,
+  label,
+}: {
+  checked: boolean
+  onToggle: () => void
+  label: string
+}) {
+  return (
+    <button
+      type="button"
+      role="checkbox"
+      aria-checked={checked}
+      aria-label={label}
+      onClick={onToggle}
+      className={cn(
+        'mt-0.5 flex size-5 shrink-0 items-center justify-center border transition-colors',
+        checked
+          ? 'border-ink bg-ink text-white'
+          : 'hover:border-ink border-gray-300 bg-white'
+      )}
+    >
+      {checked && <Check size={12} strokeWidth={3} />}
+    </button>
+  )
+}
 
 function QuestionItem({
   question,
   index,
+  checked,
+  onToggle,
 }: {
   question: InterviewScriptQuestion
   index: number
+  checked?: boolean
+  onToggle?: () => void
 }) {
   const [open, setOpen] = useState(false)
-  const hasFollowUps = !!question.followUps?.length
+  const followUps = question.followUps ?? []
 
   return (
-    <li className="border border-gray-100 bg-white p-3">
-      <p className="text-text-default text-sm">
-        <span className="text-text-faint">{index + 1}.</span> {question.prompt}
-      </p>
-      {hasFollowUps && (
-        <>
-          <button
-            type="button"
-            onClick={() => setOpen((v) => !v)}
-            className="text-text-muted hover:text-text-default mt-1.5 inline-flex items-center gap-1 text-xs"
-          >
-            {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-            {open
-              ? 'Hide follow-ups'
-              : `Follow-ups (${question.followUps?.length})`}
-          </button>
-          {open && (
-            <ul className="mt-2 flex flex-col gap-1.5 border-l-2 border-gray-100 pl-3">
-              {question.followUps?.map((f) => (
-                <li key={f} className="text-text-muted text-sm">
-                  {f}
-                </li>
-              ))}
-            </ul>
+    <li className="flex gap-4 border-b border-gray-100 py-4 last:border-b-0">
+      <span className="font-display text-text-subtle w-6 shrink-0 pt-0.5 text-sm font-bold">
+        {String(index + 1).padStart(2, '0')}
+      </span>
+      <div className="flex min-w-0 flex-1 flex-col gap-2">
+        <p
+          className={cn(
+            'text-base leading-relaxed transition-colors',
+            checked ? 'text-text-subtle' : 'text-ink'
           )}
-        </>
+        >
+          {question.prompt}
+        </p>
+        {followUps.length > 0 && (
+          <>
+            <button
+              type="button"
+              onClick={() => setOpen((v) => !v)}
+              className="text-text-muted hover:text-ink inline-flex w-fit items-center gap-1 text-xs"
+            >
+              {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+              {followUps.length} follow-up{followUps.length === 1 ? '' : 's'}
+            </button>
+            {open && (
+              <ul className="flex flex-col gap-1.5 border-l-2 border-gray-200 pl-3">
+                {followUps.map((f) => (
+                  <li key={f} className="text-text-muted text-sm">
+                    {f}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
+        )}
+      </div>
+      {onToggle && (
+        <CheckBox
+          checked={!!checked}
+          onToggle={onToggle}
+          label={`Mark question ${index + 1} as asked`}
+        />
       )}
     </li>
+  )
+}
+
+function Section({
+  title,
+  aside,
+  children,
+}: {
+  title: string
+  aside?: React.ReactNode
+  children: React.ReactNode
+}) {
+  return (
+    <section className="flex flex-col gap-4">
+      <div className="border-ink flex items-baseline justify-between gap-4 border-b-2 pb-2">
+        <h3 className="font-display text-ink text-lg font-bold tracking-tight uppercase">
+          {title}
+        </h3>
+        {aside && (
+          <span className="font-display text-text-subtle text-[11px] tracking-wider uppercase">
+            {aside}
+          </span>
+        )}
+      </div>
+      {children}
+    </section>
+  )
+}
+
+function ReadAloud({ text }: { text: string }) {
+  return (
+    <blockquote className="border-ink text-ink flex flex-col gap-3 border-l-2 pl-4 text-base leading-relaxed">
+      {text.split('\n\n').map((paragraph) => (
+        <p key={paragraph} className="whitespace-pre-line">
+          {paragraph}
+        </p>
+      ))}
+    </blockquote>
   )
 }
 
 export function InterviewScriptContent({
   cycleId,
   role,
+  checklistKey,
 }: {
   cycleId: string
   role: string
+  checklistKey?: string
 }) {
   const { data: script, isLoading } = useInterviewScript(cycleId, role)
+  const { data: challenges = [] } = useChallenges(cycleId, role)
+  const { checked, toggle, enabled } = useChecklist(checklistKey)
 
   if (isLoading || !script) {
     return <LoadingText label="Loading script…" />
   }
 
+  const asked = script.questions.filter((q) => checked.has(`q:${q.prompt}`))
+  const tracks = [
+    script.challenge_tracks.backend,
+    script.challenge_tracks.frontend,
+  ].filter((t) => t.followUps.length > 0)
+
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-2">
-        <SectionLabel as="h3">Intro speech</SectionLabel>
-        <p className="text-text-faint text-xs italic">
-          Read this to every applicant for posterity.
-        </p>
-        <div className="text-text-default flex flex-col gap-3 text-sm whitespace-pre-line">
-          {script.intro_speech.split('\n\n').map((paragraph) => (
-            <p key={paragraph}>{paragraph}</p>
-          ))}
+    <div className="flex flex-col gap-10">
+      <Section title="Intro" aside="Read aloud">
+        <ReadAloud text={script.intro_speech} />
+      </Section>
+
+      {script.recording_reminder && (
+        <div className="flex items-start gap-3 border border-gray-200 bg-gray-50 px-4 py-3">
+          <span className="bg-destructive mt-1.5 size-2 shrink-0 rounded-full" />
+          <p className="text-ink text-sm font-medium">
+            {script.recording_reminder}
+          </p>
         </div>
-      </div>
+      )}
 
-      <div className="border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800">
-        {script.recording_reminder}
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <SectionLabel as="h3">Questions</SectionLabel>
-        <ul className="flex flex-col gap-2">
+      <Section
+        title="Questions"
+        aside={
+          enabled
+            ? `${asked.length} of ${script.questions.length} asked`
+            : `${script.questions.length} questions`
+        }
+      >
+        <ol className="border-t border-gray-200">
           {script.questions.map((q, i) => (
-            <QuestionItem key={q.prompt} question={q} index={i} />
-          ))}
-        </ul>
-        <p className="text-text-muted text-sm">{script.closing_note}</p>
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <SectionLabel as="h3">Challenge</SectionLabel>
-        <p className="text-text-muted text-sm">{script.challenge_intro}</p>
-        {(
-          [
-            script.challenge_tracks.backend,
-            script.challenge_tracks.frontend,
-          ] as const
-        ).map((track) => (
-          <div key={track.label} className="flex flex-col gap-2">
-            <p className="text-text-default text-sm font-medium">
-              {track.label}
-            </p>
-            <ul className="flex flex-col gap-1.5 border-l-2 border-gray-100 pl-3">
-              {track.followUps.map((f) => (
-                <li key={f} className="text-text-muted text-sm">
-                  {f}
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <SectionLabel as="h3">Post interview</SectionLabel>
-        <ol className="flex list-decimal flex-col gap-1 pl-4">
-          {script.post_interview_checklist.map((item) => (
-            <li key={item} className="text-text-default text-sm">
-              {item}
-            </li>
+            <QuestionItem
+              key={q.prompt}
+              question={q}
+              index={i}
+              checked={checked.has(`q:${q.prompt}`)}
+              onToggle={enabled ? () => toggle(`q:${q.prompt}`) : undefined}
+            />
           ))}
         </ol>
-      </div>
+        {script.closing_note && (
+          <p className="text-text-muted text-sm">{script.closing_note}</p>
+        )}
+      </Section>
+
+      {challenges.length > 0 && (
+        <Section title="Challenge">
+          {script.challenge_intro && (
+            <p className="text-text-muted text-sm leading-relaxed">
+              {script.challenge_intro}
+            </p>
+          )}
+          <div className="grid gap-3 sm:grid-cols-2">
+            {tracks.map((track) => (
+              <div
+                key={track.label}
+                className="flex flex-col gap-2 border border-gray-200 p-4"
+              >
+                <span className="font-display text-ink text-xs font-bold tracking-wider uppercase">
+                  {track.label}
+                </span>
+                <ul className="flex flex-col gap-1.5">
+                  {track.followUps.map((f) => (
+                    <li key={f} className="text-text-default text-sm">
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </Section>
+      )}
+
+      <Section title="After the interview">
+        <ul className="flex flex-col gap-2">
+          {script.post_interview_checklist.map((item) => (
+            <li key={item} className="flex items-start gap-3">
+              {enabled ? (
+                <CheckBox
+                  checked={checked.has(`p:${item}`)}
+                  onToggle={() => toggle(`p:${item}`)}
+                  label={item}
+                />
+              ) : (
+                <span className="mt-2 size-1.5 shrink-0 bg-gray-400" />
+              )}
+              <span
+                className={cn(
+                  'text-sm',
+                  checked.has(`p:${item}`) ? 'text-text-subtle' : 'text-ink'
+                )}
+              >
+                {item}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </Section>
     </div>
   )
 }

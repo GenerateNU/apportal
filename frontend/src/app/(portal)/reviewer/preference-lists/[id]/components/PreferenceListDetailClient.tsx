@@ -4,7 +4,7 @@ import { useCallback, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { LayoutGrid, Lock, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
 import { PageContainer } from '@/components/PageContainer'
-import { BackLink } from '@/components/ui/back-link'
+import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -287,13 +287,24 @@ export function PreferenceListDetailClient({
     if (!editingName) setName(list.name)
   }
 
+  const crumbs = (name?: string) => [
+    ...(isChief
+      ? [{ label: 'Preference lists', href: '/reviewer/preference-lists' }]
+      : [
+          { label: 'My work', href: '/reviewer/my-work' },
+          {
+            label: 'Preference list',
+            href: '/reviewer/my-work?phase=preference',
+          },
+        ]),
+    { label: name ?? 'Group' },
+  ]
+
   if (isError) {
     const notFound = error instanceof APIError && error.status === 404
     return (
       <PageContainer>
-        <BackLink href="/reviewer/preference-lists">
-          Back to preference lists
-        </BackLink>
+        <Breadcrumbs items={crumbs()} />
         <p className="text-text-faint text-sm">
           {notFound
             ? "This preference list doesn't exist, or you don't have access to it."
@@ -445,9 +456,7 @@ export function PreferenceListDetailClient({
 
   return (
     <PageContainer>
-      <BackLink href="/reviewer/preference-lists">
-        Back to preference lists
-      </BackLink>
+      <Breadcrumbs items={crumbs(list.name)} />
 
       {/* Sticky: on a long ranking you otherwise lose the list's name, its
           status and how long is left. Not on phones, where the wrapped bar

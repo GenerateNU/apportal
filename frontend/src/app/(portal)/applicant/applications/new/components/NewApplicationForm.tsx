@@ -33,7 +33,7 @@ import { useChallenges } from '@/lib/queries/challenges'
 import { useQuestions } from '@/lib/queries/questions'
 import { usePutSubmission, useSubmission } from '@/lib/queries/submissions'
 import { useCurrentUser } from '@/lib/queries/users'
-import { useStore } from '@tanstack/react-form'
+import { useSelector } from '@tanstack/react-form'
 import { ApplicationFormFields } from './ApplicationFormFields'
 import {
   useApplicationForm,
@@ -266,12 +266,12 @@ function Form({
     }
   })
   const form = useApplicationForm(initialFormValues)
-  const formValues = useStore(form.store, (state) => state.values)
-  const fieldMeta = useStore(form.store, (state) => state.fieldMeta) as Record<
-    string,
-    { isBlurred?: boolean; isDirty?: boolean } | undefined
-  >
-  const formDirty = useStore(form.store, (state) => state.isDirty)
+  const formValues = useSelector(form.store, (state) => state.values)
+  const fieldMeta = useSelector(
+    form.store,
+    (state) => state.fieldMeta
+  ) as Record<string, { isBlurred?: boolean; isDirty?: boolean } | undefined>
+  const formDirty = useSelector(form.store, (state) => state.isDirty)
   const values = formValues.answers
   const submissionUrl = formValues.submissionUrl
   const [resumeUrl] = useState(initialApplication?.resume_url ?? '')

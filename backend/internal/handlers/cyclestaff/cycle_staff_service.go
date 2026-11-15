@@ -56,3 +56,15 @@ func (s *cycleStaffService) remove(ctx context.Context, in *StaffMemberInput) (*
 	}
 	return nil, nil
 }
+
+func (s *cycleStaffService) mine(ctx context.Context, _ *MyCyclesInput) (*MyCyclesOutput, error) {
+	actor, ok := middleware.ActorFrom(ctx)
+	if !ok || actor.NUID == "" {
+		return nil, huma.Error401Unauthorized("authentication required")
+	}
+	rows, err := s.staffDB.ListUserCycles(ctx, actor.NUID)
+	if err != nil {
+		return nil, utils.StoreErr(err)
+	}
+	return &MyCyclesOutput{Body: rows}, nil
+}

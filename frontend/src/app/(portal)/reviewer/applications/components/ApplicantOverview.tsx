@@ -225,14 +225,14 @@ export function ApplicantOverview({
                   {recordingReviews.map((r) => (
                     <Card key={r.id} variant="flat">
                       <span className="text-text-muted text-xs">
-                        {nameByNuid.get(r.reviewer_nuid) ?? r.reviewer_nuid}
+                        {r.reviewer_name ||
+                          nameByNuid.get(r.reviewer_nuid) ||
+                          r.reviewer_nuid}
                       </span>
                       <p className="text-text-default mt-2 whitespace-pre-wrap">
                         {r.writeup ?? (
                           <span className="text-text-faint">
-                            {r.writeup_submitted_at
-                              ? 'Hidden until released.'
-                              : 'Not written yet.'}
+                            Not submitted yet.
                           </span>
                         )}
                       </p>

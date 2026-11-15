@@ -400,7 +400,7 @@ function AssignmentRow({
         onChange={onToggle}
         aria-label={`Select ${name}`}
       />
-      <span className="text-text-default min-w-0 text-sm font-medium break-words">
+      <span className="text-text-default min-w-0 text-sm font-medium wrap-anywhere">
         {name}
       </span>
       <Badge className={roleChipClass(application.role_id)}>

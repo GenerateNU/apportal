@@ -7,6 +7,10 @@ import type {
 } from '@/lib/api/types'
 
 export const queryKeys = {
+  cycleStaff: {
+    all: ['cycleStaff'] as const,
+    mine: () => [...queryKeys.cycleStaff.all, 'mine'] as const,
+  },
   users: {
     all: ['users'] as const,
     lists: () => [...queryKeys.users.all, 'list'] as const,

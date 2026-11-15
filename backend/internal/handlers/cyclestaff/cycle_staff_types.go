@@ -26,3 +26,9 @@ type StaffOutput struct {
 type StaffMemberOutput struct {
 	Body models.CycleStaff
 }
+
+type MyCyclesInput struct{}
+
+type MyCyclesOutput struct {
+	Body []models.CycleStaff
+}

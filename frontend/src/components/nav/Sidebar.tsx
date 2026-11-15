@@ -23,6 +23,7 @@ import {
   LogOut,
   CalendarClock,
   MailCheck,
+  LayoutList,
 } from 'lucide-react'
 import NavItem, { isNavItemActive } from './NavItem'
 import { Avatar } from '@/components/ui/avatar'
@@ -48,6 +49,9 @@ type NavItemConfig = {
   label: string
   icon: typeof FileText
   chiefOnly?: boolean
+  // Leads only see their own cycle's home and the applications list.
+  forLeads?: boolean
+  leadOnly?: boolean
 }
 
 type NavSection = {
@@ -75,7 +79,18 @@ const sectionsByRole: Record<Role, NavSection[]> = {
     {
       id: 'my-work',
       items: [
-        { href: '/reviewer/applications', label: 'Applications', icon: Users },
+        {
+          href: '/reviewer/my-work',
+          label: 'My work',
+          icon: LayoutList,
+          leadOnly: true,
+        },
+        {
+          href: '/reviewer/applications',
+          label: 'Applications',
+          icon: Users,
+          forLeads: true,
+        },
         { href: '/reviewer/my-reviews', label: 'Lead Review', icon: FileText },
         { href: '/reviewer/my-interviews', label: 'My Interviews', icon: Mic },
         {
@@ -355,7 +370,9 @@ export default function Sidebar({
     .flatMap((role) => sectionsByRole[role])
     .map((section) => ({
       ...section,
-      items: section.items.filter((item) => !item.chiefOnly || isChief),
+      items: section.items.filter((item) =>
+        isChief ? !item.leadOnly : item.forLeads || item.leadOnly
+      ),
     }))
     .filter((section) => section.items.length > 0)
 

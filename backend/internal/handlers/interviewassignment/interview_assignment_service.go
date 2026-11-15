@@ -11,8 +11,6 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/access"
 
 	"github.com/GenerateNU/apportal/backend/internal/handlers/reviewrelease"
-
-	"github.com/GenerateNU/apportal/backend/internal/models"
 )
 
 type interviewAssignmentService struct {
@@ -82,11 +80,7 @@ func (s *interviewAssignmentService) listReviewersBulk(ctx context.Context, in *
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
-	visible, err := s.reviewReleaseDB.PeerReviewsVisible(ctx, s.access, models.ReviewKindRecording, ids)
-	if err != nil {
-		return nil, err
-	}
-	reviewrelease.HidePeerWriteups(items, utils.CurrentActor(ctx).NUID, visible)
+	reviewrelease.HidePeerDrafts(items, utils.CurrentActor(ctx).NUID)
 	return &InterviewReviewersOutput{Body: items}, nil
 }
 

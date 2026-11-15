@@ -25,6 +25,12 @@ func (s *CycleStaffDB) ListStaff(ctx context.Context, cycleID string, role model
 }
 
 // SetStaff adds the user to the cycle's staff or changes their role.
+func (s *CycleStaffDB) ListUserCycles(ctx context.Context, nuid string) ([]models.CycleStaff, error) {
+	rows := []models.CycleStaff{}
+	err := s.db.WithContext(ctx).Where("user_nuid = ?", nuid).Order("created_at DESC").Find(&rows).Error
+	return rows, err
+}
+
 func (s *CycleStaffDB) SetStaff(ctx context.Context, cycleID, nuid string, role models.CycleStaffRole) (models.CycleStaff, error) {
 	row := models.CycleStaff{CycleID: cycleID, UserNUID: nuid, Role: role}
 	err := s.db.WithContext(ctx).Clauses(

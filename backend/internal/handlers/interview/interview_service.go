@@ -2,9 +2,11 @@ package interview
 
 import (
 	"context"
+	"strings"
 
 	"github.com/GenerateNU/apportal/backend/internal/handlers/application"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/interviewassignment"
+	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 	"github.com/danielgtaylor/huma/v2"
 
@@ -55,8 +57,10 @@ func (s *interviewService) upsert(ctx context.Context, in *UpsertInterviewInput)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
-	if in.Body.Submit && in.Body.Rating == nil && current.Rating == nil {
-		return nil, huma.Error422UnprocessableEntity("a rating is required to submit")
+	if in.Body.Submit || current.SubmittedAt != nil {
+		if msg := missingForSubmit(in, current.Interview); msg != "" {
+			return nil, huma.Error422UnprocessableEntity(msg)
+		}
 	}
 
 	err = s.interviewDB.UpsertInterview(ctx, InterviewUpsert{
@@ -94,4 +98,24 @@ func (s *interviewService) get(ctx context.Context, in *utils.ApplicationScopedI
 		return nil, utils.StoreErr(err)
 	}
 	return &InterviewOutput{Body: iv}, nil
+}
+
+func missingForSubmit(in *UpsertInterviewInput, current models.Interview) string {
+	filled := func(next, saved *string) bool {
+		if next != nil {
+			return strings.TrimSpace(*next) != ""
+		}
+		return saved != nil && strings.TrimSpace(*saved) != ""
+	}
+	switch {
+	case !filled(in.Body.RecordingURL, current.RecordingURL):
+		return "a recording link is required to submit"
+	case !filled(in.Body.NotesURL, current.NotesURL):
+		return "a notes link is required to submit"
+	case !filled(in.Body.Writeup, current.Writeup):
+		return "a write-up is required to submit"
+	case in.Body.Rating == nil && current.Rating == nil:
+		return "a rating is required to submit"
+	}
+	return ""
 }

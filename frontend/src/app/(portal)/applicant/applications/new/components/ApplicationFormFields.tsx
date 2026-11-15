@@ -9,23 +9,9 @@ import {
   answerError,
   challengeLinkError,
   isEmptyAnswer,
+  visibleError,
 } from '../../lib/validation'
 import type { ApplicationForm } from './useApplicationForm'
-
-// A filled-in answer shows its error once typing settles; an empty one waits
-// until the field is blurred or edited, or its page has been passed.
-function visibleError(
-  field: AnyFieldApi,
-  settled: boolean,
-  reveal: boolean,
-  hasValue: boolean
-) {
-  const { errors, isBlurred, isDirty } = field.state.meta
-  const error = errors.find(Boolean) as string | undefined
-  return reveal || isBlurred || (settled && (isDirty || hasValue))
-    ? error
-    : undefined
-}
 
 function AnswerField({
   field,

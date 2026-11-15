@@ -42,6 +42,25 @@ func (in ReviewAnswerInput) isEmpty() bool {
 
 // UpsertWrittenReview upserts the review, keyed on application + reviewer, and
 // its answers in one transaction.
+func (w *WrittenReviewDB) ReviewSubmitted(ctx context.Context, applicationID, reviewerNUID string) (bool, error) {
+	var count int64
+	err := w.db.WithContext(ctx).Model(&models.WrittenReview{}).
+		Where("application_id = ? AND reviewer_nuid = ? AND submitted_at IS NOT NULL", applicationID, reviewerNUID).
+		Count(&count).Error
+	return count > 0, err
+}
+
+// RequiredReviewQuestionIDs lists the required review questions that apply to
+// an application: its cycle's, for its role or for every role.
+func (w *WrittenReviewDB) RequiredReviewQuestionIDs(ctx context.Context, applicationID string) ([]string, error) {
+	var ids []string
+	err := w.db.WithContext(ctx).Table("review_questions q").
+		Joins("JOIN applications a ON a.cycle_id = q.cycle_id").
+		Where("a.id = ? AND q.is_required AND (q.role_id = a.role_id OR q.role_id IS NULL)", applicationID).
+		Pluck("q.id", &ids).Error
+	return ids, err
+}
+
 func (w *WrittenReviewDB) UpsertWrittenReview(ctx context.Context, in WrittenReviewUpsert) (models.WrittenReviewDetail, error) {
 	var detail models.WrittenReviewDetail
 	review := models.WrittenReview{ApplicationID: in.ApplicationID, ReviewerNUID: in.ReviewerNUID}

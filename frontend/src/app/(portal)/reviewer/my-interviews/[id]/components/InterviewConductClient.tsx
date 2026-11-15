@@ -2,41 +2,31 @@
 
 import { useCallback, useMemo, useState } from 'react'
 import { useRoleLookup } from '@/lib/queries/roles'
-import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
   ArrowDown,
   ArrowRight,
-  Check,
-  CheckCircle2,
-  ChevronDown,
   ChevronLeft,
-  ChevronUp,
-  ExternalLink,
   Loader2,
-  Lock,
   Pencil,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { BackLink } from '@/components/ui/back-link'
 import { Badge } from '@/components/ui/badge'
-import { Card } from '@/components/ui/card'
+import { Breadcrumbs } from '@/components/ui/breadcrumbs'
+import { EmptyState } from '@/components/ui/empty-state'
+import { PageHeader } from '@/components/ui/page-header'
+import { PAGE_L, PAGE_R, PAGE_TOP, PAGE_X } from '@/components/ui/page-shell'
+import { ResizableSplit } from '@/components/ui/resizable-split'
 import { SectionLabel } from '@/components/ui/section-label'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import type { InterviewComment, InterviewRating } from '@/lib/api/types'
+import { SegmentedTabs } from '@/components/ui/segmented-tabs'
+import { ReturnerBadge } from '@/components/ReturnerBadge'
+import type { InterviewComment } from '@/lib/api/types'
 import { ChallengeCard } from '@/app/(portal)/reviewer/applications/components/ChallengeCard'
 import { useAnswers } from '@/lib/queries/answers'
 import { useApplicant } from '@/lib/queries/applicants'
 import { CandidateTags } from '@/components/CandidateTags'
 import { useApplication, useApplications } from '@/lib/queries/applications'
+import { useChallenges } from '@/lib/queries/challenges'
 import {
   useCreateInterviewComment,
   useInterviewComments,
@@ -46,44 +36,39 @@ import {
   interviewSubmitted,
   useInterview,
   useInterviewsByApplicationIds,
-  useUpsertInterview,
 } from '@/lib/queries/interviews'
 import { useQuestions } from '@/lib/queries/questions'
-import {
-  useRecordingReviews,
-  useUpsertRecordingReview,
-} from '@/lib/queries/recording-reviews'
+import { useRecordingReviews } from '@/lib/queries/recording-reviews'
 import { useReviewQuestions } from '@/lib/queries/review-questions'
 import { useCurrentUser, useReviewerNames } from '@/lib/queries/users'
 import { useWrittenReviews } from '@/lib/queries/written-reviews'
-import {
-  RATING_COLORS,
-  RATING_LABEL,
-  RATING_OPTIONS,
-} from '@/lib/interview-ratings'
-import {
-  REVIEW_STATE_BADGE,
-  REVIEWED_TEXT,
-} from '../../../my-reviews/constants'
+import { cn } from '@/lib/utils'
 import { ResponseField } from '@/app/(portal)/reviewer/applications/components/ResponseField'
 import { InterviewScriptContent } from '@/app/(portal)/reviewer/interview-script/components/InterviewScriptContent'
+import { InterviewSummary } from './InterviewSummary'
+import { InterviewWriteupForm } from './InterviewWriteupForm'
+import { RecordingReviewThread } from './RecordingReviewThread'
 
-const TEXTAREA_CLASS =
-  'border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 min-h-40 lg:min-h-28 w-full rounded-lg border bg-transparent px-3.5 py-2.5 text-base transition-all outline-none focus-visible:ring-3 hover:border-gray-300 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 resize-none'
+const COMMENT_TEXTAREA_CLASS =
+  'focus:border-ink text-text-default placeholder:text-text-subtle w-full border border-gray-300 bg-white p-3 text-sm focus:outline-none'
 
 // Which list page linked into this interview — carried through the `from`
-// query param so "Back" (and paging via Previous/Next) returns wherever the
-// reviewer actually came from, instead of always assuming My Interviews.
+// query param so the breadcrumb (and paging via Previous/Next) returns
+// wherever the reviewer actually came from, instead of always assuming My
+// Interviews.
 const BACK_LINK: Record<string, { href: string; label: string }> = {
   'interview-ratings': {
     href: '/reviewer/interview-ratings',
-    label: 'Back to Interview Ratings',
+    label: 'Interview ratings',
   },
 }
 const DEFAULT_BACK_LINK = {
   href: '/reviewer/my-interviews',
-  label: 'Back to My interviews',
+  label: 'My interviews',
 }
+
+type LeftTab = 'application' | 'challenge' | 'script'
+type RightTab = 'interview' | 'recordings' | 'comments'
 
 export function InterviewConductClient({
   applicationId,
@@ -101,12 +86,13 @@ export function InterviewConductClient({
   const from = searchParams.get('from') ?? ''
   const backLink = BACK_LINK[from] ?? DEFAULT_BACK_LINK
   const queueQuery = from ? `?from=${encodeURIComponent(from)}` : ''
-  const [scriptOpen, setScriptOpen] = useState(true)
   const { data: currentUser } = useCurrentUser()
   const { data: applicant } = useApplicant(applicantNuid)
   const { data: application } = useApplication(applicationId)
   const { data: answers = [] } = useAnswers(applicationId)
   const { data: questions = [] } = useQuestions(cycleId, role)
+  const { data: challenges = [] } = useChallenges(cycleId, role)
+  const hasChallenge = challenges.length > 0
   // What other leads said about this applicant's written application during
   // lead review — so an interviewer doesn't have to separately open the
   // lead-review page to see it. The backend already withholds other
@@ -122,16 +108,15 @@ export function InterviewConductClient({
     (nuid: string) => nameByNuid.get(nuid) ?? nuid,
     [nameByNuid]
   )
-  const { data: interview } = useInterview(applicationId)
+  const { data: interview, isLoading: interviewLoading } =
+    useInterview(applicationId)
   const interviewers = interview?.interviewers ?? []
   const interviewerNames = interviewers
     .map((iv) => iv.interviewer_name ?? nameFor(iv.interviewer_nuid))
     .join(', ')
-  const upsertInterview = useUpsertInterview()
   const { data: recordingReviews = [] } = useRecordingReviews(
     interview ? applicationId : ''
   )
-  const upsertRecordingReview = useUpsertRecordingReview()
 
   const isInterviewer = interviewers.some(
     (iv) => iv.interviewer_nuid === currentUser?.nuid
@@ -140,7 +125,7 @@ export function InterviewConductClient({
     (r) => r === 'chief' || r === 'admin'
   )
   const writeupSubmitted = !!interview?.submitted_at
-  const canEditInterview = !!interview && (isInterviewer || isChief)
+  const [editingWriteup, setEditingWriteup] = useState(false)
   const canReview =
     !!currentUser &&
     recordingReviews.some((r) => r.reviewer_nuid === currentUser.nuid)
@@ -187,6 +172,7 @@ export function InterviewConductClient({
     }
     return null
   }, [orderedQueue, needsInterviewAt, applicationId])
+  const queuePosition = orderedQueue.findIndex((a) => a.id === applicationId)
 
   // Applicant answers keyed by question id, for the read-only left panel.
   const answersByQuestionId = useMemo(
@@ -194,75 +180,8 @@ export function InterviewConductClient({
     [answers]
   )
 
-  const [recordingUrl, setRecordingUrl] = useState('')
-  const [notesUrl, setNotesUrl] = useState('')
-  const [comments, setComments] = useState('')
-  const [rating, setRating] = useState<InterviewRating | ''>('')
-  const [seeded, setSeeded] = useState(false)
-  if (!seeded && interview) {
-    setRecordingUrl(interview.recording_url ?? '')
-    setNotesUrl(interview.notes_url ?? '')
-    setComments(interview.writeup ?? '')
-    setRating(interview.rating ?? '')
-    setSeeded(true)
-  }
-  const [savedInterview, setSavedInterview] = useState(false)
-
-  const missingInterviewRequired = !comments.trim() || !rating
-
-  async function saveInterview(submit: boolean) {
-    setSavedInterview(false)
-    try {
-      await upsertInterview.mutateAsync({
-        applicationId,
-        body: {
-          recording_url: isInterviewer ? recordingUrl || undefined : undefined,
-          notes_url: isInterviewer ? notesUrl || undefined : undefined,
-          writeup: isInterviewer ? comments : undefined,
-          rating: rating || undefined,
-          submit,
-        },
-      })
-      setSavedInterview(true)
-    } catch {}
-  }
-
-  const ownReview = recordingReviews.find(
-    (r) => r.reviewer_nuid === currentUser?.nuid
-  )
-  const otherReviews = recordingReviews.filter(
-    (r) => r.reviewer_nuid !== currentUser?.nuid
-  )
-
-  const [reviewComment, setReviewComment] = useState('')
-  const [reviewRating, setReviewRating] = useState<InterviewRating | ''>('')
-  const [reviewSeeded, setReviewSeeded] = useState(false)
-  const [savedReview, setSavedReview] = useState(false)
-  if (!reviewSeeded && ownReview && interview) {
-    setReviewComment(ownReview.writeup ?? '')
-    setReviewRating(interview.rating ?? '')
-    setReviewSeeded(true)
-  }
-  const reviewSubmitted = !!ownReview?.writeup_submitted_at
-
-  async function saveReview(submit: boolean) {
-    setSavedReview(false)
-    await upsertRecordingReview.mutateAsync({
-      applicationId,
-      body: {
-        writeup: reviewComment || undefined,
-        rating:
-          isChief && reviewRating && reviewRating !== interview?.rating
-            ? reviewRating
-            : undefined,
-        submit,
-      },
-    })
-    setSavedReview(true)
-  }
-
   // Open calibration discussion — any reviewer can post, unlike the
-  // interviewer write-up and recording reviews above.
+  // interviewer write-up and recording reviews.
   const { data: discussionComments = [] } = useInterviewComments(applicationId)
   const createComment = useCreateInterviewComment()
   const updateComment = useUpdateInterviewComment()
@@ -293,624 +212,437 @@ export function InterviewConductClient({
     setEditingCommentId(null)
   }
 
+  const leftTabs: { id: LeftTab; label: string }[] = [
+    { id: 'application', label: 'Application' },
+    ...(hasChallenge ? [{ id: 'challenge' as const, label: 'Challenge' }] : []),
+    { id: 'script', label: 'Script' },
+  ]
+  const [pickedLeft, setPickedLeft] = useState<LeftTab | null>(null)
+  const leftTab: LeftTab =
+    pickedLeft && leftTabs.some((t) => t.id === pickedLeft)
+      ? pickedLeft
+      : isInterviewer && !writeupSubmitted
+        ? 'script'
+        : 'application'
+
+  const rightTabs: { id: RightTab; label: string; count?: number }[] = [
+    { id: 'interview', label: 'Interview' },
+    ...(canReview || recordingReviews.length > 0
+      ? [
+          {
+            id: 'recordings' as const,
+            label: 'Recording reviews',
+            count: recordingReviews.filter((r) => r.writeup_submitted_at)
+              .length,
+          },
+        ]
+      : []),
+    { id: 'comments', label: 'Comments', count: discussionComments.length },
+  ]
+  const [pickedRight, setPickedRight] = useState<RightTab | null>(null)
+  const rightTab: RightTab =
+    pickedRight && rightTabs.some((t) => t.id === pickedRight)
+      ? pickedRight
+      : canReview && !isInterviewer
+        ? 'recordings'
+        : 'interview'
+
+  const crumbs =
+    !isChief && isInterviewer
+      ? [
+          { label: 'My work', href: '/reviewer/my-work' },
+          { label: 'Interviews', href: '/reviewer/my-work?phase=interviews' },
+        ]
+      : !isChief && canReview
+        ? [
+            { label: 'My work', href: '/reviewer/my-work' },
+            {
+              label: 'Interview reviews',
+              href: '/reviewer/my-work?phase=interviewReviews',
+            },
+          ]
+        : [backLink]
+
+  const applicantFacts = [
+    applicant?.graduation_year && `Class of ${applicant.graduation_year}`,
+    applicant?.major,
+  ].filter(Boolean) as string[]
+
+  const scrollPane = cn(
+    'py-6 pl-6 sm:pl-8 lg:flex-1 lg:overflow-y-auto',
+    PAGE_R
+  )
+  const paneClass = (tab: RightTab) =>
+    cn(rightTab === tab ? 'flex' : 'hidden', 'flex-col lg:min-h-0 lg:flex-1')
+
   return (
     <div className="flex min-h-full flex-col lg:h-full">
-      {/* Top bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 bg-white px-4 py-3 sm:px-8">
-        <div className="flex min-w-0 flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-4">
-          <BackLink href={backLink.href}>{backLink.label}</BackLink>
-          <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 sm:border-l sm:border-gray-200 sm:pl-4">
-            <h1 className="text-text-default min-w-0 text-lg font-semibold break-words">
-              {applicant?.full_name ?? 'Applicant'}
-            </h1>
-            <Badge className={roleChipClass(role)}>{roleLabel(role)}</Badge>
-            <CandidateTags
-              applicationId={applicationId}
-              cycleId={cycleId}
-              tagIds={application?.tag_ids}
+      <div
+        className={cn(
+          'bg-white pb-6',
+          PAGE_X,
+          PAGE_TOP
+        )}
+      >
+        <PageHeader
+          back={
+            <Breadcrumbs
+              items={[
+                ...crumbs,
+                { label: applicant?.full_name ?? 'Applicant' },
+              ]}
             />
-            {interview?.rating && (
-              <Badge
-                className={`${RATING_COLORS[interview.rating].bg} ${RATING_COLORS[interview.rating].text}`}
-              >
-                {RATING_LABEL[interview.rating]}
+          }
+          title={applicant?.full_name ?? 'Applicant'}
+          subtitle={
+            <span className="flex flex-wrap items-center gap-2">
+              <Badge className={`w-fit shrink-0 ${roleChipClass(role)}`}>
+                {roleLabel(role)}
               </Badge>
-            )}
-            {interviewerNames && (
-              <span className="text-text-subtle text-sm">
-                {interviewers.length === 1 ? 'Interviewer' : 'Interviewers'}:{' '}
-                {interviewerNames}
-              </span>
-            )}
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Stacked on phones, the write-up sits below the whole application. */}
-          <Button
-            variant="outline"
-            size="sm"
-            className="lg:hidden"
-            onClick={() =>
-              document
-                .getElementById('interview-writeup')
-                ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-            }
-          >
-            <ArrowDown data-icon="inline-start" size={14} />
-            Write-up
-          </Button>
-          {writeupDone && (
-            <Badge className={REVIEW_STATE_BADGE.submitted}>
-              <CheckCircle2 size={12} />
-              Interviewed
-            </Badge>
-          )}
-          {previousApplicationId && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                router.push(
-                  `/reviewer/my-interviews/${previousApplicationId}${queueQuery}`
-                )
-              }
-            >
-              <ChevronLeft data-icon="inline-start" size={14} />
-              Previous
-            </Button>
-          )}
-          {nextApplicationId && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                router.push(
-                  `/reviewer/my-interviews/${nextApplicationId}${queueQuery}`
-                )
-              }
-            >
-              Next
-              <ArrowRight data-icon="inline-end" size={14} />
-            </Button>
-          )}
-        </div>
+              <CandidateTags
+                compact
+                applicationId={applicationId}
+                cycleId={cycleId}
+                tagIds={application?.tag_ids}
+              />
+              {applicantFacts.length > 0 && (
+                <span className="text-text-muted text-sm">
+                  {applicantFacts.join(' · ')}
+                </span>
+              )}
+              {applicant?.returner && <ReturnerBadge showLabel />}
+            </span>
+          }
+          actions={
+            <>
+              {queuePosition >= 0 && (
+                <span className="font-display text-text-subtle mr-3 text-[11px] tracking-wider uppercase">
+                  Interview {queuePosition + 1} of {orderedQueue.length}
+                </span>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                className="lg:hidden"
+                onClick={() =>
+                  document
+                    .getElementById('interview-panel')
+                    ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                }
+              >
+                <ArrowDown data-icon="inline-start" size={14} />
+                Write-up
+              </Button>
+              {previousApplicationId && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    router.push(
+                      `/reviewer/my-interviews/${previousApplicationId}${queueQuery}`
+                    )
+                  }
+                >
+                  <ChevronLeft data-icon="inline-start" size={14} />
+                  Previous
+                </Button>
+              )}
+              {nextApplicationId && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    router.push(
+                      `/reviewer/my-interviews/${nextApplicationId}${queueQuery}`
+                    )
+                  }
+                >
+                  Next
+                  <ArrowRight data-icon="inline-end" size={14} />
+                </Button>
+              )}
+            </>
+          }
+        />
       </div>
 
-      {/* Split: application (left) · interview + reviews (right) */}
-      <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-2 lg:overflow-hidden">
-        {/* Application */}
-        <div className="border-b border-gray-200 px-4 py-4 sm:px-8 sm:py-6 lg:overflow-y-auto lg:border-r lg:border-b-0">
-          <ChallengeCard
-            applicantNuid={applicantNuid}
-            applicationId={applicationId}
-            cycleId={cycleId}
-            role={role}
-          />
-
-          <Card className="mb-4 flex flex-col gap-2">
-            <button
-              type="button"
-              onClick={() => setScriptOpen((v) => !v)}
-              className="text-text-faint hover:text-text-default flex items-center justify-between text-xs font-semibold tracking-wide uppercase"
-            >
-              Interview script
-              {scriptOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-            </button>
-            {scriptOpen && (
-              <>
-                <Link
-                  href={`/reviewer/interview-script?cycle=${cycleId}&role=${role}`}
-                  className="text-ink self-start text-xs hover:underline"
-                >
-                  Open as a full page →
-                </Link>
-                <InterviewScriptContent cycleId={cycleId} role={role} />
-              </>
+      <ResizableSplit
+        storageKey="interview-split"
+        className="min-h-0 flex-1 lg:overflow-hidden"
+        left={
+          <div
+            className={cn(
+              'border-b border-gray-200 pb-6 lg:overflow-y-auto lg:border-b-0',
+              PAGE_L,
+              'pr-6 sm:pr-8'
             )}
-          </Card>
-
-          <SectionLabel className="mb-4">Application</SectionLabel>
-          <div className="space-y-4">
-            {questions.map((q) => (
-              <ResponseField
-                key={q.id}
-                question={q}
-                answer={answersByQuestionId.get(q.id)}
-                applicable={true}
-              />
-            ))}
-          </div>
-
-          {otherWrittenReviews.length > 0 && (
-            <div className="mt-6">
-              <SectionLabel className="mb-3">Lead review comments</SectionLabel>
-              <div className="flex flex-col gap-3">
-                {otherWrittenReviews.map((r) => (
-                  <Card key={r.id}>
-                    <span className="text-text-muted text-xs">
-                      Reviewer {r.reviewer_name || r.reviewer_nuid}
-                    </span>
-                    <div className="mt-2 flex flex-col gap-2">
-                      {reviewQuestions.map((q) => {
-                        const a = r.answers.find(
-                          (ans) => ans.review_question_id === q.id
-                        )
-                        if (!a) return null
-                        const display =
-                          a.score != null
-                            ? `${a.score}/10`
-                            : a.answer_options?.length
-                              ? a.answer_options.join(', ')
-                              : a.answer_text
-                        if (!display) return null
-                        return (
-                          <div key={q.id}>
-                            <p className="text-text-muted text-xs font-medium">
-                              {q.question_text}
-                            </p>
-                            <p className="text-text-default text-sm break-words whitespace-pre-wrap">
-                              {display}
-                            </p>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Interview + recording reviews */}
-        <div className="flex flex-col gap-6 px-4 py-4 sm:px-8 sm:py-6 lg:overflow-y-auto">
-          {/* Interview write-up */}
-          <Card
-            id="interview-writeup"
-            className="flex scroll-mt-4 flex-col gap-4 p-5"
           >
-            <SectionLabel>Interview</SectionLabel>
-
-            {upsertInterview.isError && (
-              <p className="text-destructive text-sm">
-                Couldn&apos;t save the interview. Try again.
-              </p>
-            )}
-
-            {interviewerNames && (
-              <p className="text-text-muted text-sm">
-                Interviewers: {interviewerNames}
-              </p>
-            )}
-
-            {writeupSubmitted && (
-              <div className="border-border bg-muted/40 text-text-muted flex items-center gap-2 border px-4 py-3 text-sm">
-                <CheckCircle2 size={14} />
-                Submitted
-                {interview?.submitted_at
-                  ? ` on ${new Date(interview.submitted_at).toLocaleDateString()}`
-                  : ''}
-                . You can still make changes below.
-              </div>
-            )}
-
-            {!canEditInterview && !interview && (
-              <p className="text-text-faint text-sm">
-                This interview hasn&apos;t started yet.
-              </p>
-            )}
-            {!canEditInterview && !!interview && (
-              <p className="text-text-faint text-sm">
-                You&apos;re not an assigned interviewer, so this is read-only.
-              </p>
-            )}
-
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col gap-1.5">
-                <Label>Recording link</Label>
-                {isInterviewer ? (
-                  <div className="flex items-center gap-2">
-                    <Input
-                      value={recordingUrl}
-                      onChange={(e) => setRecordingUrl(e.target.value)}
-                      placeholder="https://…"
-                      disabled={upsertInterview.isPending}
-                    />
-                    {interview?.recording_url && (
-                      <a
-                        href={interview.recording_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-ink inline-flex shrink-0 items-center gap-1 text-sm hover:underline"
-                      >
-                        Open
-                        <ExternalLink size={12} />
-                      </a>
-                    )}
-                  </div>
-                ) : interview?.recording_url ? (
-                  <a
-                    href={interview.recording_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-ink inline-flex items-center gap-1 text-sm break-all hover:underline"
-                  >
-                    {interview.recording_url}
-                    <ExternalLink size={12} />
-                  </a>
-                ) : (
-                  <p className="text-text-faint text-sm">Not added yet.</p>
-                )}
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <Label>Notes link (e.g. Granola)</Label>
-                {isInterviewer ? (
-                  <div className="flex items-center gap-2">
-                    <Input
-                      value={notesUrl}
-                      onChange={(e) => setNotesUrl(e.target.value)}
-                      placeholder="https://…"
-                      disabled={upsertInterview.isPending}
-                    />
-                    {interview?.notes_url && (
-                      <a
-                        href={interview.notes_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-ink inline-flex shrink-0 items-center gap-1 text-sm hover:underline"
-                      >
-                        Open
-                        <ExternalLink size={12} />
-                      </a>
-                    )}
-                  </div>
-                ) : interview?.notes_url ? (
-                  <a
-                    href={interview.notes_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-ink inline-flex items-center gap-1 text-sm break-all hover:underline"
-                  >
-                    {interview.notes_url}
-                    <ExternalLink size={12} />
-                  </a>
-                ) : (
-                  <p className="text-text-faint text-sm">Not added yet.</p>
-                )}
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <Label>Write-up</Label>
-                {isInterviewer ? (
-                  <textarea
-                    className={TEXTAREA_CLASS}
-                    value={comments}
-                    onChange={(e) => setComments(e.target.value)}
-                    placeholder="Summarize how the interview went…"
-                    disabled={upsertInterview.isPending}
-                  />
-                ) : (
-                  <p className="text-text-default text-sm whitespace-pre-wrap">
-                    {interview?.writeup || (
-                      <span className="text-text-faint">Not added yet.</span>
-                    )}
-                  </p>
-                )}
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <Label>Rating</Label>
-                {canEditInterview ? (
-                  <Select
-                    value={rating}
-                    onValueChange={(v) => setRating(v as InterviewRating)}
-                  >
-                    <SelectTrigger aria-label="Rating">
-                      <SelectValue placeholder="Choose a rating" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {RATING_OPTIONS.map((o) => (
-                        <SelectItem key={o.value} value={o.value}>
-                          {o.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <p className="text-text-default text-sm">
-                    {interview?.rating ? (
-                      RATING_LABEL[interview.rating]
-                    ) : (
-                      <span className="text-text-faint">Not rated yet.</span>
-                    )}
-                  </p>
-                )}
-              </div>
+            <div className="bg-white pt-6 pb-4 lg:sticky lg:top-0 lg:z-10">
+              <SegmentedTabs
+                tabs={leftTabs}
+                value={leftTab}
+                onChange={setPickedLeft}
+              />
             </div>
 
-            {canEditInterview && (
-              <div className="flex flex-col items-stretch gap-3 border-t border-gray-200 pt-4 sm:flex-row sm:items-center sm:justify-end">
-                {savedInterview && !upsertInterview.isPending && (
-                  <span
-                    className={`inline-flex items-center gap-1 text-sm sm:mr-auto ${REVIEWED_TEXT}`}
-                  >
-                    <Check size={14} />
-                    Saved
-                  </span>
-                )}
-                {!writeupSubmitted && isInterviewer && (
-                  <Button
-                    variant="outline"
-                    onClick={() => saveInterview(false)}
-                    disabled={upsertInterview.isPending}
-                    className="w-full sm:w-auto"
-                  >
-                    Save draft
-                  </Button>
-                )}
-                <Button
-                  onClick={() =>
-                    saveInterview(!writeupSubmitted && isInterviewer)
-                  }
-                  disabled={
-                    upsertInterview.isPending ||
-                    (isInterviewer && missingInterviewRequired)
-                  }
-                  className="w-full sm:w-auto"
-                >
-                  {upsertInterview.isPending ? (
-                    <>
-                      <Loader2 className="animate-spin" size={14} />
-                      Saving…
-                    </>
-                  ) : writeupSubmitted || !isInterviewer ? (
-                    'Save changes'
-                  ) : (
-                    'Submit write-up'
-                  )}
-                </Button>
-              </div>
-            )}
-          </Card>
-
-          {/* Recording reviews */}
-          <Card className="flex flex-col gap-4 p-5">
-            <SectionLabel>Recording reviews</SectionLabel>
-
-            {!writeupDone ? (
-              <p className="text-text-faint text-sm">
-                Waiting for the interview write-up to be submitted before
-                reviews can start.
-              </p>
-            ) : (
+            {leftTab === 'application' && (
               <>
-                {canReview && (
-                  <div className="flex flex-col gap-3">
-                    {reviewSubmitted && (
-                      <div className="border-border bg-muted/40 text-text-muted flex items-center gap-2 border px-4 py-3 text-sm">
-                        <Lock size={14} />
-                        You&apos;ve submitted your review. You can still make
-                        changes below.
-                      </div>
-                    )}
-                    <div className="flex flex-col gap-1.5">
-                      <Label>Your comments</Label>
-                      <textarea
-                        className={TEXTAREA_CLASS}
-                        value={reviewComment}
-                        onChange={(e) => setReviewComment(e.target.value)}
-                        placeholder="Share your thoughts on the recording…"
-                        disabled={upsertRecordingReview.isPending}
-                      />
-                    </div>
-                    {isChief && (
-                      <div className="flex flex-col gap-1.5">
-                        <Label>Rating</Label>
-                        <Select
-                          value={reviewRating}
-                          onValueChange={(v) =>
-                            setReviewRating(v as InterviewRating)
-                          }
-                        >
-                          <SelectTrigger aria-label="Rating">
-                            <SelectValue placeholder="Choose a rating" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {RATING_OPTIONS.map((o) => (
-                              <SelectItem key={o.value} value={o.value}>
-                                {o.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-                    <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-end">
-                      {savedReview && !upsertRecordingReview.isPending && (
-                        <span
-                          className={`inline-flex items-center gap-1 text-sm sm:mr-auto ${REVIEWED_TEXT}`}
-                        >
-                          <Check size={14} />
-                          Saved
-                        </span>
-                      )}
-                      {reviewSubmitted ? (
-                        <Button
-                          onClick={() => saveReview(true)}
-                          disabled={upsertRecordingReview.isPending}
-                          className="w-full sm:w-auto"
-                        >
-                          {upsertRecordingReview.isPending ? (
-                            <>
-                              <Loader2 className="animate-spin" size={14} />
-                              Saving…
-                            </>
-                          ) : (
-                            'Save changes'
-                          )}
-                        </Button>
-                      ) : (
-                        <>
-                          <Button
-                            variant="outline"
-                            onClick={() => saveReview(false)}
-                            disabled={upsertRecordingReview.isPending}
-                            className="w-full sm:w-auto"
-                          >
-                            Save draft
-                          </Button>
-                          <Button
-                            onClick={() => saveReview(true)}
-                            disabled={
-                              upsertRecordingReview.isPending ||
-                              !reviewComment.trim()
-                            }
-                            className="w-full sm:w-auto"
-                          >
-                            {upsertRecordingReview.isPending ? (
-                              <>
-                                <Loader2 className="animate-spin" size={14} />
-                                Saving…
-                              </>
-                            ) : (
-                              'Submit review'
-                            )}
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                )}
+                <div className="space-y-4">
+                  {questions.map((q) => (
+                    <ResponseField
+                      key={q.id}
+                      question={q}
+                      answer={answersByQuestionId.get(q.id)}
+                      applicable={true}
+                    />
+                  ))}
+                </div>
 
-                {otherReviews.length > 0 && (
-                  <div>
-                    <SectionLabel as="h3" className="mt-2 mb-3">
-                      Other reviews
+                {otherWrittenReviews.length > 0 && (
+                  <section className="mt-8">
+                    <SectionLabel className="mb-2">
+                      Lead review comments
                     </SectionLabel>
-                    <div className="flex flex-col gap-3">
-                      {otherReviews.map((r) => (
-                        <Card key={r.id}>
-                          <span className="text-text-muted text-xs">
-                            {nameFor(r.reviewer_nuid)}
-                          </span>
-                          <p className="text-text-default mt-2 text-sm break-words whitespace-pre-wrap">
-                            {r.writeup ?? (
-                              <span className="text-text-faint">
-                                {r.writeup_submitted_at
-                                  ? 'Hidden until released.'
-                                  : 'Not written yet.'}
-                              </span>
-                            )}
-                          </p>
-                        </Card>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {!canReview && otherReviews.length === 0 && (
-                  <p className="text-text-faint text-sm">No reviews yet.</p>
+                    {otherWrittenReviews.map((r) => (
+                      <div
+                        key={r.id}
+                        className="border-b border-gray-200 py-3 last:border-0"
+                      >
+                        <span className="text-text-muted text-xs">
+                          Reviewer {r.reviewer_name || r.reviewer_nuid}
+                        </span>
+                        <div className="mt-2 flex flex-col gap-2">
+                          {reviewQuestions.map((q) => {
+                            const a = r.answers.find(
+                              (ans) => ans.review_question_id === q.id
+                            )
+                            if (!a) return null
+                            const display =
+                              a.score != null
+                                ? `${a.score}/10`
+                                : a.answer_options?.length
+                                  ? a.answer_options.join(', ')
+                                  : a.answer_text
+                            if (!display) return null
+                            return (
+                              <div key={q.id}>
+                                <p className="text-text-muted text-xs font-medium">
+                                  {q.question_text}
+                                </p>
+                                <p className="text-text-default text-sm wrap-anywhere whitespace-pre-wrap">
+                                  {display}
+                                </p>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </section>
                 )}
               </>
             )}
-          </Card>
 
-          {/* Open calibration discussion — any reviewer can post */}
-          <Card className="flex flex-col gap-4 p-5">
-            <SectionLabel>Comments</SectionLabel>
-            <div className="flex flex-col gap-3">
-              {discussionComments.map((c) => {
-                const editing = editingCommentId === c.id
-                const edited = c.updated_at !== c.created_at
-                const isOwn = c.author_nuid === currentUser?.nuid
-                return (
-                  <Card key={c.id} variant="flat">
-                    {editing ? (
-                      <div className="flex flex-col gap-2">
-                        <textarea
-                          value={editingBody}
-                          onChange={(e) => setEditingBody(e.target.value)}
-                          rows={3}
-                          autoFocus
-                          aria-label="Edit comment"
-                          className="focus:border-ink text-text-default placeholder:text-text-subtle w-full rounded-md border border-gray-200 p-3 text-sm focus:outline-none"
-                        />
-                        <div className="flex items-center gap-2">
-                          <Button
-                            onClick={saveEditedComment}
-                            disabled={
-                              updateComment.isPending || !editingBody.trim()
-                            }
-                          >
-                            Save
-                          </Button>
-                          <Button
-                            variant="outline"
-                            onClick={() => setEditingCommentId(null)}
-                          >
-                            Cancel
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 break-words">
-                          <p className="text-text-muted text-xs">
-                            {c.author_name || c.author_nuid}
-                          </p>
-                          <p className="text-text-default mt-1 text-sm whitespace-pre-wrap">
-                            {c.body}
-                          </p>
-                          <p className="text-text-faint mt-1.5 text-xs">
-                            {new Date(c.created_at).toLocaleString()}
-                            {edited && ' · edited'}
-                          </p>
-                        </div>
-                        {isOwn && (
-                          <button
-                            type="button"
-                            onClick={() => startEditingComment(c)}
-                            className="text-text-faint hover:text-text-muted -m-2 shrink-0 p-2"
-                            aria-label="Edit comment"
-                          >
-                            <Pencil size={14} />
-                          </button>
+            {leftTab === 'challenge' && (
+              <ChallengeCard
+                applicantNuid={applicantNuid}
+                applicationId={applicationId}
+                cycleId={cycleId}
+                role={role}
+                bare
+              />
+            )}
+
+            {leftTab === 'script' && (
+              <div className="flex flex-col gap-3">
+                <InterviewScriptContent
+                  cycleId={cycleId}
+                  role={role}
+                  checklistKey={applicationId}
+                />
+              </div>
+            )}
+          </div>
+        }
+        right={
+          <div
+            id="interview-panel"
+            className="flex scroll-mt-4 flex-col lg:min-h-0"
+          >
+            <div
+              className={cn(
+                'border-b border-gray-200 bg-white pt-6 pb-4 pl-6 sm:pl-8',
+                PAGE_R
+              )}
+            >
+              <SegmentedTabs
+                tabs={rightTabs}
+                value={rightTab}
+                onChange={setPickedRight}
+              />
+            </div>
+
+            <div className={paneClass('interview')}>
+              {interviewLoading ? (
+                <div className={cn('flex flex-col gap-4', scrollPane)}>
+                  <span className="h-3 w-24 animate-pulse bg-gray-100" />
+                  <div className="h-40 animate-pulse border border-gray-100 bg-gray-50" />
+                </div>
+              ) : isInterviewer &&
+                interview &&
+                (!writeupSubmitted || editingWriteup) ? (
+                <InterviewWriteupForm
+                  key={interview.id}
+                  applicationId={applicationId}
+                  interview={interview}
+                  interviewerNames={interviewerNames}
+                  onDone={() => setEditingWriteup(false)}
+                />
+              ) : (
+                <div className={scrollPane}>
+                  <InterviewSummary
+                    applicationId={applicationId}
+                    interview={interview}
+                    interviewerNames={interviewerNames}
+                    isInterviewer={isInterviewer}
+                    isChief={isChief}
+                    onEdit={
+                      isInterviewer && writeupSubmitted
+                        ? () => setEditingWriteup(true)
+                        : undefined
+                    }
+                  />
+                </div>
+              )}
+            </div>
+
+            {rightTabs.some((t) => t.id === 'recordings') && (
+              <div className={paneClass('recordings')}>
+                {!writeupDone ? (
+                  <div className={scrollPane}>
+                    <EmptyState
+                      size="sm"
+                      title="Waiting on the interviewer"
+                      description="Waiting for the interview write-up to be submitted before reviews can start."
+                    />
+                  </div>
+                ) : (
+                  <div className={scrollPane}>
+                    <RecordingReviewThread
+                      applicationId={applicationId}
+                      reviews={recordingReviews}
+                      currentNuid={currentUser?.nuid}
+                      nameFor={nameFor}
+                      recordingUrl={interview?.recording_url}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className={paneClass('comments')}>
+              <div className={scrollPane}>
+                <section className="flex flex-col">
+                  <SectionLabel className="mb-2">Comments</SectionLabel>
+                  {discussionComments.length === 0 && (
+                    <p className="text-text-faint py-3 text-sm">
+                      No comments yet.
+                    </p>
+                  )}
+                  {discussionComments.map((c) => {
+                    const editing = editingCommentId === c.id
+                    const edited = c.updated_at !== c.created_at
+                    const isOwn = c.author_nuid === currentUser?.nuid
+                    return (
+                      <div key={c.id} className="border-b border-gray-200 py-3">
+                        {editing ? (
+                          <div className="flex flex-col gap-2">
+                            <textarea
+                              value={editingBody}
+                              onChange={(e) => setEditingBody(e.target.value)}
+                              rows={3}
+                              autoFocus
+                              aria-label="Edit comment"
+                              className={COMMENT_TEXTAREA_CLASS}
+                            />
+                            <div className="flex items-center gap-2">
+                              <Button
+                                onClick={saveEditedComment}
+                                disabled={
+                                  updateComment.isPending || !editingBody.trim()
+                                }
+                              >
+                                Save
+                              </Button>
+                              <Button
+                                variant="outline"
+                                onClick={() => setEditingCommentId(null)}
+                              >
+                                Cancel
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0 wrap-anywhere">
+                              <p className="text-text-muted text-xs">
+                                {c.author_name || c.author_nuid}
+                                <span className="text-text-faint">
+                                  {' · '}
+                                  {new Date(c.created_at).toLocaleString()}
+                                  {edited && ' · edited'}
+                                </span>
+                              </p>
+                              <p className="text-text-default mt-1 text-sm whitespace-pre-wrap">
+                                {c.body}
+                              </p>
+                            </div>
+                            {isOwn && (
+                              <button
+                                type="button"
+                                onClick={() => startEditingComment(c)}
+                                className="text-text-faint hover:text-text-muted -m-2 shrink-0 p-2"
+                                aria-label="Edit comment"
+                              >
+                                <Pencil size={14} />
+                              </button>
+                            )}
+                          </div>
                         )}
                       </div>
-                    )}
-                  </Card>
-                )
-              })}
+                    )
+                  })}
 
-              <Card variant="flat">
-                <textarea
-                  value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
-                  placeholder="Add a comment on this applicant…"
-                  rows={3}
-                  className="focus:border-ink text-text-default placeholder:text-text-subtle w-full rounded-md border border-gray-200 p-3 text-sm focus:outline-none"
-                />
-                <div className="mt-3">
-                  <Button
-                    onClick={postComment}
-                    disabled={createComment.isPending || !newComment.trim()}
-                  >
-                    {createComment.isPending ? (
-                      <>
-                        <Loader2 className="animate-spin" size={14} />
-                        Posting…
-                      </>
-                    ) : (
-                      'Post comment'
-                    )}
-                  </Button>
-                </div>
-              </Card>
+                  <div className="mt-4 flex flex-col gap-3">
+                    <textarea
+                      value={newComment}
+                      onChange={(e) => setNewComment(e.target.value)}
+                      placeholder="Add a comment on this applicant…"
+                      aria-label="New comment"
+                      rows={3}
+                      className={COMMENT_TEXTAREA_CLASS}
+                    />
+                    <Button
+                      className="self-start"
+                      onClick={postComment}
+                      disabled={createComment.isPending || !newComment.trim()}
+                    >
+                      {createComment.isPending ? (
+                        <>
+                          <Loader2 className="animate-spin" size={14} />
+                          Posting…
+                        </>
+                      ) : (
+                        'Post comment'
+                      )}
+                    </Button>
+                  </div>
+                </section>
+              </div>
             </div>
-          </Card>
-        </div>
-      </div>
+          </div>
+        }
+      />
     </div>
   )
 }

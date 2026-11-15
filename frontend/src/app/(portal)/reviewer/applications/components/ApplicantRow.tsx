@@ -86,6 +86,19 @@ export function ApplicantRow({
       <td
         className={cn(
           CELL,
+          'max-w-64 min-w-48 border-r border-gray-100 whitespace-nowrap'
+        )}
+      >
+        <div className="flex items-center gap-1.5">
+          <span className="text-ink truncate text-sm font-semibold">
+            {applicant.fullName}
+          </span>
+          {applicant.returner && <ReturnerBadge />}
+        </div>
+      </td>
+      <td
+        className={cn(
+          CELL,
           'min-w-36 border-r border-gray-100 whitespace-nowrap'
         )}
       >
@@ -99,7 +112,6 @@ export function ApplicantRow({
           ) : (
             <span className="text-text-faint text-sm">—</span>
           )}
-          {applicant.returner && <ReturnerBadge />}
         </div>
       </td>
       {columns.map((q) => {

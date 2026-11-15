@@ -1,19 +1,17 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { useRoleLookup } from '@/lib/queries/roles'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import {
-  ArrowRight,
-  Check,
-  CheckCircle2,
-  ChevronLeft,
-  Loader2,
-  Lock,
-} from 'lucide-react'
+import { ArrowRight, CheckCircle2, ChevronLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { BackLink } from '@/components/ui/back-link'
+import { Breadcrumbs } from '@/components/ui/breadcrumbs'
+import { ReturnerBadge } from '@/components/ReturnerBadge'
+import { ResizableSplit } from '@/components/ui/resizable-split'
+import { PageHeader } from '@/components/ui/page-header'
+import { PAGE_L, PAGE_R, PAGE_TOP, PAGE_X } from '@/components/ui/page-shell'
+import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { SectionLabel } from '@/components/ui/section-label'
@@ -26,16 +24,12 @@ import { useQuestions } from '@/lib/queries/questions'
 import { useReviewQuestions } from '@/lib/queries/review-questions'
 import { useCurrentUser } from '@/lib/queries/users'
 import {
-  useUpsertWrittenReview,
   useWrittenReviews,
   useWrittenReviewsByApplicationIds,
 } from '@/lib/queries/written-reviews'
-import { REVIEW_STATE_BADGE, REVIEWED_TEXT } from '../../constants'
+import { REVIEW_STATE_BADGE } from '../../constants'
+import { ReviewForm } from './ReviewForm'
 import { ResponseField } from '@/app/(portal)/reviewer/applications/components/ResponseField'
-import {
-  QuestionField,
-  type AnswerValue,
-} from '@/app/(portal)/applicant/applications/components/QuestionField'
 
 export function ReviewClient({
   applicationId,
@@ -55,8 +49,8 @@ export function ReviewClient({
   const { data: questions = [] } = useQuestions(cycleId, role)
   const { data: reviewQuestions = [] } = useReviewQuestions(cycleId, role)
   const { data: template } = useApplicationTemplate(cycleId, role)
-  const { data: reviews = [] } = useWrittenReviews(applicationId)
-  const upsert = useUpsertWrittenReview()
+  const { data: reviews = [], isLoading: reviewsLoading } =
+    useWrittenReviews(applicationId)
   const { data: application } = useApplication(applicationId)
 
   // The rest of my review queue, so a "next" button can jump to the next
@@ -115,304 +109,214 @@ export function ReviewClient({
     [answers]
   )
 
-  const [reviewValues, setReviewValues] = useState<Record<string, AnswerValue>>(
-    {}
-  )
-  const [seeded, setSeeded] = useState(false)
-  const [saved, setSaved] = useState(false)
-
-  // Seed the form from the reviewer's existing review, once loaded.
-  if (!seeded && reviews) {
-    const seededValues: Record<string, AnswerValue> = {}
-    for (const a of own?.answers ?? []) {
-      if (a.score != null) {
-        seededValues[a.review_question_id] = { text: String(a.score) }
-      } else if (a.answer_options?.length) {
-        seededValues[a.review_question_id] = { options: a.answer_options }
-      } else {
-        seededValues[a.review_question_id] = { text: a.answer_text ?? '' }
-      }
-    }
-    setReviewValues(seededValues)
-    setSeeded(true)
-  }
-
   const submitted = !!own?.submitted_at
-
-  function isMissing(q: (typeof reviewQuestions)[number]) {
-    if (!q.is_required) return false
-    const v = reviewValues[q.id]
-    if (q.question_type === 'checkbox') return !v?.options?.length
-    return !v?.text?.trim()
-  }
-  const missingRequired = reviewQuestions.some(isMissing)
-
-  // Score answers are stored as ints — a decimal would fail on the backend,
-  // so block saving until it's fixed rather than surfacing a raw API error.
-  function isInvalidScore(q: (typeof reviewQuestions)[number]) {
-    if (q.question_type !== 'score') return false
-    const text = reviewValues[q.id]?.text
-    return !!text && !Number.isInteger(Number(text))
-  }
-  const hasInvalidScore = reviewQuestions.some(isInvalidScore)
-
-  async function save(submit: boolean) {
-    setSaved(false)
-
-    // Always send one entry per review question (not just the answered
-    // ones) — a question that was cleared needs to actually clear the
-    // stored answer, not leave the stale value in place.
-    const reviewAnswers = reviewQuestions.map((q) => {
-      const v = reviewValues[q.id]
-      if (q.question_type === 'checkbox') {
-        return { review_question_id: q.id, answer_options: v?.options ?? [] }
-      }
-      if (q.question_type === 'score') {
-        return {
-          review_question_id: q.id,
-          score: v?.text ? Number(v.text) : undefined,
-        }
-      }
-      return { review_question_id: q.id, answer_text: v?.text ?? '' }
-    })
-
-    await upsert.mutateAsync({
-      applicationId,
-      body: {
-        submit,
-        answers: reviewAnswers,
-      },
-    })
-    setSaved(true)
-  }
-
-  function updateReviewValue(id: string, next: AnswerValue) {
-    setReviewValues((prev) => ({ ...prev, [id]: next }))
-  }
+  const applicantFacts = [
+    applicant?.graduation_year && `Class of ${applicant.graduation_year}`,
+    applicant?.major,
+  ].filter(Boolean) as string[]
+  const queuePosition = orderedQueue.findIndex((a) => a.id === applicationId)
 
   return (
     <div className="flex min-h-full flex-col lg:h-full">
       {/* Top bar */}
-      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-gray-200 bg-white px-4 py-3 sm:px-8">
-        <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2">
-          <BackLink href="/reviewer/my-reviews">Back to Lead review</BackLink>
-          <div className="flex min-w-0 items-center gap-3 border-l border-gray-200 pl-4">
-            <h1 className="text-text-default min-w-0 truncate text-lg font-semibold">
-              {applicant?.full_name ?? 'Applicant'}
-            </h1>
-            <Badge className={`w-fit shrink-0 ${roleChipClass(role)}`}>
-              {roleLabel(role)}
-            </Badge>
-            <CandidateTags
-              compact
-              applicationId={applicationId}
-              cycleId={cycleId}
-              tagIds={application?.tag_ids}
+      <div
+        className={cn(
+          'bg-white pb-6',
+          PAGE_X,
+          PAGE_TOP
+        )}
+      >
+        <PageHeader
+          back={
+            <Breadcrumbs
+              items={
+                isChief
+                  ? [
+                      { label: 'Lead review', href: '/reviewer/my-reviews' },
+                      { label: applicant?.full_name ?? 'Applicant' },
+                    ]
+                  : [
+                      { label: 'My work', href: '/reviewer/my-work' },
+                      {
+                        label: 'Reviews',
+                        href: '/reviewer/my-work?phase=reviews',
+                      },
+                      { label: applicant?.full_name ?? 'Applicant' },
+                    ]
+              }
             />
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-          {isChief && (
-            <Link
-              href={`/reviewer/chief-review/${applicationId}`}
-              className="text-text-muted hover:text-text-default text-sm underline-offset-2 hover:underline"
-            >
-              Chief review
-            </Link>
-          )}
-          {submitted && (
-            <Badge className={REVIEW_STATE_BADGE.submitted}>
-              <CheckCircle2 size={12} />
-              Review submitted
-            </Badge>
-          )}
-          {previousApplicationId && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                router.push(`/reviewer/my-reviews/${previousApplicationId}`)
-              }
-            >
-              <ChevronLeft data-icon="inline-start" size={14} />
-              Previous<span className="hidden sm:inline"> application</span>
-            </Button>
-          )}
-          {nextApplicationId && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                router.push(`/reviewer/my-reviews/${nextApplicationId}`)
-              }
-            >
-              Next<span className="hidden sm:inline"> application</span>
-              <ArrowRight data-icon="inline-end" size={14} />
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {/* Split: application (left) · review (right) on desktop; stacked on mobile */}
-      <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-2 lg:overflow-hidden">
-        {/* Application */}
-        <div className="border-b border-gray-200 px-4 py-4 sm:px-8 sm:py-6 lg:overflow-y-auto lg:border-r lg:border-b-0">
-          <SectionLabel className="mb-4">Application</SectionLabel>
-          <div className="space-y-4">
-            {questions.map((q) => (
-              <ResponseField
-                key={q.id}
-                question={q}
-                answer={answersByQuestionId.get(q.id)}
-                applicable={true}
+          }
+          title={applicant?.full_name ?? 'Applicant'}
+          subtitle={
+            <span className="flex flex-wrap items-center gap-2">
+              <Badge className={`w-fit shrink-0 ${roleChipClass(role)}`}>
+                {roleLabel(role)}
+              </Badge>
+              <CandidateTags
+                compact
+                applicationId={applicationId}
+                cycleId={cycleId}
+                tagIds={application?.tag_ids}
               />
-            ))}
-          </div>
-        </div>
-
-        {/* Review */}
-        <div className="lg:flex lg:min-h-0 lg:flex-col">
-          <div className="px-4 py-4 sm:px-8 sm:py-6 lg:flex-1 lg:overflow-y-auto">
-            <SectionLabel
-              className={template?.review_closes_at ? 'mb-1' : 'mb-4'}
-            >
-              Your review
-            </SectionLabel>
-            {template?.review_closes_at && (
-              <p className="text-text-muted mb-4 text-xs">
-                Reviews are due by{' '}
-                {new Date(template.review_closes_at).toLocaleString(undefined, {
-                  dateStyle: 'medium',
-                  timeStyle: 'short',
-                })}
-                . You can still save and submit after this — it&apos;s just a
-                target.
-              </p>
-            )}
-            {submitted && (
-              <div className="border-border bg-muted/40 text-text-muted mb-4 flex items-center gap-2 border px-4 py-3 text-sm">
-                <Lock size={14} />
-                You&apos;ve submitted this review. You can still make changes
-                below.
-              </div>
-            )}
-            <div className="flex flex-col gap-4">
-              {reviewQuestions.length === 0 ? (
-                <p className="text-text-faint text-sm">
-                  No review questions have been set up for this cycle/role yet.
-                </p>
-              ) : (
-                reviewQuestions.map((q, i) => (
-                  <QuestionField
-                    key={q.id}
-                    question={q}
-                    index={i}
-                    value={reviewValues[q.id] ?? {}}
-                    onChange={(next) => updateReviewValue(q.id, next)}
-                  />
-                ))
+              {applicantFacts.length > 0 && (
+                <span className="text-text-muted text-sm">
+                  {applicantFacts.join(' · ')}
+                </span>
               )}
-
-              {others.length > 0 && (
-                <div>
-                  <SectionLabel as="h3" className="mt-2 mb-3">
-                    Other reviews
-                  </SectionLabel>
-                  <div className="flex flex-col gap-3">
-                    {others.map((r) => (
-                      <Card key={r.id}>
-                        <span className="text-text-muted text-xs">
-                          Reviewer {r.reviewer_name || r.reviewer_nuid}
-                        </span>
-                        <div className="mt-2 flex flex-col gap-2">
-                          {reviewQuestions.map((q) => {
-                            const a = r.answers.find(
-                              (ans) => ans.review_question_id === q.id
-                            )
-                            if (!a) return null
-                            const display =
-                              a.score != null
-                                ? `${a.score}/10`
-                                : a.answer_options?.length
-                                  ? a.answer_options.join(', ')
-                                  : a.answer_text
-                            if (!display) return null
-                            return (
-                              <div key={q.id}>
-                                <p className="text-text-muted text-xs font-medium">
-                                  {q.question_text}
-                                </p>
-                                <p className="text-text-default text-sm whitespace-pre-wrap">
-                                  {display}
-                                </p>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
+              {applicant?.returner && <ReturnerBadge showLabel />}
+            </span>
+          }
+          actions={
+            <>
+              {queuePosition >= 0 && (
+                <span className="font-display text-text-subtle mr-3 text-[11px] tracking-wider uppercase">
+                  Review {queuePosition + 1} of {orderedQueue.length}
+                </span>
               )}
-            </div>
-          </div>
-
-          {/* Action footer */}
-          <div className="flex flex-col items-stretch gap-3 border-t border-gray-200 bg-white px-4 py-4 sm:flex-row sm:items-center sm:justify-end sm:px-8">
-            {saved && !upsert.isPending && (
-              <span
-                className={`inline-flex items-center gap-1 text-sm sm:mr-auto ${REVIEWED_TEXT}`}
-              >
-                <Check size={14} />
-                Saved
-              </span>
-            )}
-            {submitted ? (
-              <Button
-                onClick={() => save(true)}
-                disabled={upsert.isPending || hasInvalidScore}
-                className="w-full sm:w-auto"
-              >
-                {upsert.isPending ? (
-                  <>
-                    <Loader2 className="animate-spin" size={14} />
-                    Saving…
-                  </>
-                ) : (
-                  'Save changes'
-                )}
-              </Button>
-            ) : (
-              <>
+              {isChief && (
+                <Link
+                  href={`/reviewer/chief-review/${applicationId}`}
+                  className="text-text-muted hover:text-text-default text-sm underline-offset-2 hover:underline"
+                >
+                  Chief review
+                </Link>
+              )}
+              {submitted && (
+                <Badge className={REVIEW_STATE_BADGE.submitted}>
+                  <CheckCircle2 size={12} />
+                  Review submitted
+                </Badge>
+              )}
+              {previousApplicationId && (
                 <Button
                   variant="outline"
-                  onClick={() => save(false)}
-                  disabled={upsert.isPending || hasInvalidScore}
-                  className="w-full sm:w-auto"
-                >
-                  Save draft
-                </Button>
-                <Button
-                  onClick={() => save(true)}
-                  disabled={
-                    upsert.isPending || missingRequired || hasInvalidScore
+                  size="sm"
+                  onClick={() =>
+                    router.push(`/reviewer/my-reviews/${previousApplicationId}`)
                   }
-                  className="w-full sm:w-auto"
                 >
-                  {upsert.isPending ? (
-                    <>
-                      <Loader2 className="animate-spin" size={14} />
-                      Saving…
-                    </>
-                  ) : (
-                    'Submit review'
-                  )}
+                  <ChevronLeft data-icon="inline-start" size={14} />
+                  Previous<span className="hidden sm:inline"> application</span>
                 </Button>
-              </>
-            )}
-          </div>
-        </div>
+              )}
+              {nextApplicationId && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    router.push(`/reviewer/my-reviews/${nextApplicationId}`)
+                  }
+                >
+                  Next<span className="hidden sm:inline"> application</span>
+                  <ArrowRight data-icon="inline-end" size={14} />
+                </Button>
+              )}
+            </>
+          }
+        />
       </div>
+
+      <ResizableSplit
+        storageKey="review-split"
+        className="min-h-0 flex-1 lg:overflow-hidden"
+        left={
+          <>
+            {/* Application */}
+            <div
+              className={cn(
+                'border-b border-gray-200 py-6 lg:overflow-y-auto lg:border-b-0',
+                PAGE_L,
+                'pr-6 sm:pr-8'
+              )}
+            >
+              <SectionLabel className="mb-4">Application</SectionLabel>
+              <div className="space-y-4">
+                {questions.map((q) => (
+                  <ResponseField
+                    key={q.id}
+                    question={q}
+                    answer={answersByQuestionId.get(q.id)}
+                    applicable={true}
+                  />
+                ))}
+              </div>
+            </div>
+          </>
+        }
+        right={
+          <>
+            {/* Review */}
+            <div className="lg:flex lg:min-h-0 lg:flex-col">
+              {reviewsLoading ? (
+                <div
+                  className={cn(
+                    'flex flex-col gap-4 py-6 pl-6 sm:pl-8',
+                    PAGE_R
+                  )}
+                >
+                  <span className="h-3 w-24 animate-pulse bg-gray-100" />
+                  {Array.from({ length: 3 }, (_, i) => (
+                    <div
+                      key={i}
+                      className="h-40 animate-pulse border border-gray-100 bg-gray-50"
+                    />
+                  ))}
+                </div>
+              ) : (
+                <ReviewForm
+                  key={`${applicationId}-${own?.id ?? 'new'}`}
+                  applicationId={applicationId}
+                  reviewQuestions={reviewQuestions}
+                  own={own}
+                  reviewClosesAt={template?.review_closes_at}
+                >
+                  {others.length > 0 && (
+                    <div>
+                      <SectionLabel as="h3" className="mt-2 mb-3">
+                        Other reviews
+                      </SectionLabel>
+                      <div className="flex flex-col gap-3">
+                        {others.map((r) => (
+                          <Card key={r.id}>
+                            <span className="text-text-muted text-xs">
+                              Reviewer {r.reviewer_name || r.reviewer_nuid}
+                            </span>
+                            <div className="mt-2 flex flex-col gap-2">
+                              {reviewQuestions.map((q) => {
+                                const a = r.answers.find(
+                                  (ans) => ans.review_question_id === q.id
+                                )
+                                if (!a) return null
+                                const display =
+                                  a.score != null
+                                    ? `${a.score}/10`
+                                    : a.answer_options?.length
+                                      ? a.answer_options.join(', ')
+                                      : a.answer_text
+                                if (!display) return null
+                                return (
+                                  <div key={q.id}>
+                                    <p className="text-text-muted text-xs font-medium">
+                                      {q.question_text}
+                                    </p>
+                                    <p className="text-text-default text-sm whitespace-pre-wrap">
+                                      {display}
+                                    </p>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          </Card>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </ReviewForm>
+              )}
+            </div>
+          </>
+        }
+      />
     </div>
   )
 }

@@ -103,7 +103,7 @@ export function TableView({
     [columns]
   )
   const columnCount =
-    (selectable ? 1 : 0) + 1 + tableColumns.length + TRAILING_COLUMNS.length
+    (selectable ? 1 : 0) + 2 + tableColumns.length + TRAILING_COLUMNS.length
 
   // Batch fetch interviews for the current page of applications. One request for
   // the whole page rather than one per row, following the pattern in CLAUDE.md.
@@ -203,6 +203,9 @@ export function TableView({
                   />
                 </th>
               )}
+              <th className={cn(HEAD_CELL, 'min-w-48 whitespace-nowrap')}>
+                Name
+              </th>
               <th className={cn(HEAD_CELL, 'min-w-36 whitespace-nowrap')}>
                 Rating
               </th>

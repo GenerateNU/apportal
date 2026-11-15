@@ -79,7 +79,7 @@ export function AnswerCell({
   return (
     <span
       className={`text-text-muted block ${
-        truncate ? 'max-w-50 truncate text-xs' : 'text-base break-words'
+        truncate ? 'max-w-50 truncate text-xs' : 'text-base wrap-anywhere'
       }`}
       title={text}
     >

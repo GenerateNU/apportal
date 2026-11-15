@@ -162,3 +162,11 @@ func HidePeerWriteups(items []models.InterviewReviewerDetail, nuid string, visib
 	}
 	return hid
 }
+
+func HidePeerDrafts(items []models.InterviewReviewerDetail, nuid string) {
+	for i := range items {
+		if items[i].ReviewerNUID != nuid && items[i].WriteupSubmittedAt == nil {
+			items[i].Writeup = nil
+		}
+	}
+}

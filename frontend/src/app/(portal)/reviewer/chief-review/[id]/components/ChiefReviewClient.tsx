@@ -457,7 +457,7 @@ export function ChiefReviewClient({
                       </div>
                     ) : (
                       <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 break-words">
+                        <div className="min-w-0 wrap-anywhere">
                           <p className="text-text-default text-sm whitespace-pre-wrap">
                             {c.body}
                           </p>

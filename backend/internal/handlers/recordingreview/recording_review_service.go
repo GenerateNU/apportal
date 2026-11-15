@@ -2,6 +2,7 @@ package recordingreview
 
 import (
 	"context"
+	"strings"
 
 	"github.com/GenerateNU/apportal/backend/internal/handlers/interviewassignment"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/reviewrelease"
@@ -9,8 +10,6 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 
 	"github.com/GenerateNU/apportal/backend/internal/access"
-
-	"github.com/GenerateNU/apportal/backend/internal/models"
 )
 
 type recordingReviewService struct {
@@ -45,6 +44,15 @@ func (s *recordingReviewService) upsert(ctx context.Context, in *UpsertRecording
 	if !submitted {
 		return nil, huma.Error409Conflict("the interview write-up hasn't been submitted yet")
 	}
+	if in.Body.Writeup != nil && strings.TrimSpace(*in.Body.Writeup) == "" {
+		reviewed, err := s.recordingReviewDB.ReviewSubmitted(ctx, in.ID, actor.NUID)
+		if err != nil {
+			return nil, utils.StoreErr(err)
+		}
+		if in.Body.Submit || reviewed {
+			return nil, huma.Error422UnprocessableEntity("a submitted review can't be empty")
+		}
+	}
 
 	err = s.recordingReviewDB.SaveRecordingReview(ctx, RecordingReviewUpsert{
 		ApplicationID: in.ID,
@@ -67,10 +75,6 @@ func (s *recordingReviewService) list(ctx context.Context, in *utils.Application
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
-	visible, err := s.reviewReleaseDB.PeerReviewsVisible(ctx, s.access, models.ReviewKindRecording, []string{in.ID})
-	if err != nil {
-		return nil, err
-	}
-	reviewrelease.HidePeerWriteups(items, utils.CurrentActor(ctx).NUID, visible)
+	reviewrelease.HidePeerDrafts(items, utils.CurrentActor(ctx).NUID)
 	return &RecordingReviewsOutput{Body: items}, nil
 }
