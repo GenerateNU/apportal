@@ -62,8 +62,7 @@ export function useDraftBoards<T = QueryObserverResult<DraftBoard>[]>(
       refetchInterval: poll ? DRAFT_POLL_MS : false,
     })),
     combine: combine as
-      | ((results: QueryObserverResult<unknown>[]) => T)
-      | undefined,
+      ((results: QueryObserverResult<unknown>[]) => T) | undefined,
   }) as T
 }
 
