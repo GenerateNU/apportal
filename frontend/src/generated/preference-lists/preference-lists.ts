@@ -1113,7 +1113,7 @@ export const useSetPreferenceListMeetingDay = <TError = ErrorModel | ErrorModel 
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Any current member (or a chief/admin) may add another lead, chief, or admin. Rejected once the group has 4 members.
+ * Any current member (or a chief/admin) may add another lead, chief, or admin.
  * @summary Add a lead as a collaborator on a preference list
  */
 export const addPreferenceListMember = (

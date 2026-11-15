@@ -23,10 +23,7 @@ import { useApplication, useApplications } from '@/lib/queries/applications'
 import { useQuestions } from '@/lib/queries/questions'
 import { useReviewQuestions } from '@/lib/queries/review-questions'
 import { useCurrentUser } from '@/lib/queries/users'
-import {
-  useWrittenReviews,
-  useWrittenReviewsByApplicationIds,
-} from '@/lib/queries/written-reviews'
+import { useWrittenReviews } from '@/lib/queries/written-reviews'
 import { REVIEW_STATE_BADGE } from '../../constants'
 import { ReviewForm } from './ReviewForm'
 import { ResponseField } from '@/app/(portal)/reviewer/applications/components/ResponseField'
@@ -68,33 +65,13 @@ export function ReviewClient({
       ),
     [assignedApplications, roleIds]
   )
-  const queueIds = useMemo(() => orderedQueue.map((a) => a.id), [orderedQueue])
-  const queueReviewQueries = useWrittenReviewsByApplicationIds(queueIds)
-  const needsReviewAt = useMemo(
-    () => (i: number) => {
-      const own = queueReviewQueries[i]?.data?.find(
-        (r) => r.reviewer_nuid === currentUser?.nuid
-      )
-      return !own?.submitted_at
-    },
-    [queueReviewQueries, currentUser?.nuid]
-  )
-  const nextApplicationId = useMemo(() => {
-    const currentIndex = orderedQueue.findIndex((a) => a.id === applicationId)
-    if (currentIndex === -1) return null
-    for (let i = currentIndex + 1; i < orderedQueue.length; i++) {
-      if (needsReviewAt(i)) return orderedQueue[i].id
-    }
-    return null
-  }, [orderedQueue, needsReviewAt, applicationId])
-  const previousApplicationId = useMemo(() => {
-    const currentIndex = orderedQueue.findIndex((a) => a.id === applicationId)
-    if (currentIndex === -1) return null
-    for (let i = currentIndex - 1; i >= 0; i--) {
-      if (needsReviewAt(i)) return orderedQueue[i].id
-    }
-    return null
-  }, [orderedQueue, needsReviewAt, applicationId])
+  const queuePosition = orderedQueue.findIndex((a) => a.id === applicationId)
+  const previousApplicationId =
+    queuePosition > 0 ? orderedQueue[queuePosition - 1].id : null
+  const nextApplicationId =
+    queuePosition >= 0 && queuePosition < orderedQueue.length - 1
+      ? orderedQueue[queuePosition + 1].id
+      : null
 
   const isChief = !!currentUser?.roles.some(
     (r) => r === 'chief' || r === 'admin'
@@ -114,18 +91,11 @@ export function ReviewClient({
     applicant?.graduation_year && `Class of ${applicant.graduation_year}`,
     applicant?.major,
   ].filter(Boolean) as string[]
-  const queuePosition = orderedQueue.findIndex((a) => a.id === applicationId)
 
   return (
     <div className="flex min-h-full flex-col lg:h-full">
       {/* Top bar */}
-      <div
-        className={cn(
-          'bg-white pb-6',
-          PAGE_X,
-          PAGE_TOP
-        )}
-      >
+      <div className={cn('bg-white pb-6', PAGE_X, PAGE_TOP)}>
         <PageHeader
           back={
             <Breadcrumbs

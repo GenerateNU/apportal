@@ -17,7 +17,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { PageHeader } from '@/components/ui/page-header'
 import { PAGE_L, PAGE_R, PAGE_TOP, PAGE_X } from '@/components/ui/page-shell'
 import { ResizableSplit } from '@/components/ui/resizable-split'
-import { SectionLabel } from '@/components/ui/section-label'
+import { PanelHeading } from '@/components/ui/panel-heading'
 import { SegmentedTabs } from '@/components/ui/segmented-tabs'
 import { ReturnerBadge } from '@/components/ReturnerBadge'
 import type { InterviewComment } from '@/lib/api/types'
@@ -32,11 +32,7 @@ import {
   useInterviewComments,
   useUpdateInterviewComment,
 } from '@/lib/queries/interview-comments'
-import {
-  interviewSubmitted,
-  useInterview,
-  useInterviewsByApplicationIds,
-} from '@/lib/queries/interviews'
+import { interviewSubmitted, useInterview } from '@/lib/queries/interviews'
 import { useQuestions } from '@/lib/queries/questions'
 import { useRecordingReviews } from '@/lib/queries/recording-reviews'
 import { useReviewQuestions } from '@/lib/queries/review-questions'
@@ -148,31 +144,13 @@ export function InterviewConductClient({
       ),
     [assignedApplications, roleIds]
   )
-  const queueIds = useMemo(() => orderedQueue.map((a) => a.id), [orderedQueue])
-  const { data: interviewByApplicationId } =
-    useInterviewsByApplicationIds(queueIds)
-  const needsInterviewAt = useMemo(
-    () => (i: number) =>
-      !interviewByApplicationId?.[orderedQueue[i].id]?.submitted_at,
-    [interviewByApplicationId, orderedQueue]
-  )
-  const nextApplicationId = useMemo(() => {
-    const currentIndex = orderedQueue.findIndex((a) => a.id === applicationId)
-    if (currentIndex === -1) return null
-    for (let i = currentIndex + 1; i < orderedQueue.length; i++) {
-      if (needsInterviewAt(i)) return orderedQueue[i].id
-    }
-    return null
-  }, [orderedQueue, needsInterviewAt, applicationId])
-  const previousApplicationId = useMemo(() => {
-    const currentIndex = orderedQueue.findIndex((a) => a.id === applicationId)
-    if (currentIndex === -1) return null
-    for (let i = currentIndex - 1; i >= 0; i--) {
-      if (needsInterviewAt(i)) return orderedQueue[i].id
-    }
-    return null
-  }, [orderedQueue, needsInterviewAt, applicationId])
   const queuePosition = orderedQueue.findIndex((a) => a.id === applicationId)
+  const previousApplicationId =
+    queuePosition > 0 ? orderedQueue[queuePosition - 1].id : null
+  const nextApplicationId =
+    queuePosition >= 0 && queuePosition < orderedQueue.length - 1
+      ? orderedQueue[queuePosition + 1].id
+      : null
 
   // Applicant answers keyed by question id, for the read-only left panel.
   const answersByQuestionId = useMemo(
@@ -277,13 +255,7 @@ export function InterviewConductClient({
 
   return (
     <div className="flex min-h-full flex-col lg:h-full">
-      <div
-        className={cn(
-          'bg-white pb-6',
-          PAGE_X,
-          PAGE_TOP
-        )}
-      >
+      <div className={cn('bg-white pb-6', PAGE_X, PAGE_TOP)}>
         <PageHeader
           back={
             <Breadcrumbs
@@ -370,98 +342,100 @@ export function InterviewConductClient({
         storageKey="interview-split"
         className="min-h-0 flex-1 lg:overflow-hidden"
         left={
-          <div
-            className={cn(
-              'border-b border-gray-200 pb-6 lg:overflow-y-auto lg:border-b-0',
-              PAGE_L,
-              'pr-6 sm:pr-8'
-            )}
-          >
-            <div className="bg-white pt-6 pb-4 lg:sticky lg:top-0 lg:z-10">
+          <div className="border-b border-gray-200 lg:overflow-y-auto lg:border-b-0">
+            <div
+              className={cn(
+                'border-b border-gray-200 bg-white pt-6 pb-4 lg:sticky lg:top-0 lg:z-10',
+                PAGE_L,
+                'pr-6 sm:pr-8'
+              )}
+            >
               <SegmentedTabs
                 tabs={leftTabs}
                 value={leftTab}
                 onChange={setPickedLeft}
               />
             </div>
-
-            {leftTab === 'application' && (
-              <>
-                <div className="space-y-4">
-                  {questions.map((q) => (
-                    <ResponseField
-                      key={q.id}
-                      question={q}
-                      answer={answersByQuestionId.get(q.id)}
-                      applicable={true}
-                    />
-                  ))}
-                </div>
-
-                {otherWrittenReviews.length > 0 && (
-                  <section className="mt-8">
-                    <SectionLabel className="mb-2">
-                      Lead review comments
-                    </SectionLabel>
-                    {otherWrittenReviews.map((r) => (
-                      <div
-                        key={r.id}
-                        className="border-b border-gray-200 py-3 last:border-0"
-                      >
-                        <span className="text-text-muted text-xs">
-                          Reviewer {r.reviewer_name || r.reviewer_nuid}
-                        </span>
-                        <div className="mt-2 flex flex-col gap-2">
-                          {reviewQuestions.map((q) => {
-                            const a = r.answers.find(
-                              (ans) => ans.review_question_id === q.id
-                            )
-                            if (!a) return null
-                            const display =
-                              a.score != null
-                                ? `${a.score}/10`
-                                : a.answer_options?.length
-                                  ? a.answer_options.join(', ')
-                                  : a.answer_text
-                            if (!display) return null
-                            return (
-                              <div key={q.id}>
-                                <p className="text-text-muted text-xs font-medium">
-                                  {q.question_text}
-                                </p>
-                                <p className="text-text-default text-sm wrap-anywhere whitespace-pre-wrap">
-                                  {display}
-                                </p>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      </div>
-                    ))}
+            <div className={cn('py-6', PAGE_L, 'pr-6 sm:pr-8')}>
+              {leftTab === 'application' && (
+                <div className="flex flex-col gap-10">
+                  <section className="flex flex-col gap-4">
+                    <PanelHeading>Application</PanelHeading>
+                    <div className="space-y-4">
+                      {questions.map((q) => (
+                        <ResponseField
+                          key={q.id}
+                          question={q}
+                          answer={answersByQuestionId.get(q.id)}
+                          applicable={true}
+                        />
+                      ))}
+                    </div>
                   </section>
-                )}
-              </>
-            )}
 
-            {leftTab === 'challenge' && (
-              <ChallengeCard
-                applicantNuid={applicantNuid}
-                applicationId={applicationId}
-                cycleId={cycleId}
-                role={role}
-                bare
-              />
-            )}
+                  {otherWrittenReviews.length > 0 && (
+                    <section className="flex flex-col gap-4">
+                      <PanelHeading>Lead reviews</PanelHeading>
+                      {otherWrittenReviews.map((r) => (
+                        <div
+                          key={r.id}
+                          className="border border-gray-200 bg-gray-50 p-4"
+                        >
+                          <span className="text-ink text-sm font-semibold">
+                            {r.reviewer_name || r.reviewer_nuid}
+                          </span>
+                          <div className="mt-2 flex flex-col gap-2">
+                            {reviewQuestions.map((q) => {
+                              const a = r.answers.find(
+                                (ans) => ans.review_question_id === q.id
+                              )
+                              if (!a) return null
+                              const display =
+                                a.score != null
+                                  ? `${a.score}/10`
+                                  : a.answer_options?.length
+                                    ? a.answer_options.join(', ')
+                                    : a.answer_text
+                              if (!display) return null
+                              return (
+                                <div key={q.id}>
+                                  <p className="text-text-muted text-xs font-medium">
+                                    {q.question_text}
+                                  </p>
+                                  <p className="text-text-default text-sm wrap-anywhere whitespace-pre-wrap">
+                                    {display}
+                                  </p>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </section>
+                  )}
+                </div>
+              )}
 
-            {leftTab === 'script' && (
-              <div className="flex flex-col gap-3">
-                <InterviewScriptContent
+              {leftTab === 'challenge' && (
+                <ChallengeCard
+                  applicantNuid={applicantNuid}
+                  applicationId={applicationId}
                   cycleId={cycleId}
                   role={role}
-                  checklistKey={applicationId}
+                  bare
                 />
-              </div>
-            )}
+              )}
+
+              {leftTab === 'script' && (
+                <div className="flex flex-col gap-3">
+                  <InterviewScriptContent
+                    cycleId={cycleId}
+                    role={role}
+                    checklistKey={applicationId}
+                  />
+                </div>
+              )}
+            </div>
           </div>
         }
         right={
@@ -543,7 +517,7 @@ export function InterviewConductClient({
             <div className={paneClass('comments')}>
               <div className={scrollPane}>
                 <section className="flex flex-col">
-                  <SectionLabel className="mb-2">Comments</SectionLabel>
+                  <PanelHeading className="mb-2">Comments</PanelHeading>
                   {discussionComments.length === 0 && (
                     <p className="text-text-faint py-3 text-sm">
                       No comments yet.

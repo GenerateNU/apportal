@@ -1,5 +1,6 @@
 'use client'
 
+import { PanelHeading } from '@/components/ui/panel-heading'
 import { useState } from 'react'
 import { Check, Loader2, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -128,23 +129,24 @@ export function InterviewSummary({
   }
   return (
     <section className="flex flex-col gap-4">
-      <div className="flex items-center justify-between gap-4">
-        <SectionLabel>
-          {isInterviewer ? 'Your write-up' : 'Interview write-up'}
-        </SectionLabel>
-        {onEdit && (
-          <Button variant="outline" size="sm" onClick={onEdit}>
-            <Pencil size={14} />
-            Edit
-          </Button>
-        )}
-      </div>
+      <PanelHeading
+        action={
+          onEdit && (
+            <Button variant="outline" size="sm" onClick={onEdit}>
+              <Pencil size={14} />
+              Edit
+            </Button>
+          )
+        }
+      >
+        {isInterviewer ? 'Your write-up' : 'Interview write-up'}
+      </PanelHeading>
       {!interview.submitted_at && !isInterviewer && !isChief && (
         <p className="text-text-faint text-sm">
           You&apos;re not an assigned interviewer, so this is read-only.
         </p>
       )}
-      <dl className="border-t border-gray-200">
+      <dl>
         {interviewerNames && (
           <Row label="Interviewers">
             <span className="text-text-default text-sm">

@@ -2,12 +2,15 @@
 
 import { useMemo } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, ArrowRight } from 'lucide-react'
+import { ArrowRight, ChevronLeft } from 'lucide-react'
 import { PageContainer } from '@/components/PageContainer'
-import { BackLink } from '@/components/ui/back-link'
+import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import { Badge } from '@/components/ui/badge'
 import { LoadingText } from '@/components/ui/loading-text'
 import { PageHeader } from '@/components/ui/page-header'
+import { PAGE_L, PAGE_R, PAGE_TOP, PAGE_X } from '@/components/ui/page-shell'
+import { ResizableSplit } from '@/components/ui/resizable-split'
+import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import type {
   DecisionContext,
@@ -51,6 +54,9 @@ export function DecisionDraftClient({
     useDecisionContext([applicationId])
 
   const row = rows.find((r) => r.application_id === applicationId)
+  const isChief = !!currentUser?.roles.some(
+    (r) => r === 'chief' || r === 'admin'
+  )
 
   // The queue in the order the list page shows it, so next/back move the way
   // the list reads rather than however the server happened to sort.
@@ -59,9 +65,15 @@ export function DecisionDraftClient({
       roleIds.flatMap((r) =>
         rows
           .filter((x) => x.role_id === r)
+          .filter(
+            (x) =>
+              isChief ||
+              (x.kind === 'rejection_post_interview' &&
+                x.interviewers.some((iv) => iv.nuid === currentUser?.nuid))
+          )
           .sort((a, b) => a.full_name.localeCompare(b.full_name))
       ),
-    [rows, roleIds]
+    [rows, roleIds, isChief, currentUser?.nuid]
   )
   const index = queue.findIndex((r) => r.application_id === applicationId)
   const nextUnwritten = queue
@@ -111,6 +123,7 @@ export function DecisionDraftClient({
       previousHref={
         previous ? `/reviewer/decisions/${previous.application_id}` : undefined
       }
+      position={index >= 0 ? { index, total: queue.length } : undefined}
     />
   )
 }
@@ -128,6 +141,7 @@ function DraftBody({
   canWrite,
   nextHref,
   previousHref,
+  position,
 }: {
   row: DecisionRow
   cycleId: string
@@ -139,6 +153,7 @@ function DraftBody({
   canWrite: boolean
   nextHref?: string
   previousHref?: string
+  position?: { index: number; total: number }
 }) {
   const { roleLabel, roleChipClass } = useRoleLookup()
   const draft = useFeedbackDraft(row, cycleId, canWrite)
@@ -150,75 +165,114 @@ function DraftBody({
   )
 
   return (
-    <PageContainer>
-      <PageHeader
-        size="md"
-        back={<BackToQueue />}
-        title={row.full_name}
-        subtitle={<span className="break-all">{row.email}</span>}
-        actions={
-          <Badge className={roleChipClass(row.role_id)}>
-            {roleLabel(row.role_id)}
-          </Badge>
+    <div className="flex min-h-full flex-col lg:h-full">
+      <div className={cn('bg-white pb-6', PAGE_X, PAGE_TOP)}>
+        <PageHeader
+          back={<BackToQueue name={row.full_name} />}
+          title={row.full_name}
+          subtitle={
+            <span className="flex flex-wrap items-center gap-2">
+              <Badge className={roleChipClass(row.role_id)}>
+                {roleLabel(row.role_id)}
+              </Badge>
+              <span className="text-text-muted text-sm break-all">
+                {row.email}
+              </span>
+            </span>
+          }
+          actions={
+            <>
+              {position && (
+                <span className="font-display text-text-subtle mr-3 text-[11px] tracking-wider uppercase">
+                  Feedback {position.index + 1} of {position.total}
+                </span>
+              )}
+              {previousHref && (
+                <Button asChild variant="outline" size="sm">
+                  <Link href={previousHref}>
+                    <ChevronLeft data-icon="inline-start" size={14} />
+                    Previous
+                  </Link>
+                </Button>
+              )}
+              {nextHref && (
+                <Button asChild variant="outline" size="sm">
+                  <Link href={nextHref}>
+                    Next to write
+                    <ArrowRight data-icon="inline-end" size={14} />
+                  </Link>
+                </Button>
+              )}
+            </>
+          }
+        />
+      </div>
+
+      <ResizableSplit
+        storageKey="feedback-split"
+        className="min-h-0 flex-1 lg:overflow-hidden"
+        left={
+          <div
+            className={cn(
+              'border-b border-gray-200 py-6 lg:overflow-y-auto lg:border-b-0',
+              PAGE_L,
+              'pr-6 sm:pr-8'
+            )}
+          >
+            <DecisionContextPanel
+              context={context}
+              reviewQuestions={reviewQuestions}
+              isLoading={contextLoading}
+            />
+          </div>
+        }
+        right={
+          <div
+            className={cn(
+              'flex flex-col gap-6 py-6 pl-6 sm:pl-8 lg:overflow-y-auto',
+              PAGE_R
+            )}
+          >
+            <FeedbackFields
+              row={row}
+              feedback={draft.feedback}
+              compliments={draft.compliments}
+              onFeedbackChange={draft.setFeedback}
+              onComplimentsChange={draft.setCompliments}
+              canWrite={canWrite}
+              saving={draft.saving}
+            />
+            <MessagePreview
+              rendered={rendered}
+              email={row.email}
+              copyKeyPrefix={row.application_id}
+              overridden={!!row.body_override}
+            />
+          </div>
         }
       />
-
-      <div className="grid gap-8 lg:grid-cols-2">
-        <div className="flex flex-col gap-5">
-          <DecisionContextPanel
-            context={context}
-            reviewQuestions={reviewQuestions}
-            isLoading={contextLoading}
-          />
-        </div>
-
-        <div className="flex flex-col gap-6">
-          <FeedbackFields
-            row={row}
-            feedback={draft.feedback}
-            compliments={draft.compliments}
-            onFeedbackChange={draft.setFeedback}
-            onComplimentsChange={draft.setCompliments}
-            canWrite={canWrite}
-            saving={draft.saving}
-          />
-          <MessagePreview
-            rendered={rendered}
-            email={row.email}
-            copyKeyPrefix={row.application_id}
-            overridden={!!row.body_override}
-          />
-        </div>
-      </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 pt-4">
-        {previousHref ? (
-          <Button asChild variant="ghost">
-            <Link href={previousHref}>
-              <ArrowLeft data-icon="inline-start" size={14} />
-              Previous
-            </Link>
-          </Button>
-        ) : (
-          <span />
-        )}
-        {nextHref ? (
-          <Button asChild>
-            <Link href={nextHref}>
-              Next to write
-              <ArrowRight data-icon="inline-end" size={14} />
-            </Link>
-          </Button>
-        ) : (
-          <span className="text-text-faint text-sm">
-            Nothing left to write — your paragraphs save as you type.
-          </span>
-        )}
-      </div>
-    </PageContainer>
+    </div>
   )
 }
 
-function BackToQueue() {
-  return <BackLink href="/reviewer/decisions">Decision feedback</BackLink>
+function BackToQueue({ name }: { name?: string }) {
+  const { data: user } = useCurrentUser()
+  const isChief = !!user?.roles.some((r) => r === 'chief' || r === 'admin')
+  const current = { label: name ?? 'Applicant' }
+  return (
+    <Breadcrumbs
+      items={
+        isChief
+          ? [
+              { label: 'Decision feedback', href: '/reviewer/decisions' },
+              current,
+            ]
+          : [
+              { label: 'My work', href: '/reviewer/my-work' },
+              { label: 'Feedback', href: '/reviewer/my-work?phase=feedback' },
+              current,
+            ]
+      }
+    />
+  )
 }

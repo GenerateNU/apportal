@@ -224,14 +224,6 @@ func (p *PreferenceListDB) AddPreferenceListMember(ctx context.Context, listID, 
 	return member, err
 }
 
-// CountPreferenceListMembers backs the handler's member cap, which lives in
-// code rather than a constraint so it's easy to change.
-func (p *PreferenceListDB) CountPreferenceListMembers(ctx context.Context, listID string) (int, error) {
-	var n int64
-	err := p.db.WithContext(ctx).Model(&models.PreferenceListMember{}).Where("preference_list_id = ?", listID).Count(&n).Error
-	return int(n), err
-}
-
 // RemovePreferenceListMember is scoped to the list so a member id from one
 // list can't remove a row on another.
 func (p *PreferenceListDB) RemovePreferenceListMember(ctx context.Context, listID, memberID string) error {

@@ -1,5 +1,6 @@
 'use client'
 
+import { PanelHeading } from '@/components/ui/panel-heading'
 import { useMemo, useState, useSyncExternalStore } from 'react'
 import { Check, ChevronDown, ChevronRight } from 'lucide-react'
 import { LoadingText } from '@/components/ui/loading-text'
@@ -154,16 +155,9 @@ function Section({
 }) {
   return (
     <section className="flex flex-col gap-4">
-      <div className="border-ink flex items-baseline justify-between gap-4 border-b-2 pb-2">
-        <h3 className="font-display text-ink text-lg font-bold tracking-tight uppercase">
-          {title}
-        </h3>
-        {aside && (
-          <span className="font-display text-text-subtle text-[11px] tracking-wider uppercase">
-            {aside}
-          </span>
-        )}
-      </div>
+      <PanelHeading as="h3" aside={aside}>
+        {title}
+      </PanelHeading>
       {children}
     </section>
   )

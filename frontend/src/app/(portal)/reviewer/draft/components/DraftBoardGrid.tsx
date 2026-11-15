@@ -54,7 +54,7 @@ export function DraftBoardGrid({
     <div className="flex flex-col gap-3">
       <SectionLabel>Board</SectionLabel>
       <div className={TABLE_FRAME}>
-        <table className="w-full min-w-max border-collapse">
+        <table className="w-full border-collapse">
           <thead>
             <tr>
               <th className={cn(HEAD_CELL, 'w-14 sm:w-20')}>Round</th>
@@ -63,14 +63,14 @@ export function DraftBoardGrid({
                   key={team.id}
                   className={cn(
                     HEAD_CELL,
-                    'min-w-44 last:border-r-0 sm:min-w-56'
+                    'min-w-44 whitespace-normal last:border-r-0 sm:min-w-56'
                   )}
                 >
-                  <span className="text-text-default block text-sm font-semibold">
+                  <span className="text-text-default block text-sm font-semibold wrap-anywhere">
                     {team.name}
                   </span>
                   {team.member_names.length > 0 && (
-                    <span className="text-text-subtle mt-0.5 block truncate font-sans text-xs font-normal tracking-normal normal-case">
+                    <span className="text-text-subtle mt-0.5 block font-sans text-xs font-normal tracking-normal wrap-anywhere normal-case">
                       {team.member_names.join(', ')}
                     </span>
                   )}
@@ -128,6 +128,7 @@ export function DraftBoardGrid({
                               name={pick.full_name || pick.application_id}
                               secondary={`Pick #${slot}`}
                               className="flex-1"
+                              wrap
                             />
                             {canEdit && (
                               <div className="flex shrink-0 items-center gap-1 transition-opacity [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-focus-within:opacity-100 [@media(hover:hover)]:group-hover:opacity-100">

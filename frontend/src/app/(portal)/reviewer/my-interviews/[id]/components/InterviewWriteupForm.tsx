@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { PAGE_R } from '@/components/ui/page-shell'
 import { RatingScale } from '@/components/ui/rating-scale'
-import { SectionLabel } from '@/components/ui/section-label'
+import { PanelHeading } from '@/components/ui/panel-heading'
 import type { Interview, InterviewRating } from '@/lib/api/types'
 import { useUpsertInterview } from '@/lib/queries/interviews'
 import { cn } from '@/lib/utils'
@@ -110,7 +110,7 @@ export function InterviewWriteupForm({
         className={cn('py-6 pl-6 sm:pl-8 lg:flex-1 lg:overflow-y-auto', PAGE_R)}
       >
         <section className="flex flex-col gap-4">
-          <SectionLabel>Your write-up</SectionLabel>
+          <PanelHeading>Your write-up</PanelHeading>
           {interviewerNames && (
             <p className="text-text-muted text-sm">
               Interviewers: {interviewerNames}

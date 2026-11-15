@@ -101,10 +101,6 @@ const STATUS_LABEL: Record<PreferenceListStatus, string> = {
   submitted: 'Submitted',
 }
 
-// Matches the backend's maxPreferenceListMembers — enforced there, mirrored
-// here just to hide the picker before a rejected request round-trips.
-const MAX_PREFERENCE_LIST_MEMBERS = 4
-
 function deadlinePassed(closesAt: string | undefined | null): boolean {
   return !!closesAt && new Date(closesAt) < new Date()
 }
@@ -586,7 +582,6 @@ export function PreferenceListDetailClient({
         members={list.members}
         nameByNuid={nameByNuid}
         availableToAdd={availableToAdd}
-        maxMembers={MAX_PREFERENCE_LIST_MEMBERS}
         onAddMember={(nuid) =>
           addMember.mutate({ listId: list.id, leadNuid: nuid })
         }

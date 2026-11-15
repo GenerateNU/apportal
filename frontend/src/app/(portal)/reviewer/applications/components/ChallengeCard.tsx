@@ -9,7 +9,7 @@ import { useChallenges } from '@/lib/queries/challenges'
 import { useSubmission } from '@/lib/queries/submissions'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
-import { SectionLabel } from '@/components/ui/section-label'
+import { PanelHeading } from '@/components/ui/panel-heading'
 import { cn, formatDate } from '@/lib/utils'
 
 const CHALLENGE_METRIC_LABEL: { key: keyof ChallengeMetrics; label: string }[] =
@@ -94,7 +94,7 @@ export function ChallengeCard({
   const body = (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3">
-        <SectionLabel>Technical challenge</SectionLabel>
+        <PanelHeading>Technical challenge</PanelHeading>
         {challenges.map((c) => (
           <div
             key={c.id}

@@ -10,6 +10,7 @@ import type { PreferenceListDetail } from '@/lib/api/types'
 import { getServerCurrentUser } from '@/lib/auth/server-user'
 import { queryKeys } from '@/lib/queries/keys'
 import { prefetchUsersByRole } from '@/lib/queries/server-prefetch'
+import { LeadPreferenceListClient } from './components/LeadPreferenceListClient'
 import { PreferenceListDetailClient } from './components/PreferenceListDetailClient'
 
 // Auth-gated, live data fetched per request from the backend — never prerender
@@ -54,7 +55,11 @@ export default async function PreferenceListDetailPage({
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <PreferenceListDetailClient id={id} isChief={reviewer.isChief} />
+      {reviewer.isChief ? (
+        <PreferenceListDetailClient id={id} isChief />
+      ) : (
+        <LeadPreferenceListClient id={id} />
+      )}
     </HydrationBoundary>
   )
 }

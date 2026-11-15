@@ -84,7 +84,7 @@ func Route(api huma.API, db *gorm.DB) {
 		Method:        http.MethodPost,
 		Path:          "/preference-lists/{id}/members",
 		Summary:       "Add a lead as a collaborator on a preference list",
-		Description:   "Any current member (or a chief/admin) may add another lead, chief, or admin. Rejected once the group has 4 members.",
+		Description:   "Any current member (or a chief/admin) may add another lead, chief, or admin.",
 		Tags:          []string{"Preference lists"},
 		DefaultStatus: http.StatusCreated,
 		Errors:        []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound, http.StatusConflict, http.StatusUnprocessableEntity},

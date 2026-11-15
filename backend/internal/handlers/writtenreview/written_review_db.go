@@ -40,8 +40,6 @@ func (in ReviewAnswerInput) isEmpty() bool {
 	return false
 }
 
-// UpsertWrittenReview upserts the review, keyed on application + reviewer, and
-// its answers in one transaction.
 func (w *WrittenReviewDB) ReviewSubmitted(ctx context.Context, applicationID, reviewerNUID string) (bool, error) {
 	var count int64
 	err := w.db.WithContext(ctx).Model(&models.WrittenReview{}).
@@ -61,6 +59,8 @@ func (w *WrittenReviewDB) RequiredReviewQuestionIDs(ctx context.Context, applica
 	return ids, err
 }
 
+// UpsertWrittenReview upserts the review, keyed on application + reviewer, and
+// its answers in one transaction.
 func (w *WrittenReviewDB) UpsertWrittenReview(ctx context.Context, in WrittenReviewUpsert) (models.WrittenReviewDetail, error) {
 	var detail models.WrittenReviewDetail
 	review := models.WrittenReview{ApplicationID: in.ApplicationID, ReviewerNUID: in.ReviewerNUID}

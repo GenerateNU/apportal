@@ -1,4 +1,6 @@
+import { useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { createClient } from '@/lib/supabase/client'
 import {
   deleteDraft,
   getDraftBoard,
@@ -15,10 +17,27 @@ import type { RequestOptions } from '@/lib/api/orval-mutator'
 import type { DraftBoard, DraftPickDetail, DraftStatus } from '@/lib/api/types'
 import { queryKeys } from './keys'
 
-// The board is driven by one operator in a room full of people watching it, so
-// it polls on the same 8s cadence the preference lists use — everyone sees a
-// pick land without reloading.
-const DRAFT_POLL_MS = 8000
+const DRAFT_POLL_MS = 30000
+
+export function useDraftRealtime(cycleId: string) {
+  const queryClient = useQueryClient()
+  useEffect(() => {
+    if (!cycleId) return
+    const supabase = createClient()
+    const channel = supabase
+      .channel(`draft:${cycleId}`)
+      .on('broadcast', { event: 'changed' }, () => {
+        queryClient.invalidateQueries({ queryKey: queryKeys.drafts.all })
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.applications.lists(),
+        })
+      })
+      .subscribe()
+    return () => {
+      void supabase.removeChannel(channel)
+    }
+  }, [cycleId, queryClient])
+}
 
 export function useDraftBoard(
   cycleId: string,

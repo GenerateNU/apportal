@@ -1,6 +1,10 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { useQueries } from '@tanstack/react-query'
+import { getDraftBoard } from '@/generated/draft/draft'
+import type { DraftBoard } from '@/lib/api/types'
+import { queryKeys } from '@/lib/queries/keys'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowRight, Check, Lock } from 'lucide-react'
@@ -21,6 +25,7 @@ import {
 } from '@/lib/queries/interviews'
 import {
   usePreferenceListDeadlines,
+  usePreferenceListDetails,
   usePreferenceLists,
 } from '@/lib/queries/preference-lists'
 import { useCycleRoles, useRoleLookup } from '@/lib/queries/roles'
@@ -47,8 +52,18 @@ type Task = {
 }
 
 type Phase = {
-  id: 'reviews' | 'interviews' | 'interviewReviews' | 'preference' | 'feedback'
+  id:
+    | 'reviews'
+    | 'interviews'
+    | 'interviewReviews'
+    | 'preference'
+    | 'draft'
+    | 'feedback'
   label: string
+  blurb: string
+  grouped: boolean
+  sections?: { title: string; aside?: string; tasks: Task[] }[]
+  deadline?: string
   open: boolean
   tasks: Task[]
   locked: string
@@ -60,6 +75,8 @@ const ENABLED_PHASES = new Set<Phase['id']>([
   'interviews',
   'interviewReviews',
   'preference',
+  'draft',
+  'feedback',
 ])
 
 const NOUNS: Record<Phase['id'], [string, string]> = {
@@ -67,6 +84,7 @@ const NOUNS: Record<Phase['id'], [string, string]> = {
   interviews: ['interview', 'interviews'],
   interviewReviews: ['interview review', 'interview reviews'],
   preference: ['preference list', 'preference lists'],
+  draft: ['draft', 'drafts'],
   feedback: ['feedback note', 'feedback notes'],
 }
 
@@ -127,9 +145,21 @@ export function LeadHomeClient() {
     useInterviewReviewersBulk(recordingIds)
 
   const { data: lists = [] } = usePreferenceLists(cycleId)
+  const { data: listDetails = [] } = usePreferenceListDetails(cycleId)
   const { roleIds } = useCycleRoles(cycleId)
   const deadlines = usePreferenceListDeadlines(cycleId, roleIds)
   const { data: decisions = [] } = useDecisions(cycleId)
+  const boards = useQueries({
+    queries: roleIds.map((roleId) => ({
+      queryKey: queryKeys.drafts.board(cycleId, roleId),
+      queryFn: () =>
+        getDraftBoard(cycleId, { role_id: roleId }) as Promise<DraftBoard>,
+      enabled: !!cycleId,
+      retry: false,
+    })),
+    combine: (results) =>
+      results.map((q) => q.data).filter((b): b is DraftBoard => !!b),
+  })
 
   const phases: Phase[] = useMemo(() => {
     const reviewTasks: Task[] = reviewApps.map((app, i) => {
@@ -207,44 +237,102 @@ export function LeadHomeClient() {
       }
     })
 
-    const listTasks: Task[] = lists.map((list) => ({
-      id: list.id,
-      title: list.name,
-      meta: `${list.entry_count} ranked · ${list.member_count} members`,
-      status: {
-        label: PREFERENCE_LIST_STATUS_LABEL[list.status],
-        className: PREFERENCE_LIST_STATUS_BADGE[list.status],
-      },
-      done: list.status === 'submitted',
-      href: `/reviewer/preference-lists/${list.id}`,
-      action: list.status === 'submitted' ? 'View' : 'Rank',
-    }))
-    const listDeadline = Object.values(deadlines).find(Boolean)
-
-    const feedbackTasks: Task[] = decisions.map((row) => {
-      const state = feedbackState(row)
+    const myListIds = new Set(lists.map((l) => l.id))
+    const listTasks: Task[] = lists.map((list) => {
+      const entries = listDetails.find((d) => d.id === list.id)?.entries ?? []
+      const submitted = list.status === 'submitted'
+      const perRole = roleIds
+        .map(
+          (roleId) =>
+            `${roleLabel(roleId)} ${entries.filter((e) => e.role_id === roleId).length}`
+        )
+        .join(' · ')
       return {
-        id: row.application_id,
-        title: row.full_name,
-        roleId: row.role_id,
-        status:
-          state === 'submitted'
-            ? STATE.done
-            : state === 'draft'
-              ? STATE.draft
-              : { ...STATE.todo, label: 'To be written' },
-        done: state === 'submitted',
-        href: `/reviewer/decisions/${row.application_id}`,
-        action: state === 'submitted' ? 'View' : 'Write',
+        id: list.id,
+        title: list.name,
+        meta: perRole ? `Ranked so far: ${perRole}` : undefined,
+        status: {
+          label: PREFERENCE_LIST_STATUS_LABEL[list.status],
+          className: PREFERENCE_LIST_STATUS_BADGE[list.status],
+        },
+        done: submitted,
+        href: `/reviewer/preference-lists/${list.id}`,
+        action: submitted ? 'View' : 'Rank',
       }
     })
+    const team = lists.length === 1 ? lists[0] : undefined
+    const listDeadline = Object.values(deadlines).find(Boolean)
+
+    const settingUp = boards.some((b) => b.status === 'setup')
+    const startedBoards = boards.filter((b) => b.status !== 'setup')
+    const roleStatus = startedBoards.map((board) => {
+      const teams = board.teams ?? []
+      const mine = teams.find((t) => myListIds.has(t.preference_list_id))
+      const onClock = teams.find((t) => t.id === board.on_the_clock_team_id)
+      const label = roleLabel(board.role_id)
+      if (board.status === 'complete') return `${label} finished`
+      return onClock && onClock.id === mine?.id
+        ? `${label}: your team is on the clock`
+        : `${label}: ${onClock?.name ?? 'next team'} is picking`
+    })
+    const anyLive = startedBoards.some((b) => b.status === 'active')
+    const allDone =
+      startedBoards.length > 0 &&
+      startedBoards.every((b) => b.status === 'complete') &&
+      !settingUp
+    const draftTasks: Task[] =
+      startedBoards.length === 0
+        ? []
+        : [
+            {
+              id: 'draft',
+              title: 'Draft',
+              meta: roleStatus.join(' · '),
+              status: allDone
+                ? { label: 'Finished', className: STATE.done.className }
+                : anyLive
+                  ? { label: 'Live', className: STATE.done.className }
+                  : STATE.waiting,
+              done: allDone,
+              href: '/reviewer/my-work/draft',
+              action: allDone ? 'View' : 'Watch',
+            },
+          ]
+
+    const feedbackTasks: Task[] = decisions
+      .filter(
+        (row) =>
+          row.kind === 'rejection_post_interview' &&
+          (row.interviewers ?? []).some((i) => i.nuid === me)
+      )
+      .map((row) => {
+        const state = feedbackState(row)
+        return {
+          id: row.application_id,
+          title: row.full_name,
+          roleId: row.role_id,
+          status:
+            state === 'submitted'
+              ? STATE.done
+              : state === 'draft'
+                ? STATE.draft
+                : { ...STATE.todo, label: 'To be written' },
+          done: state === 'submitted',
+          href: `/reviewer/decisions/${row.application_id}`,
+          action: state === 'submitted' ? 'View' : 'Write',
+        }
+      })
 
     const make = (
       id: Phase['id'],
       label: string,
       tasks: Task[],
       open: boolean,
-      locked: string
+      locked: string,
+      blurb: string,
+      deadline?: string,
+      grouped = true,
+      sections?: Phase['sections']
     ): Phase => {
       const enabled = ENABLED_PHASES.has(id)
       const isOpen = enabled && open
@@ -252,6 +340,10 @@ export function LeadHomeClient() {
         id,
         label,
         tasks,
+        blurb,
+        deadline,
+        grouped,
+        sections,
         open: isOpen,
         locked: enabled ? locked : 'Opens once your chiefs move the cycle on.',
         done: isOpen && tasks.length > 0 && tasks.every((t) => t.done),
@@ -264,35 +356,57 @@ export function LeadHomeClient() {
         'Reviews',
         reviewTasks,
         reviewTasks.length > 0,
-        'Opens once your chief assigns you applications to review.'
+        'Opens once your chief assigns you applications to review.',
+        'Read each application and score it.'
       ),
       make(
         'interviews',
         'Interviews',
         interviewTasks,
         interviewTasks.length > 0,
-        'Opens once your chief assigns you interviews.'
+        'Opens once your chief assigns you interviews.',
+        'Interview each applicant, then submit the recording, notes, write-up and rating.'
       ),
       make(
         'interviewReviews',
         'Interview reviews',
         recordingTasks,
         recordingTasks.length > 0,
-        'Opens once your chief assigns you interview recordings to review.'
+        'Opens once your chief assigns you interview recordings to review.',
+        'Watch each recording and add your review.'
       ),
       make(
         'preference',
         'Preference list',
         listTasks,
         listTasks.length > 0 || !!listDeadline,
-        'Opens once your chief sets a preference-list deadline.'
+        'Opens once your chief sets a preference-list deadline.',
+        team
+          ? `Rank the applicants ${team.name} wants for every role, then submit the whole list together. Your team: ${(team.member_names ?? []).join(', ')}.`
+          : 'Rank the applicants your team wants for every role, then submit the whole list together.',
+        listDeadline ?? undefined,
+        false,
+        [{ title: 'Your team', tasks: listTasks }]
+      ),
+      make(
+        'draft',
+        'Draft',
+        draftTasks,
+        draftTasks.length > 0,
+        settingUp
+          ? 'Chiefs are setting up the draft. It opens here once they start it.'
+          : 'Opens once a chief starts the draft.',
+        'Teams take turns picking. Follow along and see who is left on your list.',
+        undefined,
+        false
       ),
       make(
         'feedback',
         'Feedback',
         feedbackTasks,
         feedbackTasks.length > 0,
-        'Opens once applicants you interviewed reach a decision.'
+        'Opens once applicants you interviewed reach a decision.',
+        'Write feedback for the applicants you interviewed.'
       ),
     ]
   }, [
@@ -303,8 +417,12 @@ export function LeadHomeClient() {
     interviews,
     recordingReviewers,
     lists,
+    listDetails,
+    roleIds,
     deadlines,
     decisions,
+    boards,
+    roleLabel,
     me,
   ])
 
@@ -356,70 +474,63 @@ export function LeadHomeClient() {
         subtitle={`${[branch?.name, cycle?.name].filter(Boolean).join(' · ')} · ${summary}`}
       />
 
-      <ol className="grid grid-cols-2 border border-gray-200 bg-white sm:grid-cols-5">
-        {phases.map((phase) => {
-          const total = phase.tasks.length
-          const doneCount = phase.tasks.filter((t) => t.done).length
-          const isSelected = selected?.id === phase.id
-          const isCurrent = phase.id === current?.id
-          return (
-            <li
-              key={phase.id}
-              className="border-gray-200 not-last:border-b sm:not-last:border-r sm:not-last:border-b-0"
-            >
-              <button
-                type="button"
-                onClick={() => setPicked(phase.id)}
-                disabled={!phase.open}
-                title={phase.open ? undefined : phase.locked}
-                aria-current={isCurrent ? 'step' : undefined}
-                className={cn(
-                  'flex w-full flex-col gap-1 px-4 py-3 text-left transition-colors',
-                  isSelected ? 'bg-ink text-white' : 'hover:bg-gray-50',
-                  !phase.open &&
-                    'text-text-subtle cursor-not-allowed opacity-40 hover:bg-transparent'
+      <nav aria-label="Phases" className="-mx-1 overflow-x-auto">
+        <ol className="flex min-w-max items-center gap-1 px-1">
+          {phases.map((phase, i) => {
+            const total = phase.tasks.length
+            const doneCount = phase.tasks.filter((t) => t.done).length
+            const isSelected = selected?.id === phase.id
+            const isCurrent = phase.id === current?.id
+            return (
+              <li key={phase.id} className="flex items-center gap-1">
+                {i > 0 && (
+                  <span
+                    aria-hidden
+                    className={cn(
+                      'h-px w-4 sm:w-8',
+                      phase.open ? 'bg-ink/40' : 'bg-gray-200'
+                    )}
+                  />
                 )}
-              >
-                <span className="font-display flex items-center gap-1.5 text-sm font-bold tracking-wider uppercase">
-                  {isCurrent && (
+                <button
+                  type="button"
+                  onClick={() => setPicked(phase.id)}
+                  disabled={!phase.open}
+                  title={phase.open ? undefined : phase.locked}
+                  aria-current={isCurrent ? 'step' : undefined}
+                  aria-pressed={isSelected}
+                  className={cn(
+                    'font-display flex items-center gap-2 border px-3 py-2 text-xs tracking-wider uppercase transition-colors',
+                    isSelected
+                      ? 'border-ink bg-ink text-white'
+                      : 'text-ink border-gray-200 bg-white hover:border-gray-400',
+                    !phase.open &&
+                      'text-text-subtle cursor-not-allowed border-dashed opacity-50 hover:border-gray-200'
+                  )}
+                >
+                  {isCurrent && !phase.done ? (
                     <span className="relative flex size-2">
                       <span className="bg-status-open absolute inline-flex size-full animate-ping rounded-full opacity-60" />
                       <span className="bg-status-open relative inline-flex size-2 rounded-full" />
                       <span className="sr-only">Current phase</span>
                     </span>
+                  ) : phase.done ? (
+                    <Check size={12} strokeWidth={3} />
+                  ) : !phase.open ? (
+                    <Lock size={11} />
+                  ) : null}
+                  <span className="font-bold">{phase.label}</span>
+                  {phase.open && total > 0 && !phase.done && (
+                    <span className="opacity-60">
+                      {doneCount}/{total}
+                    </span>
                   )}
-                  {phase.label}
-                  {phase.done && <Check size={13} strokeWidth={3} />}
-                  {!phase.open && <Lock size={12} />}
-                </span>
-                <span className="text-xs opacity-70">
-                  {!phase.open
-                    ? 'Not open yet'
-                    : phase.done
-                      ? `All done · ${total} of ${total}`
-                      : `${doneCount} of ${total} done`}
-                </span>
-                {phase.open && total > 0 && (
-                  <span
-                    className={cn(
-                      'mt-1 block h-1 w-full',
-                      isSelected ? 'bg-white/25' : 'bg-gray-200'
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        'block h-full transition-[width]',
-                        isSelected ? 'bg-white' : 'bg-ink'
-                      )}
-                      style={{ width: `${(doneCount / total) * 100}%` }}
-                    />
-                  </span>
-                )}
-              </button>
-            </li>
-          )
-        })}
-      </ol>
+                </button>
+              </li>
+            )
+          })}
+        </ol>
+      </nav>
 
       {selected && <PhasePanel phase={selected} />}
     </LeadPage>
@@ -429,33 +540,112 @@ export function LeadHomeClient() {
     if (!phase.open) {
       return <EmptyState title="Not open yet" description={phase.locked} />
     }
+    const total = phase.tasks.length
+    const doneCount = phase.tasks.filter((t) => t.done).length
+    const next = phase.tasks.find((t) => !t.done && !t.waiting)
+    const header = (
+      <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-4 border border-gray-200 bg-white p-5">
+        <div className="flex max-w-xl min-w-0 flex-col gap-1">
+          <h2 className="font-display text-ink text-xl font-bold tracking-tight uppercase">
+            {phase.label}
+          </h2>
+          <p className="text-text-muted text-sm">{phase.blurb}</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+          {phase.deadline && (
+            <div className="flex flex-col">
+              <span className="font-display text-text-subtle text-[11px] tracking-wider uppercase">
+                Due
+              </span>
+              <span className="text-ink text-sm font-semibold">
+                {formatDate(phase.deadline)}
+              </span>
+            </div>
+          )}
+          {total === 1 && (
+            <div className="flex flex-col">
+              <span className="font-display text-text-subtle text-[11px] tracking-wider uppercase">
+                Status
+              </span>
+              <span className="text-ink text-sm font-semibold">
+                {phase.tasks[0].status.label}
+              </span>
+            </div>
+          )}
+          {total > 1 && (
+            <div className="flex w-40 flex-col gap-1.5">
+              <span className="font-display text-text-subtle text-[11px] tracking-wider uppercase">
+                {phase.done ? 'All done' : `${doneCount} of ${total} done`}
+              </span>
+              <span className="block h-1 w-full bg-gray-200">
+                <span
+                  className="bg-ink block h-full transition-[width]"
+                  style={{ width: `${(doneCount / total) * 100}%` }}
+                />
+              </span>
+            </div>
+          )}
+          {next && (
+            <Link
+              href={next.href}
+              className="bg-ink inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white"
+            >
+              {next.action === 'Watch' ? 'Watch' : 'Continue'}
+              <ArrowRight size={14} />
+            </Link>
+          )}
+        </div>
+      </div>
+    )
     const groups = new Map<string, Task[]>()
     for (const task of phase.tasks) {
-      const key = task.roleId ?? ''
+      const key = phase.grouped ? (task.roleId ?? '') : ''
       groups.set(key, [...(groups.get(key) ?? []), task])
     }
     const rank = (id: string) => {
       const i = roleIds.indexOf(id)
       return i === -1 ? roleIds.length : i
     }
-    const sections = [...groups.entries()].sort(([a], [b]) => rank(a) - rank(b))
+    const sections = phase.sections
+      ? phase.sections.map((sec) => ({
+          key: sec.title,
+          title: sec.title as string | null,
+          aside: sec.aside,
+          tasks: sec.tasks,
+        }))
+      : [...groups.entries()]
+          .sort(([a], [b]) => rank(a) - rank(b))
+          .map(([roleId, tasks]) => ({
+            key: roleId,
+            title: phase.grouped
+              ? roleId
+                ? roleLabel(roleId)
+                : 'Other'
+              : null,
+            aside: `${tasks.filter((t) => t.done).length} of ${tasks.length} done`,
+            tasks,
+          }))
     return (
       <div className="flex flex-col gap-10">
-        {sections.map(([roleId, tasks]) => {
-          const done = tasks.filter((t) => t.done).length
+        {header}
+        {sections.map(({ key, title, aside, tasks }) => {
           const ordered = [...tasks].sort(
             (a, b) => Number(a.done) - Number(b.done)
           )
           return (
-            <section key={roleId} className="flex flex-col gap-4">
-              <div className="flex items-baseline justify-between gap-4">
-                <h2 className="font-display text-ink text-xl font-bold tracking-tight uppercase">
-                  {roleId ? roleLabel(roleId) : 'Other'}
-                </h2>
-                <span className="font-display text-text-subtle text-[11px] tracking-wider uppercase">
-                  {done} of {tasks.length} done
-                </span>
-              </div>
+            <section key={key} className="flex flex-col gap-4">
+              {title && (
+                <div className="flex items-baseline justify-between gap-4">
+                  <h2 className="font-display text-ink text-xl font-bold tracking-tight uppercase">
+                    {title}
+                  </h2>
+                  {aside && (
+                    <span className="font-display text-text-subtle text-[11px] tracking-wider uppercase">
+                      {aside}
+                    </span>
+                  )}
+                </div>
+              )}
               <div className={TABLE_FRAME}>
                 {ordered.map((task) => (
                   <Link
@@ -508,19 +698,12 @@ function LeadHomeSkeleton() {
           <span className="inline-block h-4 w-72 animate-pulse bg-gray-100" />
         }
       />
-      <div className="grid grid-cols-2 border border-gray-200 bg-white sm:grid-cols-5">
-        {Array.from({ length: 5 }, (_, i) => (
-          <div
-            key={i}
-            className="flex flex-col gap-2 border-gray-200 px-4 py-3 not-last:border-b sm:not-last:border-r sm:not-last:border-b-0"
-          >
-            <span className="h-3 w-8 animate-pulse bg-gray-100" />
-            <span className="h-4 w-24 animate-pulse bg-gray-100" />
-            <span className="h-3 w-20 animate-pulse bg-gray-100" />
-            <span className="mt-1 h-1 w-full bg-gray-100" />
-          </div>
+      <div className="flex flex-wrap items-center gap-2">
+        {Array.from({ length: 6 }, (_, i) => (
+          <span key={i} className="h-8 w-28 animate-pulse bg-gray-100" />
         ))}
       </div>
+      <div className="h-24 animate-pulse border border-gray-100 bg-gray-50" />
       <div className={TABLE_FRAME}>
         {Array.from({ length: 6 }, (_, i) => (
           <div key={i} className={cn('flex items-center gap-6', TABLE_ROW)}>

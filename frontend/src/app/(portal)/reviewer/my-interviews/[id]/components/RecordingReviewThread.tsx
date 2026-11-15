@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { ExternalLink, Loader2, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { SectionLabel } from '@/components/ui/section-label'
+import { PanelHeading } from '@/components/ui/panel-heading'
 import type { InterviewReviewer } from '@/lib/api/types'
 import { useUpsertRecordingReview } from '@/lib/queries/recording-reviews'
 import { formatDate } from '@/lib/utils'
@@ -51,12 +51,12 @@ export function RecordingReviewThread({
 
   return (
     <section className="flex flex-col">
-      <div className="mb-2 flex items-baseline justify-between gap-4">
-        <SectionLabel>Recording reviews</SectionLabel>
-        <span className="font-display text-text-subtle text-[11px] tracking-wider uppercase">
-          {submitted.length} of {reviews.length} in
-        </span>
-      </div>
+      <PanelHeading
+        className="mb-2"
+        aside={`${submitted.length} of ${reviews.length} in`}
+      >
+        Recording reviews
+      </PanelHeading>
 
       {submitted.length === 0 && (
         <p className="text-text-faint py-3 text-sm">No reviews yet.</p>

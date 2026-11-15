@@ -36,7 +36,6 @@ export function GroupSettings({
   members,
   nameByNuid,
   availableToAdd,
-  maxMembers,
   onAddMember,
   onRemoveMember,
 }: {
@@ -54,12 +53,10 @@ export function GroupSettings({
   members: PreferenceListMember[]
   nameByNuid: Map<string, string>
   availableToAdd: { nuid: string; full_name: string }[]
-  maxMembers: number
   onAddMember: (nuid: string) => void
   onRemoveMember: (memberId: string) => void
 }) {
   const { roleLabel } = useRoleLookup()
-  const atMemberCap = members.length >= maxMembers
   const memberNames = members
     .map((m) => nameByNuid.get(m.lead_nuid) ?? m.lead_nuid)
     .join(', ')
@@ -80,7 +77,7 @@ export function GroupSettings({
               ? `Meets ${MEETING_DAY_LABEL[meetingDay]}`
               : 'No meeting day'}
             {' · '}
-            {members.length}/{maxMembers} members
+            {members.length} members
             {memberNames && ` · ${memberNames}`}
           </span>
         )}
@@ -155,7 +152,7 @@ export function GroupSettings({
 
           <div className="flex flex-col gap-2">
             <span className="text-text-muted text-sm font-medium">
-              Members ({members.length}/{maxMembers})
+              Members ({members.length})
             </span>
             <div className="flex flex-wrap items-center gap-2">
               {members.map((m) => (
@@ -177,7 +174,7 @@ export function GroupSettings({
                 </span>
               ))}
             </div>
-            {!groupLocked && !atMemberCap && (
+            {!groupLocked && (
               <SearchableSelect
                 options={availableToAdd.map((u) => ({
                   value: u.nuid,
@@ -190,11 +187,6 @@ export function GroupSettings({
                 className="w-full sm:w-64"
                 ariaLabel="Add a member"
               />
-            )}
-            {!groupLocked && atMemberCap && (
-              <p className="text-text-faint text-xs">
-                This group has reached the maximum of {maxMembers} members.
-              </p>
             )}
           </div>
         </div>

@@ -85,7 +85,8 @@ export function usePreferenceList(
 // keeps its own usePreferenceList above).
 export function usePreferenceListDetails(
   cycleId: string,
-  opts?: RequestOptions
+  opts?: RequestOptions,
+  { poll = false }: { poll?: boolean } = {}
 ) {
   return useQuery({
     queryKey: queryKeys.preferenceLists.allDetails(cycleId),
@@ -93,6 +94,22 @@ export function usePreferenceListDetails(
       ((await listPreferenceListDetails({ cycle_id: cycleId }, opts)) ??
         []) as PreferenceListDetail[],
     enabled: !!cycleId,
+    refetchInterval: poll ? 8000 : false,
+  })
+}
+
+function invalidateSharedEntries(
+  queryClient: ReturnType<typeof useQueryClient>,
+  listId: string
+) {
+  queryClient.invalidateQueries({
+    queryKey: queryKeys.preferenceLists.detail(listId),
+  })
+  queryClient.invalidateQueries({
+    queryKey: [...queryKeys.preferenceLists.all, 'all-details'],
+  })
+  queryClient.invalidateQueries({
+    queryKey: queryKeys.preferenceLists.lists(),
   })
 }
 
@@ -208,9 +225,7 @@ export function useUpsertPreferenceListEntry() {
         vars.opts
       ) as Promise<PreferenceListEntry>,
     onSuccess: (_data, vars) => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.preferenceLists.detail(vars.listId),
-      })
+      invalidateSharedEntries(queryClient, vars.listId)
     },
   })
 }
@@ -224,9 +239,7 @@ export function useDeletePreferenceListEntry() {
       opts?: RequestOptions
     }) => deletePreferenceListEntry(vars.listId, vars.applicationId, vars.opts),
     onSuccess: (_data, vars) => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.preferenceLists.detail(vars.listId),
-      })
+      invalidateSharedEntries(queryClient, vars.listId)
     },
   })
 }
@@ -305,9 +318,7 @@ export function useReorderPreferenceListEntries() {
     // Settled rather than success: the rollback above restores a snapshot
     // that the 8s poll may already have moved past.
     onSettled: (_data, _error, vars) => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.preferenceLists.detail(vars.listId),
-      })
+      invalidateSharedEntries(queryClient, vars.listId)
     },
   })
 }
