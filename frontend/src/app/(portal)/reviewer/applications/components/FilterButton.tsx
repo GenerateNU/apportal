@@ -49,12 +49,7 @@ export interface AnswerFilter {
 }
 
 export type SpecialFilter =
-  | 'rating'
-  | 'stage'
-  | 'availability'
-  | 'role'
-  | 'returner'
-  | 'tag'
+  'rating' | 'stage' | 'availability' | 'role' | 'returner' | 'tag'
 
 const SPECIAL_FILTER_ID: Record<SpecialFilter, string> = {
   tag: '__tag__',
