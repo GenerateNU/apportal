@@ -84,6 +84,26 @@ func (w *WrittenReviewDB) RequiredReviewQuestionIDs(ctx context.Context, applica
 	return ids, err
 }
 
+func (w *WrittenReviewDB) ReviewQuestionsForApplication(ctx context.Context, applicationID string, questionIDs []string) (map[string]models.ReviewQuestion, error) {
+	out := map[string]models.ReviewQuestion{}
+	if len(questionIDs) == 0 {
+		return out, nil
+	}
+	var questions []models.ReviewQuestion
+	err := w.db.WithContext(ctx).Table("review_questions rq").
+		Select("rq.*").
+		Joins("JOIN applications a ON a.cycle_id = rq.cycle_id AND (rq.role_id IS NULL OR rq.role_id = a.role_id)").
+		Where("a.id = ? AND rq.id IN ?", applicationID, questionIDs).
+		Scan(&questions).Error
+	if err != nil {
+		return nil, err
+	}
+	for _, q := range questions {
+		out[q.ID] = q
+	}
+	return out, nil
+}
+
 // UpsertWrittenReview upserts the review, keyed on application + reviewer, and
 // its answers in one transaction.
 func (w *WrittenReviewDB) UpsertWrittenReview(ctx context.Context, in WrittenReviewUpsert) (models.WrittenReviewDetail, error) {

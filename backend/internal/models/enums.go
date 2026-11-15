@@ -62,7 +62,7 @@ func (r CycleStaffRole) Valid() bool {
 }
 
 // InterviewRating is the qualitative verdict interviewers and recording
-// reviewers give. Written reviews use a numeric 1–10 score instead.
+// reviewers give. Written reviews use a numeric score instead.
 type InterviewRating string
 
 const (
@@ -120,6 +120,17 @@ func (t ApplicationType) Valid() bool {
 	return false
 }
 
+type CutoffMode string
+
+const (
+	CutoffMinScore CutoffMode = "min_score"
+	CutoffTopN     CutoffMode = "top_n"
+)
+
+func (m CutoffMode) Valid() bool {
+	return m == CutoffMinScore || m == CutoffTopN
+}
+
 type QuestionType string
 
 const (
@@ -129,9 +140,7 @@ const (
 	QuestionCheckbox       QuestionType = "checkbox"
 	QuestionDropdown       QuestionType = "dropdown"
 	QuestionURL            QuestionType = "url"
-	// QuestionScore is a 1-10 numeric rating, used by review_questions to
-	// replace written_reviews' old fixed overall_score column.
-	QuestionScore QuestionType = "score"
+	QuestionScore          QuestionType = "score"
 )
 
 func (q QuestionType) Valid() bool {

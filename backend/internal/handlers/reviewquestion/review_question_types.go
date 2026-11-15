@@ -29,6 +29,9 @@ type CreateReviewQuestionInput struct {
 		DisplayOrder int                 `json:"display_order,omitempty"`
 		Options      json.RawMessage     `json:"options,omitempty"`
 		Description  *string             `json:"description,omitempty" doc:"Markdown help text shown under the question's label"`
+		ScoreMin     *int                `json:"score_min,omitempty" doc:"Score questions only; defaults to 1"`
+		ScoreMax     *int                `json:"score_max,omitempty" doc:"Score questions only; defaults to 10"`
+		Ranked       *bool               `json:"ranked,omitempty" doc:"Whether a score question counts toward the review ranking; defaults to true"`
 	}
 }
 
@@ -42,6 +45,9 @@ type UpdateReviewQuestionInput struct {
 		Options          json.RawMessage      `json:"options,omitempty"`
 		Description      *string              `json:"description,omitempty" doc:"Markdown help text shown under the question's label"`
 		ClearDescription bool                 `json:"clear_description,omitempty" doc:"Set true to remove this question's help text"`
+		ScoreMin         *int                 `json:"score_min,omitempty" doc:"Score questions only; locked once any review has scored it"`
+		ScoreMax         *int                 `json:"score_max,omitempty" doc:"Score questions only; locked once any review has scored it"`
+		Ranked           *bool                `json:"ranked,omitempty" doc:"Whether a score question counts toward the review ranking"`
 	}
 }
 
@@ -58,6 +64,9 @@ type ReviewQuestionCreate struct {
 	DisplayOrder int
 	Options      json.RawMessage
 	Description  *string
+	ScoreMin     *int
+	ScoreMax     *int
+	Ranked       bool
 }
 
 type ReviewQuestionUpdate struct {
@@ -68,6 +77,10 @@ type ReviewQuestionUpdate struct {
 	Options          json.RawMessage
 	Description      *string
 	ClearDescription bool
+	SetScale         bool
+	ScoreMin         *int
+	ScoreMax         *int
+	Ranked           *bool
 }
 
 // ReviewQuestionAverageRow is one lead's average on one review question,

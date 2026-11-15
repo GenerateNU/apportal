@@ -128,13 +128,13 @@ BEGIN
     (cur, sd, 'Walk us through a design decision you had to defend.', 'long_answer', true, 5, NULL, 'Experience'),
     (cur, sd, 'Which tools do you use?', 'checkbox', false, 6, '["Figma", "Framer", "Illustrator", "Protopie"]', 'Experience');
 
-  INSERT INTO review_questions (cycle_id, role_id, question_text, question_type, is_required, display_order, description) VALUES
-    (cur, NULL, 'Motivation', 'score', true, 1, 'How clearly do they explain why Generate?'),
-    (cur, NULL, 'Communication', 'score', true, 2, 'Clarity and structure of their writing.'),
-    (cur, swe, 'Technical depth', 'score', true, 3, 'Depth of the project they describe.'),
-    (cur, sd, 'Design craft', 'score', true, 3, 'Quality of process and portfolio.'),
-    (cur, NULL, 'Overall', 'score', true, 4, 'Your overall score.'),
-    (cur, NULL, 'Notes', 'long_answer', false, 5, 'Anything the chiefs should know.');
+  INSERT INTO review_questions (cycle_id, role_id, question_text, question_type, is_required, display_order, description, score_min, score_max) VALUES
+    (cur, NULL, 'Motivation', 'score', true, 1, 'How clearly do they explain why Generate?', 1, 10),
+    (cur, NULL, 'Communication', 'score', true, 2, 'Clarity and structure of their writing.', 1, 10),
+    (cur, swe, 'Technical depth', 'score', true, 3, 'Depth of the project they describe.', 1, 10),
+    (cur, sd, 'Design craft', 'score', true, 3, 'Quality of process and portfolio.', 1, 10),
+    (cur, NULL, 'Overall', 'score', true, 4, 'Your overall score.', 1, 10),
+    (cur, NULL, 'Notes', 'long_answer', false, 5, 'Anything the chiefs should know.', NULL, NULL);
 
   INSERT INTO code_challenges (cycle_id, role_id, name, challenge_url, instructions, due_at) VALUES
     (cur, swe, 'Gate Scheduler', 'https://github.com/example/seed-gate-scheduler', 'Fork the repo and make the tests pass.', now() + interval '14 days'),

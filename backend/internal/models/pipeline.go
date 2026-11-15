@@ -47,6 +47,9 @@ type ReviewQuestion struct {
 	DisplayOrder int             `json:"display_order" gorm:"type:integer;not null;default:0"`
 	Options      json.RawMessage `json:"options,omitempty" gorm:"serializer:jsonb;type:jsonb"`
 	Description  *string         `json:"description,omitempty"`
+	ScoreMin     *int            `json:"score_min,omitempty" gorm:"type:integer;check:review_questions_score_scale_check,CASE WHEN question_type = 'score' THEN score_min IS NOT NULL AND score_max IS NOT NULL AND score_min < score_max ELSE score_min IS NULL AND score_max IS NULL END"`
+	ScoreMax     *int            `json:"score_max,omitempty" gorm:"type:integer"`
+	Ranked       bool            `json:"ranked" doc:"Whether a score question counts toward the review ranking" gorm:"not null;default:true"`
 	CreatedAt    time.Time       `json:"created_at" gorm:"not null;default:now()"`
 	Cycle        Cycle           `json:"-" gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
 	Role         *Role           `json:"-" gorm:"foreignKey:RoleID;references:ID;constraint:OnDelete:RESTRICT"`
@@ -60,7 +63,7 @@ type WrittenReviewAnswer struct {
 	ReviewQuestionID string          `json:"review_question_id" gorm:"type:uuid;not null;uniqueIndex:written_review_answers_review_id_review_question_id_key,priority:2"`
 	AnswerText       *string         `json:"answer_text,omitempty"`
 	AnswerOptions    json.RawMessage `json:"answer_options,omitempty" gorm:"serializer:jsonb;type:jsonb"`
-	Score            *int            `json:"score,omitempty" gorm:"type:integer;check:written_review_answers_score_check,score >= 1 AND score <= 10"`
+	Score            *int            `json:"score,omitempty" gorm:"type:integer"`
 	SubmittedAt      time.Time       `json:"submitted_at" gorm:"not null;default:now()"`
 	Review           WrittenReview   `json:"-" gorm:"foreignKey:ReviewID;references:ID;constraint:OnDelete:CASCADE"`
 	ReviewQuestion   ReviewQuestion  `json:"-" gorm:"foreignKey:ReviewQuestionID;references:ID"`
@@ -302,4 +305,42 @@ type ReviewRelease struct {
 	Cycle      Cycle      `json:"-" gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
 	Releaser   User       `json:"-" gorm:"foreignKey:ReleasedBy;references:NUID"`
 	Role       Role       `json:"-" gorm:"foreignKey:RoleID;references:ID;constraint:OnDelete:RESTRICT"`
+}
+
+type ReviewCutoff struct {
+	CycleID   string     `json:"cycle_id" gorm:"primaryKey;type:uuid"`
+	RoleID    string     `json:"role_id" gorm:"primaryKey;type:uuid"`
+	Mode      CutoffMode `json:"mode" gorm:"type:text;not null;check:review_cutoffs_mode_check,mode IN ('min_score','top_n')"`
+	Value     float64    `json:"value" doc:"Minimum normalized score for min_score; how many to take for top_n" gorm:"type:double precision;not null"`
+	UpdatedBy string     `json:"updated_by" gorm:"not null"`
+	UpdatedAt time.Time  `json:"updated_at" gorm:"not null;default:now()"`
+	Cycle     Cycle      `json:"-" gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
+	Role      Role       `json:"-" gorm:"foreignKey:RoleID;references:ID;constraint:OnDelete:RESTRICT"`
+	Updater   User       `json:"-" gorm:"foreignKey:UpdatedBy;references:NUID"`
+}
+
+type ReviewCutoffOverride struct {
+	ApplicationID string      `json:"application_id" gorm:"primaryKey;type:uuid"`
+	Included      bool        `json:"included" gorm:"not null"`
+	SetBy         string      `json:"set_by" gorm:"not null"`
+	UpdatedAt     time.Time   `json:"updated_at" gorm:"not null;default:now()"`
+	Application   Application `json:"-" gorm:"foreignKey:ApplicationID;references:ID;constraint:OnDelete:CASCADE"`
+	Setter        User        `json:"-" gorm:"foreignKey:SetBy;references:NUID"`
+}
+
+type ReviewRanking struct {
+	Cutoff  *ReviewCutoff        `json:"cutoff"`
+	Entries []ReviewRankingEntry `json:"entries"`
+}
+
+type ReviewRankingEntry struct {
+	ApplicationID   string           `json:"application_id"`
+	Stage           ApplicationStage `json:"stage"`
+	ReviewCount     int              `json:"review_count" doc:"Submitted written reviews with at least one score"`
+	NormalizedScore *float64         `json:"normalized_score,omitempty" doc:"Mean of per-reviewer z-scores; 0 is an average review"`
+	ScaledAverage   *float64         `json:"scaled_average,omitempty" doc:"Raw scores mapped onto 0-1 by each question's scale, then averaged"`
+	Rank            *int             `json:"rank,omitempty" doc:"1-based; omitted until the application has a score"`
+	AboveCutoff     bool             `json:"above_cutoff"`
+	Override        *bool            `json:"override,omitempty" doc:"A chief's manual include (true) or exclude (false)"`
+	Included        bool             `json:"included" doc:"The override if set, otherwise above_cutoff"`
 }

@@ -2,9 +2,11 @@ package writtenreview
 
 import (
 	"encoding/json"
+	"net/http"
 	"testing"
 
 	"github.com/GenerateNU/apportal/backend/internal/models"
+	"github.com/GenerateNU/apportal/backend/internal/testutil"
 )
 
 func TestMissingRequired(t *testing.T) {
@@ -71,5 +73,36 @@ func TestScopeReviews(t *testing.T) {
 		if got[id][0].ReviewerNUID != "me" {
 			t.Errorf("%s: kept %s, want own review", id, got[id][0].ReviewerNUID)
 		}
+	}
+}
+
+func ip(v int) *int { return &v }
+
+func TestValidateAnswers(t *testing.T) {
+	questions := map[string]models.ReviewQuestion{
+		"five":  {ID: "five", QuestionType: models.QuestionScore, ScoreMin: ip(1), ScoreMax: ip(5)},
+		"ten":   {ID: "ten", QuestionType: models.QuestionScore, ScoreMin: ip(1), ScoreMax: ip(10)},
+		"notes": {ID: "notes", QuestionType: models.QuestionLongAnswer},
+	}
+	text := "fine"
+	ok := []ReviewAnswerInput{
+		{ReviewQuestionID: "five", Score: ip(1)},
+		{ReviewQuestionID: "five", Score: ip(5)},
+		{ReviewQuestionID: "ten", Score: ip(10)},
+		{ReviewQuestionID: "five"},
+		{ReviewQuestionID: "notes", AnswerText: &text},
+	}
+	if err := validateAnswers(ok, questions); err != nil {
+		t.Fatal(err)
+	}
+
+	bad := []ReviewAnswerInput{
+		{ReviewQuestionID: "five", Score: ip(6)},
+		{ReviewQuestionID: "five", Score: ip(0)},
+		{ReviewQuestionID: "notes", Score: ip(3)},
+		{ReviewQuestionID: "other-cycle", Score: ip(3)},
+	}
+	for _, a := range bad {
+		testutil.WantStatus(t, validateAnswers([]ReviewAnswerInput{a}, questions), http.StatusUnprocessableEntity)
 	}
 }

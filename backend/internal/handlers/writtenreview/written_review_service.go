@@ -6,6 +6,8 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/google/uuid"
+
 	"github.com/GenerateNU/apportal/backend/internal/handlers/reviewrelease"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 	"github.com/danielgtaylor/huma/v2"
@@ -33,18 +35,22 @@ func (s *writtenReviewService) upsert(ctx context.Context, in *UpsertWrittenRevi
 		return nil, huma.Error409Conflict("This review was already submitted and can't be changed.")
 	}
 	answers := make([]ReviewAnswerInput, 0, len(in.Body.Answers))
+	questionIDs := make([]string, 0, len(in.Body.Answers))
 	for _, a := range in.Body.Answers {
-		if a.ReviewQuestionID == "" {
-			return nil, huma.Error422UnprocessableEntity("each answer requires a review_question_id")
+		if _, err := uuid.Parse(a.ReviewQuestionID); err != nil {
+			return nil, huma.Error422UnprocessableEntity("each answer requires a valid review_question_id")
 		}
 		answers = append(answers, ReviewAnswerInput(a))
+		questionIDs = append(questionIDs, a.ReviewQuestionID)
+	}
+	questions, err := s.writtenReviewDB.ReviewQuestionsForApplication(ctx, in.ID, questionIDs)
+	if err != nil {
+		return nil, utils.StoreErr(err)
+	}
+	if err := validateAnswers(answers, questions); err != nil {
+		return nil, err
 	}
 
-	for _, a := range answers {
-		if a.Score != nil && (*a.Score < 1 || *a.Score > 10) {
-			return nil, huma.Error422UnprocessableEntity("Scores must be whole numbers from 1 to 10.")
-		}
-	}
 	if in.Body.Submit {
 		required, err := s.writtenReviewDB.RequiredReviewQuestionIDs(ctx, in.ID)
 		if err != nil {
@@ -171,4 +177,23 @@ func missingRequired(required []string, answers []ReviewAnswerInput) int {
 		}
 	}
 	return missing
+}
+
+func validateAnswers(answers []ReviewAnswerInput, questions map[string]models.ReviewQuestion) error {
+	for _, a := range answers {
+		q, ok := questions[a.ReviewQuestionID]
+		if !ok {
+			return huma.Error422UnprocessableEntity("review_question_id " + a.ReviewQuestionID + " is not a review question for this application")
+		}
+		if a.Score == nil {
+			continue
+		}
+		if q.QuestionType != models.QuestionScore || q.ScoreMin == nil || q.ScoreMax == nil {
+			return huma.Error422UnprocessableEntity("score is only allowed on score questions")
+		}
+		if *a.Score < *q.ScoreMin || *a.Score > *q.ScoreMax {
+			return huma.Error422UnprocessableEntity(fmt.Sprintf("score for %q must be between %d and %d", q.QuestionText, *q.ScoreMin, *q.ScoreMax))
+		}
+	}
+	return nil
 }

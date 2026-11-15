@@ -27,9 +27,12 @@ func (r *ReviewQuestionDB) CreateReviewQuestion(ctx context.Context, in ReviewQu
 		DisplayOrder: in.DisplayOrder,
 		Options:      in.Options,
 		Description:  in.Description,
+		ScoreMin:     in.ScoreMin,
+		ScoreMax:     in.ScoreMax,
+		Ranked:       in.Ranked,
 	}
 	err := utils.Insert(r.db.WithContext(ctx), &question, "cycle_id", "role_id", "question_text",
-		"question_type", "is_required", "display_order", "options", "description")
+		"question_type", "is_required", "display_order", "options", "description", "score_min", "score_max", "ranked")
 	return question, err
 }
 
@@ -58,7 +61,26 @@ func (r *ReviewQuestionDB) UpdateReviewQuestion(ctx context.Context, id string, 
 	} else {
 		utils.SetIf(updates, "description", in.Description)
 	}
+	if in.SetScale {
+		updates["score_min"], updates["score_max"] = nil, nil
+		utils.SetIf(updates, "score_min", in.ScoreMin)
+		utils.SetIf(updates, "score_max", in.ScoreMax)
+	}
+	utils.SetIf(updates, "ranked", in.Ranked)
 	return utils.UpdateReturning[models.ReviewQuestion](r.db.WithContext(ctx), updates, "id = ?", id)
+}
+
+func (r *ReviewQuestionDB) GetReviewQuestion(ctx context.Context, id string) (models.ReviewQuestion, error) {
+	var q models.ReviewQuestion
+	return q, utils.DBErr(r.db.WithContext(ctx).Where("id = ?", id).Take(&q).Error)
+}
+
+func (r *ReviewQuestionDB) HasScoredAnswers(ctx context.Context, questionID string) (bool, error) {
+	var exists bool
+	err := r.db.WithContext(ctx).Raw(
+		"SELECT EXISTS (SELECT 1 FROM written_review_answers WHERE review_question_id = ? AND score IS NOT NULL)", questionID,
+	).Scan(&exists).Error
+	return exists, err
 }
 
 func (r *ReviewQuestionDB) DeleteReviewQuestion(ctx context.Context, id string) error {

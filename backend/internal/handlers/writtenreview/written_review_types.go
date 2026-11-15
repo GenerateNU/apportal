@@ -24,7 +24,7 @@ type ReviewAnswerSubmission struct {
 	ReviewQuestionID string          `json:"review_question_id"`
 	AnswerText       *string         `json:"answer_text,omitempty"`
 	AnswerOptions    json.RawMessage `json:"answer_options,omitempty"`
-	Score            *int            `json:"score,omitempty" minimum:"1" maximum:"10"`
+	Score            *int            `json:"score,omitempty" doc:"Must fall within the question's score_min..score_max"`
 }
 
 type UpsertWrittenReviewInput struct {
