@@ -8,14 +8,11 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/models"
 )
 
-// InterviewRules is the seam for per-opening settings; StageRules reads what
-// the cycle has today.
 type InterviewRules interface {
 	PerApplicant(ctx context.Context, cycleID string, kind models.StaffKind) (int, error)
 	Released(ctx context.Context, cycleID, roleID string) (bool, error)
 }
 
-// Conflicts maps each applicant NUID to the staff who must not work on them.
 type Conflicts interface {
 	Conflicted(ctx context.Context, cycleID string, applicantNUIDs []string) (map[string]map[string]bool, error)
 }
@@ -92,7 +89,6 @@ func (StageRules) Released(context.Context, string, string) (bool, error) {
 	return false, nil
 }
 
-// Limits loads PerApplicant for every kind.
 func Limits(ctx context.Context, r InterviewRules, cycleID string) (map[models.StaffKind]int, error) {
 	out := make(map[models.StaffKind]int, len(models.StaffKinds))
 	for _, k := range models.StaffKinds {

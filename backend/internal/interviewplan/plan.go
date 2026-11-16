@@ -1,6 +1,3 @@
-// Package interviewplan spreads interviewers or recording reviewers over an
-// opening's applicants: least-loaded first, interleaving openings so none
-// takes everyone's time, and preferring units that share a meeting slot.
 package interviewplan
 
 import (
@@ -8,7 +5,6 @@ import (
 	"strings"
 )
 
-// Unit is who gets assigned together: one person, or a whole panel.
 type Unit struct {
 	ID      string
 	Members []string
@@ -47,9 +43,6 @@ type state struct {
 	got     int
 }
 
-// Plan never mutates its inputs. An applicant with slots only gets units on
-// one of them while any is free; if none is, they get anyone and are listed in
-// NoSlotMatch. Applicants with no slots are neither filtered nor flagged.
 func Plan(openings []Opening, loads map[string]int, matchSlots bool) Result {
 	res := Result{Picks: []Pick{}, Short: []string{}, NoSlotMatch: []string{}, Loads: map[string]int{}}
 	for k, v := range loads {
@@ -157,8 +150,6 @@ func load(u Unit, loads map[string]int) int {
 	return n
 }
 
-// Panels splits people into panels of size, keeping people who share a
-// meeting slot together; leftovers are pooled and the last panel may be short.
 func Panels(people []string, slotOf map[string]string, size int) [][]string {
 	if size <= 0 {
 		return nil

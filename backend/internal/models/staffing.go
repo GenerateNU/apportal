@@ -36,8 +36,6 @@ type StaffGroupMember struct {
 	User     User       `json:"-" gorm:"foreignKey:UserNUID;references:NUID;constraint:OnDelete:CASCADE"`
 }
 
-// OpeningTeam picks a group to do one kind of work on one opening. An opening
-// with no rows for a kind is staffed by everyone on the cycle.
 type OpeningTeam struct {
 	CycleID string     `json:"cycle_id" gorm:"primaryKey;type:uuid"`
 	RoleID  string     `json:"role_id" gorm:"primaryKey;type:uuid"`
@@ -59,8 +57,6 @@ type InterviewPanel struct {
 	Creator   User      `json:"-" gorm:"foreignKey:CreatedBy;references:NUID"`
 }
 
-// InterviewPanelMember carries its panel's cycle so one person sits on at most
-// one panel per cycle.
 type InterviewPanelMember struct {
 	PanelID  string         `json:"panel_id" gorm:"primaryKey;type:uuid"`
 	UserNUID string         `json:"user_nuid" gorm:"primaryKey;uniqueIndex:interview_panel_members_cycle_id_user_nuid_key,priority:2"`

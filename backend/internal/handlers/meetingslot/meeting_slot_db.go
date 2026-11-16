@@ -42,7 +42,6 @@ func (d *MeetingSlotDB) Delete(ctx context.Context, cycleID, slotID string) erro
 	return d.db.WithContext(ctx).Where("id = ? AND cycle_id = ?", slotID, cycleID).Delete(&models.MeetingSlot{}).Error
 }
 
-// Reorder returns false, changing nothing, unless ids is exactly the cycle's slots.
 func (d *MeetingSlotDB) Reorder(ctx context.Context, cycleID string, ids []string) (bool, error) {
 	ok := false
 	err := d.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {

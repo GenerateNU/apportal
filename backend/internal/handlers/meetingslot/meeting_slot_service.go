@@ -14,7 +14,6 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 )
 
-// Applicants pick slots until their interview is being set up.
 var editableStages = []models.ApplicationStage{
 	models.StageDraft, models.StageSubmitted, models.StageLeadReview, models.StageChiefReview, models.StageInterview,
 }

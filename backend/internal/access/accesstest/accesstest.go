@@ -1,5 +1,3 @@
-// Package accesstest runs a handler against each kind of caller and checks
-// whether it got past the access gate, with no database behind it.
 package accesstest
 
 import (
@@ -60,7 +58,6 @@ func Fixture() access.Static {
 	}
 }
 
-// Recorder passes a call only if every check it made allowed it.
 type Recorder struct {
 	access.Static
 	allowed, denied int
@@ -87,8 +84,6 @@ func (r *Recorder) Passed() bool {
 	return r.allowed > 0 && r.denied == 0
 }
 
-// Allow marks a caller who gets past the gate; any other value is the status
-// the call must fail with.
 const Allow = 0
 
 type Want map[string]int
@@ -102,8 +97,6 @@ var (
 		LeadOnCycle.Name: Allow, Applicant.Name: Allow, Anonymous.Name: http.StatusUnauthorized}
 )
 
-// Run calls the handler once per caller with a fresh Recorder wired in by
-// setup, and checks the outcome against want.
 func Run(t *testing.T, want Want, call func(ctx context.Context, gate access.Gate) error) {
 	t.Helper()
 	for _, c := range Callers {
@@ -141,8 +134,6 @@ func safely(f func() error) (err error) {
 	return f()
 }
 
-// DB builds SQL without ever opening a connection; queries return nothing and
-// transactions fail.
 func DB(t *testing.T) *gorm.DB {
 	t.Helper()
 	g, err := gorm.Open(postgres.New(postgres.Config{Conn: noConn{}}), &gorm.Config{

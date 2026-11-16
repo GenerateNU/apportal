@@ -9,7 +9,6 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/models"
 )
 
-// Gate is the checks handlers make; Checker and Static both satisfy it.
 type Gate interface {
 	CanCycle(ctx context.Context, action CycleAction, cycleID string) error
 	CanApplication(ctx context.Context, action ApplicationAction, applicationID string) error

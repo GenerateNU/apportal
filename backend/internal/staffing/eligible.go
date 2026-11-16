@@ -1,5 +1,3 @@
-// Package staffing decides who may do which kind of work on an opening's
-// applicants, and checks a proposed assignment against the cycle's rules.
 package staffing
 
 import (
@@ -11,10 +9,8 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/models"
 )
 
-// Teams is an opening's chosen groups per kind of work.
 type Teams map[models.StaffKind][]string
 
-// Openings is everything eligibility needs for one cycle.
 type Openings struct {
 	Staff   []string
 	Teams   map[string]Teams
@@ -58,7 +54,6 @@ func NewStore(db *gorm.DB) *Store {
 	return &Store{db: db}
 }
 
-// Eligible lists who may do kind on the opening, in NUID order.
 func (s *Store) Eligible(ctx context.Context, cycleID, roleID string, kind models.StaffKind) ([]string, error) {
 	o, err := LoadOpenings(s.db.WithContext(ctx), cycleID)
 	if err != nil {
@@ -67,7 +62,6 @@ func (s *Store) Eligible(ctx context.Context, cycleID, roleID string, kind model
 	return o.Eligible(roleID, kind), nil
 }
 
-// NotStaff returns the nuids that aren't on the cycle's staff.
 func NotStaff(db *gorm.DB, cycleID string, nuids []string) ([]string, error) {
 	if len(nuids) == 0 {
 		return nil, nil

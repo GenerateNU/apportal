@@ -31,7 +31,6 @@ func (s *staffGroupService) manage(ctx context.Context, cycleID string, ids ...s
 	return s.gate.CanCycle(ctx, access.ManageCycle, cycleID)
 }
 
-// RequireStaff 422s unless every nuid is on the cycle's staff.
 func RequireStaff(ctx context.Context, db *gorm.DB, cycleID string, nuids []string) error {
 	missing, err := staffing.NotStaff(db.WithContext(ctx), cycleID, nuids)
 	if err != nil {

@@ -19,8 +19,6 @@ func NewGuard(db *gorm.DB) *Guard {
 	return &Guard{Rules: NewStageRules(db), Conflicts: NoConflicts{}}
 }
 
-// Snapshot is a cycle's rules plus the applicants a decision touches, read
-// in one pass so a plan or a single add sees the same facts.
 type Snapshot struct {
 	CycleID    string
 	Openings   Openings
@@ -41,8 +39,6 @@ func (s Snapshot) Check(applicationID, nuid string, kind models.StaffKind) error
 	return Check(*a, s.Rules(a.RoleID, kind), nuid, kind)
 }
 
-// Load reads through db, so pass the transaction holding the applicants'
-// interview locks.
 func (g *Guard) Load(ctx context.Context, db *gorm.DB, cycleID string, applicationIDs []string) (Snapshot, error) {
 	snap := Snapshot{CycleID: cycleID, Released: map[string]bool{}}
 	var err error

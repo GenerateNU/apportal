@@ -34,15 +34,12 @@ var (
 	ErrAlready     = errors.New("this person is already assigned")
 )
 
-// Rules is one opening's settings, as the check sees them.
 type Rules struct {
 	Released bool
 	Limit    int
 	Eligible []string
 }
 
-// Check is the one rule check in front of every interviewer, recording
-// reviewer and (later) reviewer add.
 func Check(a Applicant, r Rules, nuid string, kind models.StaffKind) error {
 	switch {
 	case r.Released:

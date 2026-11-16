@@ -10,7 +10,6 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 )
 
-// Check runs inside the add's transaction, before the row is written.
 type Check func(tx *gorm.DB) error
 
 type InterviewAssignmentDB struct {

@@ -7,8 +7,6 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/models"
 )
 
-// Static answers the same checks as Checker from fixed facts, so handler
-// tests can cover permissions without a database.
 type Static struct {
 	Cycles       map[string]StaticCycle
 	Applications map[string]StaticApplication

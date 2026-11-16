@@ -16,7 +16,6 @@ var (
 	unscheduled = []models.ApplicationStage{models.StageInterview, models.StageInterviewScheduled}
 )
 
-// facts is what a plan reads besides the staffing snapshot.
 type facts struct {
 	roles     []string
 	staffSlot map[string]string
@@ -36,9 +35,7 @@ func (f facts) name(nuid string) string {
 	return nuid
 }
 
-// buildPlan adds each planned pick to snap as it goes, so recording reviewers
-// see the planned interviewers and every pick passes the same staffing.Check
-// a manual add would.
+// Picks go into snap as made, so recording reviewers see planned interviewers and every pick passes staffing.Check.
 func buildPlan(snap staffing.Snapshot, f facts, opt options) InterviewPlan {
 	out := InterviewPlan{MatchSlots: opt.matchSlots, Interviewers: []PlannedAssignment{}, RecordingReviewers: []PlannedAssignment{},
 		ShortInterviewers: []string{}, ShortRecording: []string{}, NoSlotMatch: []string{}, Loads: []PlanLoad{}, Warnings: []string{}}
@@ -154,9 +151,6 @@ func planKind(snap staffing.Snapshot, f facts, roles []string, kind models.Staff
 	return res, planned
 }
 
-// panelUnits keeps panels whose every member may interview for the opening
-// and that fit under the interviewer count; a panel's slot is the one all its
-// members share, if any.
 func panelUnits(f facts, eligible []string, limit int) []interviewplan.Unit {
 	var out []interviewplan.Unit
 	for _, p := range f.panels {

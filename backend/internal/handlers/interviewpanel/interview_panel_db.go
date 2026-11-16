@@ -110,7 +110,6 @@ func (d *InterviewPanelDB) Delete(ctx context.Context, cycleID, panelID string) 
 	return d.db.WithContext(ctx).Where("id = ? AND cycle_id = ?", panelID, cycleID).Delete(&models.InterviewPanel{}).Error
 }
 
-// AddMember is a no-op when they're already on this panel.
 func (d *InterviewPanelDB) AddMember(ctx context.Context, cycleID, panelID, nuid string) error {
 	return d.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var n int64
@@ -140,8 +139,6 @@ func (d *InterviewPanelDB) RemoveMember(ctx context.Context, cycleID, panelID, n
 		Delete(&models.InterviewPanelMember{}).Error
 }
 
-// AutoCreate makes panels of size from interview-eligible staff who aren't on
-// a panel yet, keeping people with the same meeting slot together.
 func (d *InterviewPanelDB) AutoCreate(ctx context.Context, cycleID, roleID, by string, size int) ([]string, error) {
 	var ids []string
 	err := d.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
