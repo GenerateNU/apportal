@@ -100,15 +100,6 @@ func ApplicationAccessAt(level Level, owner bool) ApplicationAccess {
 	return ApplicationAccess{level: level, owner: owner}
 }
 
-// CycleAccessAt and ApplicationAccessAt let other packages' tests stand in for a Checker.
-func CycleAccessAt(level Level) CycleAccess {
-	return CycleAccess{level: level}
-}
-
-func ApplicationAccessAt(level Level, owner bool) ApplicationAccess {
-	return ApplicationAccess{level: level, owner: owner}
-}
-
 func (a CycleAccess) Allows(action CycleAction) bool {
 	return a.level >= cyclePolicies[action].level
 }
