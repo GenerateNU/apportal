@@ -5,6 +5,7 @@ import (
 
 	"github.com/GenerateNU/apportal/backend/internal/handlers/application"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/cyclestaff"
+	"github.com/GenerateNU/apportal/backend/internal/pipeline"
 	"github.com/danielgtaylor/huma/v2"
 	"gorm.io/gorm"
 
@@ -15,7 +16,7 @@ func Route(api huma.API, db *gorm.DB) {
 	applicationDB := application.NewApplicationDB(db)
 	leadAssignmentDB := NewLeadAssignmentDB(db)
 
-	registerLeadAssignment(api, &leadAssignmentService{access: access.NewChecker(db), applicationDB: applicationDB, leadAssignmentDB: leadAssignmentDB})
+	registerLeadAssignment(api, &leadAssignmentService{access: access.NewChecker(db), applicationDB: applicationDB, leadAssignmentDB: leadAssignmentDB, gate: pipeline.NewGate(db)})
 	registerReviewerProgress(api, &reviewerProgressService{access: access.NewChecker(db), leadAssignmentDB: leadAssignmentDB, staffDB: cyclestaff.NewCycleStaffDB(db)})
 }
 

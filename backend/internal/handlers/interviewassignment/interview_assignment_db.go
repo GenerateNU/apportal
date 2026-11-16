@@ -12,6 +12,8 @@ import (
 
 type Check func(tx *gorm.DB) error
 
+type RemoveCheck func(tx *gorm.DB, applicationID string) error
+
 type InterviewAssignmentDB struct {
 	db *gorm.DB
 }
@@ -131,28 +133,44 @@ func (d *InterviewAssignmentDB) AddInterviewer(ctx context.Context, applicationI
 	return d.GetInterviewer(ctx, id)
 }
 
-func (d *InterviewAssignmentDB) RemoveInterviewer(ctx context.Context, id string) error {
-	db := d.db.WithContext(ctx)
-	res := db.Where("id = ? AND interview_id IN (?)", id,
-		db.Table("interviews").Select("id").Where("conducted_at IS NULL AND submitted_at IS NULL")).
-		Delete(&models.Interviewer{})
-	if res.Error != nil {
-		return res.Error
-	}
-	if res.RowsAffected > 0 {
-		return nil
-	}
-	if _, err := d.GetInterviewer(ctx, id); err != nil {
-		return err
-	}
-	return utils.ErrConflict
+func assignmentApplication(tx *gorm.DB, table, id string) (string, error) {
+	var app string
+	err := tx.Table(table+" x").Select("i.application_id").Joins("JOIN interviews i ON i.id = x.interview_id").
+		Where("x.id = ?", id).Take(&app).Error
+	return app, utils.DBErr(err)
 }
 
-func (d *InterviewAssignmentDB) DeleteInterviewersForCycle(ctx context.Context, cycleID string, role string) (int, error) {
-	db := d.db.WithContext(ctx)
-	res := db.Where("interview_id IN (?)", cycleInterviews(db, cycleID, role).Where("i.conducted_at IS NULL AND i.submitted_at IS NULL")).
-		Delete(&models.Interviewer{})
-	return int(res.RowsAffected), res.Error
+func (d *InterviewAssignmentDB) RemoveInterviewer(ctx context.Context, id string, check RemoveCheck) error {
+	return d.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		app, err := assignmentApplication(tx, "interviewers", id)
+		if err != nil {
+			return err
+		}
+		if err := check(tx, app); err != nil {
+			return err
+		}
+		res := tx.Where("id = ? AND interview_id IN (?)", id,
+			tx.Table("interviews").Select("id").Where("conducted_at IS NULL AND submitted_at IS NULL")).
+			Delete(&models.Interviewer{})
+		if res.Error == nil && res.RowsAffected == 0 {
+			return utils.ErrConflict
+		}
+		return res.Error
+	})
+}
+
+func (d *InterviewAssignmentDB) DeleteInterviewersForCycle(ctx context.Context, cycleID string, role string, check Check) (int, error) {
+	deleted := 0
+	err := d.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := check(tx); err != nil {
+			return err
+		}
+		res := tx.Where("interview_id IN (?)", cycleInterviews(tx, cycleID, role).Where("i.conducted_at IS NULL AND i.submitted_at IS NULL")).
+			Delete(&models.Interviewer{})
+		deleted = int(res.RowsAffected)
+		return res.Error
+	})
+	return deleted, err
 }
 
 func (d *InterviewAssignmentDB) CreateInterviewers(ctx context.Context, pairs []AssignmentPair, assignedBy string) (int, error) {
@@ -255,25 +273,35 @@ func (d *InterviewAssignmentDB) AddReviewer(ctx context.Context, applicationID, 
 	return d.GetReviewer(ctx, id)
 }
 
-func (d *InterviewAssignmentDB) RemoveReviewer(ctx context.Context, id string) error {
-	res := d.db.WithContext(ctx).Where("id = ? AND writeup_submitted_at IS NULL", id).Delete(&models.InterviewReviewer{})
-	if res.Error != nil {
+func (d *InterviewAssignmentDB) RemoveReviewer(ctx context.Context, id string, check RemoveCheck) error {
+	return d.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		app, err := assignmentApplication(tx, "interview_reviewers", id)
+		if err != nil {
+			return err
+		}
+		if err := check(tx, app); err != nil {
+			return err
+		}
+		res := tx.Where("id = ? AND writeup_submitted_at IS NULL", id).Delete(&models.InterviewReviewer{})
+		if res.Error == nil && res.RowsAffected == 0 {
+			return utils.ErrConflict
+		}
 		return res.Error
-	}
-	if res.RowsAffected > 0 {
-		return nil
-	}
-	if _, err := d.GetReviewer(ctx, id); err != nil {
-		return err
-	}
-	return utils.ErrConflict
+	})
 }
 
-func (d *InterviewAssignmentDB) DeleteReviewersForCycle(ctx context.Context, cycleID string, role string) (int, error) {
-	db := d.db.WithContext(ctx)
-	res := db.Where("writeup_submitted_at IS NULL AND interview_id IN (?)", cycleInterviews(db, cycleID, role)).
-		Delete(&models.InterviewReviewer{})
-	return int(res.RowsAffected), res.Error
+func (d *InterviewAssignmentDB) DeleteReviewersForCycle(ctx context.Context, cycleID string, role string, check Check) (int, error) {
+	deleted := 0
+	err := d.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := check(tx); err != nil {
+			return err
+		}
+		res := tx.Where("writeup_submitted_at IS NULL AND interview_id IN (?)", cycleInterviews(tx, cycleID, role)).
+			Delete(&models.InterviewReviewer{})
+		deleted = int(res.RowsAffected)
+		return res.Error
+	})
+	return deleted, err
 }
 
 func (d *InterviewAssignmentDB) CreateReviewers(ctx context.Context, pairs []AssignmentPair, assignedBy string) (int, error) {

@@ -17,7 +17,6 @@ export interface ApplicationTemplate {
   description?: string;
   id: string;
   instructions?: string;
-  opens_at?: string;
   review_closes_at?: string;
   review_status: ApplicationTemplateReviewStatus;
   role_id: string;

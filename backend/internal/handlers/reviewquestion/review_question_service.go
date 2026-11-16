@@ -2,6 +2,7 @@ package reviewquestion
 
 import (
 	"context"
+	"errors"
 
 	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/GenerateNU/apportal/backend/internal/models"
@@ -56,6 +57,14 @@ func (s *reviewQuestionService) create(ctx context.Context, in *CreateReviewQues
 	if in.Body.IsRequired != nil {
 		required = *in.Body.IsRequired
 	}
+	scoreMin, scoreMax, err := resolveScale(qType, in.Body.ScoreMin, in.Body.ScoreMax)
+	if err != nil {
+		return nil, err
+	}
+	ranked := true
+	if in.Body.Ranked != nil {
+		ranked = *in.Body.Ranked
+	}
 
 	q, err := s.reviewQuestionDB.CreateReviewQuestion(ctx, ReviewQuestionCreate{
 		CycleID:      in.ID,
@@ -66,6 +75,9 @@ func (s *reviewQuestionService) create(ctx context.Context, in *CreateReviewQues
 		DisplayOrder: in.Body.DisplayOrder,
 		Options:      in.Body.Options,
 		Description:  in.Body.Description,
+		ScoreMin:     scoreMin,
+		ScoreMax:     scoreMax,
+		Ranked:       ranked,
 	})
 	if err != nil {
 		return nil, utils.StoreErr(err)
@@ -81,7 +93,7 @@ func (s *reviewQuestionService) update(ctx context.Context, in *UpdateReviewQues
 		return nil, huma.Error422UnprocessableEntity("invalid question_type")
 	}
 
-	q, err := s.reviewQuestionDB.UpdateReviewQuestion(ctx, in.ID, ReviewQuestionUpdate{
+	upd := ReviewQuestionUpdate{
 		QuestionText:     in.Body.QuestionText,
 		QuestionType:     in.Body.QuestionType,
 		IsRequired:       in.Body.IsRequired,
@@ -89,8 +101,23 @@ func (s *reviewQuestionService) update(ctx context.Context, in *UpdateReviewQues
 		Options:          in.Body.Options,
 		Description:      in.Body.Description,
 		ClearDescription: in.Body.ClearDescription,
-	})
-	if err != nil {
+		Ranked:           in.Body.Ranked,
+	}
+	var scale ScaleResolver
+	if in.Body.QuestionType != nil || in.Body.ScoreMin != nil || in.Body.ScoreMax != nil {
+		scale = func(cur models.ReviewQuestion) (*int, *int, error) {
+			return mergeScale(cur, in.Body.QuestionType, in.Body.ScoreMin, in.Body.ScoreMax)
+		}
+	}
+
+	q, err := s.reviewQuestionDB.UpdateReviewQuestion(ctx, in.ID, upd, scale)
+	var se huma.StatusError
+	switch {
+	case errors.As(err, &se):
+		return nil, err
+	case errors.Is(err, ErrScaleLocked):
+		return nil, huma.Error409Conflict("this question's scale can't change after reviews have scored it")
+	case err != nil:
 		return nil, utils.StoreErr(err)
 	}
 	return &ReviewQuestionOutput{Body: q}, nil

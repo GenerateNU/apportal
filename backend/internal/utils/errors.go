@@ -50,7 +50,10 @@ func InvalidInput(err error) bool {
 // StoreErr maps DB sentinel errors to the matching Huma HTTP error so the
 // operation returns the right status code (and it appears in the OpenAPI spec).
 func StoreErr(err error) error {
+	var se huma.StatusError
 	switch {
+	case errors.As(err, &se):
+		return err
 	case errors.Is(err, ErrNotFound):
 		return huma.Error404NotFound("not found")
 	case errors.Is(err, ErrConflict):

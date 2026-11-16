@@ -19,7 +19,7 @@ var chiefOfApplication = accesstest.Want{
 
 func service(t *testing.T, gate access.Gate) *interviewAssignmentService {
 	db := accesstest.DB(t)
-	return &interviewAssignmentService{gate: gate, guard: staffing.NewGuard(db), interviewAssignmentDB: NewInterviewAssignmentDB(db)}
+	return &interviewAssignmentService{gate: gate, guard: staffing.NewGuard(), interviewAssignmentDB: NewInterviewAssignmentDB(db)}
 }
 
 func TestAddPermissions(t *testing.T) {

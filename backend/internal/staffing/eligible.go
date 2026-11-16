@@ -2,6 +2,7 @@ package staffing
 
 import (
 	"context"
+	"errors"
 	"slices"
 
 	"gorm.io/gorm"
@@ -9,7 +10,7 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/models"
 )
 
-type Teams map[models.StaffKind][]string
+type Teams map[models.StepKind][]string
 
 type Openings struct {
 	Staff   []string
@@ -19,7 +20,7 @@ type Openings struct {
 
 // Eligible: the groups picked for this kind, else the interviewers for
 // recording reviews, else everyone on the cycle.
-func (o Openings) Eligible(roleID string, kind models.StaffKind) []string {
+func (o Openings) Eligible(roleID string, kind models.StepKind) []string {
 	groups := o.Teams[roleID][kind]
 	if len(groups) == 0 {
 		if kind == models.KindRecordingReviewer {
@@ -42,20 +43,17 @@ func (o Openings) Eligible(roleID string, kind models.StaffKind) []string {
 	return out
 }
 
-func (o Openings) IsEligible(roleID string, kind models.StaffKind, nuid string) bool {
+func (o Openings) IsEligible(roleID string, kind models.StepKind, nuid string) bool {
 	return slices.Contains(o.Eligible(roleID, kind), nuid)
 }
 
-type Store struct {
-	db *gorm.DB
-}
+var ErrNotStaffKind = errors.New("kind must be reviewer, interviewer or recording_reviewer")
 
-func NewStore(db *gorm.DB) *Store {
-	return &Store{db: db}
-}
-
-func (s *Store) Eligible(ctx context.Context, cycleID, roleID string, kind models.StaffKind) ([]string, error) {
-	o, err := LoadOpenings(s.db.WithContext(ctx), cycleID)
+func Eligible(ctx context.Context, db *gorm.DB, cycleID, roleID string, kind models.StepKind) ([]string, error) {
+	if !kind.Staff() {
+		return nil, ErrNotStaffKind
+	}
+	o, err := LoadOpenings(db.WithContext(ctx), cycleID)
 	if err != nil {
 		return nil, err
 	}

@@ -6,6 +6,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/GenerateNU/apportal/backend/internal/models"
+	"github.com/GenerateNU/apportal/backend/internal/pipeline"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 )
 
@@ -60,10 +61,11 @@ func (c *Checker) RequireOpenForm(ctx context.Context, cycleID, roleID string) e
 }
 
 func openForm(db *gorm.DB, cycleID, roleID string) *gorm.DB {
-	return db.Table("application_templates at").
+	q := db.Table("application_templates at").
 		Joins("JOIN cycles c ON c.id = at.cycle_id").
 		Where("at.cycle_id = ? AND at.role_id = ?", cycleID, roleID).
-		Where("at.status = ? AND c.status = ?", models.CycleOpen, models.CycleOpen)
+		Where("c.status = ?", models.CycleOpen)
+	return pipeline.AcceptingApplications(q, "at")
 }
 
 func ownApplication(db *gorm.DB, cycleID, roleID, nuid string) *gorm.DB {

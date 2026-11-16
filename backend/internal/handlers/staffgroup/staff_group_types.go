@@ -58,9 +58,9 @@ type MemberPathInput struct {
 }
 
 type OpeningTeam struct {
-	RoleID   string           `json:"role_id"`
-	Kind     models.StaffKind `json:"kind"`
-	GroupIDs []string         `json:"group_ids"`
+	RoleID   string          `json:"role_id"`
+	Kind     models.StepKind `json:"kind"`
+	GroupIDs []string        `json:"group_ids"`
 }
 
 type OpeningTeamsOutput struct {
@@ -72,9 +72,9 @@ type OpeningTeamOutput struct {
 }
 
 type SetOpeningTeamInput struct {
-	ID     string           `path:"id" doc:"Cycle ID"`
-	RoleID string           `path:"role_id"`
-	Kind   models.StaffKind `path:"kind"`
+	ID     string          `path:"id" doc:"Cycle ID"`
+	RoleID string          `path:"role_id"`
+	Kind   models.StepKind `path:"kind"`
 	Body   struct {
 		GroupIDs []string `json:"group_ids" maxItems:"50" doc:"Empty means everyone on the cycle's staff"`
 	}

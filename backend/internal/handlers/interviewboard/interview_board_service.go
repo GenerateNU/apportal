@@ -12,6 +12,7 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/handlers/interviewassignment"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/interviewpanel"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
+	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/staffing"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 )
@@ -23,7 +24,7 @@ type interviewBoardService struct {
 }
 
 func newService(gate access.Gate, db *gorm.DB) *interviewBoardService {
-	return &interviewBoardService{gate: gate, db: db, guard: staffing.NewGuard(db)}
+	return &interviewBoardService{gate: gate, db: db, guard: staffing.NewGuard()}
 }
 
 func (s *interviewBoardService) board(ctx context.Context, in *BoardInput) (*BoardOutput, error) {
@@ -147,13 +148,16 @@ func (s *interviewBoardService) plan(ctx context.Context, db *gorm.DB, cycleID s
 		return InterviewPlan{}, err
 	}
 	if lock {
-		if err := staffing.LockApplicants(db, ids); err != nil {
+		if err := staffing.Hold(db, cycleID, ids); err != nil {
 			return InterviewPlan{}, err
 		}
 	}
 	snap, err := s.guard.Load(ctx, db, cycleID, ids)
 	if err != nil {
 		return InterviewPlan{}, err
+	}
+	if err := snap.RequireLimit(models.KindInterviewer); err != nil {
+		return InterviewPlan{}, staffing.HTTPError(err)
 	}
 	f := facts{roles: roleIDs}
 	if f.staffSlot, err = staffSlots(db, cycleID); err != nil {

@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
+	"github.com/GenerateNU/apportal/backend/internal/pipeline"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 	"github.com/danielgtaylor/huma/v2"
 
@@ -35,6 +36,9 @@ func (s *applicationTemplateService) get(ctx context.Context, in *GetApplication
 		return nil, err
 	}
 	t, err := s.applicationTemplateDB.GetOrCreateApplicationTemplate(ctx, in.ID, in.RoleID)
+	if err == nil {
+		err = s.applicationTemplateDB.FillTimeline(ctx, &t)
+	}
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
@@ -54,17 +58,31 @@ func (s *applicationTemplateService) update(ctx context.Context, in *UpdateAppli
 	if in.Body.ReviewStatus != nil && !in.Body.ReviewStatus.Valid() {
 		return nil, huma.Error422UnprocessableEntity("invalid review_status")
 	}
+	if err := role.RequireCycleRole(ctx, s.roleDB, in.ID, in.RoleID); err != nil {
+		return nil, err
+	}
+	if _, err := s.applicationTemplateDB.GetOrCreateApplicationTemplate(ctx, in.ID, in.RoleID); err != nil {
+		return nil, utils.StoreErr(err)
+	}
 
-	t, err := s.applicationTemplateDB.UpdateApplicationTemplate(ctx, in.ID, in.RoleID, ApplicationTemplateUpdate{
-		Title:          in.Body.Title,
-		Description:    in.Body.Description,
-		Instructions:   in.Body.Instructions,
-		OpensAt:        in.Body.OpensAt,
+	actor := utils.CurrentActor(ctx)
+	if err := s.applicationTemplateDB.ApplyTimeline(ctx, in.ID, in.RoleID, pipeline.TemplateTimeline{
 		ClosesAt:       in.Body.ClosesAt,
 		Status:         in.Body.Status,
-		ReviewStatus:   in.Body.ReviewStatus,
 		ReviewClosesAt: in.Body.ReviewClosesAt,
+		ReviewStatus:   in.Body.ReviewStatus,
+	}, pipeline.Actor{NUID: actor.NUID, Admin: access.IsAdmin(actor)}); err != nil {
+		return nil, pipeline.HTTPErr(err)
+	}
+
+	t, err := s.applicationTemplateDB.UpdateApplicationTemplate(ctx, in.ID, in.RoleID, ApplicationTemplateUpdate{
+		Title:        in.Body.Title,
+		Description:  in.Body.Description,
+		Instructions: in.Body.Instructions,
 	})
+	if err == nil {
+		err = s.applicationTemplateDB.FillTimeline(ctx, &t)
+	}
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}

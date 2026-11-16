@@ -51,19 +51,19 @@ type AutoPlanInput struct {
 }
 
 type PlannedAssignment struct {
-	ApplicationID string           `json:"application_id"`
-	Kind          models.StaffKind `json:"kind"`
-	NUID          string           `json:"nuid"`
-	FullName      string           `json:"full_name"`
-	PanelID       string           `json:"panel_id,omitempty"`
+	ApplicationID string          `json:"application_id"`
+	Kind          models.StepKind `json:"kind"`
+	NUID          string          `json:"nuid"`
+	FullName      string          `json:"full_name"`
+	PanelID       string          `json:"panel_id,omitempty"`
 }
 
 type PlanLoad struct {
-	NUID     string           `json:"nuid"`
-	FullName string           `json:"full_name"`
-	Kind     models.StaffKind `json:"kind"`
-	Existing int              `json:"existing"`
-	Added    int              `json:"added"`
+	NUID     string          `json:"nuid"`
+	FullName string          `json:"full_name"`
+	Kind     models.StepKind `json:"kind"`
+	Existing int             `json:"existing"`
+	Added    int             `json:"added"`
 }
 
 type InterviewPlan struct {

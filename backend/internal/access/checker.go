@@ -92,7 +92,11 @@ func (c *Checker) cycleFor(ctx context.Context, actor middleware.Actor, from cyc
 	if err := take(q, &f); err != nil {
 		return CycleAccess{}, err
 	}
-	return CycleAccess{level: f.level(actor)}, nil
+	staff := models.CycleStaffRole("")
+	if f.StaffRole != nil {
+		staff = *f.StaffRole
+	}
+	return CycleAccess{level: f.level(actor), admin: IsAdmin(actor), staff: staff}, nil
 }
 
 // Application is what the caller may do with an application.

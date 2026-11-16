@@ -5,12 +5,20 @@ import (
 
 	"gorm.io/gorm"
 
+	"github.com/GenerateNU/apportal/backend/internal/middleware"
 	"github.com/GenerateNU/apportal/backend/internal/models"
+	"github.com/GenerateNU/apportal/backend/internal/pipeline"
 )
 
+// Released and Frozen are per role, for the interviews step; a zero limit means the count isn't set.
+type Policy struct {
+	Limits   map[models.StepKind]int
+	Released map[string]bool
+	Frozen   map[string]error
+}
+
 type InterviewRules interface {
-	PerApplicant(ctx context.Context, cycleID string, kind models.StaffKind) (int, error)
-	Released(ctx context.Context, cycleID, roleID string) (bool, error)
+	Load(ctx context.Context, db *gorm.DB, cycleID string) (Policy, error)
 }
 
 type Conflicts interface {
@@ -23,80 +31,37 @@ func (NoConflicts) Conflicted(context.Context, string, []string) (map[string]map
 	return map[string]map[string]bool{}, nil
 }
 
-const (
-	DefaultReviewers          = 2
-	DefaultInterviewers       = 2
-	DefaultRecordingReviewers = 1
-)
+type PipelineRules struct{}
 
-type StageRules struct {
-	db *gorm.DB
-}
-
-func NewStageRules(db *gorm.DB) StageRules {
-	return StageRules{db: db}
-}
-
-type stageSetting struct {
-	Found    bool
-	Active   bool
-	Required int
-}
-
-var kindStage = map[models.StaffKind]models.ApplicationStage{
-	models.KindReviewer:          models.StageLeadReview,
-	models.KindInterviewer:       models.StageInterview,
-	models.KindRecordingReviewer: models.StageInterviewReview,
-}
-
-func (r StageRules) PerApplicant(ctx context.Context, cycleID string, kind models.StaffKind) (int, error) {
-	var rows []models.CycleStage
-	err := r.db.WithContext(ctx).Where("cycle_id = ? AND stage = ?", cycleID, kindStage[kind]).Limit(1).Find(&rows).Error
+func (PipelineRules) Load(ctx context.Context, db *gorm.DB, cycleID string) (Policy, error) {
+	f, err := pipeline.Load(db, cycleID)
 	if err != nil {
-		return 0, err
+		return Policy{}, err
 	}
-	s := stageSetting{}
-	if len(rows) > 0 {
-		s = stageSetting{Found: true, Active: rows[0].IsActive, Required: rows[0].RequiredAssignments}
-	}
-	return perApplicant(kind, s), nil
+	return PolicyFrom(f, isAdmin(ctx)), nil
 }
 
-// Recording reviews are opt-in: no active interview_review stage means none.
-func perApplicant(kind models.StaffKind, s stageSetting) int {
-	switch kind {
-	case models.KindRecordingReviewer:
-		if !s.Found || !s.Active {
-			return 0
-		}
-		return orDefault(s.Required, DefaultRecordingReviewers)
-	case models.KindInterviewer:
-		return orDefault(s.Required, DefaultInterviewers)
-	default:
-		return orDefault(s.Required, DefaultReviewers)
-	}
+var kindStep = map[models.StepKind]models.Step{
+	models.KindReviewer:          models.StepReviews,
+	models.KindInterviewer:       models.StepInterviews,
+	models.KindRecordingReviewer: models.StepInterviews,
 }
 
-func orDefault(n, def int) int {
-	if n > 0 {
-		return n
-	}
-	return def
-}
-
-// Released is always false: main has no interview release yet.
-func (StageRules) Released(context.Context, string, string) (bool, error) {
-	return false, nil
-}
-
-func Limits(ctx context.Context, r InterviewRules, cycleID string) (map[models.StaffKind]int, error) {
-	out := make(map[models.StaffKind]int, len(models.StaffKinds))
+func PolicyFrom(f *pipeline.Facts, admin bool) Policy {
+	p := Policy{Limits: map[models.StepKind]int{}, Released: map[string]bool{}, Frozen: map[string]error{}}
 	for _, k := range models.StaffKinds {
-		n, err := r.PerApplicant(ctx, cycleID, k)
-		if err != nil {
-			return nil, err
+		if s := kindStep[k]; f.Enabled[s] {
+			p.Limits[k] = f.Assignments[s][k]
 		}
-		out[k] = n
 	}
-	return out, nil
+	for _, o := range f.Openings {
+		p.Released[o.RoleID] = f.Released(o.RoleID, models.StepInterviews)
+		p.Frozen[o.RoleID] = f.Lock(pipeline.Action{Op: pipeline.OpAssign, Step: models.StepInterviews, RoleID: o.RoleID, Admin: admin})
+	}
+	return p
+}
+
+func isAdmin(ctx context.Context) bool {
+	actor, _ := middleware.ActorFrom(ctx)
+	return actor.HasRole(models.UserRoleAdmin)
 }

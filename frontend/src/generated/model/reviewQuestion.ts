@@ -19,5 +19,9 @@ export interface ReviewQuestion {
   options?: unknown;
   question_text: string;
   question_type: ReviewQuestionQuestionType;
+  /** Whether a score question counts toward the review ranking */
+  ranked: boolean;
   role_id?: string;
+  score_max?: number;
+  score_min?: number;
 }

@@ -145,7 +145,7 @@ func (s *staffGroupService) listTeams(ctx context.Context, in *utils.CycleScoped
 }
 
 func (s *staffGroupService) setTeam(ctx context.Context, in *SetOpeningTeamInput) (*OpeningTeamOutput, error) {
-	if !in.Kind.Valid() {
+	if !in.Kind.Staff() {
 		return nil, huma.Error422UnprocessableEntity("invalid kind")
 	}
 	if err := s.manage(ctx, in.ID); err != nil {

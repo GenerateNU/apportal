@@ -76,6 +76,6 @@ func (DecisionStatus) Schema(huma.Registry) *huma.Schema {
 	)
 }
 
-func (StaffKind) Schema(huma.Registry) *huma.Schema {
-	return enumSchema(string(KindReviewer), string(KindInterviewer), string(KindRecordingReviewer))
+func (CutoffMode) Schema(huma.Registry) *huma.Schema {
+	return enumSchema(string(CutoffMinScore), string(CutoffTopN))
 }

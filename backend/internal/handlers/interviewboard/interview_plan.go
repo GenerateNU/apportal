@@ -41,8 +41,8 @@ func buildPlan(snap staffing.Snapshot, f facts, opt options) InterviewPlan {
 		ShortInterviewers: []string{}, ShortRecording: []string{}, NoSlotMatch: []string{}, Loads: []PlanLoad{}, Warnings: []string{}}
 	roles := []string{}
 	for _, r := range f.roles {
-		if snap.Released[r] {
-			out.Warnings = append(out.Warnings, fmt.Sprintf("Opening %s is released, so its assignments are locked.", r))
+		if err := snap.Locked(r); err != nil {
+			out.Warnings = append(out.Warnings, fmt.Sprintf("Opening %s was skipped: %s.", r, err))
 			continue
 		}
 		roles = append(roles, r)
@@ -50,12 +50,8 @@ func buildPlan(snap staffing.Snapshot, f facts, opt options) InterviewPlan {
 	existing := loads(snap)
 
 	var res interviewplan.Result
-	ivLimit := snap.Limits[models.KindInterviewer]
 	res, out.Interviewers = planKind(snap, f, roles, models.KindInterviewer, opt, &out.Warnings)
 	out.ShortInterviewers, out.NoSlotMatch = res.Short, res.NoSlotMatch
-	if ivLimit <= 0 {
-		out.Warnings = append(out.Warnings, "This cycle has no interviewer count set.")
-	}
 	if opt.withRecording {
 		if snap.Limits[models.KindRecordingReviewer] <= 0 {
 			out.Warnings = append(out.Warnings, "Recording reviews are off for this cycle.")
@@ -65,11 +61,11 @@ func buildPlan(snap staffing.Snapshot, f facts, opt options) InterviewPlan {
 		}
 	}
 
-	added := map[models.StaffKind]map[string]int{models.KindInterviewer: {}, models.KindRecordingReviewer: {}}
+	added := map[models.StepKind]map[string]int{models.KindInterviewer: {}, models.KindRecordingReviewer: {}}
 	for _, p := range append(slices.Clone(out.Interviewers), out.RecordingReviewers...) {
 		added[p.Kind][p.NUID]++
 	}
-	for _, kind := range []models.StaffKind{models.KindInterviewer, models.KindRecordingReviewer} {
+	for _, kind := range []models.StepKind{models.KindInterviewer, models.KindRecordingReviewer} {
 		people := map[string]bool{}
 		for n := range existing[kind] {
 			people[n] = true
@@ -84,7 +80,7 @@ func buildPlan(snap staffing.Snapshot, f facts, opt options) InterviewPlan {
 	return out
 }
 
-func planKind(snap staffing.Snapshot, f facts, roles []string, kind models.StaffKind, opt options, warnings *[]string) (interviewplan.Result, []PlannedAssignment) {
+func planKind(snap staffing.Snapshot, f facts, roles []string, kind models.StepKind, opt options, warnings *[]string) (interviewplan.Result, []PlannedAssignment) {
 	limit := snap.Limits[kind]
 	stages := interviewStages
 	if kind == models.KindInterviewer {
@@ -122,7 +118,7 @@ func planKind(snap staffing.Snapshot, f facts, roles []string, kind models.Staff
 			for n := range a.Conflicted {
 				blocked[n] = a.Conflicted[n]
 			}
-			for _, k := range []models.StaffKind{models.KindInterviewer, models.KindRecordingReviewer} {
+			for _, k := range []models.StepKind{models.KindInterviewer, models.KindRecordingReviewer} {
 				for _, n := range a.Assigned[k] {
 					blocked[n] = true
 				}
@@ -174,8 +170,8 @@ func panelUnits(f facts, eligible []string, limit int) []interviewplan.Unit {
 	return out
 }
 
-func loads(snap staffing.Snapshot) map[models.StaffKind]map[string]int {
-	out := map[models.StaffKind]map[string]int{models.KindInterviewer: {}, models.KindRecordingReviewer: {}}
+func loads(snap staffing.Snapshot) map[models.StepKind]map[string]int {
+	out := map[models.StepKind]map[string]int{models.KindInterviewer: {}, models.KindRecordingReviewer: {}}
 	for _, a := range snap.Applicants {
 		for kind, m := range out {
 			for _, n := range a.Assigned[kind] {

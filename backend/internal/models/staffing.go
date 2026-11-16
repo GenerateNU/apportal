@@ -2,22 +2,10 @@ package models
 
 import "time"
 
-type StaffKind string
+var StaffKinds = []StepKind{KindReviewer, KindInterviewer, KindRecordingReviewer}
 
-const (
-	KindReviewer          StaffKind = "reviewer"
-	KindInterviewer       StaffKind = "interviewer"
-	KindRecordingReviewer StaffKind = "recording_reviewer"
-)
-
-var StaffKinds = []StaffKind{KindReviewer, KindInterviewer, KindRecordingReviewer}
-
-func (k StaffKind) Valid() bool {
-	switch k {
-	case KindReviewer, KindInterviewer, KindRecordingReviewer:
-		return true
-	}
-	return false
+func (k StepKind) Staff() bool {
+	return k == KindReviewer || k == KindInterviewer || k == KindRecordingReviewer
 }
 
 type StaffGroup struct {
@@ -39,7 +27,7 @@ type StaffGroupMember struct {
 type OpeningTeam struct {
 	CycleID string     `json:"cycle_id" gorm:"primaryKey;type:uuid"`
 	RoleID  string     `json:"role_id" gorm:"primaryKey;type:uuid"`
-	Kind    StaffKind  `json:"kind" gorm:"primaryKey;type:text;check:opening_teams_kind_check,kind IN ('reviewer', 'interviewer', 'recording_reviewer')"`
+	Kind    StepKind   `json:"kind" gorm:"primaryKey;type:text;check:opening_teams_kind_check,kind IN ('reviewer', 'interviewer', 'recording_reviewer')"`
 	GroupID string     `json:"group_id" gorm:"primaryKey;type:uuid;index:idx_opening_teams_group"`
 	Cycle   Cycle      `json:"-" gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
 	Role    Role       `json:"-" gorm:"foreignKey:RoleID;references:ID;constraint:OnDelete:CASCADE"`

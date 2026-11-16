@@ -58,9 +58,9 @@ func TestMalformedInput(t *testing.T) {
 	testutil.WantStatus(t, err, http.StatusUnprocessableEntity)
 }
 
-func applicant(id, role string, stage models.ApplicationStage, assigned map[models.StaffKind][]string) *staffing.Applicant {
+func applicant(id, role string, stage models.ApplicationStage, assigned map[models.StepKind][]string) *staffing.Applicant {
 	if assigned == nil {
-		assigned = map[models.StaffKind][]string{}
+		assigned = map[models.StepKind][]string{}
 	}
 	return &staffing.Applicant{ApplicationID: id, RoleID: role, Stage: stage, Assigned: assigned, Conflicted: map[string]bool{}}
 }
@@ -68,7 +68,7 @@ func applicant(id, role string, stage models.ApplicationStage, assigned map[mode
 func snapshot(apps ...*staffing.Applicant) staffing.Snapshot {
 	s := staffing.Snapshot{
 		Openings: staffing.Openings{Staff: []string{"ann", "bob", "cat", "dan", "eve"}, Teams: map[string]staffing.Teams{}, Members: map[string][]string{}},
-		Limits:   map[models.StaffKind]int{models.KindInterviewer: 2, models.KindRecordingReviewer: 1},
+		Limits:   map[models.StepKind]int{models.KindInterviewer: 2, models.KindRecordingReviewer: 1},
 		Released: map[string]bool{}, Applicants: map[string]*staffing.Applicant{},
 	}
 	for _, a := range apps {
@@ -89,7 +89,7 @@ func who(plan []PlannedAssignment, app string) []string {
 }
 
 func TestPlanFillsToCapWithTeamAndConflicts(t *testing.T) {
-	x := applicant("x", "eng", models.StageInterview, map[models.StaffKind][]string{models.KindInterviewer: {"ann"}})
+	x := applicant("x", "eng", models.StageInterview, map[models.StepKind][]string{models.KindInterviewer: {"ann"}})
 	y := applicant("y", "eng", models.StageInterview, nil)
 	y.Conflicted["bob"] = true
 	done := applicant("z", "eng", models.StageInterviewConducted, nil)
@@ -113,8 +113,8 @@ func TestPlanFillsToCapWithTeamAndConflicts(t *testing.T) {
 }
 
 func TestPlanRecordingNeverInterviewer(t *testing.T) {
-	x := applicant("x", "eng", models.StageInterview, map[models.StaffKind][]string{models.KindInterviewer: {"ann"}})
-	y := applicant("y", "eng", models.StageInterviewReview, map[models.StaffKind][]string{models.KindInterviewer: {"dan", "eve"}})
+	x := applicant("x", "eng", models.StageInterview, map[models.StepKind][]string{models.KindInterviewer: {"ann"}})
+	y := applicant("y", "eng", models.StageInterviewReview, map[models.StepKind][]string{models.KindInterviewer: {"dan", "eve"}})
 	snap := snapshot(x, y)
 	plan := buildPlan(snap, facts{roles: []string{"eng"}}, options{withRecording: true})
 	ivX := append(who(plan.Interviewers, "x"), "ann")
@@ -126,7 +126,7 @@ func TestPlanRecordingNeverInterviewer(t *testing.T) {
 	if got := who(plan.RecordingReviewers, "y"); len(got) != 1 || got[0] == "dan" || got[0] == "eve" {
 		t.Errorf("y: %v", got)
 	}
-	for _, kind := range []models.StaffKind{models.KindInterviewer, models.KindRecordingReviewer} {
+	for _, kind := range []models.StepKind{models.KindInterviewer, models.KindRecordingReviewer} {
 		for _, p := range append(plan.Interviewers, plan.RecordingReviewers...) {
 			if p.Kind == kind && snap.Applicants[p.ApplicationID].Has(otherKind(kind), p.NUID) {
 				t.Errorf("%s is both kinds on %s", p.NUID, p.ApplicationID)
@@ -135,7 +135,7 @@ func TestPlanRecordingNeverInterviewer(t *testing.T) {
 	}
 }
 
-func otherKind(k models.StaffKind) models.StaffKind {
+func otherKind(k models.StepKind) models.StepKind {
 	if k == models.KindInterviewer {
 		return models.KindRecordingReviewer
 	}
@@ -178,7 +178,7 @@ func TestPlanBalancesAcrossOpenings(t *testing.T) {
 
 func TestPlanByPanel(t *testing.T) {
 	x := applicant("x", "eng", models.StageInterview, nil)
-	y := applicant("y", "eng", models.StageInterview, map[models.StaffKind][]string{models.KindInterviewer: {"eve"}})
+	y := applicant("y", "eng", models.StageInterview, map[models.StepKind][]string{models.KindInterviewer: {"eve"}})
 	snap := snapshot(x, y)
 	snap.Openings.Teams["eng"] = staffing.Teams{models.KindInterviewer: {"g"}}
 	snap.Openings.Members["g"] = []string{"ann", "bob", "cat", "dan"}

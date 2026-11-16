@@ -14,7 +14,6 @@ export interface UpdateApplicationTemplateInputBody {
   closes_at?: string;
   description?: string;
   instructions?: string;
-  opens_at?: string;
   review_closes_at?: string;
   review_status?: UpdateApplicationTemplateInputBodyReviewStatus;
   status?: UpdateApplicationTemplateInputBodyStatus;

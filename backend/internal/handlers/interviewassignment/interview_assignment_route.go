@@ -14,7 +14,7 @@ import (
 
 func Route(api huma.API, db *gorm.DB) {
 	checker := access.NewChecker(db)
-	s := &interviewAssignmentService{gate: checker, guard: staffing.NewGuard(db), access: checker, interviewAssignmentDB: NewInterviewAssignmentDB(db), reviewReleaseDB: reviewrelease.NewReviewReleaseDB(db)}
+	s := &interviewAssignmentService{gate: checker, guard: staffing.NewGuard(), access: checker, interviewAssignmentDB: NewInterviewAssignmentDB(db), reviewReleaseDB: reviewrelease.NewReviewReleaseDB(db)}
 
 	huma.Register(api, huma.Operation{
 		OperationID:   "add-interviewer",

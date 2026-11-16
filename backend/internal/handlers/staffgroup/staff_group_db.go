@@ -132,7 +132,7 @@ func (d *StaffGroupDB) ListTeams(ctx context.Context, cycleID string) ([]Opening
 	return out, nil
 }
 
-func (d *StaffGroupDB) SetTeam(ctx context.Context, cycleID, roleID string, kind models.StaffKind, groupIDs []string) error {
+func (d *StaffGroupDB) SetTeam(ctx context.Context, cycleID, roleID string, kind models.StepKind, groupIDs []string) error {
 	return d.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Where("cycle_id = ? AND role_id = ? AND kind = ?", cycleID, roleID, kind).
 			Delete(&models.OpeningTeam{}).Error; err != nil {
