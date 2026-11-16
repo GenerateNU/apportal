@@ -42,6 +42,7 @@ CREATE TABLE "public"."opening_deadlines" (
 );
 CREATE TABLE "public"."application_moves" (
   "id" uuid NOT NULL DEFAULT gen_random_uuid(),
+  "seq" bigserial NOT NULL,
   "batch_id" uuid NOT NULL,
   "application_id" uuid NOT NULL,
   "from_stage" "public"."application_stage" NOT NULL,

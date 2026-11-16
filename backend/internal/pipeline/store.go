@@ -379,6 +379,28 @@ func contains(stages []models.ApplicationStage, s models.ApplicationStage) bool 
 	return false
 }
 
+// ReviewsIn is true once an opening's reviews are released and either closed or every applicant has their reviews.
+func ReviewsIn(db *gorm.DB, cycleID, roleID string, now time.Time) (bool, error) {
+	f, err := Load(db, cycleID)
+	if err != nil {
+		return false, err
+	}
+	if !f.Released(roleID, models.StepReviews) {
+		return false, nil
+	}
+	if f.Ready(roleID, models.StepReviews, now) {
+		return true, nil
+	}
+	var ids []string
+	if err := db.Model(&models.Application{}).Where("cycle_id = ? AND role_id = ? AND stage IN ?", cycleID, roleID, Stages(models.StepReviews)).Pluck("id", &ids).Error; err != nil {
+		return false, err
+	}
+	if len(ids) == 0 {
+		return false, nil
+	}
+	return workComplete(db, f, models.StepReviews, ids)
+}
+
 func workComplete(tx *gorm.DB, f *Facts, s models.Step, ids []string) (bool, error) {
 	var short int64
 	q := tx.Table("applications a").Where("a.id IN ?", ids)
@@ -429,7 +451,7 @@ func Undo(db *gorm.DB, cycleID string, s models.Step, roleID string, actor Actor
 	err := inTx(db, cycleID, func(tx *gorm.DB, f *Facts) error {
 		latest := tx.Table("application_moves m").Select("m.batch_id").
 			Joins("JOIN applications a ON a.id = m.application_id").
-			Where("a.cycle_id = ?", cycleID).Order("m.moved_at DESC").Order("m.batch_id DESC").Limit(1)
+			Where("a.cycle_id = ?", cycleID).Order("m.seq DESC").Limit(1)
 		if roleID != "" {
 			latest = latest.Where("a.role_id = ?", roleID)
 		}

@@ -2,8 +2,10 @@ package reviewquestion
 
 import (
 	"context"
+	"errors"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
@@ -27,9 +29,12 @@ func (r *ReviewQuestionDB) CreateReviewQuestion(ctx context.Context, in ReviewQu
 		DisplayOrder: in.DisplayOrder,
 		Options:      in.Options,
 		Description:  in.Description,
+		ScoreMin:     in.ScoreMin,
+		ScoreMax:     in.ScoreMax,
+		Ranked:       in.Ranked,
 	}
 	err := utils.Insert(r.db.WithContext(ctx), &question, "cycle_id", "role_id", "question_text",
-		"question_type", "is_required", "display_order", "options", "description")
+		"question_type", "is_required", "display_order", "options", "description", "score_min", "score_max", "ranked")
 	return question, err
 }
 
@@ -44,7 +49,11 @@ func (r *ReviewQuestionDB) ListReviewQuestions(ctx context.Context, cycleID stri
 	return questions, q.Order("display_order").Order("created_at").Find(&questions).Error
 }
 
-func (r *ReviewQuestionDB) UpdateReviewQuestion(ctx context.Context, id string, in ReviewQuestionUpdate) (models.ReviewQuestion, error) {
+var ErrScaleLocked = errors.New("score scale locked by existing scores")
+
+type ScaleResolver func(cur models.ReviewQuestion) (scoreMin, scoreMax *int, err error)
+
+func (r *ReviewQuestionDB) UpdateReviewQuestion(ctx context.Context, id string, in ReviewQuestionUpdate, scale ScaleResolver) (models.ReviewQuestion, error) {
 	updates := map[string]any{}
 	utils.SetIf(updates, "question_text", in.QuestionText)
 	utils.SetIf(updates, "question_type", in.QuestionType)
@@ -58,7 +67,40 @@ func (r *ReviewQuestionDB) UpdateReviewQuestion(ctx context.Context, id string, 
 	} else {
 		utils.SetIf(updates, "description", in.Description)
 	}
-	return utils.UpdateReturning[models.ReviewQuestion](r.db.WithContext(ctx), updates, "id = ?", id)
+	utils.SetIf(updates, "ranked", in.Ranked)
+	if scale == nil {
+		return utils.UpdateReturning[models.ReviewQuestion](r.db.WithContext(ctx), updates, "id = ?", id)
+	}
+
+	var out models.ReviewQuestion
+	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var cur models.ReviewQuestion
+		err := tx.Clauses(clause.Locking{Strength: clause.LockingStrengthUpdate}).Where("id = ?", id).Take(&cur).Error
+		if err != nil {
+			return utils.DBErr(err)
+		}
+		scoreMin, scoreMax, err := scale(cur)
+		if err != nil {
+			return err
+		}
+		if !sameInt(scoreMin, cur.ScoreMin) || !sameInt(scoreMax, cur.ScoreMax) {
+			var scored bool
+			err := tx.Raw("SELECT EXISTS (SELECT 1 FROM written_review_answers WHERE review_question_id = ? AND score IS NOT NULL)", id).
+				Scan(&scored).Error
+			if err != nil {
+				return err
+			}
+			if scored {
+				return ErrScaleLocked
+			}
+		}
+		updates["score_min"], updates["score_max"] = nil, nil
+		utils.SetIf(updates, "score_min", scoreMin)
+		utils.SetIf(updates, "score_max", scoreMax)
+		out, err = utils.UpdateReturning[models.ReviewQuestion](tx, updates, "id = ?", id)
+		return err
+	})
+	return out, err
 }
 
 func (r *ReviewQuestionDB) DeleteReviewQuestion(ctx context.Context, id string) error {

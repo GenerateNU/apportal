@@ -92,6 +92,7 @@ type OpeningDeadline struct {
 
 type ApplicationMove struct {
 	ID            string           `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	Seq           int64            `json:"-" gorm:"type:bigserial;not null;<-:false"`
 	BatchID       string           `json:"batch_id" gorm:"type:uuid;not null;index:idx_application_moves_batch"`
 	ApplicationID string           `json:"application_id" gorm:"type:uuid;not null;index:idx_application_moves_app"`
 	FromStage     ApplicationStage `json:"from_stage" gorm:"type:application_stage;not null"`

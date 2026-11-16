@@ -45,6 +45,7 @@ func main() {
 		&models.PreferenceListPersonalEntry{}, &models.PreferenceListComment{},
 		&models.PreferenceListDeadline{}, &models.Draft{}, &models.DraftTeam{}, &models.DraftPick{},
 		&models.CycleTag{}, &models.DecisionTemplate{}, &models.DecisionDraft{}, &models.ReviewRelease{},
+		&models.ReviewCutoff{}, &models.ReviewCutoffOverride{},
 	)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "failed to load gorm schema:", err)
