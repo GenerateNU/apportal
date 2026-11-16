@@ -25,9 +25,9 @@ type BoardRow struct {
 	ScheduledAt        *time.Time              `json:"scheduled_at,omitempty"`
 	Started            bool                    `json:"started" doc:"Has notes, a write-up or a rating"`
 	Done               bool                    `json:"done" doc:"Interview submitted"`
-	Interviewers       []BoardPerson           `json:"interviewers"`
-	RecordingReviewers []BoardPerson           `json:"recording_reviewers"`
-	SlotIDs            []string                `json:"slot_ids" doc:"Meeting slots the applicant can make"`
+	Interviewers       []BoardPerson           `json:"interviewers" gorm:"-"`
+	RecordingReviewers []BoardPerson           `json:"recording_reviewers" gorm:"-"`
+	SlotIDs            []string                `json:"slot_ids" gorm:"-" doc:"Meeting slots the applicant can make"`
 }
 
 type BoardInput struct {
