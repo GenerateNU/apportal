@@ -15,4 +15,6 @@ export const TaskKind = {
   interview: 'interview',
   recording_review: 'recording_review',
   preference_list: 'preference_list',
+  draft: 'draft',
+  feedback: 'feedback',
 } as const;

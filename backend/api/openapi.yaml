@@ -4580,6 +4580,8 @@ components:
             - interview
             - recording_review
             - preference_list
+            - draft
+            - feedback
           type: string
         locked_reason:
           type: string

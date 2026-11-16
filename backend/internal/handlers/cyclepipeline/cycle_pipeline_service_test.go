@@ -527,6 +527,50 @@ func TestMyPipeline(t *testing.T) {
 	}
 }
 
+func TestDraftAndFeedbackTasks(t *testing.T) {
+	f := newFixture(t)
+	list, draft, interview := uuid.NewString(), uuid.NewString(), uuid.NewString()
+	f.exec("INSERT INTO preference_lists (id, cycle_id, name, created_by) VALUES (?, ?, 'Team', ?)", list, f.cycleA, f.chiefA.NUID)
+	f.exec("INSERT INTO preference_list_members (preference_list_id, lead_nuid, added_by) VALUES (?, ?, ?)", list, f.leadA.NUID, f.chiefA.NUID)
+	f.exec("INSERT INTO drafts (id, cycle_id, role_id, status, rounds, created_by) VALUES (?, ?, ?, 'active', 2, ?)", draft, f.cycleA, f.roleA, f.chiefA.NUID)
+	f.exec("INSERT INTO draft_teams (draft_id, preference_list_id, position) VALUES (?, ?, 1)", draft, list)
+
+	rejected := f.application(f.cycleA, f.roleA, models.StageRejected)
+	written := f.application(f.cycleA, f.roleA, models.StageRejected)
+	for _, app := range []string{rejected, written} {
+		iv := uuid.NewString()
+		if app == written {
+			iv = interview
+		}
+		f.exec("INSERT INTO interviews (id, application_id) VALUES (?, ?)", iv, app)
+		f.exec("INSERT INTO interviewers (interview_id, interviewer_nuid, assigned_by) VALUES (?, ?, ?)", iv, f.leadA.NUID, f.chiefA.NUID)
+	}
+	f.exec(`INSERT INTO decision_drafts (application_id, kind, feedback, compliments, previous_stage)
+		VALUES (?, 'rejection_post_interview', 'Feedback', 'Compliments', 'selection')`, written)
+
+	counts, err := pipeline.LoadTaskCounts(f.db, f.cycleA, f.leadA.NUID)
+	f.must(err)
+	got := map[pipeline.TaskKind]pipeline.TaskCount{}
+	for _, c := range counts {
+		got[c.Kind] = c
+	}
+	if c := got[pipeline.TaskDraft]; c.RoleID != f.roleA || c.Total != 1 || c.Done != 0 {
+		t.Errorf("draft task: %+v", c)
+	}
+	if c := got[pipeline.TaskFeedback]; c.RoleID != f.roleA || c.Total != 2 || c.Done != 1 {
+		t.Errorf("feedback task: %+v", c)
+	}
+
+	f.exec("UPDATE drafts SET status = 'complete' WHERE id = ?", draft)
+	counts, err = pipeline.LoadTaskCounts(f.db, f.cycleA, f.leadA.NUID)
+	f.must(err)
+	for _, c := range counts {
+		if c.Kind == pipeline.TaskDraft && c.Done != 1 {
+			t.Errorf("completed draft: %+v", c)
+		}
+	}
+}
+
 func TestTemplateCompat(t *testing.T) {
 	f := newFixture(t)
 	actor := pipeline.Actor{NUID: f.chiefA.NUID}
