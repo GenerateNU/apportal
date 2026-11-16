@@ -3,6 +3,8 @@ package chiefreview
 import (
 	"context"
 
+	"github.com/GenerateNU/apportal/backend/internal/models"
+	"github.com/GenerateNU/apportal/backend/internal/pipeline"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 
 	"github.com/GenerateNU/apportal/backend/internal/access"
@@ -11,6 +13,7 @@ import (
 type chiefReviewCommentService struct {
 	access        *access.Checker
 	chiefReviewDB *ChiefReviewDB
+	gate          *pipeline.Gate
 }
 
 func (s *chiefReviewCommentService) list(ctx context.Context, in *utils.ApplicationScopedInput) (*ChiefReviewCommentsOutput, error) {
@@ -28,6 +31,9 @@ func (s *chiefReviewCommentService) create(ctx context.Context, in *CreateChiefR
 	if err := s.access.CanApplication(ctx, access.ManageApplication, in.ID); err != nil {
 		return nil, err
 	}
+	if err := s.gate.Application(ctx, in.ID, models.StepReviews, ""); err != nil {
+		return nil, err
+	}
 	comment, err := s.chiefReviewDB.CreateChiefReviewComment(ctx, in.ID, utils.CurrentActor(ctx).NUID, in.Body.Body)
 	if err != nil {
 		return nil, utils.StoreErr(err)
@@ -37,6 +43,9 @@ func (s *chiefReviewCommentService) create(ctx context.Context, in *CreateChiefR
 
 func (s *chiefReviewCommentService) update(ctx context.Context, in *UpdateChiefReviewCommentInput) (*ChiefReviewCommentOutput, error) {
 	if err := s.access.CanApplication(ctx, access.ManageApplication, in.ID); err != nil {
+		return nil, err
+	}
+	if err := s.gate.Application(ctx, in.ID, models.StepReviews, ""); err != nil {
 		return nil, err
 	}
 	comment, err := s.chiefReviewDB.UpdateChiefReviewComment(ctx, in.CommentID, utils.CurrentActor(ctx).NUID, in.Body.Body)

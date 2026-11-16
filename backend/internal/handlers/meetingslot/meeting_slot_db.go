@@ -3,6 +3,7 @@ package meetingslot
 import (
 	"context"
 	"slices"
+	"strings"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -53,10 +54,10 @@ func (d *MeetingSlotDB) Reorder(ctx context.Context, cycleID string, ids []strin
 		if len(have) != len(ids) || !containsAll(have, ids) {
 			return nil
 		}
-		for i, id := range ids {
-			if err := tx.Model(&models.MeetingSlot{}).Where("id = ?", id).Update("position", i).Error; err != nil {
-				return err
-			}
+		if err := tx.Exec(`UPDATE meeting_slots m SET position = o.ord - 1
+			FROM unnest(string_to_array(?, ',')::uuid[]) WITH ORDINALITY AS o(id, ord)
+			WHERE m.id = o.id AND m.cycle_id = ?`, strings.Join(ids, ","), cycleID).Error; err != nil {
+			return err
 		}
 		ok = true
 		return nil
