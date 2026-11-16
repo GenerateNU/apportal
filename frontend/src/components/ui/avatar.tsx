@@ -23,7 +23,7 @@ function hashToBucket(value: string, bucketCount: number) {
   return Math.abs(hash) % bucketCount
 }
 
-function initials(name: string) {
+export function initials(name: string) {
   return name
     .split(/\s+/)
     .filter(Boolean)

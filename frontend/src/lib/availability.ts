@@ -13,6 +13,12 @@ export const AVAILABILITY_OPTIONS = [
   { key: 'thursday_1930_2100', label: 'Thursday 7:30–9:00 PM' },
 ] as const
 
+export function shortDay(key: string): string {
+  return (
+    AVAILABILITY_OPTIONS.find((o) => o.key === key)?.label.slice(0, 3) ?? key
+  )
+}
+
 export const ANY_DAY = 'any'
 export const SKIP_DAY = 'skip'
 

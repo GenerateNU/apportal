@@ -31,6 +31,7 @@ export function SearchableSelect({
   emptyText = 'No results.',
   className,
   ariaLabel,
+  variant = 'box',
 }: {
   options: SearchableSelectOption[]
   value?: string
@@ -40,6 +41,7 @@ export function SearchableSelect({
   emptyText?: string
   className?: string
   ariaLabel?: string
+  variant?: 'box' | 'link'
 }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -65,19 +67,27 @@ export function SearchableSelect({
           type="button"
           aria-label={ariaLabel}
           className={cn(
-            'border-input focus-visible:border-ring focus-visible:ring-ring/50 flex h-9 items-center justify-between gap-2 rounded-lg border bg-transparent px-3 py-2 text-sm outline-none hover:border-gray-300 focus-visible:ring-3',
+            variant === 'link'
+              ? 'text-text-muted hover:text-ink flex items-center text-sm font-medium outline-none focus-visible:underline'
+              : 'border-input focus-visible:border-ring focus-visible:ring-ring/50 flex h-9 items-center justify-between gap-2 rounded-lg border bg-transparent px-3 py-2 text-sm outline-none hover:border-gray-300 focus-visible:ring-3',
             className
           )}
         >
           <span
             className={cn(
               'truncate',
-              selected ? 'text-text-default' : 'text-text-subtle'
+              variant === 'link'
+                ? undefined
+                : selected
+                  ? 'text-text-default'
+                  : 'text-text-subtle'
             )}
           >
             {selected?.label ?? placeholder}
           </span>
-          <ChevronsUpDown size={14} className="text-text-faint shrink-0" />
+          {variant === 'box' && (
+            <ChevronsUpDown size={14} className="text-text-faint shrink-0" />
+          )}
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-64 p-0" align="start">
