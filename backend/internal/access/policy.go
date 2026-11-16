@@ -11,7 +11,7 @@ type CycleAction int
 
 const (
 	ReviewCycle CycleAction = iota // read its setup and work its queues
-	ManageCycle                    // set it up and run the pipeline
+	ManageCycle                    // set it up and run the workflow
 	cycleActionCount
 )
 

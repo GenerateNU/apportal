@@ -105,6 +105,8 @@ export const queryKeys = {
     details: () => [...queryKeys.applicationTemplates.all, 'detail'] as const,
     detail: (cycleId: string, roleId: string) =>
       [...queryKeys.applicationTemplates.details(), cycleId, roleId] as const,
+    cycleList: (cycleId: string) =>
+      [...queryKeys.applicationTemplates.all, 'cycle-list', cycleId] as const,
     openList: () =>
       [...queryKeys.applicationTemplates.all, 'open-list'] as const,
   },
@@ -186,11 +188,6 @@ export const queryKeys = {
   // Assignment planning is read-only and driven by teams the chief types in,
   // so only the pool size (cycle × role) is cached; capacity and preview are
   // mutations keyed by the in-flight team layout rather than queries.
-  assignmentPlan: {
-    all: ['assignment-plan'] as const,
-    pool: (cycleId: string, roleId: string) =>
-      [...queryKeys.assignmentPlan.all, 'pool', cycleId, roleId] as const,
-  },
 
   interviews: {
     all: ['interviews'] as const,
@@ -323,26 +320,17 @@ export const queryKeys = {
       [...queryKeys.decisions.all, 'context', applicationIds] as const,
   },
 
-  preferenceListDeadline: {
-    all: ['preference-list-deadline'] as const,
-    detail: (cycleId: string, roleId: string) =>
-      [...queryKeys.preferenceListDeadline.all, cycleId, roleId] as const,
-  },
   cycleStaff: {
     all: ['cycleStaff'] as const,
     mine: () => [...queryKeys.cycleStaff.all, 'mine'] as const,
     list: (cycleId: string) =>
       [...queryKeys.cycleStaff.all, 'list', cycleId] as const,
   },
-  pipeline: {
-    all: ['pipeline'] as const,
-    detail: (cycleId: string) => [...queryKeys.pipeline.all, cycleId] as const,
+  workflow: {
+    all: ['workflow'] as const,
+    detail: (cycleId: string) => [...queryKeys.workflow.all, cycleId] as const,
     steps: (cycleId: string) =>
-      [...queryKeys.pipeline.all, 'steps', cycleId] as const,
-  },
-  myWork: {
-    all: ['my-work'] as const,
-    detail: (cycleId: string) => [...queryKeys.myWork.all, cycleId] as const,
+      [...queryKeys.workflow.all, 'steps', cycleId] as const,
   },
   interviewBoard: {
     all: ['interview-board'] as const,

@@ -1,4 +1,4 @@
-import type { View } from '@/generated/model/view'
+import type { Overview } from '@/generated/model'
 
 export type Step = {
   href: string
@@ -79,7 +79,7 @@ const STEPS_FOR: Record<string, string[]> = {
 }
 
 export function toPhases(
-  view: View | undefined,
+  view: Overview | undefined,
   hasOpenings: boolean
 ): Phase[] {
   if (!view) return []

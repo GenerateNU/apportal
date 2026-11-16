@@ -7,7 +7,8 @@ import {
   updateRole,
 } from '@/generated/roles/roles'
 import type { RequestOptions } from '@/lib/api/orval-mutator'
-import type { Role } from '@/lib/api/types'
+import { getApplicationTemplate } from '@/generated/application-templates/application-templates'
+import type { ApplicationTemplate, Role } from '@/lib/api/types'
 import { buildRoleLookup, type RoleLookup } from '@/lib/roles'
 import { queryKeys } from './keys'
 
@@ -46,15 +47,41 @@ export function useCycleRoles(
   }, [roles, cycleId, isLoading])
 }
 
+// Also creates the role's draft application: the backend makes the template
+// on first fetch. `draft` is null if that failed — the role itself still saved.
+export async function createRoleWithDraft(
+  body: Parameters<typeof createRole>[0],
+  opts?: RequestOptions
+): Promise<{ role: Role; draft: ApplicationTemplate | null }> {
+  const role = (await createRole(body, opts)) as Role
+  const draft = await (
+    getApplicationTemplate(
+      role.cycle_id,
+      { role_id: role.id },
+      opts
+    ) as Promise<ApplicationTemplate>
+  ).catch(() => null)
+  return { role, draft }
+}
+
 export function useCreateRole() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (vars: {
       body: Parameters<typeof createRole>[0]
       opts?: RequestOptions
-    }) => createRole(vars.body, vars.opts),
-    onSuccess: () => {
+    }) => createRoleWithDraft(vars.body, vars.opts),
+    onSuccess: ({ role, draft }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.roles.all })
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.applicationTemplates.cycleList(role.cycle_id),
+      })
+      if (draft) {
+        queryClient.setQueryData(
+          queryKeys.applicationTemplates.detail(role.cycle_id, role.id),
+          draft
+        )
+      }
     },
   })
 }

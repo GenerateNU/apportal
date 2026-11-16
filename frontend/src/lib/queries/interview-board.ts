@@ -119,13 +119,16 @@ export function useInterviewBoardMutations(cycleId: string) {
         matchSlots: boolean
         dryRun: boolean
       }) =>
-        (await autoPlanInterviews(cycleId, {
-          role_ids: v.roleIds,
-          with_recording: v.withRecording,
-          by_panel: v.byPanel,
-          match_slots: v.matchSlots,
-          dry_run: v.dryRun,
-        })) as InterviewPlan,
+        (await autoPlanInterviews(
+          cycleId,
+          {
+            role_ids: v.roleIds,
+            with_recording: v.withRecording,
+            by_panel: v.byPanel,
+            match_slots: v.matchSlots,
+          },
+          { dry_run: v.dryRun }
+        )) as InterviewPlan,
       onSuccess: (_, v) => {
         if (!v.dryRun) refresh()
       },

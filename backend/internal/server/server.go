@@ -12,17 +12,19 @@ import (
 	"gorm.io/gorm"
 
 	appdb "github.com/GenerateNU/apportal/backend/internal/db"
+	"github.com/GenerateNU/apportal/backend/internal/handlers/answer"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/applicant"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/application"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/applicationtemplate"
-	"github.com/GenerateNU/apportal/backend/internal/handlers/assignmentplanner"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/branch"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/challenge"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/chiefreview"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/codesubmission"
+	"github.com/GenerateNU/apportal/backend/internal/handlers/comment"
+	"github.com/GenerateNU/apportal/backend/internal/handlers/conflict"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/cycle"
-	"github.com/GenerateNU/apportal/backend/internal/handlers/cyclepipeline"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/cyclestaff"
+	"github.com/GenerateNU/apportal/backend/internal/handlers/cycleworkflow"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/decision"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/draft"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/interview"
@@ -34,9 +36,9 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/handlers/preferencelist"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/question"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/recordingreview"
+	"github.com/GenerateNU/apportal/backend/internal/handlers/reviewboard"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/reviewquestion"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/reviewranking"
-	"github.com/GenerateNU/apportal/backend/internal/handlers/reviewrelease"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/selection"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/staffgroup"
@@ -86,6 +88,7 @@ func CreateApp(db *gorm.DB, cfg Config) *fiber.App {
 	app.Use(middleware.Logging())
 	app.Use(middleware.WithTimeout(requestTimeout))
 	app.Use(middleware.WithActor(verifier, user.NewUserDB(db).GetUserByEmail))
+	app.Use(middleware.ReadIntent())
 
 	app.Get("/", root)
 	app.Get("/healthz", health)
@@ -101,7 +104,9 @@ func CreateApp(db *gorm.DB, cfg Config) *fiber.App {
 func humaConfig() huma.Config {
 	config := huma.DefaultConfig("apportal API", "0.1.0")
 	config.DocsRenderer = huma.DocsRendererScalar
-	config.Info.Description = "Generate application portal — applications, reviews, and the hiring pipeline."
+	config.Info.Description = "Generate application portal — applications, reviews, and the hiring workflow.\n\n" +
+		"A write the workflow flags as an override or destructive answers 409 with an error at `query.confirm_override`; " +
+		"chiefs and admins repeat it with `?confirm_override=true` to go ahead, and it is recorded."
 	return config
 }
 
@@ -109,24 +114,26 @@ func CreateRoutes(api huma.API, db *gorm.DB, storageClient *storage.Client, chal
 	branch.Route(api, db)
 	role.Route(api, db)
 	cycle.Route(api, db)
-	cyclepipeline.Route(api, db)
+	cycleworkflow.Route(api, db)
 	cyclestaff.Route(api, db)
 	applicationtemplate.Route(api, db)
 	question.Route(api, db)
 	challenge.Route(api, db)
 	user.Route(api, db)
 	applicant.Route(api, db, challengeClient)
-	application.Route(api, db, storageClient)
+	application.Route(api, db)
+	answer.Route(api, db, storageClient)
+	comment.Route(api, db)
 	codesubmission.Route(api, db)
 	tag.Route(api, db)
 
-	// Review → interview → selection pipeline.
+	// Review → interview → selection workflow.
 	leadassignment.Route(api, db)
-	assignmentplanner.Route(api, db)
+	reviewboard.Route(api, db)
+	conflict.Route(api, db)
 	reviewquestion.Route(api, db)
 	writtenreview.Route(api, db)
 	chiefreview.Route(api, db)
-	reviewrelease.Route(api, db)
 	staffgroup.Route(api, db)
 	meetingslot.Route(api, db)
 	interviewpanel.Route(api, db)

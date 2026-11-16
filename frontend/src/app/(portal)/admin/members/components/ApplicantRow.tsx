@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { ChevronDown } from 'lucide-react'
 import { PersonCell } from '@/components/ui/person-cell'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -17,8 +16,7 @@ import { TABLE_ROW } from '@/components/ui/table-styles'
 import type { User } from '@/lib/api/types'
 import { cn } from '@/lib/utils'
 import { useSetReturner } from '@/lib/queries/users'
-import { USER_ROLE_LABEL } from '../lib/role-meta'
-import { RoleEditDialog } from './RoleEditDialog'
+import { isAdmin } from '../lib/role-meta'
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-US', {
@@ -35,7 +33,6 @@ export function ApplicantRow({
   user: User
   gridCols: string
 }) {
-  const [showEdit, setShowEdit] = useState(false)
   const [confirmReturner, setConfirmReturner] = useState(false)
   const setReturner = useSetReturner()
 
@@ -48,15 +45,9 @@ export function ApplicantRow({
           {formatDate(user.created_at)}
         </span>
 
-        <button
-          type="button"
-          onClick={() => setShowEdit(true)}
-          aria-label="Edit roles"
-          className="text-text-secondary flex w-fit items-center gap-1.5 border border-transparent px-2 py-1 text-sm hover:border-gray-300 hover:bg-gray-50"
-        >
-          {USER_ROLE_LABEL['applicant']}
-          <ChevronDown className="text-text-faint h-3.5 w-3.5" />
-        </button>
+        <span className="text-text-secondary text-sm">
+          {isAdmin(user.roles) ? 'Admin' : 'Applicant'}
+        </span>
 
         {/* Confirmed before it's applied: the flag follows the person across
             every cycle, so a stray click is not a local mistake. The box only
@@ -101,12 +92,6 @@ export function ApplicantRow({
             </DialogFooter>
           </DialogContent>
         </Dialog>
-
-        <RoleEditDialog
-          open={showEdit}
-          onOpenChange={setShowEdit}
-          user={user}
-        />
       </div>
     </>
   )

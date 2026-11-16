@@ -30,9 +30,9 @@ import {
   dueAt,
   stepConfig,
   useCycleSteps,
-  usePipeline,
-  usePipelineMutations,
-} from '@/lib/queries/pipeline'
+  useWorkflow,
+  useWorkflowMutations,
+} from '@/lib/queries/workflow'
 import { queryKeys } from '@/lib/queries/keys'
 import { ApplicationDetail } from '../../../applications/components/ApplicationDetail'
 import { TASK_STATE } from '../../../my-work/useLeadWork'
@@ -44,13 +44,13 @@ import {
 type View = 'everyone' | 'mine'
 
 function useDue(cycleId: string) {
-  const { data: pipeline } = usePipeline(cycleId)
+  const { data: workflow } = useWorkflow(cycleId)
   return (
     roleId: string,
     field: 'interview_closes_at' | 'interview_review_closes_at'
   ) => {
     const raw = dueAt(
-      pipeline,
+      workflow,
       'interviews',
       roleId,
       field === 'interview_closes_at' ? 'interviewer' : 'recording_reviewer'
@@ -690,7 +690,7 @@ function MoveOn({
   withRecording: boolean
 }) {
   const { data: steps = [] } = useCycleSteps(cycleId)
-  const { advance } = usePipelineMutations(cycleId)
+  const { advance } = useWorkflowMutations(cycleId)
   const queryClient = useQueryClient()
   const toast = useToast()
   const [confirm, setConfirm] = useState(false)

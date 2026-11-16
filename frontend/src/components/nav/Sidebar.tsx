@@ -11,11 +11,13 @@ import {
   Calendar,
   PanelLeftClose,
   PanelLeftOpen,
+  GitBranch,
   LogOut,
   LayoutList,
 } from 'lucide-react'
 import { ChiefCycleNav } from './ChiefCycleNav'
 import { LeadPhaseNav } from './LeadPhaseNav'
+import { withApplyItems } from './nav-sections'
 import { SectionCaret } from './SectionHeader'
 import NavItem, { isNavItemActive } from './NavItem'
 import { Avatar } from '@/components/ui/avatar'
@@ -99,7 +101,7 @@ const sectionsByRole: Record<Role, NavSection[]> = {
       id: 'admin',
       label: 'Admin',
       items: [
-        { href: '/admin/cycles', label: 'Branches & cycles', icon: Calendar },
+        { href: '/admin/branches', label: 'Branches', icon: GitBranch },
         {
           href: '/admin/applications',
           label: 'Application Forms',
@@ -272,10 +274,7 @@ export default function Sidebar({
   const { data: myCycles, isFetched: myCyclesFetched } = useMyCycles()
   const offCycle = !isChief && myCyclesFetched && (myCycles ?? []).length === 0
   const chiefMode = !!isChief
-  const leadMode =
-    !isChief &&
-    myCyclesFetched &&
-    (myCycles ?? []).length > 0
+  const leadMode = !isChief && myCyclesFetched && (myCycles ?? []).length > 0
   const cycleNavMode = chiefMode ? 'chief' : leadMode ? 'lead' : null
   const staffSections = roleOrder
     .filter(
@@ -285,6 +284,8 @@ export default function Sidebar({
         !(cycleNavMode && role === 'reviewer')
     )
     .flatMap((role) => sectionsByRole[role])
+    // Applicants who are also reviewers would otherwise get it twice.
+    .filter((section, i, all) => all.indexOf(section) === i)
     .map((section) => ({
       ...section,
       items: section.items.filter((item) =>
@@ -298,11 +299,7 @@ export default function Sidebar({
       ? cycleNavMode
         ? [{ id: 'apply-chief', label: 'Applying', items: applyItems }]
         : sectionsByRole.applicant
-      : staffSections.map((section, i) =>
-          i === 0
-            ? { ...section, items: [...section.items, ...applyItems] }
-            : section
-        )
+      : withApplyItems(staffSections, applyItems)
 
   // Navigating into a collapsed section expands it, so the active item is
   // never hidden. Easy to hit from the icon-only rail, which shows every item

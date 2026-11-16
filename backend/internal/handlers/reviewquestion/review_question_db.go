@@ -103,6 +103,12 @@ func (r *ReviewQuestionDB) UpdateReviewQuestion(ctx context.Context, id string, 
 	return out, err
 }
 
+func (r *ReviewQuestionDB) GetReviewQuestion(ctx context.Context, id string) (models.ReviewQuestion, error) {
+	var q models.ReviewQuestion
+	err := r.db.WithContext(ctx).Where("id = ?", id).Take(&q).Error
+	return q, utils.DBErr(err)
+}
+
 func (r *ReviewQuestionDB) DeleteReviewQuestion(ctx context.Context, id string) error {
 	res := r.db.WithContext(ctx).Where("id = ?", id).Delete(&models.ReviewQuestion{})
 	if res.Error != nil {

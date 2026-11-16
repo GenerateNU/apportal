@@ -21,9 +21,10 @@ import type { ApplicationTemplate } from '@/lib/api/types'
 import {
   useApplicationTemplate,
   useApplicationTemplatesByCycleRoles,
-  useUpdateApplicationTemplate,
 } from '@/lib/queries/application-templates'
-import { useCycleTemplateSummary, useUpdateCycle } from '@/lib/queries/cycles'
+import { useCycleTemplateSummary } from '@/lib/queries/cycles'
+import { useSetOpeningStep } from '@/lib/queries/workflow'
+import type { CycleStatus } from '@/lib/api/types'
 import {
   cycleStatusDot,
   cycleStatusLabel,
@@ -66,23 +67,17 @@ export function ApplicationHubClient() {
       (summary(r)?.question_count ?? 0) > 0 &&
       !!templates[roleIds.indexOf(r)]?.data?.closes_at
   )
-  const update = useUpdateApplicationTemplate()
-  const updateCycle = useUpdateCycle()
+  const setStep = useSetOpeningStep()
   const toast = useToast()
 
   async function releaseAll() {
     try {
       for (const roleId of releasable) {
-        await update.mutateAsync({
+        await setStep.mutateAsync({
           cycleId: scope.cycleId,
           roleId,
-          body: { status: 'open' },
-        })
-      }
-      if (scope.cycle?.status === 'draft') {
-        await updateCycle.mutateAsync({
-          id: scope.cycleId,
-          body: { status: 'open' },
+          step: 'applications',
+          status: 'open',
         })
       }
       toast(
@@ -103,7 +98,7 @@ export function ApplicationHubClient() {
           releasable.length > 0 && (
             <Button
               variant="brutal-ink"
-              disabled={update.isPending}
+              disabled={setStep.isPending}
               title={
                 releasable.length < drafts.length
                   ? `${drafts.length - releasable.length} still need a form or deadline`
@@ -186,8 +181,7 @@ function PositionRelease({
   applicants: number
 }) {
   const { data: template } = useApplicationTemplate(cycleId, roleId)
-  const update = useUpdateApplicationTemplate()
-  const updateCycle = useUpdateCycle()
+  const setStep = useSetOpeningStep()
   const { cycle } = useCycleScope()
   const toast = useToast()
   const status = template?.status
@@ -197,11 +191,15 @@ function PositionRelease({
   const [confirmClose, setConfirmClose] = useState(false)
   const router = useRouter()
 
-  async function save(body: Parameters<typeof update.mutateAsync>[0]['body']) {
+  async function save(change: { status?: CycleStatus; dueAt?: string }) {
     try {
-      await update.mutateAsync({ cycleId, roleId, body })
-      if (body.status === 'open' && cycle?.status === 'draft') {
-        await updateCycle.mutateAsync({ id: cycleId, body: { status: 'open' } })
+      await setStep.mutateAsync({
+        cycleId,
+        roleId,
+        step: 'applications',
+        ...change,
+      })
+      if (change.status === 'open' && cycle?.status === 'draft') {
         toast(`${cycle.name} is now open to applicants`)
       }
     } catch (err) {
@@ -250,7 +248,7 @@ function PositionRelease({
       <div onClick={stop} onKeyDown={stop}>
         <DeadlinePicker
           value={template?.closes_at}
-          onValueChange={(date) => save({ closes_at: date.toISOString() })}
+          onValueChange={(date) => save({ dueAt: date.toISOString() })}
           disabled={!template}
           lockedReason={
             template?.review_status === 'open' ||
@@ -273,7 +271,7 @@ function PositionRelease({
             <Button
               size="sm"
               variant={action.to === 'open' ? 'default' : 'outline'}
-              disabled={!template || update.isPending}
+              disabled={!template || setStep.isPending}
               onClick={() =>
                 action.to === 'closed' && applicants > 0
                   ? setConfirmClose(true)
@@ -295,7 +293,7 @@ function PositionRelease({
           }
           description={`${applicants} ${applicants === 1 ? 'person has' : 'people have'} applied. Applications stop right away, and anyone still writing theirs won't be able to submit.`}
           confirmLabel="Close applications"
-          pending={update.isPending}
+          pending={setStep.isPending}
           onConfirm={async () => {
             await save({ status: 'closed' })
             setConfirmClose(false)

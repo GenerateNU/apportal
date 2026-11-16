@@ -30,9 +30,9 @@ import {
   openingIn,
   perApplicant,
   useCycleSteps,
-  usePipeline,
-  usePipelineMutations,
-} from '@/lib/queries/pipeline'
+  useWorkflow,
+  useWorkflowMutations,
+} from '@/lib/queries/workflow'
 import { useCycleStaff } from '@/lib/queries/cycle-staff'
 import { queryKeys } from '@/lib/queries/keys'
 import { useUnassignAllLeads } from '@/lib/queries/lead-assignments'
@@ -73,22 +73,22 @@ export function usePositions() {
   const { data: summaries = [] } = useCycleTemplateSummary(cycleId)
   const { data: reviewQuestions = [] } = useReviewQuestions(cycleId)
   const { data: steps = [] } = useCycleSteps(cycleId)
-  const { data: pipeline } = usePipeline(cycleId)
+  const { data: workflow } = useWorkflow(cycleId)
   const coverage = perApplicant(steps, 'reviews', 'reviewer')
 
   const positions: PositionState[] = roleIds.map((roleId, i) => {
     const items = (progress[i]?.data ?? []).flatMap((p) => p.items)
-    const applying = dueAt(pipeline, 'applications', roleId, 'applicant')
+    const applying = dueAt(workflow, 'applications', roleId, 'applicant')
     const closesAt = applying ? new Date(applying) : null
-    const reviewState = openingIn(pipeline, 'reviews', roleId)?.state
-    const reviewDue = dueAt(pipeline, 'reviews', roleId, 'reviewer')
+    const reviewState = openingIn(workflow, 'reviews', roleId)?.state
+    const reviewDue = dueAt(workflow, 'reviews', roleId, 'reviewer')
     return {
       roleId,
       name: scope.roles.roleLabel(roleId),
       applicants:
         summaries.find((s) => s.role_id === roleId)?.submission_count ?? 0,
       closesAt,
-      closed: openingIn(pipeline, 'applications', roleId)?.state === 'closed',
+      closed: openingIn(workflow, 'applications', roleId)?.state === 'closed',
       hasRubric: reviewQuestions.some(
         (q) =>
           q.question_type === 'score' &&
@@ -658,7 +658,7 @@ function ReviewDeadline({
   position: PositionState
   label: string
 }) {
-  const { setDeadline: update } = usePipelineMutations(cycleId)
+  const { setDeadline: update } = useWorkflowMutations(cycleId)
   const toast = useToast()
   return (
     <DateTimePicker
@@ -707,7 +707,7 @@ function ReleaseControls({
   cycleId: string
   position: PositionState
 }) {
-  const { release: update } = usePipelineMutations(cycleId)
+  const { release: update } = useWorkflowMutations(cycleId)
   const toast = useToast()
   const step = releaseAction(p)
   const due = p.reviewClosesAt

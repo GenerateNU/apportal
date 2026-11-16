@@ -35,9 +35,9 @@ import {
   perApplicant,
   released as isReleased,
   useCycleSteps,
-  usePipeline,
-  usePipelineMutations,
-} from '@/lib/queries/pipeline'
+  useWorkflow,
+  useWorkflowMutations,
+} from '@/lib/queries/workflow'
 import {
   type InterviewEntry,
   type Kind,
@@ -129,9 +129,9 @@ function Board({
   const { data: panels = [] } = useInterviewPanels(cycleId)
   const usable = panels.filter((g) => (g.members ?? []).length > 0)
   const panelMode = usable.length > 0
-  const { data: pipeline } = usePipeline(cycleId)
-  const released = isReleased(pipeline, 'interviews', roleId)
-  const interviewDue = dueAt(pipeline, 'interviews', roleId, 'interviewer')
+  const { data: workflow } = useWorkflow(cycleId)
+  const released = isReleased(workflow, 'interviews', roleId)
+  const interviewDue = dueAt(workflow, 'interviews', roleId, 'interviewer')
   const editable = !plan && !released
   const { data: days = new Map<string, string>() } = useStaffSlots(cycleId)
   const { data: meetingSlots = [] } = useMeetingSlots(cycleId)
@@ -892,13 +892,13 @@ function DueLink({
   roleId: string
   field: 'interview_closes_at' | 'interview_review_closes_at'
 }) {
-  const { data: pipeline } = usePipeline(cycleId)
-  const { setDeadline: update } = usePipelineMutations(cycleId)
+  const { data: workflow } = useWorkflow(cycleId)
+  const { setDeadline: update } = useWorkflowMutations(cycleId)
   const toast = useToast()
   const kind =
     field === 'interview_closes_at' ? 'interviewer' : 'recording_reviewer'
   const at = (k: 'interviewer' | 'recording_reviewer') => {
-    const raw = dueAt(pipeline, 'interviews', roleId, k)
+    const raw = dueAt(workflow, 'interviews', roleId, k)
     return raw ? new Date(raw) : null
   }
   const due = at(kind) ?? undefined
@@ -1122,7 +1122,7 @@ function ReleaseInterviews({
   assigned: boolean
   withRecording: boolean
 }) {
-  const { release: update } = usePipelineMutations(cycleId)
+  const { release: update } = useWorkflowMutations(cycleId)
   const toast = useToast()
   const [confirm, setConfirm] = useState(false)
 

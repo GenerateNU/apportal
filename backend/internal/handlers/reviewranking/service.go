@@ -8,11 +8,11 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 
 	"github.com/GenerateNU/apportal/backend/internal/access"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/GenerateNU/apportal/backend/internal/models"
-	"github.com/GenerateNU/apportal/backend/internal/pipeline"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 )
 
@@ -80,6 +80,9 @@ func (s *rankingService) manageOpening(ctx context.Context, cycleID, roleID stri
 }
 
 func (s *rankingService) requireReviewsIn(ctx context.Context, cycleID, roleID string) error {
+	if err := s.rules.Editable(ctx, cycleID, roleID); err != nil {
+		return err
+	}
 	in, err := s.rules.ReviewsIn(ctx, cycleID, roleID)
 	if err != nil {
 		return utils.StoreErr(err)
@@ -110,27 +113,34 @@ func (s *rankingService) manageApplication(ctx context.Context, applicationID st
 }
 
 func (s *rankingService) ranking(ctx context.Context, cycleID, roleID string) (models.ReviewRanking, error) {
-	apps, err := s.store.ListApplications(ctx, cycleID, roleID)
+	r, err := rankWith(ctx, s.store, cycleID, roleID)
+	if err != nil {
+		return models.ReviewRanking{}, err
+	}
+	if r.ReviewsIn, err = s.rules.ReviewsIn(ctx, cycleID, roleID); err != nil {
+		return models.ReviewRanking{}, utils.StoreErr(err)
+	}
+	return r, nil
+}
+
+func rankWith(ctx context.Context, store rankingStore, cycleID, roleID string) (models.ReviewRanking, error) {
+	apps, err := store.ListApplications(ctx, cycleID, roleID)
 	if err != nil {
 		return models.ReviewRanking{}, utils.StoreErr(err)
 	}
-	scores, err := s.store.ListScores(ctx, cycleID, roleID)
+	scores, err := store.ListScores(ctx, cycleID, roleID)
 	if err != nil {
 		return models.ReviewRanking{}, utils.StoreErr(err)
 	}
-	overrides, err := s.store.ListOverrides(ctx, cycleID, roleID)
+	overrides, err := store.ListOverrides(ctx, cycleID, roleID)
 	if err != nil {
 		return models.ReviewRanking{}, utils.StoreErr(err)
 	}
-	cutoff, err := s.store.GetCutoff(ctx, cycleID, roleID)
+	cutoff, err := store.GetCutoff(ctx, cycleID, roleID)
 	if err != nil {
 		return models.ReviewRanking{}, utils.StoreErr(err)
 	}
-	in, err := s.rules.ReviewsIn(ctx, cycleID, roleID)
-	if err != nil {
-		return models.ReviewRanking{}, utils.StoreErr(err)
-	}
-	return models.ReviewRanking{Cutoff: cutoff, ReviewsIn: in, Entries: Rank(apps, scores, cutoff, overrides)}, nil
+	return models.ReviewRanking{Cutoff: cutoff, Entries: Rank(apps, scores, cutoff, overrides)}, nil
 }
 
 func (s *rankingService) get(ctx context.Context, in *OpeningInput) (*RankingOutput, error) {
@@ -249,8 +259,7 @@ func (s *rankingService) advance(ctx context.Context, in *AdvanceInput) (*Advanc
 			return nil, err
 		}
 	}
-	a, err := s.manageOpening(ctx, in.ID, in.RoleID)
-	if err != nil {
+	if _, err := s.manageOpening(ctx, in.ID, in.RoleID); err != nil {
 		return nil, err
 	}
 	r, err := s.ranking(ctx, in.ID, in.RoleID)
@@ -264,7 +273,17 @@ func (s *rankingService) advance(ctx context.Context, in *AdvanceInput) (*Advanc
 	if err != nil {
 		return nil, err
 	}
-	moved, err := s.rules.Advance(ctx, in.ID, in.RoleID, ids, pipeline.Actor{NUID: utils.CurrentActor(ctx).NUID, Admin: a.Admin()})
+	verify := func(tx *gorm.DB) error {
+		current, err := rankWith(ctx, NewRankingDB(tx), in.ID, in.RoleID)
+		if err != nil {
+			return err
+		}
+		if _, err := shortlisted(current.Entries, ids); err != nil {
+			return huma.Error409Conflict("The shortlist changed while you were advancing it. Reload and try again.")
+		}
+		return nil
+	}
+	moved, err := s.rules.Advance(ctx, in.ID, in.RoleID, ids, verify)
 	if errors.Is(err, ErrNoNextStage) {
 		return nil, huma.Error409Conflict("This cycle has no enabled stage after review to move the shortlist into.")
 	}

@@ -3,6 +3,8 @@ package interviewboard
 import (
 	"time"
 
+	"github.com/GenerateNU/apportal/backend/internal/middleware"
+
 	"github.com/GenerateNU/apportal/backend/internal/models"
 )
 
@@ -40,10 +42,10 @@ type BoardOutput struct {
 }
 
 type AutoPlanInput struct {
+	middleware.DryRunQuery
 	ID   string `path:"id" doc:"Cycle ID"`
 	Body struct {
 		RoleIDs       []string `json:"role_ids,omitempty" maxItems:"50" doc:"Openings to plan; empty means all"`
-		DryRun        bool     `json:"dry_run,omitempty" doc:"Return the plan without saving it"`
 		ByPanel       bool     `json:"by_panel,omitempty" doc:"Give each unstaffed applicant one whole panel"`
 		MatchSlots    *bool    `json:"match_slots,omitempty" doc:"Prefer interviewers on a slot the applicant can make; defaults to the cycle's match_by_slot"`
 		WithRecording bool     `json:"with_recording,omitempty" doc:"Also plan recording reviewers, after interviewers"`

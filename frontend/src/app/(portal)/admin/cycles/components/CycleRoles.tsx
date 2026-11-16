@@ -11,9 +11,11 @@ import { RoleDialog } from './RoleDialog'
 export function CycleRoles({
   cycleId,
   roles,
+  canAdd = true,
 }: {
   cycleId: string
   roles: Role[]
+  canAdd?: boolean
 }) {
   // A role being edited, 'new' while creating, null while closed.
   const [editing, setEditing] = useState<Role | 'new' | null>(null)
@@ -25,7 +27,9 @@ export function CycleRoles({
       </span>
       {roles.length === 0 && (
         <span className="text-text-muted text-sm">
-          None yet — add one so this cycle can take applications.
+          {canAdd
+            ? 'None yet — add one so this cycle can take applications.'
+            : 'None yet.'}
         </span>
       )}
       {roles.map((role, i) => (
@@ -43,15 +47,17 @@ export function CycleRoles({
           />
         </button>
       ))}
-      <Button
-        variant="ghost"
-        size="sm"
-        className="h-6 px-2 text-xs"
-        onClick={() => setEditing('new')}
-      >
-        <Plus className="h-3 w-3" />
-        Add role
-      </Button>
+      {canAdd && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-6 px-2 text-xs"
+          onClick={() => setEditing('new')}
+        >
+          <Plus className="h-3 w-3" />
+          Add role
+        </Button>
+      )}
 
       <RoleDialog
         // Remount per role so the name field starts from that role.

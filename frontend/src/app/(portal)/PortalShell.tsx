@@ -19,8 +19,8 @@ export function PortalShell({
   children: React.ReactNode
 }) {
   const { data: currentUser } = useCurrentUser()
-  const roles = currentUser ? getRoles(currentUser) : []
-  const { isChief } = useStaffAccess()
+  const { isChief, isStaff } = useStaffAccess()
+  const roles = currentUser ? getRoles(currentUser, isStaff) : []
 
   const pathname = usePathname()
   const [navOpen, setNavOpen] = useState(false)

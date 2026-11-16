@@ -17,7 +17,11 @@ import { ApplicationsClient } from './components/ApplicationsClient'
 // this at build time (the backend isn't running then).
 export const dynamic = 'force-dynamic'
 
-export default async function ApplicationsPage() {
+export default async function ApplicationsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ cycle?: string }>
+}) {
   const queryClient = new QueryClient()
   const requestOptions = await getServerRequestOptions()
 
@@ -25,16 +29,21 @@ export default async function ApplicationsPage() {
   // then the application list scoped to the cycle and role it defaults to.
   // A prefetch under any other key (e.g. the unfiltered list) is a cache miss
   // the browser silently refetches, so it costs a round trip and saves none.
-  const [cycles, roles] = await Promise.all([
+  const [cycles, roles, { cycle: requested }] = await Promise.all([
     queryClient.fetchQuery({
       queryKey: queryKeys.cycles.list(),
       queryFn: async () =>
         ((await listCycles(undefined, requestOptions)) ?? []) as Cycle[],
     }),
     prefetchRoles(queryClient, requestOptions),
+    searchParams,
   ])
 
-  const cycleId = defaultApplicationsCycleId(cycles)
+  // The client may land elsewhere (its remembered cycle); that's just a miss.
+  const listed = cycles.filter((c) => c.status !== 'closed')
+  const cycleId = listed.some((c) => c.id === requested)
+    ? (requested ?? null)
+    : defaultApplicationsCycleId(listed)
   const roleIds = cycleId ? cycleRoleIds(roles, cycleId) : []
   if (cycleId && roleIds.length > 0) {
     // The table scrolls to load, so this has to be an infinite prefetch: a

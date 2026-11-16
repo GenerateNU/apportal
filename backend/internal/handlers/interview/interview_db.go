@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 
+	"github.com/GenerateNU/apportal/backend/internal/workflow"
+
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
@@ -67,7 +69,7 @@ func (i *InterviewDB) ListInterviewDetails(ctx context.Context, applicationIDs [
 		if list == nil {
 			list = []models.InterviewerDetail{}
 		}
-		out = append(out, models.InterviewDetail{Interview: iv, Interviewers: list})
+		out = append(out, models.InterviewDetail{Interview: iv, StepRef: workflow.Ref(models.StepInterviews), Interviewers: list})
 	}
 	return out, nil
 }

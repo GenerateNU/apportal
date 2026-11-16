@@ -3,8 +3,9 @@ package preferencelist
 import (
 	"context"
 
-	"github.com/GenerateNU/apportal/backend/internal/utils"
 	"github.com/danielgtaylor/huma/v2"
+
+	"github.com/GenerateNU/apportal/backend/internal/utils"
 )
 
 func (s *preferenceListService) createComment(ctx context.Context, in *CreatePreferenceListCommentInput) (*PreferenceListCommentOutput, error) {

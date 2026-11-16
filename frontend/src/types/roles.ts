@@ -2,13 +2,15 @@ import type { User } from '@/lib/api/types'
 
 export type Role = 'applicant' | 'reviewer' | 'admin'
 
-export function getRoles(user: User): Role[] {
+// Admin and applicant are global roles. Leads and chiefs live per cycle, so
+// the caller passes whether the user is on any cycle's staff.
+export function getRoles(user: Pick<User, 'roles'>, isStaff = false): Role[] {
   const roles = new Set<Role>()
   for (const role of user.roles) {
     if (role === 'admin') roles.add('admin')
     else if (role === 'applicant') roles.add('applicant')
-    else roles.add('reviewer') // member, lead, chief
   }
+  if (isStaff) roles.add('reviewer')
   return [...roles]
 }
 

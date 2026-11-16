@@ -17,8 +17,8 @@ import { useChiefPhases } from '@/components/nav/ChiefCycleNav'
 import { apiErrorDetail } from '@/lib/api/client'
 import { cycleAudience } from '@/lib/cycle-type'
 import { useMutation } from '@tanstack/react-query'
-import { closeCycle as closeCycleApi } from '@/generated/pipeline/pipeline'
-import { usePipelineMutations, type StepName } from '@/lib/queries/pipeline'
+import { closeCycle as closeCycleApi } from '@/generated/workflow/workflow'
+import { useWorkflowMutations, type StepName } from '@/lib/queries/workflow'
 
 const CHECKLIST: Record<string, string[]> = {
   applications: [
@@ -42,7 +42,7 @@ export function WrapUpClient() {
   const router = useRouter()
   const toast = useToast()
   const { scope, phases } = useChiefPhases()
-  const { complete: update } = usePipelineMutations(scope.cycleId)
+  const { complete: update } = useWorkflowMutations(scope.cycleId)
 
   const index = phases.findIndex((p) => p.key === stageKey)
   const phase = phases[index]

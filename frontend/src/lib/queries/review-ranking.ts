@@ -81,7 +81,7 @@ export function useAdvanceShortlist(cycleId: string, roleId: string) {
       for (const key of [
         queryKeys.applications.all,
         queryKeys.reviewRanking.all,
-        queryKeys.pipeline.all,
+        queryKeys.workflow.all,
       ])
         queryClient.invalidateQueries({ queryKey: key })
     },

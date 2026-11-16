@@ -110,7 +110,7 @@ export function ApplicationsClient() {
 
       {cycles.length === 0 ? (
         <p className="text-text-faint px-1 text-sm">
-          No cycles yet — create one from the Cycles page.
+          No cycles yet — create one from a branch on the Branches page.
         </p>
       ) : openCycles.length === 0 && draftCycles.length === 0 ? (
         <p className="text-text-faint px-1 text-sm">

@@ -17,8 +17,8 @@ import {
   type StepName,
   stepConfig,
   useCycleSteps,
-  usePipelineMutations,
-} from '@/lib/queries/pipeline'
+  useWorkflowMutations,
+} from '@/lib/queries/workflow'
 import { useCreateRole, useDeleteRole } from '@/lib/queries/roles'
 import { cn } from '@/lib/utils'
 import { GroupsGrid, StaffingTable } from '../../components/PositionTeams'
@@ -214,7 +214,7 @@ function PositionsSection({ scope }: { scope: CycleScope }) {
 
 function PipelineSection({ cycleId }: { cycleId: string }) {
   const { data: steps = [], isLoading } = useCycleSteps(cycleId)
-  const m = usePipelineMutations(cycleId)
+  const m = useWorkflowMutations(cycleId)
   const toast = useToast()
   const busy = m.setEnabled.isPending || m.setPerApplicant.isPending
 

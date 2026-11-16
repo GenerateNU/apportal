@@ -26,12 +26,12 @@ export const CYCLE_STATUS: Record<
   },
 }
 
-export const CYCLE_STATUS_ORDER: CycleStatus[] = [
-  'draft',
-  'open',
-  'closed',
-  'archived',
-]
+// Open and close come from the cycle's workflow; here a closed cycle can only be archived or restored.
+export function statusChoices(current: CycleStatus): CycleStatus[] {
+  return current === 'closed' || current === 'archived'
+    ? ['closed', 'archived']
+    : [current]
+}
 
 // application_type is a separate enum from applicant role (member/lead/chief).
 export const APPLICATION_TYPES = [

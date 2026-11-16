@@ -11,17 +11,19 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/GenerateNU/apportal/backend/internal/staffing"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
+	"github.com/GenerateNU/apportal/backend/internal/workflow"
 )
 
 type staffGroupService struct {
-	gate   access.Gate
-	db     *gorm.DB
-	groups *StaffGroupDB
-	roleDB *role.RoleDB
+	gate     access.Gate
+	db       *gorm.DB
+	groups   *StaffGroupDB
+	roleDB   *role.RoleDB
+	workflow *workflow.Service
 }
 
 func newService(gate access.Gate, db *gorm.DB) *staffGroupService {
-	return &staffGroupService{gate: gate, db: db, groups: NewStaffGroupDB(db), roleDB: role.NewRoleDB(db)}
+	return &staffGroupService{gate: gate, db: db, groups: NewStaffGroupDB(db), roleDB: role.NewRoleDB(db), workflow: workflow.NewService(db)}
 }
 
 func (s *staffGroupService) manage(ctx context.Context, cycleID string, ids ...string) error {
@@ -97,8 +99,25 @@ func (s *staffGroupService) rename(ctx context.Context, in *RenameGroupInput) (*
 	return s.get(ctx, in.ID, in.GroupID)
 }
 
+// membership changes who is eligible on every opening team using the group, so it is that team's setup.
+func (s *staffGroupService) editMembers(ctx context.Context, cycleID, groupID string) error {
+	teams, err := s.groups.TeamsUsing(ctx, cycleID, groupID)
+	if err != nil {
+		return utils.StoreErr(err)
+	}
+	for _, t := range teams {
+		if err := s.workflow.RequireSetupEditable(ctx, cycleID, t.RoleID, staffing.TeamOf(t.Kind)); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (s *staffGroupService) remove(ctx context.Context, in *GroupPathInput) (*struct{}, error) {
 	if err := s.manage(ctx, in.ID, "group_id", in.GroupID); err != nil {
+		return nil, err
+	}
+	if err := s.editMembers(ctx, in.ID, in.GroupID); err != nil {
 		return nil, err
 	}
 	if err := s.groups.Delete(ctx, in.ID, in.GroupID); err != nil {
@@ -117,6 +136,9 @@ func (s *staffGroupService) addMember(ctx context.Context, in *MemberPathInput) 
 	if err := RequireStaff(ctx, s.db, in.ID, []string{in.NUID}); err != nil {
 		return nil, err
 	}
+	if err := s.editMembers(ctx, in.ID, in.GroupID); err != nil {
+		return nil, err
+	}
 	if err := s.groups.AddMember(ctx, in.GroupID, in.NUID); err != nil {
 		return nil, utils.StoreErr(err)
 	}
@@ -125,6 +147,9 @@ func (s *staffGroupService) addMember(ctx context.Context, in *MemberPathInput) 
 
 func (s *staffGroupService) removeMember(ctx context.Context, in *MemberPathInput) (*struct{}, error) {
 	if err := s.manage(ctx, in.ID, "group_id", in.GroupID); err != nil {
+		return nil, err
+	}
+	if err := s.editMembers(ctx, in.ID, in.GroupID); err != nil {
 		return nil, err
 	}
 	if err := s.groups.RemoveMember(ctx, in.ID, in.GroupID, in.NUID); err != nil {
@@ -164,6 +189,9 @@ func (s *staffGroupService) setTeam(ctx context.Context, in *SetOpeningTeamInput
 	}
 	if !ok {
 		return nil, huma.Error422UnprocessableEntity("group_ids must be groups in this cycle")
+	}
+	if err := s.workflow.RequireSetupEditable(ctx, in.ID, in.RoleID, staffing.TeamOf(in.Kind)); err != nil {
+		return nil, err
 	}
 	if err := s.groups.SetTeam(ctx, in.ID, in.RoleID, in.Kind, groupIDs); err != nil {
 		return nil, utils.StoreErr(err)

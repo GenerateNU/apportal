@@ -18,9 +18,18 @@ func NewLeadAssignmentDB(db *gorm.DB) *LeadAssignmentDB {
 	return &LeadAssignmentDB{db: db}
 }
 
-func (l *LeadAssignmentDB) CreateLeadAssignment(ctx context.Context, applicationID, leadNUID, assignedBy string) (models.LeadAssignment, error) {
+type Check func(tx *gorm.DB) error
+
+type RemoveCheck func(tx *gorm.DB, applicationID string) error
+
+func (l *LeadAssignmentDB) Assign(ctx context.Context, applicationID, leadNUID, assignedBy string, check Check) (models.LeadAssignment, error) {
 	assignment := models.LeadAssignment{ApplicationID: applicationID, LeadNUID: leadNUID, AssignedBy: assignedBy}
-	err := utils.Insert(l.db.WithContext(ctx), &assignment, "application_id", "lead_nuid", "assigned_by")
+	err := l.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := check(tx); err != nil {
+			return err
+		}
+		return utils.Insert(tx, &assignment, "application_id", "lead_nuid", "assigned_by")
+	})
 	return assignment, err
 }
 
@@ -46,25 +55,18 @@ func (l *LeadAssignmentDB) CreateLeadAssignments(ctx context.Context, pairs []Le
 	return int(res.RowsAffected), res.Error
 }
 
-// ListLeadAssignmentsForCycle returns every assignment for one role in a
-// cycle, so the planner can seed loads and coverage in one query.
-func (l *LeadAssignmentDB) ListLeadAssignmentsForCycle(ctx context.Context, cycleID string, role string) ([]models.LeadAssignment, error) {
-	assignments := []models.LeadAssignment{}
-	err := l.db.WithContext(ctx).Table("lead_assignments la").
-		Select("la.*").
-		Joins("JOIN applications a ON a.id = la.application_id").
-		Where("a.cycle_id = ? AND a.role_id = ?", cycleID, role).
-		Order("la.assigned_at").Order("la.id").
-		Find(&assignments).Error
-	return assignments, err
-}
-
-// DeleteLeadAssignmentsForCycle clears one role's assignments in a cycle, for
-// a chief undoing a bad run, and returns how many were removed. Reviewers who
-// already submitted keep their assignment.
-func (l *LeadAssignmentDB) DeleteLeadAssignmentsForCycle(ctx context.Context, cycleID string, role string) (int, error) {
-	res := deleteUnsubmittedQuery(l.db.WithContext(ctx), cycleID, role).Delete(&models.LeadAssignment{})
-	return int(res.RowsAffected), res.Error
+// UnassignUnsubmitted clears one opening's assignments, keeping reviewers who already submitted.
+func (l *LeadAssignmentDB) UnassignUnsubmitted(ctx context.Context, cycleID, roleID string, check Check) (int, error) {
+	deleted := 0
+	err := l.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := check(tx); err != nil {
+			return err
+		}
+		res := deleteUnsubmittedQuery(tx, cycleID, roleID).Delete(&models.LeadAssignment{})
+		deleted = int(res.RowsAffected)
+		return res.Error
+	})
+	return deleted, err
 }
 
 func deleteUnsubmittedQuery(db *gorm.DB, cycleID, role string) *gorm.DB {
@@ -89,13 +91,21 @@ func (l *LeadAssignmentDB) ListReviewerProgressForCycle(ctx context.Context, cyc
 	return rows, err
 }
 
-func (l *LeadAssignmentDB) DeleteLeadAssignment(ctx context.Context, id string) error {
-	res := l.db.WithContext(ctx).Where("id = ?", id).Delete(&models.LeadAssignment{})
-	if res.Error != nil {
-		return res.Error
-	}
-	if res.RowsAffected == 0 {
-		return utils.ErrNotFound
-	}
-	return nil
+func (l *LeadAssignmentDB) Unassign(ctx context.Context, id string, check RemoveCheck) error {
+	return l.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var app string
+		if err := tx.Model(&models.LeadAssignment{}).Select("application_id").Where("id = ?", id).Take(&app).Error; err != nil {
+			return utils.DBErr(err)
+		}
+		if err := check(tx, app); err != nil {
+			return err
+		}
+		return tx.Where("id = ?", id).Delete(&models.LeadAssignment{}).Error
+	})
+}
+
+func (l *LeadAssignmentDB) RoleInCycle(ctx context.Context, cycleID, roleID string) (bool, error) {
+	var n int64
+	err := l.db.WithContext(ctx).Model(&models.Role{}).Where("id = ? AND cycle_id = ?", roleID, cycleID).Count(&n).Error
+	return n > 0, err
 }

@@ -182,10 +182,11 @@ export function useAutoAssign(cycleId: string) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (vars: { roleIds?: string[]; dryRun: boolean }) =>
-      (await autoAssignReviewers(cycleId, {
-        role_ids: vars.roleIds,
-        dry_run: vars.dryRun,
-      })) as AutoAssignPlan,
+      (await autoAssignReviewers(
+        cycleId,
+        { role_ids: vars.roleIds },
+        { dry_run: vars.dryRun }
+      )) as AutoAssignPlan,
     onSuccess: (_, vars) => {
       if (vars.dryRun) return
       for (const key of [

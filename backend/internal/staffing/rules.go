@@ -5,19 +5,25 @@ import (
 
 	"gorm.io/gorm"
 
-	"github.com/GenerateNU/apportal/backend/internal/middleware"
 	"github.com/GenerateNU/apportal/backend/internal/models"
-	"github.com/GenerateNU/apportal/backend/internal/pipeline"
+	"github.com/GenerateNU/apportal/backend/internal/workflow"
 )
 
-// Released and Frozen are per role, for the interviews step; a zero limit means the count isn't set.
+// Permissions holds, per kind and opening, whether adding (or removing) someone is blocked.
+type Permissions map[models.StepKind]map[string]error
+
+func (p Permissions) Of(kind models.StepKind, roleID string) error { return p[kind][roleID] }
+
+// Policy is everything the workflow says about staffing a cycle. A zero limit means the count isn't set; Record audits a
+// change that goes ahead as an override.
 type Policy struct {
-	Limits   map[models.StepKind]int
-	Released map[string]bool
-	Frozen   map[string]error
+	Limits  map[models.StepKind]int
+	Adds    Permissions
+	Removes Permissions
+	Record  func(tx *gorm.DB, roleID string, kind models.StepKind, remove bool) error
 }
 
-type InterviewRules interface {
+type StaffingRules interface {
 	Load(ctx context.Context, db *gorm.DB, cycleID string) (Policy, error)
 }
 
@@ -53,37 +59,49 @@ func (StoredConflicts) Conflicted(ctx context.Context, db *gorm.DB, cycleID stri
 	return out, nil
 }
 
-type PipelineRules struct{}
+type WorkflowRules struct{}
 
-func (PipelineRules) Load(ctx context.Context, db *gorm.DB, cycleID string) (Policy, error) {
-	f, err := pipeline.Load(db, cycleID)
+func (WorkflowRules) Load(ctx context.Context, db *gorm.DB, cycleID string) (Policy, error) {
+	f, err := workflow.Load(db, cycleID)
 	if err != nil {
 		return Policy{}, err
 	}
-	return PolicyFrom(f, isAdmin(ctx)), nil
+	caller, err := workflow.CallerOn(ctx, db, cycleID)
+	if err != nil {
+		return Policy{}, err
+	}
+	return PolicyFrom(f, caller), nil
 }
 
-var kindStep = map[models.StepKind]models.Step{
-	models.KindReviewer:          models.StepReviews,
-	models.KindInterviewer:       models.StepInterviews,
-	models.KindRecordingReviewer: models.StepInterviews,
+func TeamOf(kind models.StepKind) workflow.Work {
+	if kind == models.KindReviewer {
+		return workflow.SetupReviewTeam
+	}
+	return workflow.SetupInterviewTeam
 }
 
-func PolicyFrom(f *pipeline.Facts, admin bool) Policy {
-	p := Policy{Limits: map[models.StepKind]int{}, Released: map[string]bool{}, Frozen: map[string]error{}}
+func WorkOf(kind models.StepKind) workflow.Work {
+	if kind == models.KindReviewer {
+		return workflow.WorkReviewAssignment
+	}
+	return workflow.WorkInterviewAssignment
+}
+
+func PolicyFrom(f *workflow.CycleState, actor workflow.Caller) Policy {
+	p := Policy{Limits: map[models.StepKind]int{}, Adds: Permissions{}, Removes: Permissions{}}
 	for _, k := range models.StaffKinds {
-		if s := kindStep[k]; f.Enabled[s] {
+		w := WorkOf(k)
+		if s := workflow.StepOf(w); f.Enabled[s] {
 			p.Limits[k] = f.Assignments[s][k]
 		}
+		p.Adds[k], p.Removes[k] = map[string]error{}, map[string]error{}
+		for _, o := range f.Openings {
+			p.Adds[k][o.RoleID] = f.AssignmentPermission(actor, w, o.RoleID, false)
+			p.Removes[k][o.RoleID] = f.AssignmentPermission(actor, w, o.RoleID, true)
+		}
 	}
-	for _, o := range f.Openings {
-		p.Released[o.RoleID] = f.Released(o.RoleID, models.StepInterviews)
-		p.Frozen[o.RoleID] = f.Lock(pipeline.Action{Op: pipeline.OpAssign, Step: models.StepInterviews, RoleID: o.RoleID, Admin: admin})
+	p.Record = func(tx *gorm.DB, roleID string, kind models.StepKind, remove bool) error {
+		return workflow.Authorize(tx, f, f.AssignmentOp(actor, WorkOf(kind), roleID, remove))
 	}
 	return p
-}
-
-func isAdmin(ctx context.Context) bool {
-	actor, _ := middleware.ActorFrom(ctx)
-	return actor.HasRole(models.UserRoleAdmin)
 }

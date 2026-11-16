@@ -123,11 +123,14 @@ components:
           type:
             - array
             - "null"
-        pipeline:
-          $ref: "#/components/schemas/View"
+        preview:
+          $ref: "#/components/schemas/Preview"
+        workflow:
+          $ref: "#/components/schemas/Overview"
       required:
         - moved_application_ids
-        - pipeline
+        - workflow
+        - preview
       type: object
     Applicant:
       additionalProperties: false
@@ -500,57 +503,6 @@ components:
         - full_name
         - available
       type: object
-    AssignmentPlanPreview:
-      additionalProperties: false
-      properties:
-        $schema:
-          description: A URL to the JSON Schema for this object.
-          examples:
-            - https://example.com/schemas/AssignmentPlanPreview.json
-          format: uri
-          readOnly: true
-          type: string
-        coverage:
-          format: int64
-          type: integer
-        coverage_counts:
-          additionalProperties:
-            format: int64
-            type: integer
-          type: object
-        leads:
-          items:
-            $ref: "#/components/schemas/PlannedLead"
-          type:
-            - array
-            - "null"
-        pool_size:
-          format: int64
-          type: integer
-        total_added:
-          format: int64
-          type: integer
-        under_covered:
-          items:
-            $ref: "#/components/schemas/PlannedApplication"
-          type:
-            - array
-            - "null"
-        warnings:
-          items:
-            type: string
-          type:
-            - array
-            - "null"
-      required:
-        - pool_size
-        - coverage
-        - leads
-        - coverage_counts
-        - under_covered
-        - warnings
-        - total_added
-      type: object
     AssignmentView:
       additionalProperties: false
       properties:
@@ -560,6 +512,7 @@ components:
             - reviewer
             - interviewer
             - recording_reviewer
+            - preference_list
           type: string
         per_applicant:
           format: int64
@@ -578,9 +531,6 @@ components:
           format: uri
           readOnly: true
           type: string
-        dry_run:
-          description: Plan without saving
-          type: boolean
         role_ids:
           description: Openings to assign; empty means every opening. Load from the others still counts toward balance
           items:
@@ -698,9 +648,6 @@ components:
         by_panel:
           description: Give each unstaffed applicant one whole panel
           type: boolean
-        dry_run:
-          description: Return the plan without saving it
-          type: boolean
         match_slots:
           description: Prefer interviewers on a slot the applicant can make; defaults to the cycle's match_by_slot
           type: boolean
@@ -807,103 +754,6 @@ components:
         - id
         - name
         - created_at
-      type: object
-    Capacity:
-      additionalProperties: false
-      properties:
-        $schema:
-          description: A URL to the JSON Schema for this object.
-          examples:
-            - https://example.com/schemas/Capacity.json
-          format: uri
-          readOnly: true
-          type: string
-        applications:
-          format: int64
-          type: integer
-        coverage:
-          format: int64
-          type: integer
-        even_split:
-          format: int64
-          type: integer
-        feasible:
-          type: boolean
-        leads:
-          format: int64
-          type: integer
-        max_coverage:
-          format: int64
-          type: integer
-        min_cap:
-          format: int64
-          type: integer
-        notes:
-          items:
-            type: string
-          type:
-            - array
-            - "null"
-        per_lead_at_suggested:
-          format: int64
-          type: integer
-        required_slots:
-          format: int64
-          type: integer
-        suggested_cap:
-          format: int64
-          type: integer
-        teams:
-          format: int64
-          type: integer
-      required:
-        - applications
-        - teams
-        - leads
-        - coverage
-        - required_slots
-        - max_coverage
-        - feasible
-        - min_cap
-        - suggested_cap
-        - even_split
-        - per_lead_at_suggested
-        - notes
-      type: object
-    CapacityInputBody:
-      additionalProperties: false
-      properties:
-        $schema:
-          description: A URL to the JSON Schema for this object.
-          examples:
-            - https://example.com/schemas/CapacityInputBody.json
-          format: uri
-          readOnly: true
-          type: string
-        coverage:
-          description: How many distinct leads should review each application
-          format: int64
-          minimum: 1
-          type: integer
-        excluded_application_ids:
-          items:
-            type: string
-          type:
-            - array
-            - "null"
-        role_id:
-          description: Applicant role whose pool is being planned
-          type: string
-        teams:
-          items:
-            $ref: "#/components/schemas/PlanTeam"
-          type:
-            - array
-            - "null"
-      required:
-        - role_id
-        - teams
-        - coverage
       type: object
     ChallengeAttempt:
       additionalProperties: false
@@ -1048,6 +898,16 @@ components:
           type: string
         reviewer_nuid:
           type: string
+        step:
+          enum:
+            - applications
+            - reviews
+            - interviews
+            - decisions
+            - feedback
+          type: string
+        step_label:
+          type: string
         updated_at:
           format: date-time
           type: string
@@ -1065,6 +925,26 @@ components:
         - reviewer_nuid
         - created_at
         - updated_at
+        - step
+        - step_label
+      type: object
+    CloseResult:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/CloseResult.json
+          format: uri
+          readOnly: true
+          type: string
+        cycle:
+          $ref: "#/components/schemas/Cycle"
+        preview:
+          $ref: "#/components/schemas/Preview"
+      required:
+        - cycle
+        - preview
       type: object
     CodeChallenge:
       additionalProperties: false
@@ -1135,25 +1015,6 @@ components:
         - challenge_id
         - submission_url
         - submitted_at
-      type: object
-    CommitPlanOutputBody:
-      additionalProperties: false
-      properties:
-        $schema:
-          description: A URL to the JSON Schema for this object.
-          examples:
-            - https://example.com/schemas/CommitPlanOutputBody.json
-          format: uri
-          readOnly: true
-          type: string
-        created:
-          format: int64
-          type: integer
-        plan:
-          $ref: "#/components/schemas/AssignmentPlanPreview"
-      required:
-        - created
-        - plan
       type: object
     Conflict:
       additionalProperties: false
@@ -1295,13 +1156,6 @@ components:
           type: string
         opens_at:
           format: date-time
-          type: string
-        status:
-          enum:
-            - draft
-            - open
-            - closed
-            - archived
           type: string
       required:
         - branch_id
@@ -1805,6 +1659,7 @@ components:
             - reviewer
             - interviewer
             - recording_reviewer
+            - preference_list
           type: string
         late_count:
           format: int64
@@ -2416,6 +2271,16 @@ components:
         scheduled_at:
           format: date-time
           type: string
+        step:
+          enum:
+            - applications
+            - reviews
+            - interviews
+            - decisions
+            - feedback
+          type: string
+        step_label:
+          type: string
         submitted_at:
           format: date-time
           type: string
@@ -2430,6 +2295,8 @@ components:
         - application_id
         - created_at
         - updated_at
+        - step
+        - step_label
       type: object
     InterviewPanelDetail:
       additionalProperties: false
@@ -2565,6 +2432,16 @@ components:
           type: string
         reviewer_nuid:
           type: string
+        step:
+          enum:
+            - applications
+            - reviews
+            - interviews
+            - decisions
+            - feedback
+          type: string
+        step_label:
+          type: string
         writeup:
           type: string
         writeup_submitted_at:
@@ -2577,6 +2454,8 @@ components:
         - reviewer_nuid
         - assigned_by
         - assigned_at
+        - step
+        - step_label
       type: object
     InterviewScript:
       additionalProperties: false
@@ -2837,54 +2716,6 @@ components:
         - position
         - created_at
       type: object
-    MyPipeline:
-      additionalProperties: false
-      properties:
-        $schema:
-          description: A URL to the JSON Schema for this object.
-          examples:
-            - https://example.com/schemas/MyPipeline.json
-          format: uri
-          readOnly: true
-          type: string
-        current_step:
-          enum:
-            - applications
-            - reviews
-            - interviews
-            - decisions
-            - feedback
-          type: string
-        next_actions:
-          items:
-            $ref: "#/components/schemas/NextAction"
-          type:
-            - array
-            - "null"
-        role:
-          enum:
-            - admin
-            - chief
-            - lead
-          type: string
-        steps:
-          items:
-            $ref: "#/components/schemas/StepView"
-          type:
-            - array
-            - "null"
-        tasks:
-          items:
-            $ref: "#/components/schemas/Task"
-          type:
-            - array
-            - "null"
-      required:
-        - role
-        - steps
-        - next_actions
-        - tasks
-      type: object
     NextAction:
       additionalProperties: false
       properties:
@@ -2896,6 +2727,7 @@ components:
             - reviewer
             - interviewer
             - recording_reviewer
+            - preference_list
           type: string
         kind:
           enum:
@@ -2904,10 +2736,14 @@ components:
             - advance
             - complete
             - waiting
+            - prepare
           type: string
         label:
           type: string
         role_id:
+          type: string
+        setup:
+          description: "For prepare: which setup is missing"
           type: string
         step:
           enum:
@@ -2965,6 +2801,7 @@ components:
             - reviewer
             - interviewer
             - recording_reviewer
+            - preference_list
           type: string
         role_id:
           type: string
@@ -3005,6 +2842,50 @@ components:
         - applicant_count
         - deadlines
       type: object
+    Overview:
+      additionalProperties: false
+      properties:
+        current_step:
+          enum:
+            - applications
+            - reviews
+            - interviews
+            - decisions
+            - feedback
+          type: string
+        cycle_id:
+          type: string
+        next_actions:
+          items:
+            $ref: "#/components/schemas/NextAction"
+          type:
+            - array
+            - "null"
+        role:
+          enum:
+            - admin
+            - chief
+            - lead
+          type: string
+        steps:
+          items:
+            $ref: "#/components/schemas/StepView"
+          type:
+            - array
+            - "null"
+        tasks:
+          items:
+            $ref: "#/components/schemas/Task"
+          type:
+            - array
+            - "null"
+      required:
+        - cycle_id
+        - role
+        - steps
+        - next_actions
+        - tasks
+      type: object
     PanelMember:
       additionalProperties: false
       properties:
@@ -3015,6 +2896,25 @@ components:
       required:
         - user_nuid
         - full_name
+      type: object
+    PermissionResult:
+      additionalProperties: false
+      properties:
+        allowed:
+          type: boolean
+        level:
+          enum:
+            - normal
+            - override
+            - destructive
+          type: string
+        needs_confirm:
+          type: boolean
+        reason:
+          type: string
+      required:
+        - allowed
+        - level
       type: object
     PlanLoad:
       additionalProperties: false
@@ -3033,6 +2933,7 @@ components:
             - reviewer
             - interviewer
             - recording_reviewer
+            - preference_list
           type: string
         nuid:
           type: string
@@ -3042,44 +2943,6 @@ components:
         - kind
         - existing
         - added
-      type: object
-    PlanTeam:
-      additionalProperties: false
-      properties:
-        lead_nuids:
-          description: NUIDs of the leads on this team
-          items:
-            type: string
-          minItems: 1
-          type:
-            - array
-            - "null"
-        name:
-          description: Display name for the team
-          type: string
-      required:
-        - name
-        - lead_nuids
-      type: object
-    PlannedApplication:
-      additionalProperties: false
-      properties:
-        already_assigned:
-          type: boolean
-        applicant_nuid:
-          type: string
-        application_id:
-          type: string
-        email:
-          type: string
-        full_name:
-          type: string
-      required:
-        - application_id
-        - applicant_nuid
-        - full_name
-        - email
-        - already_assigned
       type: object
     PlannedAssignment:
       additionalProperties: false
@@ -3094,6 +2957,7 @@ components:
             - reviewer
             - interviewer
             - recording_reviewer
+            - preference_list
           type: string
         nuid:
           type: string
@@ -3105,43 +2969,6 @@ components:
         - nuid
         - full_name
       type: object
-    PlannedLead:
-      additionalProperties: false
-      properties:
-        added:
-          format: int64
-          type: integer
-        applications:
-          items:
-            $ref: "#/components/schemas/PlannedApplication"
-          type:
-            - array
-            - "null"
-        cap:
-          format: int64
-          type: integer
-        existing:
-          format: int64
-          type: integer
-        full_name:
-          type: string
-        lead_nuid:
-          type: string
-        team_name:
-          type: string
-        total:
-          format: int64
-          type: integer
-      required:
-        - lead_nuid
-        - full_name
-        - team_name
-        - cap
-        - existing
-        - added
-        - total
-        - applications
-      type: object
     PlannedPair:
       additionalProperties: false
       properties:
@@ -3152,47 +2979,6 @@ components:
       required:
         - application_id
         - lead_nuid
-      type: object
-    PoolApplicant:
-      additionalProperties: false
-      properties:
-        application_id:
-          type: string
-        email:
-          type: string
-        full_name:
-          type: string
-      required:
-        - application_id
-        - full_name
-        - email
-      type: object
-    PoolOutputBody:
-      additionalProperties: false
-      properties:
-        $schema:
-          description: A URL to the JSON Schema for this object.
-          examples:
-            - https://example.com/schemas/PoolOutputBody.json
-          format: uri
-          readOnly: true
-          type: string
-        applicants:
-          items:
-            $ref: "#/components/schemas/PoolApplicant"
-          type:
-            - array
-            - "null"
-        lead_count:
-          format: int64
-          type: integer
-        pool_size:
-          format: int64
-          type: integer
-      required:
-        - pool_size
-        - lead_count
-        - applicants
       type: object
     PreferenceList:
       additionalProperties: false
@@ -3268,36 +3054,6 @@ components:
         - author_nuid
         - body
         - created_at
-        - updated_at
-      type: object
-    PreferenceListDeadline:
-      additionalProperties: false
-      properties:
-        $schema:
-          description: A URL to the JSON Schema for this object.
-          examples:
-            - https://example.com/schemas/PreferenceListDeadline.json
-          format: uri
-          readOnly: true
-          type: string
-        closes_at:
-          format: date-time
-          type: string
-        cycle_id:
-          type: string
-        id:
-          type: string
-        role_id:
-          type: string
-        updated_at:
-          format: date-time
-          type: string
-        updated_by:
-          type: string
-      required:
-        - id
-        - cycle_id
-        - role_id
         - updated_at
       type: object
     PreferenceListDetail:
@@ -3609,50 +3365,58 @@ components:
         - created_at
         - updated_at
       type: object
-    PreviewPlanInputBody:
+    Preview:
       additionalProperties: false
       properties:
-        $schema:
-          description: A URL to the JSON Schema for this object.
-          examples:
-            - https://example.com/schemas/PreviewPlanInputBody.json
-          format: uri
-          readOnly: true
-          type: string
-        cap:
-          description: Maximum applications per lead
-          format: int64
-          minimum: 1
-          type: integer
-        cap_overrides:
-          additionalProperties:
-            format: int64
-            type: integer
-          description: Per-lead cap overrides, keyed by NUID
-          type: object
-        coverage:
-          format: int64
-          minimum: 1
-          type: integer
-        excluded_application_ids:
+        applied:
+          type: boolean
+        changes:
+          items:
+            $ref: "#/components/schemas/PreviewItem"
+          type:
+            - array
+            - "null"
+        decision:
+          $ref: "#/components/schemas/PermissionResult"
+        kept:
+          items:
+            $ref: "#/components/schemas/PreviewItem"
+          type:
+            - array
+            - "null"
+        summary:
           items:
             type: string
           type:
             - array
             - "null"
-        role_id:
-          type: string
-        teams:
-          items:
-            $ref: "#/components/schemas/PlanTeam"
-          type:
-            - array
-            - "null"
+        unchanged:
+          description: Nothing to do; the cycle is already in that state
+          type: boolean
       required:
-        - role_id
-        - teams
-        - coverage
-        - cap
+        - decision
+        - summary
+        - changes
+        - kept
+        - applied
+      type: object
+    PreviewItem:
+      additionalProperties: false
+      properties:
+        applicant:
+          type: string
+        application_id:
+          type: string
+        detail:
+          type: string
+        id:
+          type: string
+        kind:
+          type: string
+        person:
+          type: string
+      required:
+        - kind
       type: object
     PutCutoffInputBody:
       additionalProperties: false
@@ -3961,13 +3725,6 @@ components:
     ReviewGate:
       additionalProperties: false
       properties:
-        $schema:
-          description: A URL to the JSON Schema for this object.
-          examples:
-            - https://example.com/schemas/ReviewGate.json
-          format: uri
-          readOnly: true
-          type: string
         assigned_count:
           format: int64
           type: integer
@@ -3994,6 +3751,28 @@ components:
         - assigned_count
         - submitted_count
         - released
+      type: object
+    ReviewGatesChangeOutputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/ReviewGatesChangeOutputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        gates:
+          items:
+            $ref: "#/components/schemas/ReviewGate"
+          type:
+            - array
+            - "null"
+        preview:
+          $ref: "#/components/schemas/Preview"
+      required:
+        - gates
+        - preview
       type: object
     ReviewQuestion:
       additionalProperties: false
@@ -4333,19 +4112,29 @@ components:
       required:
         - group_ids
       type: object
-    SetPreferenceListDeadlineInputBody:
+    SetPeerReleaseInputBody:
       additionalProperties: false
       properties:
         $schema:
           description: A URL to the JSON Schema for this object.
           examples:
-            - https://example.com/schemas/SetPreferenceListDeadlineInputBody.json
+            - https://example.com/schemas/SetPeerReleaseInputBody.json
           format: uri
           readOnly: true
           type: string
-        closes_at:
-          format: date-time
+        kind:
+          description: "Review kind: written or recording"
           type: string
+        released:
+          description: True shows reviewers each other's reviews; false hides them again
+          type: boolean
+        role_id:
+          description: Applicant role ID
+          type: string
+      required:
+        - role_id
+        - kind
+        - released
       type: object
     SetPreferenceListMeetingDayInputBody:
       additionalProperties: false
@@ -4360,30 +4149,6 @@ components:
         meeting_day:
           description: monday, tuesday, wednesday, or thursday; omit/null to clear
           type: string
-      type: object
-    SetReviewReleaseInputBody:
-      additionalProperties: false
-      properties:
-        $schema:
-          description: A URL to the JSON Schema for this object.
-          examples:
-            - https://example.com/schemas/SetReviewReleaseInputBody.json
-          format: uri
-          readOnly: true
-          type: string
-        kind:
-          description: "Review kind: written or recording"
-          type: string
-        released:
-          description: True releases reviews to all reviewers; false hides them again
-          type: boolean
-        role_id:
-          description: Applicant role ID
-          type: string
-      required:
-        - role_id
-        - kind
-        - released
       type: object
     SetStaffInputBody:
       additionalProperties: false
@@ -4563,6 +4328,28 @@ components:
         - assignments
         - openings
       type: object
+    StepsChangeOutputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/StepsChangeOutputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        preview:
+          $ref: "#/components/schemas/Preview"
+        steps:
+          items:
+            $ref: "#/components/schemas/StepConfig"
+          type:
+            - array
+            - "null"
+      required:
+        - steps
+        - preview
+      type: object
     Task:
       additionalProperties: false
       properties:
@@ -4653,17 +4440,20 @@ components:
           format: uri
           readOnly: true
           type: string
-        pipeline:
-          $ref: "#/components/schemas/View"
+        preview:
+          $ref: "#/components/schemas/Preview"
         restored_application_ids:
           items:
             type: string
           type:
             - array
             - "null"
+        workflow:
+          $ref: "#/components/schemas/Overview"
       required:
         - restored_application_ids
-        - pipeline
+        - workflow
+        - preview
       type: object
     UpdateApplicationInputBody:
       additionalProperties: false
@@ -4704,29 +4494,9 @@ components:
           format: uri
           readOnly: true
           type: string
-        closes_at:
-          format: date-time
-          type: string
         description:
           type: string
         instructions:
-          type: string
-        review_closes_at:
-          format: date-time
-          type: string
-        review_status:
-          enum:
-            - draft
-            - open
-            - closed
-            - archived
-          type: string
-        status:
-          enum:
-            - draft
-            - open
-            - closed
-            - archived
           type: string
         title:
           type: string
@@ -4801,6 +4571,7 @@ components:
           format: date-time
           type: string
         status:
+          description: Only archived (from closed) or closed (from archived)
           enum:
             - draft
             - open
@@ -5365,13 +5136,13 @@ components:
         - users
         - has_more
       type: object
-    View:
+    WorkflowChange:
       additionalProperties: false
       properties:
         $schema:
           description: A URL to the JSON Schema for this object.
           examples:
-            - https://example.com/schemas/View.json
+            - https://example.com/schemas/WorkflowChange.json
           format: uri
           readOnly: true
           type: string
@@ -5385,15 +5156,39 @@ components:
           type: string
         cycle_id:
           type: string
+        next_actions:
+          items:
+            $ref: "#/components/schemas/NextAction"
+          type:
+            - array
+            - "null"
+        preview:
+          $ref: "#/components/schemas/Preview"
+          description: What the change did, or with dry_run=true, what it would do
+        role:
+          enum:
+            - admin
+            - chief
+            - lead
+          type: string
         steps:
           items:
             $ref: "#/components/schemas/StepView"
           type:
             - array
             - "null"
+        tasks:
+          items:
+            $ref: "#/components/schemas/Task"
+          type:
+            - array
+            - "null"
       required:
         - cycle_id
+        - role
         - steps
+        - next_actions
+        - tasks
       type: object
     WrittenAnswer:
       additionalProperties: false
@@ -5472,6 +5267,16 @@ components:
           type: string
         reviewer_nuid:
           type: string
+        step:
+          enum:
+            - applications
+            - reviews
+            - interviews
+            - decisions
+            - feedback
+          type: string
+        step_label:
+          type: string
         submitted_at:
           format: date-time
           type: string
@@ -5485,9 +5290,14 @@ components:
         - reviewer_nuid
         - created_at
         - updated_at
+        - step
+        - step_label
       type: object
 info:
-  description: Generate application portal — applications, reviews, and the hiring pipeline.
+  description: |-
+    Generate application portal — applications, reviews, and the hiring workflow.
+
+    A write the workflow flags as an override or destructive answers 409 with an error at `query.confirm_override`; chiefs and admins repeat it with `?confirm_override=true` to go ahead, and it is recorded.
   title: apportal API
   version: 0.1.0
 openapi: 3.1.0
@@ -5938,7 +5748,7 @@ paths:
       tags:
         - Applications
     patch:
-      description: Set resume_url or availability, submit a draft, or change the stage within its pipeline step or to an outcome (accepted, rejected, withdrawn). Moving into another step goes through the cycle pipeline's advance; changes in a frozen step are 409 unless the caller is an admin.
+      description: Set resume_url or availability, submit a draft, or change the stage within its workflow step or to an outcome (accepted, rejected, withdrawn). Moving into another step goes through the workflow advance; changes in a frozen step are an override chiefs and admins confirm with confirm_override=true.
       operationId: update-application
       parameters:
         - in: path
@@ -7168,7 +6978,7 @@ paths:
       tags:
         - Lead assignments
     post:
-      description: Chief only. The lead must be able to review the opening, have no conflict with the applicant, and the applicant must be submitted or in review and below the cycle's reviewers-each count. Not allowed once the next step has started for the opening.
+      description: Chief only. The lead must be on the opening's reviewer team, have no conflict with the applicant, and the applicant must be submitted or in review and below the Reviews step's reviewers-each count. Once Reviews is released it is an override confirmed with confirm_override=true.
       operationId: assign-lead
       parameters:
         - description: Application ID
@@ -8219,6 +8029,13 @@ paths:
       description: Chief only. Tops every waiting applicant up to the cycle's reviewers-each count, balancing load across every opening and skipping conflicts and openings whose next step has started. Keeps existing assignments. dry_run plans without saving.
       operationId: auto-assign-reviewers
       parameters:
+        - description: Return the preview without changing anything
+          explode: false
+          in: query
+          name: dry_run
+          schema:
+            description: Return the preview without changing anything
+            type: boolean
         - description: Cycle ID
           in: path
           name: id
@@ -8276,215 +8093,6 @@ paths:
                 $ref: "#/components/schemas/ErrorModel"
           description: Internal Server Error
       summary: Assign reviewers across openings
-      tags:
-        - Assignment planning
-  /cycles/{id}/assignment-plan/capacity:
-    post:
-      description: Chief only. Read-only. Given teams and a coverage target, reports the minimum and suggested per-lead cap for the cycle's unreviewed pool. Because two leads on the same team never review the same application, a team can absorb at most one review per application — so the minimum cap can exceed a naive even split.
-      operationId: suggest-assignment-capacity
-      parameters:
-        - description: Cycle ID
-          in: path
-          name: id
-          required: true
-          schema:
-            description: Cycle ID
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CapacityInputBody"
-        required: true
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Capacity"
-          description: OK
-        "401":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unauthorized
-        "403":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Forbidden
-        "422":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unprocessable Entity
-        "500":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Internal Server Error
-      summary: Suggest a per-lead review cap for a team layout
-      tags:
-        - Assignment planning
-  /cycles/{id}/assignment-plan/commit:
-    post:
-      description: Chief only. Writes the plan's assignments. The plan is recomputed server-side against the pool as it stands now rather than trusting a supplied list, and existing assignments are never deleted or reassigned — so committing the same plan twice creates nothing the second time.
-      operationId: commit-assignment-plan
-      parameters:
-        - description: Cycle ID
-          in: path
-          name: id
-          required: true
-          schema:
-            description: Cycle ID
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PreviewPlanInputBody"
-        required: true
-      responses:
-        "201":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CommitPlanOutputBody"
-          description: Created
-        "401":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unauthorized
-        "403":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Forbidden
-        "422":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unprocessable Entity
-        "500":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Internal Server Error
-      summary: Assign leads according to a plan
-      tags:
-        - Assignment planning
-  /cycles/{id}/assignment-plan/pool:
-    get:
-      description: Chief only. The size of the pool a plan would cover, for sizing caps before any teams are built.
-      operationId: get-assignment-pool
-      parameters:
-        - description: Cycle ID
-          in: path
-          name: id
-          required: true
-          schema:
-            description: Cycle ID
-            type: string
-        - description: Applicant role
-          explode: false
-          in: query
-          name: role_id
-          schema:
-            description: Applicant role
-            type: string
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PoolOutputBody"
-          description: OK
-        "401":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unauthorized
-        "403":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Forbidden
-        "422":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unprocessable Entity
-        "500":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Internal Server Error
-      summary: Count the applications awaiting lead review
-      tags:
-        - Assignment planning
-  /cycles/{id}/assignment-plan/preview:
-    post:
-      description: "Chief only. Read-only — computes which applications each lead would review and returns them without saving. Existing assignments are treated as fixed: the plan only adds what is missing."
-      operationId: preview-assignment-plan
-      parameters:
-        - description: Cycle ID
-          in: path
-          name: id
-          required: true
-          schema:
-            description: Cycle ID
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PreviewPlanInputBody"
-        required: true
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AssignmentPlanPreview"
-          description: OK
-        "401":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unauthorized
-        "403":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Forbidden
-        "422":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unprocessable Entity
-        "500":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Internal Server Error
-      summary: Preview lead review assignments for a team layout
       tags:
         - Assignment planning
   /cycles/{id}/challenges:
@@ -8578,7 +8186,7 @@ paths:
         - Code challenges
   /cycles/{id}/close:
     post:
-      description: Chiefs once every enabled step is complete; admins any time.
+      description: Chief only. Closing before every enabled step is complete is destructive and needs confirm_override=true.
       operationId: close-cycle
       parameters:
         - description: Cycle ID
@@ -8588,12 +8196,19 @@ paths:
           schema:
             description: Cycle ID
             type: string
+        - description: Return the preview without changing anything
+          explode: false
+          in: query
+          name: dry_run
+          schema:
+            description: Return the preview without changing anything
+            type: boolean
       responses:
         "200":
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Cycle"
+                $ref: "#/components/schemas/CloseResult"
           description: OK
         "401":
           content:
@@ -8633,7 +8248,7 @@ paths:
           description: Internal Server Error
       summary: Close a cycle
       tags:
-        - Pipeline
+        - Workflow
   /cycles/{id}/decision-templates:
     get:
       description: Reviewer only. ?role_id= selects the role (required). Returns both kinds, creating default-content rows on first access.
@@ -9481,6 +9096,13 @@ paths:
       description: Chief or admin. Fills each applicant up to the cycle's counts, balanced across openings, from each opening's team, skipping conflicts. by_panel assigns whole panels to applicants with no interviewer yet. With slot matching, people on a slot the applicant can make come first; applicants who gave no slots are neither filtered nor flagged, and those with no shared slot are assigned anyway and listed in no_slot_match. Recording reviewers are planned after interviewers and are never the applicant's current or planned interviewers. Existing assignments are kept; with dry_run false the plan is saved in one transaction.
       operationId: auto-plan-interviews
       parameters:
+        - description: Return the preview without changing anything
+          explode: false
+          in: query
+          name: dry_run
+          schema:
+            description: Return the preview without changing anything
+            type: boolean
         - description: Cycle ID
           in: path
           name: id
@@ -9759,7 +9381,7 @@ paths:
         - Interview assignments
   /cycles/{id}/lead-assignments:
     delete:
-      description: Chief only. Deletes all written-review lead assignments for one applicant role in a cycle at once, except ones whose review is submitted. Not allowed once reviews are released or the next step has started for the opening. Cannot be undone.
+      description: Chief only. Deletes all written-review lead assignments for one applicant role in a cycle at once, except ones whose review is submitted. Once Reviews is released this is destructive and needs confirm_override=true. Cannot be undone.
       operationId: unassign-all-leads
       parameters:
         - description: Cycle ID
@@ -10182,58 +9804,6 @@ paths:
       summary: Rename a meeting slot
       tags:
         - Meeting slots
-  /cycles/{id}/my-pipeline:
-    get:
-      description: Staff on the cycle. Chiefs and admins get next actions; everyone gets their own tasks.
-      operationId: get-my-cycle-pipeline
-      parameters:
-        - description: Cycle ID
-          in: path
-          name: id
-          required: true
-          schema:
-            description: Cycle ID
-            type: string
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MyPipeline"
-          description: OK
-        "401":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unauthorized
-        "403":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Forbidden
-        "404":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Not Found
-        "422":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unprocessable Entity
-        "500":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Internal Server Error
-      summary: The caller's place in a cycle's pipeline
-      tags:
-        - Pipeline
   /cycles/{id}/opening-teams:
     get:
       description: Chief or admin. An opening with no groups for a kind is staffed by the whole cycle staff; recording reviews with none fall back to the interviewers' groups.
@@ -10316,6 +9886,7 @@ paths:
               - reviewer
               - interviewer
               - recording_reviewer
+              - preference_list
             type: string
       requestBody:
         content:
@@ -10364,10 +9935,17 @@ paths:
       tags:
         - Staff groups
   /cycles/{id}/openings/{role_id}/steps/{step}/deadlines/{kind}:
-    put:
-      description: Chief only. Frozen once the next step starts, except for admins. Extending a passed deadline reopens the step.
-      operationId: set-opening-deadline
+    delete:
+      description: Chief only. Once the next step starts it is an override that chiefs and admins confirm with confirm_override=true.
+      operationId: clear-opening-deadline
       parameters:
+        - description: Return the preview without changing anything
+          explode: false
+          in: query
+          name: dry_run
+          schema:
+            description: Return the preview without changing anything
+            type: boolean
         - description: Cycle ID
           in: path
           name: id
@@ -10406,6 +9984,104 @@ paths:
               - reviewer
               - interviewer
               - recording_reviewer
+              - preference_list
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkflowChange"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "409":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Conflict
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Remove a deadline from one opening's step
+      tags:
+        - Workflow
+    put:
+      description: Chief only. Once the next step starts it is an override that chiefs and admins confirm with confirm_override=true. Extending a passed deadline reopens the step.
+      operationId: set-opening-deadline
+      parameters:
+        - description: Return the preview without changing anything
+          explode: false
+          in: query
+          name: dry_run
+          schema:
+            description: Return the preview without changing anything
+            type: boolean
+        - description: Cycle ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Cycle ID
+            type: string
+        - description: Role ID
+          in: path
+          name: role_id
+          required: true
+          schema:
+            description: Role ID
+            type: string
+        - description: Step
+          in: path
+          name: step
+          required: true
+          schema:
+            description: Step
+            enum:
+              - applications
+              - reviews
+              - interviews
+              - decisions
+              - feedback
+            type: string
+        - description: Deadline kind
+          in: path
+          name: kind
+          required: true
+          schema:
+            description: Deadline kind
+            enum:
+              - applicant
+              - reviewer
+              - interviewer
+              - recording_reviewer
+              - preference_list
             type: string
       requestBody:
         content:
@@ -10418,7 +10094,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/View"
+                $ref: "#/components/schemas/WorkflowChange"
           description: OK
         "401":
           content:
@@ -10458,12 +10134,19 @@ paths:
           description: Internal Server Error
       summary: Set a deadline for one opening's step
       tags:
-        - Pipeline
+        - Workflow
   /cycles/{id}/openings/{role_id}/steps/{step}/release:
     delete:
-      description: Chief only. Frozen once the next step starts, except for admins.
+      description: Chief only. Once the next step starts it is an override that chiefs and admins confirm with confirm_override=true.
       operationId: unrelease-opening-step
       parameters:
+        - description: Return the preview without changing anything
+          explode: false
+          in: query
+          name: dry_run
+          schema:
+            description: Return the preview without changing anything
+            type: boolean
         - description: Cycle ID
           in: path
           name: id
@@ -10496,7 +10179,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/View"
+                $ref: "#/components/schemas/WorkflowChange"
           description: OK
         "401":
           content:
@@ -10536,11 +10219,18 @@ paths:
           description: Internal Server Error
       summary: Take back a step's release for one opening
       tags:
-        - Pipeline
+        - Workflow
     post:
       description: Chief only. Needs a future deadline for the step's main kind and the previous step closed. Idempotent.
       operationId: release-opening-step
       parameters:
+        - description: Return the preview without changing anything
+          explode: false
+          in: query
+          name: dry_run
+          schema:
+            description: Return the preview without changing anything
+            type: boolean
         - description: Cycle ID
           in: path
           name: id
@@ -10573,7 +10263,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/View"
+                $ref: "#/components/schemas/WorkflowChange"
           description: OK
         "401":
           content:
@@ -10613,163 +10303,7 @@ paths:
           description: Internal Server Error
       summary: Release a step for one opening
       tags:
-        - Pipeline
-  /cycles/{id}/pipeline:
-    get:
-      description: Staff on the cycle.
-      operationId: get-cycle-pipeline
-      parameters:
-        - description: Cycle ID
-          in: path
-          name: id
-          required: true
-          schema:
-            description: Cycle ID
-            type: string
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/View"
-          description: OK
-        "401":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unauthorized
-        "403":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Forbidden
-        "404":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Not Found
-        "422":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unprocessable Entity
-        "500":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Internal Server Error
-      summary: Where a cycle and each opening is in its pipeline
-      tags:
-        - Pipeline
-  /cycles/{id}/preference-list-deadline:
-    get:
-      operationId: get-preference-list-deadline
-      parameters:
-        - description: Cycle ID
-          in: path
-          name: id
-          required: true
-          schema:
-            description: Cycle ID
-            type: string
-        - description: Applicant role
-          explode: false
-          in: query
-          name: role_id
-          schema:
-            description: Applicant role
-            type: string
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PreferenceListDeadline"
-          description: OK
-        "401":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unauthorized
-        "422":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unprocessable Entity
-        "500":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Internal Server Error
-      summary: Get the preference-list submission deadline for a cycle's role
-      tags:
-        - Preference lists
-    put:
-      description: Chief only. Every preference list for that (cycle, role) locks for editing once this passes, submitted or not.
-      operationId: set-preference-list-deadline
-      parameters:
-        - description: Cycle ID
-          in: path
-          name: id
-          required: true
-          schema:
-            description: Cycle ID
-            type: string
-        - description: Applicant role
-          explode: false
-          in: query
-          name: role_id
-          schema:
-            description: Applicant role
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/SetPreferenceListDeadlineInputBody"
-        required: true
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PreferenceListDeadline"
-          description: OK
-        "401":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unauthorized
-        "403":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Forbidden
-        "422":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unprocessable Entity
-        "500":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Internal Server Error
-      summary: Set the preference-list submission deadline for a cycle's role
-      tags:
-        - Preference lists
+        - Workflow
   /cycles/{id}/questions:
     get:
       description: Optional ?role_id= returns that role's questions plus global ones.
@@ -11336,7 +10870,7 @@ paths:
         - Review ranking
   /cycles/{id}/review-gates:
     get:
-      description: "Reviewer only. One entry per applicant role × review kind (written, recording): how many reviewers are assigned, how many have submitted, and whether reviews have been released to everyone."
+      description: Staff on the cycle. One entry per opening and review kind whose step the cycle runs.
       operationId: list-review-gates
       parameters:
         - description: Cycle ID
@@ -11363,6 +10897,18 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorModel"
           description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
         "422":
           content:
             application/problem+json:
@@ -11375,13 +10921,20 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorModel"
           description: Internal Server Error
-      summary: Review release status and progress for a cycle
+      summary: Peer review release and progress per opening
       tags:
-        - Review releases
+        - Workflow
     put:
-      description: Chief only. Releases (reveals to all reviewers) or hides a cycle's reviews of the given kind for one applicant role. May be done at any point, before all reviewers have submitted. Idempotent.
+      description: Chief only. Hiding again, or changing it once the next step starts, is an override confirmed with confirm_override=true.
       operationId: set-review-release
       parameters:
+        - description: Return the preview without changing anything
+          explode: false
+          in: query
+          name: dry_run
+          schema:
+            description: Return the preview without changing anything
+            type: boolean
         - description: Cycle ID
           in: path
           name: id
@@ -11393,14 +10946,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/SetReviewReleaseInputBody"
+              $ref: "#/components/schemas/SetPeerReleaseInputBody"
         required: true
       responses:
         "200":
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ReviewGate"
+                $ref: "#/components/schemas/ReviewGatesChangeOutputBody"
           description: OK
         "401":
           content:
@@ -11414,6 +10967,18 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorModel"
           description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "409":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Conflict
         "422":
           content:
             application/problem+json:
@@ -11426,9 +10991,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorModel"
           description: Internal Server Error
-      summary: Release or hide a cycle's reviews for a role
+      summary: Show or hide reviewers' reviews from each other for an opening
       tags:
-        - Review releases
+        - Workflow
   /cycles/{id}/review-question-averages:
     get:
       description: Chief only. One entry per lead on the cycle's staff, listing their average score on each of the cycle/role's score-type review questions.
@@ -12577,12 +12142,19 @@ paths:
           description: Internal Server Error
       summary: List a cycle's steps and their settings
       tags:
-        - Pipeline
+        - Workflow
   /cycles/{id}/steps/{step}:
     put:
       description: Chief only. Locked after the cycle's first advance.
       operationId: set-cycle-step
       parameters:
+        - description: Return the preview without changing anything
+          explode: false
+          in: query
+          name: dry_run
+          schema:
+            description: Return the preview without changing anything
+            type: boolean
         - description: Cycle ID
           in: path
           name: id
@@ -12614,11 +12186,7 @@ paths:
           content:
             application/json:
               schema:
-                items:
-                  $ref: "#/components/schemas/StepConfig"
-                type:
-                  - array
-                  - "null"
+                $ref: "#/components/schemas/StepsChangeOutputBody"
           description: OK
         "401":
           content:
@@ -12658,12 +12226,19 @@ paths:
           description: Internal Server Error
       summary: Turn a step on or off
       tags:
-        - Pipeline
+        - Workflow
   /cycles/{id}/steps/{step}/advance:
     post:
       description: Chief only. 409 unless the step is closed for each affected opening (or, for reviews and interviews, released with all required work submitted), or if an applicant isn't in this step.
       operationId: advance-cycle-step
       parameters:
+        - description: Return the preview without changing anything
+          explode: false
+          in: query
+          name: dry_run
+          schema:
+            description: Return the preview without changing anything
+            type: boolean
         - description: Cycle ID
           in: path
           name: id
@@ -12735,12 +12310,19 @@ paths:
           description: Internal Server Error
       summary: Move applicants to the next enabled step
       tags:
-        - Pipeline
+        - Workflow
   /cycles/{id}/steps/{step}/advance/undo:
     post:
       description: Chief only. One level, and only before the step moved into is released or worked on.
       operationId: undo-cycle-step-advance
       parameters:
+        - description: Return the preview without changing anything
+          explode: false
+          in: query
+          name: dry_run
+          schema:
+            description: Return the preview without changing anything
+            type: boolean
         - description: Cycle ID
           in: path
           name: id
@@ -12812,12 +12394,19 @@ paths:
           description: Internal Server Error
       summary: Undo the most recent advance out of a step
       tags:
-        - Pipeline
+        - Workflow
   /cycles/{id}/steps/{step}/assignments/{kind}:
     delete:
       description: Chief only. Locked once the step starts for any opening.
       operationId: remove-step-assignment
       parameters:
+        - description: Return the preview without changing anything
+          explode: false
+          in: query
+          name: dry_run
+          schema:
+            description: Return the preview without changing anything
+            type: boolean
         - description: Cycle ID
           in: path
           name: id
@@ -12849,17 +12438,14 @@ paths:
               - reviewer
               - interviewer
               - recording_reviewer
+              - preference_list
             type: string
       responses:
         "200":
           content:
             application/json:
               schema:
-                items:
-                  $ref: "#/components/schemas/StepConfig"
-                type:
-                  - array
-                  - "null"
+                $ref: "#/components/schemas/StepsChangeOutputBody"
           description: OK
         "401":
           content:
@@ -12899,11 +12485,18 @@ paths:
           description: Internal Server Error
       summary: Turn off a kind of assignment in a step
       tags:
-        - Pipeline
+        - Workflow
     put:
       description: Chief only. Locked once the step starts for any opening.
       operationId: set-step-assignment
       parameters:
+        - description: Return the preview without changing anything
+          explode: false
+          in: query
+          name: dry_run
+          schema:
+            description: Return the preview without changing anything
+            type: boolean
         - description: Cycle ID
           in: path
           name: id
@@ -12935,6 +12528,7 @@ paths:
               - reviewer
               - interviewer
               - recording_reviewer
+              - preference_list
             type: string
       requestBody:
         content:
@@ -12947,11 +12541,7 @@ paths:
           content:
             application/json:
               schema:
-                items:
-                  $ref: "#/components/schemas/StepConfig"
-                type:
-                  - array
-                  - "null"
+                $ref: "#/components/schemas/StepsChangeOutputBody"
           description: OK
         "401":
           content:
@@ -12991,7 +12581,7 @@ paths:
           description: Internal Server Error
       summary: Set how many of a kind each applicant gets in a step
       tags:
-        - Pipeline
+        - Workflow
   /cycles/{id}/steps/{step}/complete:
     post:
       description: Chief only. Earlier steps must be complete and no applicants left in the step.
@@ -13022,7 +12612,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/View"
+                $ref: "#/components/schemas/WorkflowChange"
           description: OK
         "401":
           content:
@@ -13062,7 +12652,7 @@ paths:
           description: Internal Server Error
       summary: Mark a step complete
       tags:
-        - Pipeline
+        - Workflow
   /cycles/{id}/tags:
     get:
       operationId: list-cycle-tags
@@ -13292,6 +12882,114 @@ paths:
       summary: Per-role template counts for a cycle
       tags:
         - Cycles
+  /cycles/{id}/templates:
+    get:
+      description: Staff only. One template per role of the cycle, in role order; creates the default-titled draft for any role without one.
+      operationId: list-cycle-application-templates
+      parameters:
+        - description: Cycle ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Cycle ID
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/ApplicationTemplate"
+                type:
+                  - array
+                  - "null"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: List a cycle's application templates
+      tags:
+        - Application Templates
+  /cycles/{id}/workflow:
+    get:
+      description: Staff on the cycle. Leads get the steps, deadlines and their own tasks; chiefs and admins also get late counts and next actions.
+      operationId: get-cycle-workflow
+      parameters:
+        - description: Cycle ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Cycle ID
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkflowChange"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: The caller's layer of a cycle's workflow
+      tags:
+        - Workflow
   /decisions/context:
     get:
       description: "Reviewer only. ?application_ids= is comma-separated. Returns each applicant's interview write-up, recording reviews, and lead written reviews — the material an interviewer draws on to write feedback. Blind review still applies: a lead sees only their own written review, and peers' recording comments are withheld, until a chief releases the cycle's reviews. Leads only get applicants they interviewed."
@@ -13944,7 +13642,7 @@ paths:
         - Interviews
   /lead-assignments/{id}:
     delete:
-      description: Chief only. Not allowed once reviews are released or the next step has started for the opening.
+      description: Chief only. Once Reviews is released, removing someone is destructive and needs confirm_override=true.
       operationId: unassign-lead
       parameters:
         - in: path
@@ -15474,12 +15172,12 @@ paths:
       description: Admins, or anyone on some cycle's staff (e.g. to invite a fellow lead onto a preference list); creating or editing a user is admin only. Per-cycle leads and chiefs come from list-cycle-staff.
       operationId: list-users
       parameters:
-        - description: Optional role filter
+        - description: "Optional filter: a global role (applicant, admin), or lead/chief for anyone with that role on some cycle"
           explode: false
           in: query
           name: role
           schema:
-            description: Optional role filter
+            description: "Optional filter: a global role (applicant, admin), or lead/chief for anyone with that role on some cycle"
             type: string
         - description: Max results per page; omit (or 0) to return all matching users
           explode: false

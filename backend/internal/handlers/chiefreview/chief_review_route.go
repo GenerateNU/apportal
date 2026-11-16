@@ -7,13 +7,14 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/GenerateNU/apportal/backend/internal/access"
+	"github.com/GenerateNU/apportal/backend/internal/workflow"
 )
 
 func Route(api huma.API, db *gorm.DB) {
 	chiefReviewDB := NewChiefReviewDB(db)
 
-	registerChiefReviewComment(api, &chiefReviewCommentService{access: access.NewChecker(db), chiefReviewDB: chiefReviewDB})
-	registerChiefReview(api, &chiefReviewService{access: access.NewChecker(db), chiefReviewDB: chiefReviewDB})
+	registerChiefReviewComment(api, &chiefReviewCommentService{access: access.NewChecker(db), chiefReviewDB: chiefReviewDB, workflow: workflow.NewService(db)})
+	registerChiefReview(api, &chiefReviewService{access: access.NewChecker(db), chiefReviewDB: chiefReviewDB, workflow: workflow.NewService(db)})
 }
 
 func registerChiefReview(api huma.API, s *chiefReviewService) {

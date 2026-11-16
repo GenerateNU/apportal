@@ -39,8 +39,8 @@ import {
   dueAt as pipelineDue,
   perApplicant,
   useCycleSteps,
-  usePipeline,
-} from '@/lib/queries/pipeline'
+  useWorkflow,
+} from '@/lib/queries/workflow'
 import { useReviewBoard } from '@/lib/queries/reviewer-pools'
 import { useCycleScope } from '@/hooks/useCycleScope'
 import { ApplicationDetail } from '../../../applications/components/ApplicationDetail'
@@ -109,7 +109,7 @@ function Ranking({ cycleId, roleId }: { cycleId: string; roleId: string }) {
   const { data: steps = [] } = useCycleSteps(cycleId)
   const { data: questions = [] } = useReviewQuestions(cycleId, roleId)
   const { data: board = [] } = useReviewBoard(cycleId)
-  const { data: pipeline } = usePipeline(cycleId)
+  const { data: workflow } = useWorkflow(cycleId)
   const { mutate: saveCutoff, isPending: saving } = useSetCutoff(
     cycleId,
     roleId
@@ -241,7 +241,7 @@ function Ranking({ cycleId, roleId }: { cycleId: string; roleId: string }) {
     .filter((r) => r.roleId === roleId)
     .flatMap((r) => r.reviewers)
   const reviewsIn = assigned.filter((x) => x.submitted).length
-  const dueAt = pipelineDue(pipeline, 'reviews', roleId, 'reviewer')
+  const dueAt = pipelineDue(workflow, 'reviews', roleId, 'reviewer')
   const due = dueAt ? new Date(dueAt) : null
   const reviewsClosed = !!due && due < new Date()
   if (

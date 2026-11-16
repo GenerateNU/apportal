@@ -1,4 +1,4 @@
-import type { AssignmentKind, StepName } from '@/lib/queries/pipeline'
+import type { AssignmentKind, StepName } from '@/lib/queries/workflow'
 
 export const PIPELINE_STEPS: StepName[] = [
   'applications',

@@ -6,7 +6,7 @@ import { usePathname, useSearchParams } from 'next/navigation'
 import { Check, Lock } from 'lucide-react'
 import { Tooltip } from '@/components/Tooltip'
 import { useCycleScope } from '@/hooks/useCycleScope'
-import { usePipeline } from '@/lib/queries/pipeline'
+import { useWorkflow } from '@/lib/queries/workflow'
 import { cn } from '@/lib/utils'
 import {
   currentPhaseIndex,
@@ -18,11 +18,11 @@ import { CycleSwitcher } from './CycleSwitcher'
 
 export function useChiefPhases() {
   const scope = useCycleScope('chief')
-  const { data: pipeline } = usePipeline(scope.cycleId)
+  const { data: workflow } = useWorkflow(scope.cycleId)
   const hasOpenings = scope.roles.roleIds.length > 0
   const phases = useMemo(
-    () => toPhases(pipeline, hasOpenings),
-    [pipeline, hasOpenings]
+    () => toPhases(workflow, hasOpenings),
+    [workflow, hasOpenings]
   )
   return { scope, phases }
 }
