@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/GenerateNU/apportal/backend/internal/handlers/reviewrelease"
+	"github.com/GenerateNU/apportal/backend/internal/pipeline"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 	"github.com/danielgtaylor/huma/v2"
 
@@ -16,6 +17,7 @@ type writtenReviewService struct {
 	access          *access.Checker
 	reviewReleaseDB *reviewrelease.ReviewReleaseDB
 	writtenReviewDB *WrittenReviewDB
+	gate            *pipeline.Gate
 }
 
 func (s *writtenReviewService) upsert(ctx context.Context, in *UpsertWrittenReviewInput) (*WrittenReviewOutput, error) {
@@ -28,6 +30,9 @@ func (s *writtenReviewService) upsert(ctx context.Context, in *UpsertWrittenRevi
 			return nil, huma.Error422UnprocessableEntity("each answer requires a review_question_id")
 		}
 		answers = append(answers, ReviewAnswerInput(a))
+	}
+	if err := s.gate.Application(ctx, in.ID, models.StepReviews, models.KindReviewer); err != nil {
+		return nil, err
 	}
 
 	detail, err := s.writtenReviewDB.UpsertWrittenReview(ctx, WrittenReviewUpsert{

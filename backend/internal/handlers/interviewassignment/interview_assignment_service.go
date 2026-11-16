@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
+	"github.com/GenerateNU/apportal/backend/internal/pipeline"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 	"github.com/danielgtaylor/huma/v2"
 
@@ -19,10 +20,14 @@ type interviewAssignmentService struct {
 	access                *access.Checker
 	interviewAssignmentDB *InterviewAssignmentDB
 	reviewReleaseDB       *reviewrelease.ReviewReleaseDB
+	gate                  *pipeline.Gate
 }
 
 func (s *interviewAssignmentService) addInterviewer(ctx context.Context, in *AddInterviewerInput) (*InterviewerOutput, error) {
 	if err := s.access.CanApplication(ctx, access.ManageApplication, in.ID); err != nil {
+		return nil, err
+	}
+	if err := s.gate.Application(ctx, in.ID, models.StepInterviews, ""); err != nil {
 		return nil, err
 	}
 	row, err := s.interviewAssignmentDB.AddInterviewer(ctx, in.ID, in.Body.InterviewerNUID, utils.CurrentActor(ctx).NUID)
@@ -47,6 +52,9 @@ func (s *interviewAssignmentService) removeInterviewer(ctx context.Context, in *
 
 func (s *interviewAssignmentService) addReviewer(ctx context.Context, in *AddReviewerInput) (*InterviewReviewerOutput, error) {
 	if err := s.access.CanApplication(ctx, access.ManageApplication, in.ID); err != nil {
+		return nil, err
+	}
+	if err := s.gate.Application(ctx, in.ID, models.StepInterviews, ""); err != nil {
 		return nil, err
 	}
 	row, err := s.interviewAssignmentDB.AddReviewer(ctx, in.ID, in.Body.ReviewerNUID, utils.CurrentActor(ctx).NUID)

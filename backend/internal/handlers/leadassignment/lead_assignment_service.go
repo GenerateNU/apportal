@@ -5,6 +5,8 @@ import (
 
 	"github.com/GenerateNU/apportal/backend/internal/handlers/application"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
+	"github.com/GenerateNU/apportal/backend/internal/models"
+	"github.com/GenerateNU/apportal/backend/internal/pipeline"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 	"github.com/danielgtaylor/huma/v2"
 
@@ -15,6 +17,7 @@ type leadAssignmentService struct {
 	access           *access.Checker
 	applicationDB    *application.ApplicationDB
 	leadAssignmentDB *LeadAssignmentDB
+	gate             *pipeline.Gate
 }
 
 func (s *leadAssignmentService) create(ctx context.Context, in *CreateLeadAssignmentInput) (*LeadAssignmentOutput, error) {
@@ -23,6 +26,9 @@ func (s *leadAssignmentService) create(ctx context.Context, in *CreateLeadAssign
 	}
 	if in.Body.LeadNUID == "" {
 		return nil, huma.Error422UnprocessableEntity("lead_nuid is required")
+	}
+	if err := s.gate.Application(ctx, in.ID, models.StepReviews, ""); err != nil {
+		return nil, err
 	}
 	a, err := s.leadAssignmentDB.CreateLeadAssignment(ctx, in.ID, in.Body.LeadNUID, utils.CurrentActor(ctx).NUID)
 	if err != nil {
