@@ -92,8 +92,8 @@ func (a CycleAccess) Staff() models.CycleStaffRole {
 }
 
 // CycleAccessAt and ApplicationAccessAt let other packages' tests stand in for a Checker.
-func CycleAccessAt(level Level) CycleAccess {
-	return CycleAccess{level: level}
+func CycleAccessAt(level Level, admin bool) CycleAccess {
+	return CycleAccess{level: level, admin: admin}
 }
 
 func ApplicationAccessAt(level Level, owner bool) ApplicationAccess {

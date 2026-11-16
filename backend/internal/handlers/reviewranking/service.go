@@ -12,6 +12,7 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/access"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/GenerateNU/apportal/backend/internal/models"
+	"github.com/GenerateNU/apportal/backend/internal/pipeline"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 )
 
@@ -54,28 +55,28 @@ func parseID(id, name string) error {
 }
 
 // manageOpening checks the caller runs this cycle and that roleID is one of its roles.
-func (s *rankingService) manageOpening(ctx context.Context, cycleID, roleID string) error {
+func (s *rankingService) manageOpening(ctx context.Context, cycleID, roleID string) (access.CycleAccess, error) {
 	if err := parseID(cycleID, "cycle id"); err != nil {
-		return err
+		return access.CycleAccess{}, err
 	}
 	if err := role.ParseRoleID(roleID); err != nil {
-		return err
+		return access.CycleAccess{}, err
 	}
 	a, err := s.access.Cycle(ctx, cycleID)
 	if err != nil {
-		return err
+		return a, err
 	}
 	if err := a.Can(access.ManageCycle); err != nil {
-		return err
+		return a, err
 	}
 	ok, err := s.roles.CycleHasRole(ctx, cycleID, roleID)
 	if err != nil {
-		return utils.StoreErr(err)
+		return a, utils.StoreErr(err)
 	}
 	if !ok {
-		return huma.Error422UnprocessableEntity("role_id is not a role in this cycle")
+		return a, huma.Error422UnprocessableEntity("role_id is not a role in this cycle")
 	}
-	return nil
+	return a, nil
 }
 
 func (s *rankingService) requireReviewsIn(ctx context.Context, cycleID, roleID string) error {
@@ -133,7 +134,7 @@ func (s *rankingService) ranking(ctx context.Context, cycleID, roleID string) (m
 }
 
 func (s *rankingService) get(ctx context.Context, in *OpeningInput) (*RankingOutput, error) {
-	if err := s.manageOpening(ctx, in.ID, in.RoleID); err != nil {
+	if _, err := s.manageOpening(ctx, in.ID, in.RoleID); err != nil {
 		return nil, err
 	}
 	r, err := s.ranking(ctx, in.ID, in.RoleID)
@@ -160,7 +161,7 @@ func (s *rankingService) putCutoff(ctx context.Context, in *PutCutoffInput) (*Cu
 	if err := validateCutoff(in.Body.Mode, in.Body.Value); err != nil {
 		return nil, err
 	}
-	if err := s.manageOpening(ctx, in.ID, in.RoleID); err != nil {
+	if _, err := s.manageOpening(ctx, in.ID, in.RoleID); err != nil {
 		return nil, err
 	}
 	if err := s.requireReviewsIn(ctx, in.ID, in.RoleID); err != nil {
@@ -180,7 +181,7 @@ func (s *rankingService) putCutoff(ctx context.Context, in *PutCutoffInput) (*Cu
 }
 
 func (s *rankingService) deleteCutoff(ctx context.Context, in *OpeningInput) (*struct{}, error) {
-	if err := s.manageOpening(ctx, in.ID, in.RoleID); err != nil {
+	if _, err := s.manageOpening(ctx, in.ID, in.RoleID); err != nil {
 		return nil, err
 	}
 	if err := s.requireReviewsIn(ctx, in.ID, in.RoleID); err != nil {
@@ -226,7 +227,7 @@ func (s *rankingService) deleteOverride(ctx context.Context, in *utils.Applicati
 }
 
 func (s *rankingService) deleteOverrides(ctx context.Context, in *OpeningInput) (*struct{}, error) {
-	if err := s.manageOpening(ctx, in.ID, in.RoleID); err != nil {
+	if _, err := s.manageOpening(ctx, in.ID, in.RoleID); err != nil {
 		return nil, err
 	}
 	if err := s.requireReviewsIn(ctx, in.ID, in.RoleID); err != nil {
@@ -248,7 +249,8 @@ func (s *rankingService) advance(ctx context.Context, in *AdvanceInput) (*Advanc
 			return nil, err
 		}
 	}
-	if err := s.manageOpening(ctx, in.ID, in.RoleID); err != nil {
+	a, err := s.manageOpening(ctx, in.ID, in.RoleID)
+	if err != nil {
 		return nil, err
 	}
 	r, err := s.ranking(ctx, in.ID, in.RoleID)
@@ -262,7 +264,7 @@ func (s *rankingService) advance(ctx context.Context, in *AdvanceInput) (*Advanc
 	if err != nil {
 		return nil, err
 	}
-	moved, err := s.rules.Advance(ctx, in.ID, in.RoleID, ids, utils.CurrentActor(ctx).NUID)
+	moved, err := s.rules.Advance(ctx, in.ID, in.RoleID, ids, pipeline.Actor{NUID: utils.CurrentActor(ctx).NUID, Admin: a.Admin()})
 	if errors.Is(err, ErrNoNextStage) {
 		return nil, huma.Error409Conflict("This cycle has no enabled stage after review to move the shortlist into.")
 	}
