@@ -15,7 +15,6 @@ func Route(api huma.API, db *gorm.DB) {
 	cycleDB := NewCycleDB(db)
 
 	registerCycle(api, &cycleService{access: access.NewChecker(db), cycleDB: cycleDB, roleDB: role.NewRoleDB(db)})
-	registerCycleStage(api, &cycleStageService{access: access.NewChecker(db), cycleDB: cycleDB})
 }
 
 func registerCycle(api huma.API, s *cycleService) {

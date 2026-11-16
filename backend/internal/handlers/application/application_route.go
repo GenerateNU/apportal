@@ -8,6 +8,7 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/handlers/codesubmission"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/question"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
+	"github.com/GenerateNU/apportal/backend/internal/pipeline"
 	"github.com/GenerateNU/apportal/backend/internal/storage"
 	"github.com/danielgtaylor/huma/v2"
 	"gorm.io/gorm"
@@ -24,7 +25,7 @@ func Route(api huma.API, db *gorm.DB, storageClient *storage.Client) {
 
 	registerAnswer(api, &answerService{access: access.NewChecker(db), applicationDB: applicationDB})
 	registerComment(api, &commentService{access: access.NewChecker(db), commentDB: NewCommentDB(db)})
-	registerApplication(api, &applicationService{access: access.NewChecker(db), applicationDB: applicationDB, applicationTemplateDB: applicationTemplateDB, challengeDB: challengeDB, codeSubmissionDB: codeSubmissionDB, questionDB: questionDB, roleDB: role.NewRoleDB(db)})
+	registerApplication(api, &applicationService{access: access.NewChecker(db), applicationDB: applicationDB, applicationTemplateDB: applicationTemplateDB, gate: pipeline.NewGate(db), challengeDB: challengeDB, codeSubmissionDB: codeSubmissionDB, questionDB: questionDB, roleDB: role.NewRoleDB(db)})
 	registerUpload(api, &uploadService{access: access.NewChecker(db), applicationDB: applicationDB, questionDB: questionDB, storage: storageClient})
 }
 
