@@ -45,7 +45,7 @@ type userFilter struct {
 }
 
 func usersQuery(db *gorm.DB, f userFilter) *gorm.DB {
-	q := db.Model(&models.User{}).Order("full_name")
+	q := db.Model(&models.User{}).Order("full_name").Order("nuid")
 	switch {
 	case f.UserRole != nil:
 		q = q.Where("? = ANY(roles)", string(*f.UserRole))
