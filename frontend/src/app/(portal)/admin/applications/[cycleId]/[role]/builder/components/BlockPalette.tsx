@@ -1,5 +1,6 @@
 'use client'
 
+import { useSave } from './SaveTracker'
 import type { QuestionType } from '@/lib/api/types'
 import { useCreateQuestion } from '@/lib/queries/questions'
 import {
@@ -19,10 +20,11 @@ export function BlockPalette({
   nextOrder: number
 }) {
   const createQuestion = useCreateQuestion()
+  const save = useSave()
 
   function handleAdd(type: QuestionType) {
     const meta = QUESTION_TYPE_META[type]
-    createQuestion.mutate({
+    save(createQuestion, {
       cycleId,
       body: {
         role_id: role,

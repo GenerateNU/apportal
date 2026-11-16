@@ -12,7 +12,7 @@ import (
 )
 
 type staffPool interface {
-	Pool(ctx context.Context, cycleID string, kind models.StepKind) (staffing.Pool, error)
+	ForKind(ctx context.Context, cycleID string, kind models.StepKind) (staffing.KindRules, error)
 	RequireAdd(ctx context.Context, cycleID, roleID string, kind models.StepKind) error
 }
 

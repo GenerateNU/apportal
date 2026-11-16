@@ -48,7 +48,7 @@ func TestAssignableStaffAndReviewerTeams(t *testing.T) {
 	exec("INSERT INTO review_conflicts (cycle_id, lead_nuid, applicant_nuid) VALUES (?, ?, ?)", cycle, conflicted, applicant)
 
 	ctx := testutil.WithActor(middleware.Actor{NUID: chief, Roles: []models.UserRole{models.UserRoleAdmin}})
-	pool, err := staffing.NewService(db).Pool(ctx, cycle, models.KindReviewer)
+	pool, err := staffing.NewService(db).ForKind(ctx, cycle, models.KindReviewer)
 	if err != nil {
 		t.Fatal(err)
 	}

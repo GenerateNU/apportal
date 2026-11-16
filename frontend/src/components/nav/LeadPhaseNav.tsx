@@ -41,9 +41,28 @@ export function LeadPhaseNav({ collapsed }: { collapsed?: boolean }) {
 
   const applicantsActive = isNavItemActive(pathname, '/reviewer/applications')
 
+  // e.g. an admin when no chief cycle exists yet.
+  if (!cycleId) return null
+  // Open at every phase: applicants can be browsed before reviews start.
+  const applicantsHref = `/reviewer/applications?cycle=${cycleId}`
+
   if (collapsed) {
     return (
       <div className="flex flex-col items-center gap-1">
+        <Tooltip side="right" label="Applicants">
+          <Link
+            href={applicantsHref}
+            aria-label="Applicants"
+            className={cn(
+              'flex size-9 items-center justify-center',
+              applicantsActive
+                ? 'bg-ink text-white'
+                : 'text-ink/60 hover:bg-gray-100'
+            )}
+          >
+            <Users size={18} />
+          </Link>
+        </Tooltip>
         {phases.map((p, i) => {
           const locked = p.status === 'locked'
           return (
@@ -69,20 +88,6 @@ export function LeadPhaseNav({ collapsed }: { collapsed?: boolean }) {
             </Tooltip>
           )
         })}
-        <Tooltip side="right" label="Applicants">
-          <Link
-            href="/reviewer/applications"
-            aria-label="Applicants"
-            className={cn(
-              'flex size-9 items-center justify-center',
-              applicantsActive
-                ? 'bg-ink text-white'
-                : 'text-ink/60 hover:bg-gray-100'
-            )}
-          >
-            <Users size={18} />
-          </Link>
-        </Tooltip>
       </div>
     )
   }
@@ -92,6 +97,23 @@ export function LeadPhaseNav({ collapsed }: { collapsed?: boolean }) {
       <CycleSwitcher />
       <div className="mt-2 flex flex-col">
         <ol className="flex flex-col">
+          <li>
+            <Link href={applicantsHref} className="block">
+              <span
+                className={cn(
+                  'relative flex items-center gap-2.5 px-3 py-1.5 text-sm transition-colors',
+                  applicantsActive
+                    ? 'text-ink before:bg-ink bg-gray-100 font-semibold before:absolute before:inset-y-1 before:left-0 before:w-[3px]'
+                    : 'text-ink/70 hover:text-ink font-medium hover:bg-gray-50'
+                )}
+              >
+                <span className="flex size-5 shrink-0 items-center justify-center">
+                  <Users size={14} className="text-ink/60" />
+                </span>
+                <span className="flex-1 truncate">Applicants</span>
+              </span>
+            </Link>
+          </li>
           {phases.map((p, i) => {
             const active = isActive(p)
             const locked = p.status === 'locked'
@@ -148,18 +170,6 @@ export function LeadPhaseNav({ collapsed }: { collapsed?: boolean }) {
             )
           })}
         </ol>
-        <Link
-          href="/reviewer/applications"
-          className={cn(
-            'relative mt-2 flex items-center gap-2.5 border-t border-gray-100 px-3 pt-3 pb-1.5 text-sm transition-colors',
-            applicantsActive
-              ? 'text-ink font-semibold'
-              : 'text-ink/70 hover:text-ink font-medium'
-          )}
-        >
-          <Users size={16} className="text-ink/50 shrink-0" />
-          Browse applicants
-        </Link>
       </div>
     </div>
   )

@@ -8,7 +8,7 @@
 
 export type ListUsersParams = {
 /**
- * Optional role filter
+ * Optional filter: a global role (applicant, admin), or lead/chief for anyone with that role on some cycle
  */
 role?: string;
 /**

@@ -170,8 +170,7 @@ func loadLate(db *gorm.DB, cycleID string) (LateCounts, error) {
 // loadTaskCounts is empty for anyone off the cycle's staff, even if work was assigned to them.
 func loadTaskCounts(db *gorm.DB, cycleID, nuid string) ([]TaskCount, error) {
 	out := []TaskCount{}
-	var staff int64
-	if err := db.Model(&models.CycleStaff{}).Where("cycle_id = ? AND user_nuid = ?", cycleID, nuid).Count(&staff).Error; err != nil || staff == 0 {
+	if in, err := InStaffPool(db, cycleID, nuid); err != nil || !in {
 		return out, err
 	}
 	scan := func(kind TaskKind, q *gorm.DB) error {

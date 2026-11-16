@@ -9,15 +9,15 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/workflow"
 )
 
-// Pool is one kind of staffing work across a cycle's openings, as a planner sees it: the per-applicant limit, who is
+// KindRules is one kind of staffing work across a cycle's openings, as a planner sees it: the per-applicant limit, who is
 // eligible per opening, and the openings the workflow blocks adding to.
-type Pool struct {
+type KindRules struct {
 	Limit    int
 	Eligible map[string][]string
 	Blocked  map[string]error
 }
 
-func (p Pool) RequireLimit(kind models.StepKind) error {
+func (p KindRules) RequireLimit(kind models.StepKind) error {
 	return Rules{Limit: p.Limit}.RequireLimit(kind)
 }
 
@@ -28,17 +28,17 @@ type Service struct {
 
 func NewService(db *gorm.DB) *Service { return &Service{db: db, rules: WorkflowRules{}} }
 
-func (s *Service) Pool(ctx context.Context, cycleID string, kind models.StepKind) (Pool, error) {
+func (s *Service) ForKind(ctx context.Context, cycleID string, kind models.StepKind) (KindRules, error) {
 	db := s.db.WithContext(ctx)
 	p, err := s.rules.Load(ctx, db, cycleID)
 	if err != nil {
-		return Pool{}, err
+		return KindRules{}, err
 	}
 	o, err := LoadOpenings(db, cycleID)
 	if err != nil {
-		return Pool{}, err
+		return KindRules{}, err
 	}
-	out := Pool{Limit: p.Limits[kind], Eligible: map[string][]string{}, Blocked: map[string]error{}}
+	out := KindRules{Limit: p.Limits[kind], Eligible: map[string][]string{}, Blocked: map[string]error{}}
 	for role, blocked := range p.Adds[kind] {
 		out.Eligible[role] = o.Eligible(role, kind)
 		out.Blocked[role] = blocked

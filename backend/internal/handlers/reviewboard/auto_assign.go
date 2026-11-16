@@ -135,7 +135,7 @@ func (s *reviewService) planAuto(ctx context.Context, store reviewStore, cycleID
 			return AutoAssignPlan{}, nil, huma.Error422UnprocessableEntity("role_id " + id + " isn't an opening on this cycle")
 		}
 	}
-	pool, err := s.staff.Pool(ctx, cycleID, models.KindReviewer)
+	pool, err := s.staff.ForKind(ctx, cycleID, models.KindReviewer)
 	if err != nil {
 		return AutoAssignPlan{}, nil, utils.StoreErr(err)
 	}

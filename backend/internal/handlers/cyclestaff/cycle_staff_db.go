@@ -24,6 +24,12 @@ func (s *CycleStaffDB) ListStaff(ctx context.Context, cycleID string, role model
 	return rows, staffQuery(s.db.WithContext(ctx), cycleID, role).Find(&rows).Error
 }
 
+func (s *CycleStaffDB) CycleType(ctx context.Context, cycleID string) (models.ApplicationType, error) {
+	var cycle models.Cycle
+	err := s.db.WithContext(ctx).Select("application_type").Where("id = ?", cycleID).Take(&cycle).Error
+	return cycle.ApplicationType, utils.DBErr(err)
+}
+
 func (s *CycleStaffDB) ListUserCycles(ctx context.Context, nuid string) ([]models.CycleStaff, error) {
 	rows := []models.CycleStaff{}
 	err := s.db.WithContext(ctx).Table("cycle_staff cs").

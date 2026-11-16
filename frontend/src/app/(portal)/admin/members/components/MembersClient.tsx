@@ -3,17 +3,10 @@ import { PageContainer } from '@/components/PageContainer'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { UserPlus } from 'lucide-react'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import type { User, UserRole } from '@/lib/api/types'
+import type { User } from '@/lib/api/types'
 import { useMembersInfinite } from '@/lib/queries/users'
-import { isMember, STAFF_ROLES, USER_ROLE_LABEL } from '../lib/role-meta'
-import { AddMemberDialog } from './AddMemberDialog'
+import { isAdmin } from '../lib/role-meta'
+import { AddAdminDialog } from './AddAdminDialog'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
 import { PageHeader } from '@/components/ui/page-header'
@@ -24,11 +17,10 @@ import { SegmentedTabs } from '@/components/ui/segmented-tabs'
 import { TABLE_FRAME, TABLE_HEAD } from '@/components/ui/table-styles'
 import { cn } from '@/lib/utils'
 
-type RoleFilter = UserRole | 'all'
-type ViewType = 'staff' | 'applicants'
+type ViewType = 'admins' | 'applicants'
 
 // The Joined column is hidden below sm so rows fit a phone without scrolling.
-const STAFF_GRID_COLS = 'grid-cols-[1fr_auto] sm:grid-cols-[1fr_140px_160px]'
+const ADMIN_GRID_COLS = 'grid-cols-[1fr_auto] sm:grid-cols-[1fr_140px_auto]'
 const APPLICANTS_GRID_COLS =
   'grid-cols-[1fr_auto_auto] sm:grid-cols-[1fr_100px_140px_110px]'
 
@@ -38,9 +30,8 @@ export function MembersClient() {
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useMembersInfinite(MEMBERS_PAGE_SIZE)
   const [search, setSearch] = useState('')
-  const [roleFilter, setRoleFilter] = useState<RoleFilter>('all')
-  const [showAddMember, setShowAddMember] = useState(false)
-  const [view, setView] = useState<ViewType>('staff')
+  const [showAddAdmin, setShowAddAdmin] = useState(false)
+  const [view, setView] = useState<ViewType>('admins')
 
   const users = useMemo(
     () => (data?.pages.flatMap((page) => page?.users ?? []) ?? []) as User[],
@@ -56,19 +47,18 @@ export function MembersClient() {
         u.email.toLowerCase().includes(query)
     )
 
-    if (view === 'staff') {
+    if (view === 'admins') {
       return filtered
-        .filter((u) => isMember(u.roles))
-        .filter((u) => roleFilter === 'all' || u.roles.includes(roleFilter))
+        .filter((u) => isAdmin(u.roles))
         .sort((a, b) => a.full_name.localeCompare(b.full_name))
     } else {
       return filtered
         .filter((u) => u.roles.includes('applicant'))
         .sort((a, b) => a.full_name.localeCompare(b.full_name))
     }
-  }, [users, search, roleFilter, view])
+  }, [users, search, view])
 
-  const isFiltered = search.trim() !== '' || roleFilter !== 'all'
+  const isFiltered = search.trim() !== ''
 
   // Auto-loads the next page once the sentinel row scrolls into view —
   // classic infinite-scroll trigger, no extra dependency needed.
@@ -89,10 +79,10 @@ export function MembersClient() {
     return () => observer.disconnect()
   }, [fetchNextPage, hasNextPage, isFetchingNextPage])
 
-  const gridCols = view === 'staff' ? STAFF_GRID_COLS : APPLICANTS_GRID_COLS
+  const gridCols = view === 'admins' ? ADMIN_GRID_COLS : APPLICANTS_GRID_COLS
   const headerLabel =
-    view === 'staff'
-      ? 'Manage which roles each team member holds.'
+    view === 'admins'
+      ? 'Choose who is an admin. Leads and chiefs are set per cycle on the Branches page.'
       : 'View applicant status and mark who has worked on a project before.'
 
   return (
@@ -101,10 +91,10 @@ export function MembersClient() {
         title="Members"
         subtitle={headerLabel}
         actions={
-          view === 'staff' && (
-            <Button onClick={() => setShowAddMember(true)}>
+          view === 'admins' && (
+            <Button onClick={() => setShowAddAdmin(true)}>
               <UserPlus />
-              Add user
+              Add admin
             </Button>
           )
         }
@@ -113,52 +103,30 @@ export function MembersClient() {
       <div className="flex flex-wrap items-center gap-3">
         <SegmentedTabs<ViewType>
           tabs={[
-            { id: 'staff', label: 'Staff' },
+            { id: 'admins', label: 'Admins' },
             { id: 'applicants', label: 'Applicants' },
           ]}
           value={view}
-          onChange={(id) => {
-            setView(id)
-            if (id === 'staff') setRoleFilter('all')
-          }}
+          onChange={setView}
         />
 
         <SearchInput
           value={search}
           onChange={setSearch}
-          placeholder="Search members…"
+          placeholder="Search by name or email…"
           className="max-w-md min-w-48 flex-1"
         />
-
-        {view === 'staff' && (
-          <Select
-            value={roleFilter}
-            onValueChange={(val) => setRoleFilter(val as RoleFilter)}
-          >
-            <SelectTrigger className="w-40" aria-label="Filter by role">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All roles</SelectItem>
-              {STAFF_ROLES.map((role) => (
-                <SelectItem key={role} value={role}>
-                  {USER_ROLE_LABEL[role]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
       </div>
 
-      <AddMemberDialog open={showAddMember} onOpenChange={setShowAddMember} />
+      <AddAdminDialog open={showAddAdmin} onOpenChange={setShowAddAdmin} />
 
       {members.length === 0 && !hasNextPage ? (
         <EmptyState
           title={
             isFiltered
               ? 'No matches found'
-              : view === 'staff'
-                ? 'No staff members yet'
+              : view === 'admins'
+                ? 'No admins yet'
                 : 'No applicants'
           }
         />
@@ -168,7 +136,7 @@ export function MembersClient() {
             <div className={cn('grid gap-4', gridCols, TABLE_HEAD)}>
               <span>User</span>
               <span className="hidden sm:block">Joined</span>
-              <span>{view === 'staff' ? 'Role' : 'Status'}</span>
+              <span>{view === 'admins' ? '' : 'Status'}</span>
               {view === 'applicants' && <span>Returner</span>}
             </div>
             <div>
@@ -176,7 +144,7 @@ export function MembersClient() {
                 <EmptyState size="sm" title="Searching more results…" />
               ) : (
                 members.map((user) =>
-                  view === 'staff' ? (
+                  view === 'admins' ? (
                     <MemberRow
                       key={user.nuid}
                       user={user}

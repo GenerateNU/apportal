@@ -78,8 +78,8 @@ type fakeRules struct {
 	eligible     map[string][]string
 }
 
-func (f fakeRules) Pool(_ context.Context, _ string, _ models.StepKind) (staffing.Pool, error) {
-	p := staffing.Pool{Limit: f.perApplicant, Eligible: map[string][]string{}, Blocked: map[string]error{}}
+func (f fakeRules) ForKind(_ context.Context, _ string, _ models.StepKind) (staffing.KindRules, error) {
+	p := staffing.KindRules{Limit: f.perApplicant, Eligible: map[string][]string{}, Blocked: map[string]error{}}
 	for _, role := range []string{roleA, roleB} {
 		p.Eligible[role] = f.eligible[role]
 		if f.frozen[role] {

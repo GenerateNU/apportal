@@ -1,13 +1,14 @@
 'use client'
 
 import { useState } from 'react'
-import { ChevronDown } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { PersonCell } from '@/components/ui/person-cell'
 import { TABLE_ROW } from '@/components/ui/table-styles'
 import type { User } from '@/lib/api/types'
+import { useCurrentUser, useUpdateUser } from '@/lib/queries/users'
 import { cn } from '@/lib/utils'
-import { getPrimaryRole, USER_ROLE_LABEL } from '../lib/role-meta'
-import { RoleEditDialog } from './RoleEditDialog'
+import { withoutAdmin } from '../lib/role-meta'
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-US', {
@@ -24,11 +25,11 @@ export function MemberRow({
   user: User
   gridCols: string
 }) {
-  const [showEdit, setShowEdit] = useState(false)
-  const primaryRole = getPrimaryRole(user.roles)
-  const extraRoleCount = user.roles.filter(
-    (r) => r !== 'applicant' && r !== primaryRole
-  ).length
+  const { data: me } = useCurrentUser()
+  const updateUser = useUpdateUser()
+  const [confirming, setConfirming] = useState(false)
+  // Removing yourself would lock you out of this page.
+  const isSelf = me?.nuid === user.nuid
 
   return (
     <div className={cn('grid items-center gap-4', gridCols, TABLE_ROW)}>
@@ -38,20 +39,30 @@ export function MemberRow({
         {formatDate(user.created_at)}
       </span>
 
-      <button
-        type="button"
-        onClick={() => setShowEdit(true)}
-        aria-label="Edit roles"
-        className="text-text-secondary flex w-fit items-center gap-1.5 border border-transparent px-2 py-1 text-sm hover:border-gray-300 hover:bg-gray-50"
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={isSelf}
+        title={isSelf ? 'You can’t remove yourself' : undefined}
+        onClick={() => setConfirming(true)}
       >
-        {USER_ROLE_LABEL[primaryRole]}
-        {extraRoleCount > 0 && (
-          <span className="text-text-faint text-xs">+{extraRoleCount}</span>
-        )}
-        <ChevronDown className="text-text-faint h-3.5 w-3.5" />
-      </button>
+        Remove
+      </Button>
 
-      <RoleEditDialog open={showEdit} onOpenChange={setShowEdit} user={user} />
+      <ConfirmDialog
+        open={confirming}
+        onOpenChange={setConfirming}
+        title={`Remove ${user.full_name} as admin?`}
+        description="They keep any lead or chief spots on cycles."
+        confirmLabel="Remove"
+        pending={updateUser.isPending}
+        onConfirm={() =>
+          updateUser.mutate(
+            { nuid: user.nuid, body: { roles: withoutAdmin(user.roles) } },
+            { onSuccess: () => setConfirming(false) }
+          )
+        }
+      />
     </div>
   )
 }

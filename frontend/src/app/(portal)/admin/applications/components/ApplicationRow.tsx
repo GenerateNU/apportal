@@ -7,12 +7,14 @@ import { cycleStatusDot, cycleStatusLabel, paletteClass } from './constants'
 
 export function ApplicationRow({
   template,
+  href = `/admin/applications/${template.cycleId}/${template.role}/builder`,
 }: {
   template: ApplicationTemplateCard
+  href?: string
 }) {
   return (
     <Link
-      href={`/admin/applications/${template.cycleId}/${template.role}/builder`}
+      href={href}
       className="block w-full border border-gray-200 bg-white px-4 py-2 transition-colors hover:bg-gray-50"
     >
       <div className="flex items-center justify-between gap-2">
