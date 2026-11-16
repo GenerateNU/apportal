@@ -76,6 +76,10 @@ type CycleAccess struct {
 	level Level
 }
 
+func NewCycleAccess(level Level) CycleAccess {
+	return CycleAccess{level: level}
+}
+
 func (a CycleAccess) Allows(action CycleAction) bool {
 	return a.level >= cyclePolicies[action].level
 }
@@ -99,6 +103,10 @@ type ApplicationAccess struct {
 	draft             bool
 	interviewer       bool
 	recordingReviewer bool
+}
+
+func NewApplicationAccess(level Level, owner bool) ApplicationAccess {
+	return ApplicationAccess{level: level, owner: owner}
 }
 
 func (a ApplicationAccess) Allows(action ApplicationAction) bool {
