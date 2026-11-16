@@ -13,16 +13,32 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/handlers/reviewrelease"
 
 	"github.com/GenerateNU/apportal/backend/internal/models"
+	"github.com/GenerateNU/apportal/backend/internal/reviewrules"
 )
 
 type interviewAssignmentService struct {
 	access                *access.Checker
 	interviewAssignmentDB *InterviewAssignmentDB
 	reviewReleaseDB       *reviewrelease.ReviewReleaseDB
+	conflicts             *reviewrules.Conflicts
+}
+
+func (s *interviewAssignmentService) noConflict(ctx context.Context, applicationID, nuid string) error {
+	conflicted, err := s.conflicts.Conflicted(ctx, applicationID, nuid)
+	if err != nil {
+		return utils.StoreErr(err)
+	}
+	if conflicted {
+		return huma.Error409Conflict("This person has a conflict of interest with this applicant.")
+	}
+	return nil
 }
 
 func (s *interviewAssignmentService) addInterviewer(ctx context.Context, in *AddInterviewerInput) (*InterviewerOutput, error) {
 	if err := s.access.CanApplication(ctx, access.ManageApplication, in.ID); err != nil {
+		return nil, err
+	}
+	if err := s.noConflict(ctx, in.ID, in.Body.InterviewerNUID); err != nil {
 		return nil, err
 	}
 	row, err := s.interviewAssignmentDB.AddInterviewer(ctx, in.ID, in.Body.InterviewerNUID, utils.CurrentActor(ctx).NUID)
@@ -47,6 +63,9 @@ func (s *interviewAssignmentService) removeInterviewer(ctx context.Context, in *
 
 func (s *interviewAssignmentService) addReviewer(ctx context.Context, in *AddReviewerInput) (*InterviewReviewerOutput, error) {
 	if err := s.access.CanApplication(ctx, access.ManageApplication, in.ID); err != nil {
+		return nil, err
+	}
+	if err := s.noConflict(ctx, in.ID, in.Body.ReviewerNUID); err != nil {
 		return nil, err
 	}
 	row, err := s.interviewAssignmentDB.AddReviewer(ctx, in.ID, in.Body.ReviewerNUID, utils.CurrentActor(ctx).NUID)
