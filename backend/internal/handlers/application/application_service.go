@@ -5,6 +5,11 @@ import (
 	"encoding/json"
 	"strings"
 
+	"github.com/GenerateNU/apportal/backend/internal/handlers/answer"
+
+	"github.com/danielgtaylor/huma/v2"
+	"github.com/google/uuid"
+
 	"github.com/GenerateNU/apportal/backend/internal/handlers/applicationtemplate"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/challenge"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/codesubmission"
@@ -12,10 +17,8 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/GenerateNU/apportal/backend/internal/middleware"
 	"github.com/GenerateNU/apportal/backend/internal/models"
-	"github.com/GenerateNU/apportal/backend/internal/pipeline"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
-	"github.com/danielgtaylor/huma/v2"
-	"github.com/google/uuid"
+	"github.com/GenerateNU/apportal/backend/internal/workflow"
 
 	"github.com/GenerateNU/apportal/backend/internal/access"
 
@@ -23,6 +26,7 @@ import (
 )
 
 type applicationService struct {
+	answers               *answer.AnswerDB
 	access                *access.Checker
 	applicationDB         *ApplicationDB
 	applicationTemplateDB *applicationtemplate.ApplicationTemplateDB
@@ -30,7 +34,7 @@ type applicationService struct {
 	codeSubmissionDB      *codesubmission.CodeSubmissionDB
 	questionDB            *question.QuestionDB
 	roleDB                *role.RoleDB
-	gate                  *pipeline.Gate
+	workflow              *workflow.Service
 }
 
 func (s *applicationService) create(ctx context.Context, in *CreateApplicationInput) (*ApplicationOutput, error) {
@@ -48,7 +52,7 @@ func (s *applicationService) create(ctx context.Context, in *CreateApplicationIn
 	if _, err := s.applicationTemplateDB.GetOrCreateApplicationTemplate(ctx, in.Body.CycleID, in.Body.RoleID); err != nil {
 		return nil, utils.StoreErr(err)
 	}
-	if err := s.gate.Opening(ctx, in.Body.CycleID, in.Body.RoleID, models.StepApplications, models.KindApplicant); err != nil {
+	if err := s.workflow.RequireOpeningWorkEditable(ctx, in.Body.CycleID, in.Body.RoleID, workflow.WorkApplication); err != nil {
 		return nil, err
 	}
 
@@ -296,7 +300,7 @@ func (s *applicationService) update(ctx context.Context, in *UpdateApplicationIn
 	}
 
 	if current.Stage == models.StageDraft {
-		if err := s.gate.Opening(ctx, current.CycleID, current.RoleID, models.StepApplications, models.KindApplicant); err != nil {
+		if err := s.workflow.RequireOpeningWorkEditable(ctx, current.CycleID, current.RoleID, workflow.WorkApplication); err != nil {
 			return nil, err
 		}
 	}
@@ -345,7 +349,7 @@ func (s *applicationService) requireComplete(ctx context.Context, app models.App
 	if err != nil {
 		return utils.StoreErr(err)
 	}
-	answers, err := s.applicationDB.ListAnswers(ctx, app.ID)
+	answers, err := s.answers.ListAnswers(ctx, app.ID)
 	if err != nil {
 		return utils.StoreErr(err)
 	}

@@ -1,8 +1,6 @@
 package preferencelist
 
 import (
-	"time"
-
 	"github.com/GenerateNU/apportal/backend/internal/models"
 )
 
@@ -84,23 +82,6 @@ type ReorderPreferenceListEntriesInput struct {
 
 type PreferenceListEntriesDetailOutput struct {
 	Body []models.PreferenceListEntryDetail
-}
-
-type PreferenceListDeadlineOutput struct {
-	Body models.PreferenceListDeadline
-}
-
-type PreferenceListDeadlineInput struct {
-	ID     string `path:"id" doc:"Cycle ID"`
-	RoleID string `query:"role_id" doc:"Applicant role"`
-}
-
-type SetPreferenceListDeadlineInput struct {
-	ID     string `path:"id" doc:"Cycle ID"`
-	RoleID string `query:"role_id" doc:"Applicant role"`
-	Body   struct {
-		ClosesAt *time.Time `json:"closes_at,omitempty"`
-	}
 }
 
 type SetPreferenceListMeetingDayInput struct {

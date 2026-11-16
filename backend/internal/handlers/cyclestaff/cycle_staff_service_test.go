@@ -52,3 +52,31 @@ func TestListStaffRequiresActor(t *testing.T) {
 	_, err := s.list(context.Background(), &CycleIDInput{ID: "c1"})
 	testutil.WantStatus(t, err, http.StatusUnauthorized)
 }
+
+func TestCheckStaffRoleForType(t *testing.T) {
+	cases := []struct {
+		name string
+		typ  models.ApplicationType
+		role models.CycleStaffRole
+		want int // 0 for allowed
+	}{
+		{"lead on member cycle", models.ApplicationTypeMember, models.CycleStaffLead, 0},
+		{"chief on member cycle", models.ApplicationTypeMember, models.CycleStaffChief, 0},
+		{"chief on lead cycle", models.ApplicationTypeLead, models.CycleStaffChief, 0},
+		{"lead on lead cycle", models.ApplicationTypeLead, models.CycleStaffLead, http.StatusUnprocessableEntity},
+		{"chief on chief cycle", models.ApplicationTypeChief, models.CycleStaffChief, http.StatusUnprocessableEntity},
+		{"lead on chief cycle", models.ApplicationTypeChief, models.CycleStaffLead, http.StatusUnprocessableEntity},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := checkStaffRoleForType(tc.typ, tc.role)
+			if tc.want == 0 {
+				if err != nil {
+					t.Fatalf("want allowed, got %v", err)
+				}
+				return
+			}
+			testutil.WantStatus(t, err, tc.want)
+		})
+	}
+}

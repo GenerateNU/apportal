@@ -7,8 +7,8 @@ import (
 	"gorm.io/gorm/clause"
 
 	"github.com/GenerateNU/apportal/backend/internal/models"
-	"github.com/GenerateNU/apportal/backend/internal/pipeline"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
+	"github.com/GenerateNU/apportal/backend/internal/workflow"
 )
 
 type CycleStaffDB struct {
@@ -23,6 +23,12 @@ func NewCycleStaffDB(db *gorm.DB) *CycleStaffDB {
 func (s *CycleStaffDB) ListStaff(ctx context.Context, cycleID string, role models.CycleStaffRole) ([]models.CycleStaffMember, error) {
 	rows := []models.CycleStaffMember{}
 	return rows, staffQuery(s.db.WithContext(ctx), cycleID, role).Find(&rows).Error
+}
+
+func (s *CycleStaffDB) CycleType(ctx context.Context, cycleID string) (models.ApplicationType, error) {
+	var cycle models.Cycle
+	err := s.db.WithContext(ctx).Select("application_type").Where("id = ?", cycleID).Take(&cycle).Error
+	return cycle.ApplicationType, utils.DBErr(err)
 }
 
 func (s *CycleStaffDB) ListUserCycles(ctx context.Context, nuid string) ([]models.CycleStaff, error) {
@@ -54,7 +60,7 @@ func (s *CycleStaffDB) SetStaff(ctx context.Context, cycleID, nuid string, role 
 
 func (s *CycleStaffDB) RemoveStaff(ctx context.Context, cycleID, nuid string) error {
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := pipeline.HoldCycle(tx, cycleID); err != nil {
+		if err := workflow.HoldCycle(tx, cycleID); err != nil {
 			return err
 		}
 		res := tx.Where("cycle_id = ? AND user_nuid = ?", cycleID, nuid).Delete(&models.CycleStaff{})
@@ -81,6 +87,8 @@ func (s *CycleStaffDB) RemoveStaff(ctx context.Context, cycleID, nuid string) er
 				AND r.reviewer_nuid = ? AND r.writeup_submitted_at IS NULL`, []any{cycleID, nuid}},
 			{`DELETE FROM staff_group_members m USING staff_groups g
 				WHERE g.id = m.group_id AND g.cycle_id = ? AND m.user_nuid = ?`, []any{cycleID, nuid}},
+			{`DELETE FROM interview_panel_members WHERE cycle_id = ? AND user_nuid = ?`, []any{cycleID, nuid}},
+			{`DELETE FROM staff_slots WHERE cycle_id = ? AND user_nuid = ?`, []any{cycleID, nuid}},
 		} {
 			if err := tx.Exec(q.sql, q.args...).Error; err != nil {
 				return err

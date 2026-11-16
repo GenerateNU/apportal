@@ -3,18 +3,19 @@ package leadassignment
 import (
 	"net/http"
 
-	"github.com/GenerateNU/apportal/backend/internal/handlers/cyclestaff"
 	"github.com/danielgtaylor/huma/v2"
 	"gorm.io/gorm"
 
+	"github.com/GenerateNU/apportal/backend/internal/handlers/cyclestaff"
+
 	"github.com/GenerateNU/apportal/backend/internal/access"
-	"github.com/GenerateNU/apportal/backend/internal/reviewrules"
+	"github.com/GenerateNU/apportal/backend/internal/staffing"
 )
 
 func Route(api huma.API, db *gorm.DB) {
 	leadAssignmentDB := NewLeadAssignmentDB(db)
 
-	registerLeadAssignment(api, &leadAssignmentService{access: access.NewChecker(db), store: newManualDB(db), rules: reviewrules.NewDefault(db)})
+	registerLeadAssignment(api, &leadAssignmentService{access: access.NewChecker(db), db: leadAssignmentDB, guard: staffing.NewGuard()})
 	registerReviewerProgress(api, &reviewerProgressService{access: access.NewChecker(db), leadAssignmentDB: leadAssignmentDB, staffDB: cyclestaff.NewCycleStaffDB(db)})
 }
 
@@ -24,9 +25,9 @@ func registerLeadAssignment(api huma.API, s *leadAssignmentService) {
 		Method:      http.MethodPost,
 		Path:        "/applications/{id}/lead-assignments",
 		Summary:     "Assign a lead to write-review an application",
-		Description: "Chief only. The lead must be able to review the opening, have no conflict with the applicant, " +
-			"and the applicant must be submitted or in review and below the cycle's reviewers-each count. " +
-			"Not allowed once the next step has started for the opening.",
+		Description: "Chief only. The lead must be on the opening's reviewer team, have no conflict with the applicant, " +
+			"and the applicant must be submitted or in review and below the Reviews step's reviewers-each count. " +
+			"Once Reviews is released it is an override confirmed with confirm_override=true.",
 		Tags:          []string{"Lead assignments"},
 		DefaultStatus: http.StatusCreated,
 		Errors:        []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound, http.StatusConflict, http.StatusUnprocessableEntity},
@@ -46,7 +47,7 @@ func registerLeadAssignment(api huma.API, s *leadAssignmentService) {
 		Method:        http.MethodDelete,
 		Path:          "/lead-assignments/{id}",
 		Summary:       "Remove a lead assignment",
-		Description:   "Chief only. Not allowed once reviews are released or the next step has started for the opening.",
+		Description:   "Chief only. Once Reviews is released, removing someone is destructive and needs confirm_override=true.",
 		Tags:          []string{"Lead assignments"},
 		DefaultStatus: http.StatusNoContent,
 		Errors:        []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound, http.StatusConflict, http.StatusUnprocessableEntity},
@@ -59,7 +60,7 @@ func registerLeadAssignment(api huma.API, s *leadAssignmentService) {
 		Summary:     "Remove every lead assignment for a cycle's role",
 		Description: "Chief only. Deletes all written-review lead assignments " +
 			"for one applicant role in a cycle at once, except ones whose review is submitted. " +
-			"Not allowed once reviews are released or the next step has started for the opening. Cannot be undone.",
+			"Once Reviews is released this is destructive and needs confirm_override=true. Cannot be undone.",
 		Tags:   []string{"Lead assignments"},
 		Errors: []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound, http.StatusConflict, http.StatusUnprocessableEntity},
 	}, s.deleteAll)

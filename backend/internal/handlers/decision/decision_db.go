@@ -8,8 +8,8 @@ import (
 	"gorm.io/gorm/clause"
 
 	"github.com/GenerateNU/apportal/backend/internal/models"
-	"github.com/GenerateNU/apportal/backend/internal/pipeline"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
+	"github.com/GenerateNU/apportal/backend/internal/workflow"
 )
 
 type DecisionDB struct {
@@ -273,7 +273,7 @@ func (d *DecisionDB) UpsertDecisionDraft(ctx context.Context, applicationID stri
 func applyDecisionStage(ctx context.Context, tx *gorm.DB, applicationID string, sent bool) error {
 	apps := tx.Model(&models.Application{}).Where("id = ?", applicationID)
 	if sent {
-		if err := pipeline.GuardMoves(ctx, tx, pipeline.Move{ApplicationID: applicationID, To: models.StageRejected}); err != nil {
+		if err := workflow.GuardMoves(ctx, tx, workflow.Move{ApplicationID: applicationID, To: models.StageRejected}); err != nil {
 			return err
 		}
 		return apps.UpdateColumn("stage", models.StageRejected).Error
@@ -291,7 +291,7 @@ func applyDecisionStage(ctx context.Context, tx *gorm.DB, applicationID string, 
 		return nil
 	}
 	prev := *rows[0].PreviousStage
-	if err := pipeline.GuardMoves(ctx, tx, pipeline.Move{ApplicationID: applicationID, To: prev, Restore: true}); err != nil {
+	if err := workflow.GuardMoves(ctx, tx, workflow.Move{ApplicationID: applicationID, To: prev, Restore: true}); err != nil {
 		return err
 	}
 	return apps.UpdateColumn("stage", prev).Error

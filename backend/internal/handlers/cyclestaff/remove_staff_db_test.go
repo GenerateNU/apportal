@@ -6,8 +6,8 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/GenerateNU/apportal/backend/internal/pipeline"
 	"github.com/GenerateNU/apportal/backend/internal/testutil"
+	"github.com/GenerateNU/apportal/backend/internal/workflow"
 )
 
 func TestRemoveStaffClearsOpenWork(t *testing.T) {
@@ -35,7 +35,7 @@ func TestRemoveStaffClearsOpenWork(t *testing.T) {
 	branch, cycle, role, panel, group, slot := uuid.NewString(), uuid.NewString(), uuid.NewString(), uuid.NewString(), uuid.NewString(), uuid.NewString()
 	exec("INSERT INTO branches (id, name) VALUES (?, ?)", branch, "test-"+branch)
 	exec("INSERT INTO cycles (id, branch_id, name, status, application_type) VALUES (?, ?, 'Test', 'open', 'member')", cycle, branch)
-	if err := pipeline.EnsureSteps(db, cycle); err != nil {
+	if err := workflow.EnsureSteps(db, cycle); err != nil {
 		t.Fatal(err)
 	}
 	exec("INSERT INTO roles (id, cycle_id, name) VALUES (?, ?, 'Engineer')", role, cycle)

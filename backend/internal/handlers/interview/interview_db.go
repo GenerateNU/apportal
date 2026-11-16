@@ -5,13 +5,14 @@ import (
 	"encoding/json"
 	"errors"
 
+	"github.com/GenerateNU/apportal/backend/internal/workflow"
+
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
 	"github.com/GenerateNU/apportal/backend/internal/handlers/interviewassignment"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/user"
 	"github.com/GenerateNU/apportal/backend/internal/models"
-	"github.com/GenerateNU/apportal/backend/internal/pipeline"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 )
 
@@ -31,7 +32,7 @@ func (i *InterviewDB) SaveInterview(ctx context.Context, in InterviewUpsert, che
 		if err := tx.Select("id", "cycle_id").Where("id = ?", in.ApplicationID).Take(&app).Error; err != nil {
 			return utils.DBErr(err)
 		}
-		if err := pipeline.HoldCycle(tx, app.CycleID); err != nil {
+		if err := workflow.HoldCycle(tx, app.CycleID); err != nil {
 			return err
 		}
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("id").Where("id = ?", app.ID).Take(&app).Error; err != nil {
@@ -96,7 +97,7 @@ func (i *InterviewDB) ListInterviewDetails(ctx context.Context, applicationIDs [
 		if list == nil {
 			list = []models.InterviewerDetail{}
 		}
-		out = append(out, models.InterviewDetail{Interview: iv, Interviewers: list})
+		out = append(out, models.InterviewDetail{Interview: iv, StepRef: workflow.Ref(models.StepInterviews), Interviewers: list})
 	}
 	return out, nil
 }

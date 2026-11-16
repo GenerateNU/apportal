@@ -15,7 +15,7 @@ import { useUpdateCycle } from '@/lib/queries/cycles'
 import {
   APPLICATION_TYPE_LABEL,
   CYCLE_STATUS,
-  CYCLE_STATUS_ORDER,
+  statusChoices,
   type ApplicationType,
 } from '../lib/cycle-meta'
 import { CycleDialog } from './CycleDialog'
@@ -64,13 +64,15 @@ export function CycleRow({ cycle, roles }: { cycle: Cycle; roles: Role[] }) {
         <Select
           value={cycle.status}
           onValueChange={(val) => changeStatus(val as CycleStatus)}
-          disabled={updateCycle.isPending}
+          disabled={
+            updateCycle.isPending || statusChoices(cycle.status).length < 2
+          }
         >
           <SelectTrigger className="w-32" aria-label="Change status">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {CYCLE_STATUS_ORDER.map((s) => (
+            {statusChoices(cycle.status).map((s) => (
               <SelectItem key={s} value={s}>
                 {CYCLE_STATUS[s].label}
               </SelectItem>

@@ -8,6 +8,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/GenerateNU/apportal/backend/internal/models"
+	"github.com/GenerateNU/apportal/backend/internal/workflow"
 )
 
 type Teams map[models.StepKind][]string
@@ -65,8 +66,8 @@ func NotStaff(db *gorm.DB, cycleID string, nuids []string) ([]string, error) {
 		return nil, nil
 	}
 	var on []string
-	if err := db.Model(&models.CycleStaff{}).Where("cycle_id = ? AND user_nuid IN ?", cycleID, nuids).
-		Pluck("user_nuid", &on).Error; err != nil {
+	if err := db.Table("(?) AS p", workflow.StaffPool(db, cycleID)).Where("p.user_nuid IN ?", nuids).
+		Pluck("p.user_nuid", &on).Error; err != nil {
 		return nil, err
 	}
 	var out []string
@@ -80,8 +81,8 @@ func NotStaff(db *gorm.DB, cycleID string, nuids []string) ([]string, error) {
 
 func LoadOpenings(db *gorm.DB, cycleID string) (Openings, error) {
 	o := Openings{Staff: []string{}, Teams: map[string]Teams{}, Members: map[string][]string{}}
-	if err := db.Model(&models.CycleStaff{}).Where("cycle_id = ?", cycleID).
-		Order("user_nuid").Pluck("user_nuid", &o.Staff).Error; err != nil {
+	if err := db.Table("(?) AS p", workflow.StaffPool(db, cycleID)).
+		Order("p.user_nuid").Pluck("p.user_nuid", &o.Staff).Error; err != nil {
 		return o, err
 	}
 	var teams []models.OpeningTeam

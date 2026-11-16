@@ -22,7 +22,6 @@ type CreateCycleInput struct {
 	Body struct {
 		BranchID        string                 `json:"branch_id"`
 		Name            string                 `json:"name"`
-		Status          models.CycleStatus     `json:"status,omitempty"`
 		ApplicationType models.ApplicationType `json:"application_type,omitempty"`
 		OpensAt         *time.Time             `json:"opens_at,omitempty"`
 		ClosesAt        *time.Time             `json:"closes_at,omitempty"`
@@ -47,7 +46,7 @@ type UpdateCycleInput struct {
 	ID   string `path:"id"`
 	Body struct {
 		Name            *string                 `json:"name,omitempty"`
-		Status          *models.CycleStatus     `json:"status,omitempty"`
+		Status          *models.CycleStatus     `json:"status,omitempty" doc:"Only archived (from closed) or closed (from archived)"`
 		ApplicationType *models.ApplicationType `json:"application_type,omitempty"`
 		OpensAt         *time.Time              `json:"opens_at,omitempty"`
 		ClosesAt        *time.Time              `json:"closes_at,omitempty"`

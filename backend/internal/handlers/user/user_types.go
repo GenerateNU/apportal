@@ -27,7 +27,7 @@ type CreateUserInput struct {
 }
 
 type ListUsersInput struct {
-	Role   string `query:"role" doc:"Optional role filter"`
+	Role   string `query:"role" doc:"Optional filter: a global role (applicant, admin), or lead/chief for anyone with that role on some cycle"`
 	Limit  int    `query:"limit" doc:"Max results per page; omit (or 0) to return all matching users"`
 	Cursor string `query:"cursor" doc:"next_cursor from the previous page; omit for the first page"`
 }

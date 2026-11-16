@@ -3,16 +3,16 @@ package preferencelist
 import (
 	"context"
 	"strings"
-	"time"
+
+	"github.com/danielgtaylor/huma/v2"
 
 	"github.com/GenerateNU/apportal/backend/internal/handlers/application"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/user"
-	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
-	"github.com/danielgtaylor/huma/v2"
 
 	"github.com/GenerateNU/apportal/backend/internal/access"
+	"github.com/GenerateNU/apportal/backend/internal/workflow"
 )
 
 type preferenceListService struct {
@@ -21,6 +21,7 @@ type preferenceListService struct {
 	preferenceListDB *PreferenceListDB
 	userDB           *user.UserDB
 	roleDB           *role.RoleDB
+	workflow         *workflow.Service
 }
 
 var validMeetingDays = map[string]bool{
@@ -58,49 +59,13 @@ func (s *preferenceListService) requireAccess(ctx context.Context, listID string
 	return nil
 }
 
-func preferenceListDeadlinePassed(d models.PreferenceListDeadline) bool {
-	return d.ClosesAt != nil && time.Now().After(*d.ClosesAt)
-}
-
-// checkEntryNotLocked 403s once the given role's (cycle, role) deadline has
-// passed — re-checked on every shared-entry mutation, mirroring how
-// applications.go guards against writes after the application deadline.
-// Entry-level mutations (add/remove/reorder/reasoning-edit) are scoped to
-// whichever role the target application has, not the whole group.
 func (s *preferenceListService) checkEntryNotLocked(ctx context.Context, cycleID, roleID string) error {
-	deadline, err := s.preferenceListDB.GetPreferenceListDeadline(ctx, cycleID, roleID)
-	if err != nil {
-		return utils.StoreErr(err)
-	}
-	if preferenceListDeadlinePassed(deadline) {
-		return huma.Error403Forbidden("the preference list deadline has passed")
-	}
-	return nil
+	return s.workflow.RequireOpeningWorkEditable(ctx, cycleID, roleID, workflow.WorkPreferenceList)
 }
 
-// checkGroupNotLocked 403s group-level mutations (rename, submit toggle,
-// membership, meeting day, create) once every role's deadline for the cycle
-// has passed — a group no longer belongs to one role, so no single role's
-// deadline should be able to lock it while another role's window is still
-// open.
+// checkGroupNotLocked lets group-level edits through while any opening can still edit, since a group spans roles.
 func (s *preferenceListService) checkGroupNotLocked(ctx context.Context, cycleID string) error {
-	roles, err := s.roleDB.ListCycleRoles(ctx, cycleID)
-	if err != nil {
-		return utils.StoreErr(err)
-	}
-	if len(roles) == 0 {
-		return nil
-	}
-	deadlines, err := s.preferenceListDB.ListPreferenceListDeadlines(ctx, cycleID)
-	if err != nil {
-		return utils.StoreErr(err)
-	}
-	for _, r := range roles {
-		if !preferenceListDeadlinePassed(deadlines[r.ID]) {
-			return nil
-		}
-	}
-	return huma.Error403Forbidden("every role's preference list deadline has passed")
+	return s.workflow.RequireAnyOpeningWorkEditable(ctx, cycleID, workflow.WorkPreferenceList)
 }
 
 // reviewableCycle is the caller's access to a cycle they must at least review.
@@ -381,40 +346,6 @@ func samePermutation(a, b []string) bool {
 		}
 	}
 	return true
-}
-
-func (s *preferenceListService) getDeadline(ctx context.Context, in *PreferenceListDeadlineInput) (*PreferenceListDeadlineOutput, error) {
-	if err := role.ParseRoleID(in.RoleID); err != nil {
-		return nil, err
-	}
-	if err := s.access.CanCycle(ctx, access.ReviewCycle, in.ID); err != nil {
-		return nil, err
-	}
-	if err := role.RequireCycleRole(ctx, s.roleDB, in.ID, in.RoleID); err != nil {
-		return nil, err
-	}
-	d, err := s.preferenceListDB.GetPreferenceListDeadline(ctx, in.ID, in.RoleID)
-	if err != nil {
-		return nil, utils.StoreErr(err)
-	}
-	return &PreferenceListDeadlineOutput{Body: d}, nil
-}
-
-func (s *preferenceListService) setDeadline(ctx context.Context, in *SetPreferenceListDeadlineInput) (*PreferenceListDeadlineOutput, error) {
-	if err := role.ParseRoleID(in.RoleID); err != nil {
-		return nil, err
-	}
-	if err := s.access.CanCycle(ctx, access.ManageCycle, in.ID); err != nil {
-		return nil, err
-	}
-	if err := role.RequireCycleRole(ctx, s.roleDB, in.ID, in.RoleID); err != nil {
-		return nil, err
-	}
-	d, err := s.preferenceListDB.UpsertPreferenceListDeadline(ctx, in.ID, in.RoleID, in.Body.ClosesAt, utils.CurrentActor(ctx).NUID)
-	if err != nil {
-		return nil, utils.StoreErr(err)
-	}
-	return &PreferenceListDeadlineOutput{Body: d}, nil
 }
 
 func (s *preferenceListService) setMeetingDay(ctx context.Context, in *SetPreferenceListMeetingDayInput) (*PreferenceListOutput, error) {

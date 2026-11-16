@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -236,45 +235,6 @@ func (p *PreferenceListDB) CountPreferenceListMembers(ctx context.Context, listI
 func (p *PreferenceListDB) RemovePreferenceListMember(ctx context.Context, listID, memberID string) error {
 	return deleteOne(p.db.WithContext(ctx).Where("id = ? AND preference_list_id = ?", memberID, listID),
 		&models.PreferenceListMember{})
-}
-
-func (p *PreferenceListDB) GetPreferenceListDeadline(ctx context.Context, cycleID string, role string) (models.PreferenceListDeadline, error) {
-	var rows []models.PreferenceListDeadline
-	err := p.db.WithContext(ctx).Where("cycle_id = ? AND role_id = ?", cycleID, role).Limit(1).Find(&rows).Error
-	if err != nil || len(rows) == 0 {
-		return models.PreferenceListDeadline{CycleID: cycleID, RoleID: role}, err
-	}
-	return rows[0], nil
-}
-
-func (p *PreferenceListDB) ListPreferenceListDeadlines(ctx context.Context, cycleID string) (map[string]models.PreferenceListDeadline, error) {
-	var rows []models.PreferenceListDeadline
-	if err := p.db.WithContext(ctx).Where("cycle_id = ?", cycleID).Find(&rows).Error; err != nil {
-		return nil, err
-	}
-	out := make(map[string]models.PreferenceListDeadline, len(rows))
-	for _, d := range rows {
-		out[d.RoleID] = d
-	}
-	return out, nil
-}
-
-// UpsertPreferenceListDeadline sets or clears (nil) the (cycle, role) deadline.
-func (p *PreferenceListDB) UpsertPreferenceListDeadline(ctx context.Context, cycleID string, role string, closesAt *time.Time, updatedBy string) (models.PreferenceListDeadline, error) {
-	deadline := models.PreferenceListDeadline{CycleID: cycleID, RoleID: role, ClosesAt: closesAt, UpdatedBy: &updatedBy}
-	err := p.db.WithContext(ctx).Select("cycle_id", "role_id", "closes_at", "updated_by").
-		Clauses(
-			clause.OnConflict{
-				Columns: []clause.Column{{Name: "cycle_id"}, {Name: "role_id"}},
-				DoUpdates: append(
-					clause.AssignmentColumns([]string{"closes_at", "updated_by"}),
-					clause.Assignment{Column: clause.Column{Name: "updated_at"}, Value: gorm.Expr("NOW()")},
-				),
-			},
-			clause.Returning{},
-		).
-		Create(&deadline).Error
-	return deadline, err
 }
 
 // lockList serializes rank assignment within a list: two concurrent adds

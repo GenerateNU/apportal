@@ -1,5 +1,6 @@
 'use client'
 
+import { useSave } from './SaveTracker'
 import type { QuestionType } from '@/lib/api/types'
 import { useCreateReviewQuestion } from '@/lib/queries/review-questions'
 import {
@@ -19,10 +20,11 @@ export function ReviewBlockPalette({
   nextOrder: number
 }) {
   const createReviewQuestion = useCreateReviewQuestion()
+  const save = useSave()
 
   function handleAdd(type: QuestionType) {
     const meta = QUESTION_TYPE_META[type]
-    createReviewQuestion.mutate({
+    save(createReviewQuestion, {
       cycleId,
       body: {
         role_id: role,

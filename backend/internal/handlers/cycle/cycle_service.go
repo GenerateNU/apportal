@@ -24,13 +24,6 @@ func (s *cycleService) create(ctx context.Context, in *CreateCycleInput) (*Cycle
 	if in.Body.BranchID == "" {
 		return nil, huma.Error422UnprocessableEntity("branch_id is required")
 	}
-	status := in.Body.Status
-	if status == "" {
-		status = models.CycleDraft
-	}
-	if !status.Valid() {
-		return nil, huma.Error422UnprocessableEntity("invalid status")
-	}
 	appType := in.Body.ApplicationType
 	if appType == "" {
 		appType = models.ApplicationTypeMember
@@ -42,7 +35,7 @@ func (s *cycleService) create(ctx context.Context, in *CreateCycleInput) (*Cycle
 	cycle, err := s.cycleDB.CreateCycle(ctx, CycleCreate{
 		BranchID:        in.Body.BranchID,
 		Name:            in.Body.Name,
-		Status:          status,
+		Status:          models.CycleDraft,
 		ApplicationType: appType,
 		OpensAt:         in.Body.OpensAt,
 		ClosesAt:        in.Body.ClosesAt,
@@ -101,13 +94,19 @@ func (s *cycleService) update(ctx context.Context, in *UpdateCycleInput) (*Cycle
 	if err := access.RequireAdmin(ctx); err != nil {
 		return nil, err
 	}
-	if in.Body.Status != nil && !in.Body.Status.Valid() {
-		return nil, huma.Error422UnprocessableEntity("invalid status")
-	}
 	if in.Body.ApplicationType != nil && !in.Body.ApplicationType.Valid() {
 		return nil, huma.Error422UnprocessableEntity("invalid application_type")
 	}
 
+	if in.Body.Status != nil {
+		current, err := s.cycleDB.GetCycle(ctx, in.ID, CycleFilter{})
+		if err != nil {
+			return nil, utils.StoreErr(err)
+		}
+		if err := archiveOnly(current.Status, *in.Body.Status); err != nil {
+			return nil, err
+		}
+	}
 	cycle, err := s.cycleDB.UpdateCycle(ctx, in.ID, CycleUpdate{
 		Name:            in.Body.Name,
 		Status:          in.Body.Status,
@@ -119,4 +118,17 @@ func (s *cycleService) update(ctx context.Context, in *UpdateCycleInput) (*Cycle
 		return nil, utils.StoreErr(err)
 	}
 	return &CycleOutput{Body: cycle}, nil
+}
+
+// archiveOnly keeps open and close on the workflow: releasing applications opens a cycle and closing it is a workflow action.
+func archiveOnly(from, to models.CycleStatus) error {
+	switch {
+	case !to.Valid():
+		return huma.Error422UnprocessableEntity("invalid status")
+	case from == to:
+		return nil
+	case from == models.CycleClosed && to == models.CycleArchived, from == models.CycleArchived && to == models.CycleClosed:
+		return nil
+	}
+	return huma.Error409Conflict("only a closed cycle can be archived or restored; open and close a cycle from its workflow")
 }

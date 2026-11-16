@@ -9,6 +9,7 @@ import (
 
 	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
+	"github.com/GenerateNU/apportal/backend/internal/workflow"
 )
 
 type Applicant struct {
@@ -26,7 +27,6 @@ func (a Applicant) Has(kind models.StepKind, nuid string) bool {
 }
 
 var (
-	ErrLocked      = errors.New("interviews are released for this opening, so its assignments are locked")
 	ErrOff         = errors.New("this cycle doesn't use this kind of assignment")
 	ErrNotEligible = errors.New("this person isn't on this opening's team for this work")
 	ErrConflicted  = errors.New("this person has a conflict of interest with this applicant")
@@ -34,15 +34,20 @@ var (
 	ErrFull        = errors.New("this applicant already has enough people for this")
 	ErrAlready     = errors.New("this person is already assigned")
 	ErrUnset       = errors.New("the per-applicant count isn't set")
+	ErrNotInReview = errors.New("reviewers can only be assigned while an application is submitted or in review")
 )
+
+func reviewable(stage models.ApplicationStage) bool {
+	s, _ := workflow.StepOfStage(stage)
+	return s == models.StepApplications || s == models.StepReviews
+}
 
 func unset(kind models.StepKind) error {
 	return fmt.Errorf("%w: set %ss each first", ErrUnset, kind)
 }
 
 type Rules struct {
-	Frozen   error
-	Released bool
+	Blocked  error
 	Limit    int
 	Eligible []string
 }
@@ -56,14 +61,14 @@ func (r Rules) RequireLimit(kind models.StepKind) error {
 
 func Check(a Applicant, r Rules, nuid string, kind models.StepKind) error {
 	switch {
-	case r.Frozen != nil:
-		return r.Frozen
-	case r.Released:
-		return ErrLocked
+	case r.Blocked != nil:
+		return r.Blocked
 	case r.RequireLimit(kind) != nil:
 		return r.RequireLimit(kind)
 	case r.Limit <= 0:
 		return ErrOff
+	case kind == models.KindReviewer && !reviewable(a.Stage):
+		return ErrNotInReview
 	case a.Has(kind, nuid):
 		return ErrAlready
 	case !slices.Contains(r.Eligible, nuid):
@@ -88,7 +93,7 @@ func HTTPError(err error) error {
 		return huma.Error409Conflict(err.Error())
 	case errors.Is(err, ErrOff), errors.Is(err, ErrNotEligible), errors.Is(err, ErrNotStaffKind):
 		return huma.Error422UnprocessableEntity(err.Error())
-	case errors.Is(err, ErrLocked), errors.Is(err, ErrConflicted), errors.Is(err, ErrSamePerson),
+	case errors.Is(err, ErrConflicted), errors.Is(err, ErrSamePerson), errors.Is(err, ErrNotInReview),
 		errors.Is(err, ErrFull), errors.Is(err, ErrAlready):
 		return huma.Error409Conflict(err.Error())
 	}

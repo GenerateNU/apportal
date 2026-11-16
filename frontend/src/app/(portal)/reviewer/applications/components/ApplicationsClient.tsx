@@ -8,13 +8,6 @@ import { PAGE_TOP, PAGE_X } from '@/components/ui/page-shell'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { List, Columns } from 'lucide-react'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import type { ApplicationStage, WrittenAnswer } from '@/lib/api/types'
 import { usePersistedFilters } from '@/hooks/usePersistedFilters'
 import { SegmentedTabs } from '@/components/ui/segmented-tabs'
@@ -24,8 +17,6 @@ import {
   useUpdateApplication,
 } from '@/lib/queries/applications'
 import { useCycleScope } from '@/hooks/useCycleScope'
-import { pickDefaultCycleId } from '@/lib/queries/cycles'
-import { useStaffCycles } from '@/lib/queries/cycle-staff'
 import { useMyCycles } from '@/lib/queries/cycle-staff'
 import { useCurrentUser } from '@/lib/queries/users'
 import { ORDERED_STAGES, PAGE_SIZE } from './constants'
@@ -57,7 +48,6 @@ const FILTERS_STORAGE_KEY = 'applications-filters-v3'
 
 type StoredFilters = {
   view: View
-  cycleId: string
   stage: ApplicationStage | 'all'
   search: string
   filters: AnswerFilter[]
@@ -71,8 +61,6 @@ export function ApplicationsClient() {
   const [activeStage, setActiveStage] = useState<ApplicationStage | 'all'>(
     'all'
   )
-  const [activeCycle, setActiveCycle] = useState<string>('')
-  const [cycleDefaulted, setCycleDefaulted] = useState(false)
   const [search, setSearch] = useState('')
   const [selectedApplicationId, setSelectedApplicationId] = useState<
     string | null
@@ -95,102 +83,58 @@ export function ApplicationsClient() {
     return () => clearTimeout(timer)
   }, [search])
 
-  const { data: allCycles = [] } = useStaffCycles()
   const { data: myCycles = [], isFetched: myCyclesFetched } = useMyCycles()
   const isAdmin = !!currentUser?.roles.includes('admin')
-  const cycles = useMemo(
-    () =>
-      isAdmin
-        ? allCycles
-        : allCycles.filter((c) => myCycles.some((m) => m.cycle_id === c.id)),
-    [allCycles, myCycles, isAdmin]
-  )
-  const cyclesReady = isAdmin || myCyclesFetched
   if (myCyclesFetched && !isAdmin && !isChief && myCycles.length === 0) {
     redirect('/applicant/applications')
   }
 
-  // Default the cycle filter so reviewers land on a specific cycle instead
-  // of every cycle ever run. Shared with the server prefetch in ../page.tsx,
-  // which scopes its application-list prefetch to this same cycle.
-  const scope = useCycleScope(isChief ? 'chief' : 'lead')
-  const sidebarCycle = cycles.some((c) => c.id === scope.cycleId)
-    ? scope.cycleId
-    : null
-  const currentCycleId = useMemo(
-    () => sidebarCycle ?? pickDefaultCycleId(cycles) ?? null,
-    [cycles, sidebarCycle]
-  )
-  const [followed, setFollowed] = useState(sidebarCycle)
-  if (sidebarCycle !== followed) {
-    setFollowed(sidebarCycle)
-    if (sidebarCycle) setActiveCycle(sidebarCycle)
-  }
-
-  if (cyclesReady && activeCycle && !cycles.some((c) => c.id === activeCycle)) {
-    setActiveCycle(currentCycleId ?? '')
-  }
-  if (cyclesReady && !cycleDefaulted && currentCycleId) {
-    setActiveCycle(currentCycleId)
-    setCycleDefaulted(true)
-  }
+  // The cycle is the sidebar's (or ?cycle= on the link that opened this).
+  const scope = useCycleScope('lead')
+  const activeCycle = scope.cycleId
 
   // Every stored value can outlive what it points at — a cycle can be removed,
   // a role retired — so each is checked against the current options and
   // otherwise left at its default.
-  const restoreFilters = useCallback(
-    (stored: Partial<StoredFilters>) => {
-      if (stored.view === 'table' || stored.view === 'kanban') {
-        setView(stored.view)
-      }
-      if (
-        !sidebarCycle &&
-        stored.cycleId &&
-        cycles.some((c) => c.id === stored.cycleId)
-      ) {
-        setActiveCycle(stored.cycleId)
-        setCycleDefaulted(true)
-      }
-      const stage =
-        stored.stage &&
-        ORDERED_STAGES.includes(stored.stage as ApplicationStage)
-          ? (stored.stage as ApplicationStage)
-          : 'all'
-      if (stage !== 'all') setActiveStage(stage)
-      if (Array.isArray(stored.filters)) {
-        // The stage tabs and the stage chip say the same thing two ways and
-        // only one is ever live (see handleStageChange) — a snapshot holding
-        // both is stale, and the tab is what's visible.
-        setFilters(
-          stage === 'all'
-            ? stored.filters
-            : stored.filters.filter((f) => f.special !== 'stage')
-        )
-      }
+  const restoreFilters = useCallback((stored: Partial<StoredFilters>) => {
+    if (stored.view === 'table' || stored.view === 'kanban') {
+      setView(stored.view)
+    }
+    const stage =
+      stored.stage && ORDERED_STAGES.includes(stored.stage as ApplicationStage)
+        ? (stored.stage as ApplicationStage)
+        : 'all'
+    if (stage !== 'all') setActiveStage(stage)
+    if (Array.isArray(stored.filters)) {
+      // The stage tabs and the stage chip say the same thing two ways and
+      // only one is ever live (see handleStageChange) — a snapshot holding
+      // both is stale, and the tab is what's visible.
+      setFilters(
+        stage === 'all'
+          ? stored.filters
+          : stored.filters.filter((f) => f.special !== 'stage')
+      )
+    }
 
-      // Both, so a restored term doesn't fire a second query a debounce later.
-      if (stored.search) {
-        setSearch(stored.search)
-        setDebouncedSearch(stored.search)
-      }
-    },
-    [cycles, sidebarCycle]
-  )
+    // Both, so a restored term doesn't fire a second query a debounce later.
+    if (stored.search) {
+      setSearch(stored.search)
+      setDebouncedSearch(stored.search)
+    }
+  }, [])
 
-  // Held back until the cycle list is in hand, since a stored cycle id is only
-  // safe to apply once there's something to check it against. The debounced
-  // search rather than the live one, so typing doesn't write once per keystroke.
+  // The debounced search rather than the live one, so typing doesn't write
+  // once per keystroke.
   usePersistedFilters<StoredFilters>(
     FILTERS_STORAGE_KEY,
     {
       view,
-      cycleId: activeCycle,
       stage: activeStage,
       search: debouncedSearch,
       filters,
     },
     restoreFilters,
-    cycles.length > 0
+    true
   )
 
   // Which questions the chips can be built from, and the query params they
@@ -382,26 +326,26 @@ export function ApplicationsClient() {
       )}
     >
       <PageHeader
-        back={<Breadcrumbs items={[{ label: 'Applicants' }]} />}
+        back={
+          <Breadcrumbs
+            items={[
+              ...(scope.cycle
+                ? [
+                    {
+                      label: [scope.branch?.name, scope.cycle.name]
+                        .filter(Boolean)
+                        .join(' · '),
+                    },
+                  ]
+                : []),
+              { label: 'Applicants' },
+            ]}
+          />
+        }
         title="Applicants"
         subtitle="Browse everyone who applied, filter by stage, role or answers, and open anyone to see their application and reviews."
         actions={
           <div className="flex flex-wrap items-center gap-3">
-            {cycles.length > 1 && (
-              <Select value={activeCycle} onValueChange={setActiveCycle}>
-                <SelectTrigger className="w-40" aria-label="Filter by cycle">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {cycles.map((cycle) => (
-                    <SelectItem key={cycle.id} value={cycle.id}>
-                      {cycle.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-
             <SearchInput
               value={search}
               onChange={setSearch}

@@ -12,8 +12,5 @@ export type CreateUserInputBodyRolesAnyOfItem = typeof CreateUserInputBodyRolesA
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const CreateUserInputBodyRolesAnyOfItem = {
   applicant: 'applicant',
-  member: 'member',
-  lead: 'lead',
-  chief: 'chief',
   admin: 'admin',
 } as const;

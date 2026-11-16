@@ -21,12 +21,14 @@ function DateTimePicker({
   placeholder = 'Pick a date and time',
   disabled = false,
   trigger,
+  className,
 }: {
   value?: Date
   onValueChange: (date: Date) => void
   placeholder?: string
   disabled?: boolean
   trigger?: React.ReactElement
+  className?: string
 }) {
   const [open, setOpen] = React.useState(false)
   // Which month the grid shows. null follows `value`, which usually arrives
@@ -110,7 +112,8 @@ function DateTimePicker({
             disabled={disabled}
             className={cn(
               'justify-start text-left font-normal',
-              !value && 'text-muted-foreground'
+              !value && 'text-muted-foreground',
+              className
             )}
           >
             <Calendar className="mr-2 h-4 w-4" />

@@ -9,11 +9,12 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 
 	"github.com/GenerateNU/apportal/backend/internal/access"
+	"github.com/GenerateNU/apportal/backend/internal/workflow"
 )
 
 func Route(api huma.API, db *gorm.DB) {
 	draftDB := NewDraftDB(db)
-	s := &draftService{access: access.NewChecker(db), draftDB: draftDB, roleDB: role.NewRoleDB(db)}
+	s := &draftService{access: access.NewChecker(db), draftDB: draftDB, roleDB: role.NewRoleDB(db), workflow: workflow.NewService(db)}
 
 	huma.Register(api, huma.Operation{
 		OperationID: "get-draft-board",

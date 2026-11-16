@@ -9,8 +9,8 @@ import (
 	"gorm.io/gorm/clause"
 
 	"github.com/GenerateNU/apportal/backend/internal/models"
-	"github.com/GenerateNU/apportal/backend/internal/pipeline"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
+	"github.com/GenerateNU/apportal/backend/internal/workflow"
 )
 
 type ApplicationTemplateDB struct {
@@ -49,6 +49,37 @@ func (a *ApplicationTemplateDB) GetOrCreateApplicationTemplate(ctx context.Conte
 	return template, err
 }
 
+// ListCycleApplicationTemplates returns one template per role of the cycle,
+// creating the default-titled draft for any role that has none yet.
+func (a *ApplicationTemplateDB) ListCycleApplicationTemplates(ctx context.Context, cycleID string) ([]models.ApplicationTemplate, error) {
+	templates := []models.ApplicationTemplate{}
+	err := a.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := createMissingCycleTemplates(tx, cycleID).Error; err != nil {
+			return err
+		}
+		return cycleTemplatesQuery(tx, cycleID).Find(&templates).Error
+	})
+	return templates, err
+}
+
+func cycleTemplatesQuery(db *gorm.DB, cycleID string) *gorm.DB {
+	return db.Table("application_templates AS at").
+		Select("at.*").
+		Joins("JOIN roles r ON r.id = at.role_id").
+		Where("at.cycle_id = ?", cycleID).
+		Order("r.created_at")
+}
+
+func createMissingCycleTemplates(db *gorm.DB, cycleID string) *gorm.DB {
+	return db.Exec(`INSERT INTO application_templates (cycle_id, role_id, title)
+SELECT r.cycle_id, r.id, r.name || ' Application'
+FROM roles r
+WHERE r.cycle_id = ?
+ON CONFLICT DO NOTHING`, cycleID)
+}
+
+// ListOpenApplicationTemplates returns the templates live for applicants: the
+// template and its cycle are both open and the template hasn't closed.
 func (a *ApplicationTemplateDB) ListOpenApplicationTemplates(ctx context.Context) ([]models.ApplicationTemplate, error) {
 	templates := []models.ApplicationTemplate{}
 	q := a.db.WithContext(ctx).Table("application_templates AS at").
@@ -56,26 +87,22 @@ func (a *ApplicationTemplateDB) ListOpenApplicationTemplates(ctx context.Context
 		Joins("JOIN cycles c ON c.id = at.cycle_id").
 		Joins("JOIN roles r ON r.id = at.role_id").
 		Where("c.status = ?", models.CycleOpen)
-	err := pipeline.AcceptingApplications(q, "at").
+	err := workflow.AcceptingApplications(q, "at").
 		Order("c.created_at DESC").Order("r.created_at").
 		Find(&templates).Error
 	if err != nil {
 		return nil, err
 	}
-	return templates, pipeline.FillTemplates(a.db.WithContext(ctx), templates, time.Now())
+	return templates, workflow.FillTemplates(a.db.WithContext(ctx), templates, time.Now())
 }
 
 func (a *ApplicationTemplateDB) FillTimeline(ctx context.Context, t *models.ApplicationTemplate) error {
 	one := []models.ApplicationTemplate{*t}
-	if err := pipeline.FillTemplates(a.db.WithContext(ctx), one, time.Now()); err != nil {
+	if err := workflow.FillTemplates(a.db.WithContext(ctx), one, time.Now()); err != nil {
 		return err
 	}
 	*t = one[0]
 	return nil
-}
-
-func (a *ApplicationTemplateDB) ApplyTimeline(ctx context.Context, cycleID, roleID string, in pipeline.TemplateTimeline, actor pipeline.Actor) error {
-	return pipeline.ApplyTemplateTimeline(a.db.WithContext(ctx), cycleID, roleID, in, actor, time.Now())
 }
 
 func (a *ApplicationTemplateDB) UpdateApplicationTemplate(ctx context.Context, cycleID, roleID string, in ApplicationTemplateUpdate) (models.ApplicationTemplate, error) {

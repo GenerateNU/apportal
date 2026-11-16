@@ -9,11 +9,12 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 
 	"github.com/GenerateNU/apportal/backend/internal/access"
+	"github.com/GenerateNU/apportal/backend/internal/workflow"
 )
 
 func Route(api huma.API, db *gorm.DB) {
 	applicationTemplateDB := NewApplicationTemplateDB(db)
-	s := &applicationTemplateService{access: access.NewChecker(db), applicationTemplateDB: applicationTemplateDB, roleDB: role.NewRoleDB(db)}
+	s := &applicationTemplateService{workflow: workflow.NewService(db), access: access.NewChecker(db), applicationTemplateDB: applicationTemplateDB, roleDB: role.NewRoleDB(db)}
 
 	huma.Register(api, huma.Operation{
 		OperationID: "list-open-application-templates",
@@ -23,6 +24,16 @@ func Route(api huma.API, db *gorm.DB) {
 		Description: "A row is included only when both its own status and its owning cycle's status are \"open\".",
 		Tags:        []string{"Application Templates"},
 	}, s.listOpen)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "list-cycle-application-templates",
+		Method:      http.MethodGet,
+		Path:        "/cycles/{id}/templates",
+		Summary:     "List a cycle's application templates",
+		Description: "Staff only. One template per role of the cycle, in role order; creates the default-titled draft for any role without one.",
+		Tags:        []string{"Application Templates"},
+		Errors:      []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound},
+	}, s.listForCycle)
 
 	huma.Register(api, huma.Operation{
 		OperationID: "get-application-template",

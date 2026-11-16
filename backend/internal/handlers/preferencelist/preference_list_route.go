@@ -3,20 +3,22 @@ package preferencelist
 import (
 	"net/http"
 
-	"github.com/GenerateNU/apportal/backend/internal/handlers/application"
-	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
-	"github.com/GenerateNU/apportal/backend/internal/handlers/user"
 	"github.com/danielgtaylor/huma/v2"
 	"gorm.io/gorm"
 
+	"github.com/GenerateNU/apportal/backend/internal/handlers/application"
+	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
+	"github.com/GenerateNU/apportal/backend/internal/handlers/user"
+
 	"github.com/GenerateNU/apportal/backend/internal/access"
+	"github.com/GenerateNU/apportal/backend/internal/workflow"
 )
 
 func Route(api huma.API, db *gorm.DB) {
 	applicationDB := application.NewApplicationDB(db)
 	preferenceListDB := NewPreferenceListDB(db)
 	userDB := user.NewUserDB(db)
-	s := &preferenceListService{access: access.NewChecker(db), applicationDB: applicationDB, preferenceListDB: preferenceListDB, userDB: userDB, roleDB: role.NewRoleDB(db)}
+	s := &preferenceListService{access: access.NewChecker(db), applicationDB: applicationDB, preferenceListDB: preferenceListDB, userDB: userDB, roleDB: role.NewRoleDB(db), workflow: workflow.NewService(db)}
 
 	huma.Register(api, huma.Operation{
 		OperationID:   "create-preference-list",
@@ -184,25 +186,6 @@ func Route(api huma.API, db *gorm.DB) {
 		Tags:        []string{"Preference lists"},
 		Errors:      []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound, http.StatusUnprocessableEntity},
 	}, s.updateComment)
-
-	huma.Register(api, huma.Operation{
-		OperationID: "get-preference-list-deadline",
-		Method:      http.MethodGet,
-		Path:        "/cycles/{id}/preference-list-deadline",
-		Summary:     "Get the preference-list submission deadline for a cycle's role",
-		Tags:        []string{"Preference lists"},
-		Errors:      []int{http.StatusUnauthorized, http.StatusUnprocessableEntity},
-	}, s.getDeadline)
-
-	huma.Register(api, huma.Operation{
-		OperationID: "set-preference-list-deadline",
-		Method:      http.MethodPut,
-		Path:        "/cycles/{id}/preference-list-deadline",
-		Summary:     "Set the preference-list submission deadline for a cycle's role",
-		Description: "Chief only. Every preference list for that (cycle, role) locks for editing once this passes, submitted or not.",
-		Tags:        []string{"Preference lists"},
-		Errors:      []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusUnprocessableEntity},
-	}, s.setDeadline)
 
 	huma.Register(api, huma.Operation{
 		OperationID: "set-preference-list-meeting-day",

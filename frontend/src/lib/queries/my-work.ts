@@ -1,8 +1,5 @@
-import { useQuery } from '@tanstack/react-query'
-import { getMyCyclePipeline } from '@/generated/pipeline/pipeline'
-import type { MyPipeline } from '@/generated/model/myPipeline'
 import type { Task } from '@/generated/model/task'
-import { queryKeys } from './keys'
+import { useWorkflow } from './workflow'
 
 export type MyWorkPhaseId =
   | 'reviews'
@@ -95,16 +92,8 @@ export function phasesFrom(tasks: Task[]): MyWorkPhase[] {
   })
 }
 
-export function useMyPipeline(cycleId: string) {
-  return useQuery({
-    queryKey: queryKeys.myWork.detail(cycleId),
-    queryFn: async () => (await getMyCyclePipeline(cycleId)) as MyPipeline,
-    enabled: !!cycleId,
-  })
-}
-
 export function useMyWork(cycleId: string) {
-  const q = useMyPipeline(cycleId)
+  const q = useWorkflow(cycleId)
   return {
     ...q,
     data: q.data ? phasesFrom(q.data.tasks ?? []) : undefined,

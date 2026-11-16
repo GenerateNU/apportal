@@ -12,8 +12,5 @@ export type UserRolesAnyOfItem = typeof UserRolesAnyOfItem[keyof typeof UserRole
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const UserRolesAnyOfItem = {
   applicant: 'applicant',
-  member: 'member',
-  lead: 'lead',
-  chief: 'chief',
   admin: 'admin',
 } as const;

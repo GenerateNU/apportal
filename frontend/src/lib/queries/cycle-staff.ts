@@ -5,8 +5,11 @@ import {
   removeCycleStaff,
   setCycleStaff,
 } from '@/generated/cycle-staff/cycle-staff'
-import type { CycleStaffMember } from '@/generated/model/cycleStaffMember'
-import type { CycleStaff } from '@/generated/model/cycleStaff'
+import type {
+  CycleStaff,
+  CycleStaffMember,
+  CycleStaffRole,
+} from '@/generated/model'
 import type { RequestOptions } from '@/lib/api/orval-mutator'
 import { staffAccess } from '@/lib/auth/staff'
 import { defaultPipelineCycleId } from '@/lib/cycles'
@@ -66,12 +69,46 @@ export function useIsChief() {
   return useStaffAccess().isChief
 }
 
-export function useCycleStaff(cycleId: string) {
+export async function fetchCycleStaff(cycleId: string, opts?: RequestOptions) {
+  return ((await listCycleStaff(cycleId, opts)) ?? []) as CycleStaffMember[]
+}
+
+// Chiefs first, then by name (the backend's order).
+export function useCycleStaff(cycleId: string, opts?: RequestOptions) {
   return useQuery({
     queryKey: queryKeys.cycleStaff.list(cycleId),
-    queryFn: async () =>
-      ((await listCycleStaff(cycleId)) ?? []) as CycleStaffMember[],
+    queryFn: () => fetchCycleStaff(cycleId, opts),
     enabled: !!cycleId,
+  })
+}
+
+// Adds someone to a cycle's staff, or changes their role. Invalidates "mine"
+// too, since the caller may have just changed their own access.
+export function useSetCycleStaff() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (vars: {
+      cycleId: string
+      nuid: string
+      role: CycleStaffRole
+      opts?: RequestOptions
+    }) =>
+      setCycleStaff(vars.cycleId, vars.nuid, { role: vars.role }, vars.opts),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: queryKeys.cycleStaff.all }),
+  })
+}
+
+export function useRemoveCycleStaff() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (vars: {
+      cycleId: string
+      nuid: string
+      opts?: RequestOptions
+    }) => removeCycleStaff(vars.cycleId, vars.nuid, vars.opts),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: queryKeys.cycleStaff.all }),
   })
 }
 

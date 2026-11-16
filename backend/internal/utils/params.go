@@ -12,7 +12,7 @@ import (
 const MaxBulkApplications = 200
 
 // ApplicationScopedInput identifies an operation acting on an application by ID.
-// Shared across the pipeline handlers.
+// Shared across the workflow handlers.
 type ApplicationScopedInput struct {
 	ID string `path:"id" doc:"Application ID"`
 }

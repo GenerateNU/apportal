@@ -15,7 +15,7 @@ type Level int
 const (
 	None   Level = iota
 	Review       // read applications and write reviews
-	Manage       // also set up forms and run the pipeline
+	Manage       // also set up forms and run the workflow
 )
 
 type rule struct {
@@ -67,4 +67,16 @@ func LevelFor(admin bool, staff models.CycleStaffRole, status models.CycleStatus
 		}
 	}
 	return None
+}
+
+// StaffRolesFor lists the staff roles that get any access to a cycle of type t,
+// chiefs first. Staffing anyone else there would grant nothing.
+func StaffRolesFor(t models.ApplicationType) []models.CycleStaffRole {
+	var roles []models.CycleStaffRole
+	for _, s := range staffRules {
+		if slices.Contains(s.types, t) {
+			roles = append(roles, s.role)
+		}
+	}
+	return roles
 }
