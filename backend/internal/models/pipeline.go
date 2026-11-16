@@ -306,3 +306,44 @@ type ReviewRelease struct {
 	Releaser   User       `json:"-" gorm:"foreignKey:ReleasedBy;references:NUID"`
 	Role       Role       `json:"-" gorm:"foreignKey:RoleID;references:ID;constraint:OnDelete:RESTRICT"`
 }
+
+// ReviewCutoff is the saved shortlist rule for one opening (cycle × role).
+type ReviewCutoff struct {
+	CycleID   string     `json:"cycle_id" gorm:"primaryKey;type:uuid"`
+	RoleID    string     `json:"role_id" gorm:"primaryKey;type:uuid"`
+	Mode      CutoffMode `json:"mode" gorm:"type:text;not null;check:review_cutoffs_mode_check,mode IN ('min_score','top_n')"`
+	Value     float64    `json:"value" doc:"Minimum normalized score for min_score; how many to take for top_n" gorm:"type:double precision;not null"`
+	UpdatedBy string     `json:"updated_by" gorm:"not null"`
+	UpdatedAt time.Time  `json:"updated_at" gorm:"not null;default:now()"`
+	Cycle     Cycle      `json:"-" gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
+	Role      Role       `json:"-" gorm:"foreignKey:RoleID;references:ID;constraint:OnDelete:RESTRICT"`
+	Updater   User       `json:"-" gorm:"foreignKey:UpdatedBy;references:NUID"`
+}
+
+// ReviewCutoffOverride is a hand-pick that beats the cutoff for one application.
+type ReviewCutoffOverride struct {
+	ApplicationID string      `json:"application_id" gorm:"primaryKey;type:uuid"`
+	Included      bool        `json:"included" gorm:"not null"`
+	SetBy         string      `json:"set_by" gorm:"not null"`
+	UpdatedAt     time.Time   `json:"updated_at" gorm:"not null;default:now()"`
+	Application   Application `json:"-" gorm:"foreignKey:ApplicationID;references:ID;constraint:OnDelete:CASCADE"`
+	Setter        User        `json:"-" gorm:"foreignKey:SetBy;references:NUID"`
+}
+
+type ReviewRanking struct {
+	Cutoff    *ReviewCutoff        `json:"cutoff"`
+	ReviewsIn bool                 `json:"reviews_in" doc:"Every assigned review is submitted or the review due date has passed; until then the cutoff, hand-picks and advancing are locked"`
+	Entries   []ReviewRankingEntry `json:"entries"`
+}
+
+type ReviewRankingEntry struct {
+	ApplicationID   string           `json:"application_id"`
+	Stage           ApplicationStage `json:"stage"`
+	ReviewCount     int              `json:"review_count" doc:"Submitted written reviews with at least one ranked score"`
+	NormalizedScore *float64         `json:"normalized_score,omitempty" doc:"Mean of per-reviewer z-scores; 0 is an average review"`
+	ScaledAverage   *float64         `json:"scaled_average,omitempty" doc:"Raw scores mapped onto 0-1 by each question's scale, then averaged"`
+	Rank            *int             `json:"rank,omitempty" doc:"1-based; omitted until the application has a score"`
+	AboveCutoff     bool             `json:"above_cutoff"`
+	Override        *bool            `json:"override,omitempty" doc:"A manual include (true) or exclude (false)"`
+	Included        bool             `json:"included" doc:"The override if set, otherwise above_cutoff"`
+}

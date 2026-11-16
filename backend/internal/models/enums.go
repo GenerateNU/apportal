@@ -176,3 +176,15 @@ func (c CycleStatus) Valid() bool {
 	}
 	return false
 }
+
+// CutoffMode is how a review cutoff picks the shortlist.
+type CutoffMode string
+
+const (
+	CutoffMinScore CutoffMode = "min_score"
+	CutoffTopN     CutoffMode = "top_n"
+)
+
+func (m CutoffMode) Valid() bool {
+	return m == CutoffMinScore || m == CutoffTopN
+}
