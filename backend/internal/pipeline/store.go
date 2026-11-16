@@ -233,6 +233,11 @@ func release(tx *gorm.DB, f *Facts, roleID string, s models.Step, actor Actor, n
 	}).Create(&row).Error; err != nil {
 		return err
 	}
+	if s == models.StepApplications {
+		if err := tx.Model(&models.Cycle{}).Where("id = ? AND status = ?", f.CycleID, models.CycleDraft).Update("status", models.CycleOpen).Error; err != nil {
+			return err
+		}
+	}
 	f.SetRelease(roleID, s, now)
 	return nil
 }
