@@ -318,9 +318,13 @@ func (s *service) myPipeline(ctx context.Context, in *CycleInput) (*MyPipelineOu
 	if err != nil {
 		return nil, err
 	}
-	counts, err := pipeline.LoadTaskCounts(s.db.WithContext(ctx), in.ID, utils.CurrentActor(ctx).NUID)
-	if err != nil {
-		return nil, pipeline.HTTPErr(err)
+	tasks := []pipeline.Task{}
+	if a.Staff() != "" {
+		counts, err := pipeline.LoadTaskCounts(s.db.WithContext(ctx), in.ID, utils.CurrentActor(ctx).NUID)
+		if err != nil {
+			return nil, pipeline.HTTPErr(err)
+		}
+		tasks = f.Tasks(counts)
 	}
 	late, err := pipeline.LoadLate(s.db.WithContext(ctx), in.ID)
 	if err != nil {
@@ -328,7 +332,7 @@ func (s *service) myPipeline(ctx context.Context, in *CycleInput) (*MyPipelineOu
 	}
 	now := s.now()
 	v := f.View(now, late)
-	out := MyPipeline{Role: myRole(a), CurrentStep: v.CurrentStep, Steps: v.Steps, NextActions: []pipeline.NextAction{}, Tasks: f.Tasks(counts)}
+	out := MyPipeline{Role: myRole(a), CurrentStep: v.CurrentStep, Steps: v.Steps, NextActions: []pipeline.NextAction{}, Tasks: tasks}
 	if a.Allows(access.ManageCycle) {
 		out.NextActions = f.NextActions(now)
 	}
