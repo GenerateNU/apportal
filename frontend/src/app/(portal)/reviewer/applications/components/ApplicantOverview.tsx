@@ -15,7 +15,7 @@ import { useAnswers } from '@/lib/queries/answers'
 import { useApplicant } from '@/lib/queries/applicants'
 import { useInterviewComments } from '@/lib/queries/interview-comments'
 import { useInterview } from '@/lib/queries/interviews'
-import { usePipeline } from '@/lib/queries/pipeline'
+import { useWorkflow } from '@/lib/queries/workflow'
 import { useQuestions } from '@/lib/queries/questions'
 import { useRecordingReviews } from '@/lib/queries/recording-reviews'
 import { useReviewQuestions } from '@/lib/queries/review-questions'
@@ -122,12 +122,12 @@ export function ApplicantOverview({
     recordingReviews.some((r) => r.reviewer_nuid === me?.nuid)
   const canOpenReview =
     isChief || myReviewQueue.some((a) => a.id === applicationId)
-  const { data: pipeline } = usePipeline(isChief ? cycleId : '')
+  const { data: workflow } = useWorkflow(isChief ? cycleId : '')
   const { reviews: showReviews, interview: showInterview } = sectionsReached({
     stage,
     reviewsUnlocked:
-      !!pipeline &&
-      (pipeline.steps ?? []).find((s) => s.step === 'reviews')?.status !==
+      !!workflow &&
+      (workflow.steps ?? []).find((s) => s.step === 'reviews')?.status !==
         'locked',
     hasReviews: writtenReviews.length > 0,
     hasInterview: !!interview,

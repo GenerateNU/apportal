@@ -9,6 +9,7 @@ import {
 } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { ToastProvider } from '@/components/ui/toast'
+import { OverrideConfirmProvider } from '@/components/workflow/OverrideConfirmProvider'
 import { APIError } from '@/lib/api/client'
 import type { User } from '@supabase/supabase-js'
 import { AuthProvider } from '@/lib/auth/auth-context'
@@ -83,7 +84,9 @@ export function Providers({
   return (
     <AuthProvider initialUser={initialUser}>
       <QueryClientProvider client={queryClient}>
-        <ToastProvider>{children}</ToastProvider>
+        <ToastProvider>
+          <OverrideConfirmProvider>{children}</OverrideConfirmProvider>
+        </ToastProvider>
         {showDevtools && <ReactQueryDevtools initialIsOpen={false} />}
       </QueryClientProvider>
     </AuthProvider>

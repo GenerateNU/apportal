@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   listReviewGates,
   setReviewRelease,
-} from '@/generated/review-releases/review-releases'
+} from '@/generated/workflow/workflow'
 import type { ReviewGate } from '@/generated/model'
 import type { RequestOptions } from '@/lib/api/orval-mutator'
 import { queryKeys } from './keys'
@@ -27,7 +27,7 @@ export function useSetReviewRelease() {
       cycleId: string
       body: Parameters<typeof setReviewRelease>[1]
       opts?: RequestOptions
-    }) => setReviewRelease(vars.cycleId, vars.body, vars.opts),
+    }) => setReviewRelease(vars.cycleId, vars.body, undefined, vars.opts),
     onSuccess: (_data, vars) => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.reviewGates.list(vars.cycleId),

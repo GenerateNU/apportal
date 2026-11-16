@@ -24,7 +24,7 @@ import { useCreateCycle, useUpdateCycle } from '@/lib/queries/cycles'
 import {
   APPLICATION_TYPES,
   CYCLE_STATUS,
-  CYCLE_STATUS_ORDER,
+  statusChoices,
   type ApplicationType,
 } from '../lib/cycle-meta'
 
@@ -64,7 +64,10 @@ export function CycleDialog({
 
     if (isEdit) {
       updateCycle.mutate(
-        { id: cycle.id, body: { ...body, status } },
+        {
+          id: cycle.id,
+          body: status === cycle.status ? body : { ...body, status },
+        },
         { onSuccess }
       )
     } else if (branchId) {
@@ -126,12 +129,13 @@ export function CycleDialog({
               <Select
                 value={status}
                 onValueChange={(val) => setStatus(val as CycleStatus)}
+                disabled={statusChoices(cycle.status).length < 2}
               >
                 <SelectTrigger id="cycle-status">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {CYCLE_STATUS_ORDER.map((s) => (
+                  {statusChoices(cycle.status).map((s) => (
                     <SelectItem key={s} value={s}>
                       {CYCLE_STATUS[s].label}
                     </SelectItem>

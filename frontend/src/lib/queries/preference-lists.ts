@@ -1,7 +1,6 @@
 import { useMemo } from 'react'
 import {
   useMutation,
-  useQueries,
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query'
@@ -13,25 +12,28 @@ import {
   deletePreferenceListEntry,
   deletePreferenceListPersonalEntry,
   getPreferenceList,
-  getPreferenceListDeadline,
   listPreferenceListDetails,
   listPreferenceLists,
   removePreferenceListMember,
   reorderPreferenceListEntries,
   reorderPreferenceListPersonalEntries,
-  setPreferenceListDeadline,
   setPreferenceListMeetingDay,
   updatePreferenceList,
   updatePreferenceListComment,
   upsertPreferenceListEntry,
   upsertPreferenceListPersonalEntry,
 } from '@/generated/preference-lists/preference-lists'
+import {
+  clearOpeningDeadline,
+  setOpeningDeadline,
+} from '@/generated/workflow/workflow'
+import type { WorkflowChange } from '@/generated/model'
 import type { RequestOptions } from '@/lib/api/orval-mutator'
+import { useWorkflow } from './workflow'
 import type {
   MeetingDay,
   PreferenceList,
   PreferenceListComment,
-  PreferenceListDeadline,
   PreferenceListDetail,
   PreferenceListEntry,
   PreferenceListEntryDetail,
@@ -424,49 +426,32 @@ export function useReorderPersonalPreferenceListEntries() {
   })
 }
 
-export function usePreferenceListDeadline(
-  cycleId: string,
-  roleId: string,
-  opts?: RequestOptions
-) {
-  return useQuery({
-    queryKey: queryKeys.preferenceListDeadline.detail(cycleId, roleId),
-    queryFn: () =>
-      getPreferenceListDeadline(
-        cycleId,
-        { role_id: roleId },
-        opts
-      ) as Promise<PreferenceListDeadline>,
-    enabled: !!cycleId && !!roleId,
-  })
+// The preference-list deadline is the Decisions step's preference_list deadline in the workflow.
+function closesAt(w: WorkflowChange | undefined, roleId: string) {
+  return w?.steps
+    ?.find((s) => s.step === 'decisions')
+    ?.openings?.find((o) => o.role_id === roleId)
+    ?.deadlines?.find((d) => d.kind === 'preference_list')?.due_at
 }
 
-// Each role's closes_at for a cycle, keyed by role ID (undefined while
-// loading or unset). Shares cache entries with usePreferenceListDeadline.
+export function usePreferenceListDeadline(cycleId: string, roleId: string) {
+  const q = useWorkflow(cycleId)
+  return {
+    ...q,
+    data: q.data ? { closes_at: closesAt(q.data, roleId) } : undefined,
+  }
+}
+
+// Each role's closes_at for a cycle, keyed by role ID, from the one workflow read.
 export function usePreferenceListDeadlines(
   cycleId: string,
-  roleIds: string[],
-  opts?: RequestOptions
+  roleIds: string[]
 ): Record<string, string | undefined> {
-  const results = useQueries({
-    queries: roleIds.map((roleId) => ({
-      queryKey: queryKeys.preferenceListDeadline.detail(cycleId, roleId),
-      queryFn: () =>
-        getPreferenceListDeadline(
-          cycleId,
-          { role_id: roleId },
-          opts
-        ) as Promise<PreferenceListDeadline>,
-      enabled: !!cycleId,
-    })),
-  })
-  const key = results.map((r) => r.data?.closes_at ?? '').join('|')
-  return useMemo(() => {
-    const closesAt = key.split('|')
-    return Object.fromEntries(
-      roleIds.map((roleId, i) => [roleId, closesAt[i] || undefined])
-    )
-  }, [roleIds, key])
+  const { data } = useWorkflow(cycleId)
+  return useMemo(
+    () => Object.fromEntries(roleIds.map((r) => [r, closesAt(data, r)])),
+    [roleIds, data]
+  )
 }
 
 export function useSetPreferenceListDeadline() {
@@ -478,43 +463,26 @@ export function useSetPreferenceListDeadline() {
       closesAt: string | null
       opts?: RequestOptions
     }) =>
-      setPreferenceListDeadline(
-        vars.cycleId,
-        { closes_at: vars.closesAt ?? undefined },
-        { role_id: vars.roleId },
-        vars.opts
-      ) as Promise<PreferenceListDeadline>,
-    // Optimistic because the picker reads the deadline straight back out of
-    // this cache entry — without it, every edit flashes the old time until
-    // the round trip lands.
-    onMutate: async (vars) => {
-      const key = queryKeys.preferenceListDeadline.detail(
-        vars.cycleId,
-        vars.roleId
-      )
-      await queryClient.cancelQueries({ queryKey: key })
-      const previous = queryClient.getQueryData<PreferenceListDeadline>(key)
-      if (previous) {
-        queryClient.setQueryData(key, {
-          ...previous,
-          closes_at: vars.closesAt ?? undefined,
-        })
-      }
-      return { previous }
-    },
-    onError: (_err, vars, context) => {
-      if (context?.previous) {
-        queryClient.setQueryData(
-          queryKeys.preferenceListDeadline.detail(vars.cycleId, vars.roleId),
-          context.previous
-        )
-      }
-    },
+      (vars.closesAt
+        ? setOpeningDeadline(
+            vars.cycleId,
+            vars.roleId,
+            'decisions',
+            'preference_list',
+            { due_at: vars.closesAt, hard: true },
+            undefined,
+            vars.opts
+          )
+        : clearOpeningDeadline(
+            vars.cycleId,
+            vars.roleId,
+            'decisions',
+            'preference_list',
+            undefined,
+            vars.opts
+          )) as Promise<WorkflowChange>,
     onSuccess: (data, vars) => {
-      queryClient.setQueryData(
-        queryKeys.preferenceListDeadline.detail(vars.cycleId, vars.roleId),
-        data
-      )
+      queryClient.setQueryData(queryKeys.workflow.detail(vars.cycleId), data)
     },
   })
 }

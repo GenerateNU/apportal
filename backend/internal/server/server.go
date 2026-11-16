@@ -4,7 +4,6 @@ package server
 
 import (
 	"context"
-	"slices"
 	"time"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -105,7 +104,9 @@ func CreateApp(db *gorm.DB, cfg Config) *fiber.App {
 func humaConfig() huma.Config {
 	config := huma.DefaultConfig("apportal API", "0.1.0")
 	config.DocsRenderer = huma.DocsRendererScalar
-	config.Info.Description = "Generate application portal — applications, reviews, and the hiring workflow."
+	config.Info.Description = "Generate application portal — applications, reviews, and the hiring workflow.\n\n" +
+		"A write the workflow flags as an override or destructive answers 409 with an error at `query.confirm_override`; " +
+		"chiefs and admins repeat it with `?confirm_override=true` to go ahead, and it is recorded."
 	return config
 }
 
@@ -145,24 +146,8 @@ func CreateRoutes(api huma.API, db *gorm.DB, storageClient *storage.Client, chal
 	selection.Route(api, db)
 	draft.Route(api, db)
 	decision.Route(api, db)
-	documentConfirm(api)
 }
 
-// documentConfirm declares the confirm_override query that middleware.ReadIntent reads, on every write that can need it.
-func documentConfirm(api huma.API) {
-	param := &huma.Param{
-		Name: "confirm_override", In: "query", Schema: &huma.Schema{Type: huma.TypeBoolean},
-		Description: "Chiefs and admins: go ahead with an override or destructive change the workflow flags; it is recorded",
-	}
-	for _, item := range api.OpenAPI().Paths {
-		for _, op := range []*huma.Operation{item.Post, item.Put, item.Patch, item.Delete} {
-			if op == nil || slices.ContainsFunc(op.Parameters, func(p *huma.Param) bool { return p.Name == param.Name }) {
-				continue
-			}
-			op.Parameters = append(op.Parameters, param)
-		}
-	}
-}
 
 // OpenAPIYAML registers the same routes as the server over a dry-run database
 // and returns the spec, so `make openapi` needs no running server or database.
