@@ -12,6 +12,7 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/handlers/leadassignment"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/GenerateNU/apportal/backend/internal/models"
+	"github.com/GenerateNU/apportal/backend/internal/reviewrules"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 	"github.com/danielgtaylor/huma/v2"
 
@@ -30,6 +31,7 @@ type assignmentPlannerService struct {
 	applicationDB    *application.ApplicationDB
 	leadAssignmentDB *leadassignment.LeadAssignmentDB
 	staffDB          *cyclestaff.CycleStaffDB
+	conflicts        *reviewrules.Conflicts
 }
 
 // reviewPoolStages are the stages an application can be in and still need lead
@@ -132,6 +134,11 @@ func (s *assignmentPlannerService) buildPlan(ctx context.Context, in *PreviewPla
 		}
 	}
 
+	blocked, err := s.conflicts.Blocked(ctx, in.ID)
+	if err != nil {
+		return plannedRun{}, utils.StoreErr(err)
+	}
+
 	plan, err := assign.Compute(assign.Input{
 		ApplicationIDs: appIDs,
 		Teams:          toAssignTeams(in.Body.Teams),
@@ -140,6 +147,7 @@ func (s *assignmentPlannerService) buildPlan(ctx context.Context, in *PreviewPla
 		CapOverrides:   in.Body.CapOverrides,
 		Coverage:       in.Body.Coverage,
 		Seed:           assign.SeedFrom(in.ID, in.Body.RoleID),
+		Blocked:        blocked,
 	})
 	if err != nil {
 		return plannedRun{}, huma.Error422UnprocessableEntity(err.Error())
