@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { Pencil } from 'lucide-react'
+import Link from 'next/link'
+import { Pencil, Users } from 'lucide-react'
 import { PageContainer } from '@/components/PageContainer'
 import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import { Button } from '@/components/ui/button'
@@ -17,7 +18,9 @@ import { CycleDialog } from '../../../../../cycles/components/CycleDialog'
 import { CycleRoles } from '../../../../../cycles/components/CycleRoles'
 import { CYCLE_STATUS } from '../../../../../cycles/lib/cycle-meta'
 import { ApplicationTypeBadge } from '../../../../components/ApplicationTypeBadge'
+import { AdminReviewInfo } from '../../../../components/AdminReviewInfo'
 import { CycleStaffButton } from '../../../../components/CycleStaff'
+import { staffRolesFor } from '../../../../lib/cycle-staff'
 import { applicationFormHref, branchCrumbs } from '../../../../lib/breadcrumbs'
 import { cycleApplicationCards } from '../../../../lib/cycle-applications'
 
@@ -74,7 +77,19 @@ export function CycleDetailClient({
         }
         actions={
           <>
-            <CycleStaffButton cycle={cycle} />
+            {cycle.status !== 'closed' && (
+              <Button variant="outline" asChild>
+                <Link href={`/reviewer/applications?cycle=${cycle.id}`}>
+                  <Users className="h-4 w-4" />
+                  Browse applicants
+                </Link>
+              </Button>
+            )}
+            {staffRolesFor(cycle.application_type).length > 0 ? (
+              <CycleStaffButton cycle={cycle} />
+            ) : (
+              <AdminReviewInfo />
+            )}
             <Button
               onClick={() => {
                 setEditKey((k) => k + 1)

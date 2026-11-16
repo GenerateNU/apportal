@@ -527,6 +527,24 @@ func TestMyPipeline(t *testing.T) {
 	}
 }
 
+// Admins review chief cycles, so they get tasks there like staff do.
+func TestMyPipelineAdminTasksOnChiefCycle(t *testing.T) {
+	f := newFixture(t)
+	f.exec("UPDATE cycles SET application_type = 'chief' WHERE id = ?", f.cycleA)
+	f.exec("DELETE FROM cycle_staff WHERE cycle_id = ?", f.cycleA)
+	f.closeApplications()
+	_, err := f.advance(f.as(f.admin), models.StepApplications, nil, f.apps...)
+	f.must(err)
+	f.exec("INSERT INTO lead_assignments (application_id, lead_nuid, assigned_by) VALUES (?, ?, ?)",
+		f.apps[0], f.admin.NUID, f.admin.NUID)
+
+	admin, err := f.s.myPipeline(f.as(f.admin), &CycleInput{ID: f.cycleA})
+	f.must(err)
+	if len(admin.Body.Tasks) != 1 || admin.Body.Tasks[0].Kind != pipeline.TaskReview || admin.Body.Tasks[0].Total != 1 {
+		t.Fatalf("admin tasks: %+v", admin.Body.Tasks)
+	}
+}
+
 func TestDraftAndFeedbackTasks(t *testing.T) {
 	f := newFixture(t)
 	list, draft, interview := uuid.NewString(), uuid.NewString(), uuid.NewString()

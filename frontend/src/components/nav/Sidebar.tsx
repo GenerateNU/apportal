@@ -16,6 +16,7 @@ import {
   LayoutList,
 } from 'lucide-react'
 import { LeadPhaseNav } from './LeadPhaseNav'
+import { withApplyItems } from './nav-sections'
 import { SectionCaret } from './SectionHeader'
 import NavItem, { isNavItemActive } from './NavItem'
 import { Avatar } from '@/components/ui/avatar'
@@ -301,11 +302,7 @@ export default function Sidebar({
       ? cycleNavMode
         ? [{ id: 'apply-chief', label: 'Applying', items: applyItems }]
         : sectionsByRole.applicant
-      : staffSections.map((section, i) =>
-          i === 0
-            ? { ...section, items: [...section.items, ...applyItems] }
-            : section
-        )
+      : withApplyItems(staffSections, applyItems)
 
   // Navigating into a collapsed section expands it, so the active item is
   // never hidden. Easy to hit from the icon-only rail, which shows every item
@@ -386,7 +383,7 @@ export default function Sidebar({
       >
         {cycleNavMode && (
           <Suspense>
-            {cycleNavMode === 'lead' && <LeadPhaseNav collapsed={collapsed} />}
+            <LeadPhaseNav collapsed={collapsed} />
           </Suspense>
         )}
         {sections.map((section) => (

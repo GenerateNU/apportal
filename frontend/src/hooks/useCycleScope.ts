@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { scopeCycles } from '@/lib/cycle-scope'
 import { defaultPipelineCycleId } from '@/lib/cycles'
 import { useBranches } from '@/lib/queries/branches'
 import { useStaffAccess, useStaffCycles } from '@/lib/queries/cycle-staff'
@@ -28,11 +29,11 @@ export function useCycleScope(mode: 'chief' | 'lead' = 'chief') {
     } catch {}
   }, [mode])
 
-  const cycles = useMemo(() => {
-    if (isAdmin) return allCycles
-    const ids = mode === 'chief' ? chiefCycleIds : staffCycleIds
-    return allCycles.filter((c) => ids.includes(c.id))
-  }, [allCycles, chiefCycleIds, staffCycleIds, isAdmin, mode])
+  const cycles = useMemo(
+    () =>
+      scopeCycles(allCycles, { isAdmin, staffCycleIds, chiefCycleIds }, mode),
+    [allCycles, chiefCycleIds, staffCycleIds, isAdmin, mode]
+  )
   const isCycle = (id?: string | null): id is string =>
     !!id && cycles.some((c) => c.id === id)
   const urlCycle = params.get('cycle')

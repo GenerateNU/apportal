@@ -8,6 +8,7 @@ import (
 	"gorm.io/gorm/clause"
 
 	"github.com/GenerateNU/apportal/backend/internal/models"
+	"github.com/GenerateNU/apportal/backend/internal/staffing"
 )
 
 type Conflict struct {
@@ -75,10 +76,7 @@ func (c *Conflicts) Delete(ctx context.Context, cycleID, leadNUID, applicantNUID
 }
 
 func (c *Conflicts) IsStaff(ctx context.Context, cycleID, nuid string) (bool, error) {
-	var n int64
-	err := c.db.WithContext(ctx).Model(&models.CycleStaff{}).
-		Where("cycle_id = ? AND user_nuid = ?", cycleID, nuid).Count(&n).Error
-	return n > 0, err
+	return staffing.InPool(c.db.WithContext(ctx), cycleID, nuid)
 }
 
 // HasApplicant ignores drafts, which only their owner can see.

@@ -12,6 +12,7 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/pipeline"
+	"github.com/GenerateNU/apportal/backend/internal/staffing"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 )
 
@@ -318,9 +319,15 @@ func (s *service) myPipeline(ctx context.Context, in *CycleInput) (*MyPipelineOu
 	if err != nil {
 		return nil, err
 	}
+	// The pool is the staff, or the admins on a chief cycle.
+	nuid := utils.CurrentActor(ctx).NUID
+	inPool, err := staffing.InPool(s.db.WithContext(ctx), in.ID, nuid)
+	if err != nil {
+		return nil, utils.StoreErr(err)
+	}
 	tasks := []pipeline.Task{}
-	if a.Staff() != "" {
-		counts, err := pipeline.LoadTaskCounts(s.db.WithContext(ctx), in.ID, utils.CurrentActor(ctx).NUID)
+	if inPool {
+		counts, err := pipeline.LoadTaskCounts(s.db.WithContext(ctx), in.ID, nuid)
 		if err != nil {
 			return nil, pipeline.HTTPErr(err)
 		}

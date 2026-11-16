@@ -8,10 +8,10 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/access"
 	"github.com/GenerateNU/apportal/backend/internal/assign"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/application"
-	"github.com/GenerateNU/apportal/backend/internal/handlers/cyclestaff"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/leadassignment"
 	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/reviewrules"
+	"github.com/GenerateNU/apportal/backend/internal/staffing"
 )
 
 type cycleGate interface {
@@ -58,8 +58,17 @@ func (r *ReviewDB) RoleIDs(ctx context.Context, cycleID string) ([]string, error
 	return ids, err
 }
 
+// Staff is the review pool; admins on a chief cycle show as chiefs.
 func (r *ReviewDB) Staff(ctx context.Context, cycleID string) ([]models.CycleStaffMember, error) {
-	return cyclestaff.NewCycleStaffDB(r.db).ListStaff(ctx, cycleID, "")
+	rows := []models.CycleStaffMember{}
+	db := r.db.WithContext(ctx)
+	err := db.Table("(?) AS p", staffing.Pool(db, cycleID)).
+		Select("p.user_nuid, u.full_name, u.email, COALESCE(cs.role, 'chief') AS role, COALESCE(cs.created_at, u.created_at) AS created_at").
+		Joins("JOIN users u ON u.nuid = p.user_nuid").
+		Joins("LEFT JOIN cycle_staff cs ON cs.cycle_id = ? AND cs.user_nuid = p.user_nuid", cycleID).
+		Order("role DESC").Order("u.full_name").
+		Scan(&rows).Error
+	return rows, err
 }
 
 func (r *ReviewDB) Applications(ctx context.Context, cycleID string, stages []models.ApplicationStage) ([]models.ApplicationSummary, error) {
