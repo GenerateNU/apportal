@@ -1,5 +1,9 @@
 'use client'
 
+import {
+  SaveIndicator,
+  type SaveIndicatorStatus,
+} from '@/components/ui/save-indicator'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, ArrowRight, ChevronDown, Loader2 } from 'lucide-react'
@@ -209,7 +213,7 @@ type SaveSnapshot = {
   submissionUrl: string
 }
 
-type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
+type SaveStatus = SaveIndicatorStatus
 
 function Form({
   cycleId,
@@ -732,19 +736,7 @@ function Form({
           subtitle={cycleName}
           actions={
             <div className="flex flex-wrap items-center gap-3">
-              {saveStatus === 'saving' && (
-                <span className="text-text-subtle text-xs">Saving…</span>
-              )}
-              {saveStatus === 'saved' && (
-                <span className="text-text-subtle text-xs">
-                  All changes saved
-                </span>
-              )}
-              {saveStatus === 'error' && (
-                <span className="text-destructive text-xs">
-                  Couldn&apos;t save
-                </span>
-              )}
+              <SaveIndicator status={saveStatus} />
             </div>
           }
         />

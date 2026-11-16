@@ -1,5 +1,6 @@
 'use client'
 
+import { SaveStatusLabel, useSave } from './SaveTracker'
 import { useState } from 'react'
 import {
   DndContext,
@@ -45,6 +46,7 @@ export function ReviewQuestionsBuilderClient({
   const updateReviewQuestion = useUpdateReviewQuestion()
   const deleteReviewQuestion = useDeleteReviewQuestion()
   const reorderReviewQuestions = useReorderReviewQuestions(cycleId, role)
+  const save = useSave()
 
   // Mirrors the fetched list locally so drag reordering feels instant —
   // same render-time resync pattern as FormBuilderClient's `order` state.
@@ -75,7 +77,8 @@ export function ReviewQuestionsBuilderClient({
     const reordered = arrayMove(order, oldIndex, newIndex)
     setOrder(reordered)
 
-    reorderReviewQuestions.mutate(
+    save(
+      reorderReviewQuestions,
       { ordered: reordered },
       { onError: () => setOrder(previous) }
     )
@@ -97,6 +100,9 @@ export function ReviewQuestionsBuilderClient({
       </aside>
 
       <div className="overflow-y-auto bg-gray-50 p-4 sm:p-6 lg:p-10">
+        <div className="pointer-events-none sticky top-0 z-10 -mb-6 flex justify-end">
+          <SaveStatusLabel />
+        </div>
         <div className="mx-auto flex max-w-2xl flex-col gap-4">
           <DndContext
             sensors={sensors}
@@ -115,7 +121,7 @@ export function ReviewQuestionsBuilderClient({
                     allowPageBreak={false}
                     allowDescription
                     onUpdate={(body) =>
-                      updateReviewQuestion.mutate({
+                      save(updateReviewQuestion, {
                         id: question.id,
                         body: {
                           question_text: body.question_text,
@@ -127,7 +133,7 @@ export function ReviewQuestionsBuilderClient({
                       })
                     }
                     onDelete={() =>
-                      deleteReviewQuestion.mutate({ id: question.id })
+                      save(deleteReviewQuestion, { id: question.id })
                     }
                   />
                 ))}

@@ -1,8 +1,10 @@
 'use client'
 
+import { SaveStatusLabel, SaveTrackerProvider, useSave } from './SaveTracker'
 import { Fragment, useState } from 'react'
 import { Eye, Pencil, Clock, AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { statusBlockedReason } from '../lib/status'
 import { BackLink } from '@/components/ui/back-link'
 import { PageHeader } from '@/components/ui/page-header'
 import { SectionLabel } from '@/components/ui/section-label'
@@ -50,8 +52,9 @@ import { ReviewQuestionsBuilderClient } from './ReviewQuestionsBuilderClient'
 import { TemplateTextBlock } from './TemplateTextBlock'
 import { TEMPLATE_STATUS_LABEL, TEMPLATE_STATUS_ORDER } from './constants'
 import { useRoleLookup } from '@/lib/queries/roles'
+import { useCycle } from '@/lib/queries/cycles'
 
-export function FormBuilderClient({
+function FormBuilder({
   cycleId,
   cycleName,
   role,
@@ -71,13 +74,14 @@ export function FormBuilderClient({
 
   const { data: template } = useApplicationTemplate(cycleId, role)
   const updateTemplate = useUpdateApplicationTemplate()
+  const save = useSave()
+  const { data: cycle } = useCycle(cycleId)
+  // The backend refuses every edit once a cycle closes.
+  const readOnly = cycle?.status === 'closed' || cycle?.status === 'archived'
 
   const [mode, setMode] = useState<'application' | 'review'>('application')
 
-  // Applications and reviews each get their own independent status/deadline
-  // (review_status/review_closes_at are purely informational — unlike the
-  // application's own closes_at, nothing enforces them; a lead can still
-  // submit a review after the review deadline passes).
+  // Each side's status and deadline drive its pipeline step (release, close).
   const status =
     mode === 'application' ? template?.status : template?.review_status
   const closesAt =
@@ -85,7 +89,7 @@ export function FormBuilderClient({
 
   function changeStatus(next: CycleStatus) {
     if (!template || next === status) return
-    updateTemplate.mutate({
+    save(updateTemplate, {
       cycleId,
       roleId: role,
       body: mode === 'application' ? { status: next } : { review_status: next },
@@ -94,7 +98,7 @@ export function FormBuilderClient({
 
   function changeDeadline(date: Date) {
     if (!template) return
-    updateTemplate.mutate({
+    save(updateTemplate, {
       cycleId,
       roleId: role,
       body:
@@ -136,7 +140,8 @@ export function FormBuilderClient({
     const reordered = arrayMove(order, oldIndex, newIndex)
     setOrder(reordered)
 
-    reorderQuestions.mutate(
+    save(
+      reorderQuestions,
       { ordered: reordered },
       {
         // Roll the visible order back if persistence fails; the query cache is
@@ -175,22 +180,31 @@ export function FormBuilderClient({
             />
 
             {template && status && (
-              <>
+              <fieldset disabled={readOnly} className="contents">
                 <div className="flex items-center gap-1.5">
                   <AlertCircle className="h-5 w-5 text-gray-500" />
                   <span className="text-sm font-medium whitespace-nowrap text-gray-600">
-                    {mode === 'application' ? 'Status' : 'Review status'}
+                    Status
                   </span>
                   <Select value={status} onValueChange={changeStatus}>
                     <SelectTrigger className="h-8 w-32 px-2.5 py-1.5 text-sm">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {TEMPLATE_STATUS_ORDER.map((s) => (
-                        <SelectItem key={s} value={s}>
-                          {TEMPLATE_STATUS_LABEL[s]}
-                        </SelectItem>
-                      ))}
+                      {TEMPLATE_STATUS_ORDER.map((s) => {
+                        const blocked = statusBlockedReason(
+                          mode,
+                          s,
+                          template.status
+                        )
+                        return (
+                          <SelectItem key={s} value={s} disabled={!!blocked}>
+                            {blocked
+                              ? `${TEMPLATE_STATUS_LABEL[s]} — ${blocked.toLowerCase()}`
+                              : TEMPLATE_STATUS_LABEL[s]}
+                          </SelectItem>
+                        )
+                      })}
                     </SelectContent>
                   </Select>
                 </div>
@@ -198,15 +212,16 @@ export function FormBuilderClient({
                 <div className="flex items-center gap-1.5">
                   <Clock className="h-5 w-5 text-gray-500" />
                   <span className="text-sm font-medium whitespace-nowrap text-gray-600">
-                    {mode === 'application' ? 'Deadline' : 'Review deadline'}
+                    Deadline
                   </span>
                   <DateTimePicker
                     value={closesAt ? new Date(closesAt) : undefined}
                     onValueChange={changeDeadline}
                     placeholder="Set deadline"
+                    className="w-56 truncate"
                   />
                 </div>
-              </>
+              </fieldset>
             )}
 
             <button
@@ -230,6 +245,12 @@ export function FormBuilderClient({
         }
       />
 
+      {readOnly && (
+        <p className="border-b border-gray-100 bg-gray-50 px-4 py-2 text-sm text-gray-600 sm:px-8">
+          This cycle is closed, so its forms can’t be edited.
+        </p>
+      )}
+
       {mode === 'review' && showPreview ? (
         <div className="flex-1 overflow-y-auto bg-gray-50 p-4 sm:p-10">
           <div className="mx-auto max-w-2xl">
@@ -242,7 +263,9 @@ export function FormBuilderClient({
           </div>
         </div>
       ) : mode === 'review' ? (
-        <ReviewQuestionsBuilderClient cycleId={cycleId} role={role} />
+        <fieldset disabled={readOnly} className="contents">
+          <ReviewQuestionsBuilderClient cycleId={cycleId} role={role} />
+        </fieldset>
       ) : showPreview ? (
         <div className="flex-1 overflow-y-auto bg-gray-50 p-4 sm:p-10">
           <div className="mx-auto max-w-2xl">
@@ -257,86 +280,101 @@ export function FormBuilderClient({
           </div>
         </div>
       ) : (
-        <div className="grid flex-1 grid-cols-1 overflow-y-auto lg:grid-cols-[280px_1fr] lg:overflow-hidden">
-          <aside className="flex flex-col border-b border-gray-100 bg-white lg:overflow-y-auto lg:border-r lg:border-b-0">
-            <div className="p-4">
-              <BlockPalette
-                cycleId={cycleId}
-                role={role}
-                nextOrder={order.length}
-              />
-            </div>
-            <div className="flex-1 border-t border-gray-100 p-4">
-              <QuestionOutline questions={order} />
-            </div>
-          </aside>
+        <fieldset disabled={readOnly} className="contents">
+          <div className="grid flex-1 grid-cols-1 overflow-y-auto lg:grid-cols-[280px_1fr] lg:overflow-hidden">
+            <aside className="flex flex-col border-b border-gray-100 bg-white lg:overflow-y-auto lg:border-r lg:border-b-0">
+              <div className="p-4">
+                <BlockPalette
+                  cycleId={cycleId}
+                  role={role}
+                  nextOrder={order.length}
+                />
+              </div>
+              <div className="flex-1 border-t border-gray-100 p-4">
+                <QuestionOutline questions={order} />
+              </div>
+            </aside>
 
-          <div className="overflow-y-auto bg-gray-50 p-4 sm:p-6 lg:p-10">
-            <div className="mx-auto flex max-w-2xl flex-col gap-4">
-              <TemplateTextBlock
-                cycleId={cycleId}
-                role={role}
-                field="description"
-                label="Intro text — shown before the questions"
-                placeholder="Add an introduction applicants will see before the questions…"
-                value={template?.description}
-              />
+            <div className="overflow-y-auto bg-gray-50 p-4 sm:p-6 lg:p-10">
+              <div className="pointer-events-none sticky top-0 z-10 -mb-6 flex justify-end">
+                <SaveStatusLabel />
+              </div>
+              <div className="mx-auto flex max-w-2xl flex-col gap-4">
+                <TemplateTextBlock
+                  cycleId={cycleId}
+                  role={role}
+                  field="description"
+                  label="Intro text — shown before the questions"
+                  placeholder="Add an introduction applicants will see before the questions…"
+                  value={template?.description}
+                />
 
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleDragEnd}
-              >
-                <SortableContext
-                  items={order.map((q) => q.id)}
-                  strategy={verticalListSortingStrategy}
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
                 >
-                  <div className="flex flex-col gap-4">
-                    {order.map((question, index) => (
-                      <Fragment key={question.id}>
-                        {index > 0 && question.page_title && (
-                          <div className="flex items-center gap-3 pt-2">
-                            <SectionLabel as="span">
-                              {question.page_title}
-                            </SectionLabel>
-                            <div className="h-px flex-1 bg-gray-200" />
-                          </div>
-                        )}
-                        <QuestionCard
-                          question={question}
-                          onUpdate={(body) =>
-                            updateQuestion.mutate({
-                              id: question.id,
-                              body,
-                            })
-                          }
-                          onDelete={() =>
-                            deleteQuestion.mutate({ id: question.id })
-                          }
-                        />
-                      </Fragment>
-                    ))}
-                    {order.length === 0 && (
-                      <p className="text-text-subtle mt-10 text-center text-sm">
-                        Add a block to start building this form.
-                      </p>
-                    )}
-                  </div>
-                </SortableContext>
-              </DndContext>
+                  <SortableContext
+                    items={order.map((q) => q.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <div className="flex flex-col gap-4">
+                      {order.map((question, index) => (
+                        <Fragment key={question.id}>
+                          {index > 0 && question.page_title && (
+                            <div className="flex items-center gap-3 pt-2">
+                              <SectionLabel as="span">
+                                {question.page_title}
+                              </SectionLabel>
+                              <div className="h-px flex-1 bg-gray-200" />
+                            </div>
+                          )}
+                          <QuestionCard
+                            question={question}
+                            onUpdate={(body) =>
+                              save(updateQuestion, {
+                                id: question.id,
+                                body,
+                              })
+                            }
+                            onDelete={() =>
+                              save(deleteQuestion, { id: question.id })
+                            }
+                          />
+                        </Fragment>
+                      ))}
+                      {order.length === 0 && (
+                        <p className="text-text-subtle mt-10 text-center text-sm">
+                          Add a block to start building this form.
+                        </p>
+                      )}
+                    </div>
+                  </SortableContext>
+                </DndContext>
 
-              <TemplateTextBlock
-                cycleId={cycleId}
-                role={role}
-                field="instructions"
-                label="Closing text — shown after the questions"
-                placeholder="Add submission instructions or closing notes applicants will see after the questions…"
-                value={template?.instructions}
-              />
+                <TemplateTextBlock
+                  cycleId={cycleId}
+                  role={role}
+                  field="instructions"
+                  label="Closing text — shown after the questions"
+                  placeholder="Add submission instructions or closing notes applicants will see after the questions…"
+                  value={template?.instructions}
+                />
+              </div>
             </div>
           </div>
-        </div>
+        </fieldset>
       )}
     </div>
+  )
+}
+
+export function FormBuilderClient(
+  props: React.ComponentProps<typeof FormBuilder>
+) {
+  return (
+    <SaveTrackerProvider>
+      <FormBuilder {...props} />
+    </SaveTrackerProvider>
   )
 }
