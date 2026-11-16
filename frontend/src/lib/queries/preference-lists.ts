@@ -1,9 +1,5 @@
 import { useMemo } from 'react'
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   addPreferenceListMember,
   createPreferenceList,

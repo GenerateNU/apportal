@@ -148,7 +148,6 @@ func CreateRoutes(api huma.API, db *gorm.DB, storageClient *storage.Client, chal
 	decision.Route(api, db)
 }
 
-
 // OpenAPIYAML registers the same routes as the server over a dry-run database
 // and returns the spec, so `make openapi` needs no running server or database.
 func OpenAPIYAML() ([]byte, error) {
