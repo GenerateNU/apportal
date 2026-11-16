@@ -33,17 +33,22 @@ CREATE TYPE user_role AS ENUM ('applicant', 'admin');
 
 func main() {
 	tables, err := gormschema.New("postgres", gormschema.WithConfig(&gorm.Config{NamingStrategy: db.NamingStrategy})).Load(
-		&models.User{}, &models.Branch{}, &models.Role{}, &models.Cycle{}, &models.CycleStaff{}, &models.ApplicationTemplate{}, &models.CycleStage{},
+		&models.User{}, &models.Branch{}, &models.Role{}, &models.Cycle{}, &models.CycleStaff{}, &models.ApplicationTemplate{},
+		&models.CycleStep{}, &models.StepAssignment{}, &models.OpeningStep{}, &models.OpeningDeadline{}, &models.ApplicationMove{},
 		&models.Question{}, &models.CodeChallenge{}, &models.Application{}, &models.WrittenAnswer{},
 		&models.CodeSubmission{}, &models.InterviewScript{}, &models.LeadAssignment{},
 		&models.WrittenReview{}, &models.ReviewQuestion{}, &models.WrittenReviewAnswer{},
 		&models.ChiefReview{}, &models.ChiefReviewComment{},
 		&models.Interview{}, &models.Interviewer{}, &models.InterviewReviewer{},
-		&models.ApplicationComment{}, &models.InterviewGroup{}, &models.InterviewGroupMember{}, &models.LeadSelection{}, &models.PreferenceList{},
+		&models.ApplicationComment{}, &models.InterviewPanel{}, &models.InterviewPanelMember{}, &models.LeadSelection{}, &models.PreferenceList{},
 		&models.PreferenceListMember{}, &models.PreferenceListEntry{},
 		&models.PreferenceListPersonalEntry{}, &models.PreferenceListComment{},
 		&models.PreferenceListDeadline{}, &models.Draft{}, &models.DraftTeam{}, &models.DraftPick{},
 		&models.CycleTag{}, &models.DecisionTemplate{}, &models.DecisionDraft{}, &models.ReviewRelease{},
+		&models.StaffGroup{}, &models.StaffGroupMember{}, &models.OpeningTeam{},
+		&models.MeetingSlot{}, &models.StaffSlot{}, &models.ApplicationSlot{},
+		&models.ReviewConflict{},
+		&models.ReviewCutoff{}, &models.ReviewCutoffOverride{},
 	)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "failed to load gorm schema:", err)

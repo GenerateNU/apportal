@@ -17,7 +17,8 @@ import {
 import { SegmentedTabs } from '@/components/ui/segmented-tabs'
 import { MEETING_DAY_LABEL } from '@/app/(portal)/reviewer/applications/components/meetingAvailability'
 import type { PreferenceListDetail } from '@/lib/api/types'
-import { pickDefaultCycleId, useCycles } from '@/lib/queries/cycles'
+import { pickDefaultCycleId } from '@/lib/queries/cycles'
+import { useStaffCycles } from '@/lib/queries/cycle-staff'
 import { usePreferenceListDetails } from '@/lib/queries/preference-lists'
 import { useCycleRolePicker } from '@/hooks/useRoleSelection'
 import { useChiefs, useLeads } from '@/lib/queries/users'
@@ -28,7 +29,7 @@ import {
 
 export function PreferenceListsOverviewClient() {
   const searchParams = useSearchParams()
-  const { data: cycles = [] } = useCycles({})
+  const { data: cycles = [] } = useStaffCycles()
   const { data: leads = [] } = useLeads()
   const { data: chiefs = [] } = useChiefs()
 

@@ -9,6 +9,7 @@ function cycle(id: string, status: CycleStatus): Cycle {
     name: id,
     status,
     application_type: 'member',
+    match_by_slot: false,
     created_at: '2026-11-01T00:00:00Z',
   }
 }

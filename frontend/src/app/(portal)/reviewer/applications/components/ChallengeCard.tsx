@@ -2,13 +2,16 @@
 
 import { useState } from 'react'
 import { ChevronDown, ChevronUp, ExternalLink } from 'lucide-react'
-import type { ChallengeMetrics } from '@/lib/api/types'
+import type { ChallengeMetrics, ChallengeScore } from '@/lib/api/types'
 import { useApplicant } from '@/lib/queries/applicants'
 import { useChallengeScore } from '@/lib/queries/challenge-score'
 import { useChallenges } from '@/lib/queries/challenges'
 import { useSubmission } from '@/lib/queries/submissions'
+import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
+import { PanelHeading } from '@/components/ui/panel-heading'
 import { SectionLabel } from '@/components/ui/section-label'
+import { cn, formatDate } from '@/lib/utils'
 
 const CHALLENGE_METRIC_LABEL: { key: keyof ChallengeMetrics; label: string }[] =
   [
@@ -20,11 +23,6 @@ const CHALLENGE_METRIC_LABEL: { key: keyof ChallengeMetrics; label: string }[] =
     { key: 'slaCompliance', label: 'SLA compliance' },
   ]
 
-// The challenge server names each applicant's repo
-// f26-challenge-<first>-<last>-<github-username>, but never exposes the
-// username or the repo URL anywhere apportal can read it back — so this
-// only reconstructs the name portion and links to a filtered org search
-// rather than a guaranteed direct repo link.
 const CHALLENGE_GITHUB_ORG = 'generate-recruit'
 
 function slugify(value: string): string {
@@ -35,172 +33,245 @@ function slugify(value: string): string {
     .replace(/^-+|-+$/g, '')
 }
 
-// Ordered most- to least-specific: combined first+last, then each name
-// alone, so a reviewer can fall back if the combined slug doesn't line up
-// with however the applicant's name was split on the challenge server.
-function buildChallengeRepoQueries(fullName: string): string[] {
-  const parts = fullName.trim().split(/\s+/).filter(Boolean)
+type RepoSearch = { label: string; query: string }
+
+function challengeRepoSearches(fullName: string): RepoSearch[] {
+  const parts = fullName.trim().split(/\s+/).map(slugify).filter(Boolean)
   if (parts.length === 0) return []
-  const firstSlug = slugify(parts[0])
-  const lastSlug = parts.length > 1 ? slugify(parts[parts.length - 1]) : ''
-  const queries: string[] = []
-  if (firstSlug && lastSlug)
-    queries.push(`f26-challenge-${firstSlug}-${lastSlug}`)
-  if (lastSlug) queries.push(`f26-challenge-${lastSlug}`)
-  if (firstSlug) queries.push(`f26-challenge-${firstSlug}`)
-  return queries
+  const first = parts[0]
+  const last = parts.length > 1 ? parts[parts.length - 1] : ''
+  const searches: RepoSearch[] = []
+  if (last)
+    searches.push({
+      label: 'Full name',
+      query: `f26-challenge-${first}-${last}`,
+    })
+  searches.push({ label: 'First name only', query: `f26-challenge-${first}` })
+  if (last)
+    searches.push({ label: 'Last name only', query: `f26-challenge-${last}` })
+  return searches
 }
 
 function challengeRepoSearchUrl(query: string): string {
   return `https://github.com/orgs/${CHALLENGE_GITHUB_ORG}/repositories?q=${encodeURIComponent(query)}`
 }
 
-// The applicant's backend/scheduler technical challenge — read from the
-// separate challenge server, shown alongside their code submission link so
-// a reviewer doesn't have to leave this page to find either. Shared between
-// the interview conduct page and the applicant overview page.
+function displayUrl(url: string): string {
+  try {
+    const u = new URL(url)
+    return `${u.host}${u.pathname === '/' ? '' : u.pathname}`
+  } catch {
+    return url
+  }
+}
+
+const LINK_CLASS =
+  'text-ink inline-flex min-w-0 items-center gap-1 text-sm hover:underline'
+
 export function ChallengeCard({
   applicantNuid,
   applicationId,
   cycleId,
   role,
+  bare = false,
 }: {
   applicantNuid: string
   applicationId: string
   cycleId: string
   role: string
+  bare?: boolean
 }) {
+  const { data: challenges = [] } = useChallenges(cycleId, role)
   const { data: score } = useChallengeScore(applicantNuid)
   const { data: submission } = useSubmission(applicationId)
   const { data: applicant } = useApplicant(applicantNuid)
-  const { data: challenges = [] } = useChallenges(cycleId, role)
-  const [showHistory, setShowHistory] = useState(false)
 
-  // Only roles with a challenge get one. Try a best-effort repo match for
-  // every such applicant, scored or not — a repo can exist without an attempt.
-  const repoQueries =
-    challenges.length > 0 && applicant
-      ? buildChallengeRepoQueries(applicant.full_name)
-      : []
+  if (challenges.length === 0) return null
 
-  if (!score && !submission && repoQueries.length === 0) return null
+  const repoSearches = applicant
+    ? challengeRepoSearches(applicant.full_name)
+    : []
 
-  return (
-    <Card className="mb-4 flex flex-col gap-3">
-      <SectionLabel>Technical challenge</SectionLabel>
+  const body = (
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-3">
+        {bare ? (
+          <PanelHeading>Technical challenge</PanelHeading>
+        ) : (
+          <SectionLabel>Technical challenge</SectionLabel>
+        )}
+        {challenges.map((c) => (
+          <div
+            key={c.id}
+            className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1"
+          >
+            <div className="flex flex-col">
+              <span className="text-ink text-base font-semibold">{c.name}</span>
+              {c.due_at && (
+                <span className="text-text-muted text-xs">
+                  Due {formatDate(c.due_at)}
+                </span>
+              )}
+            </div>
+            {c.challenge_url && (
+              <a
+                href={c.challenge_url}
+                target="_blank"
+                rel="noreferrer"
+                className={LINK_CLASS}
+              >
+                Prompt
+                <ExternalLink size={12} />
+              </a>
+            )}
+          </div>
+        ))}
+      </div>
 
-      {submission && (
-        <a
-          href={submission.submission_url}
-          target="_blank"
-          rel="noreferrer"
-          className="text-ink inline-flex w-fit items-center gap-1 text-sm hover:underline"
-        >
-          View code submission
-          <ExternalLink size={12} />
-        </a>
+      <Row label="Submission">
+        {submission ? (
+          <a
+            href={submission.submission_url}
+            target="_blank"
+            rel="noreferrer"
+            className={LINK_CLASS}
+          >
+            <span className="truncate">
+              {displayUrl(submission.submission_url)}
+            </span>
+            <ExternalLink size={12} className="shrink-0" />
+          </a>
+        ) : (
+          <span className="text-text-faint text-sm">Not submitted</span>
+        )}
+      </Row>
+
+      {repoSearches.length > 0 && (
+        <Row label="Repo">
+          <div className="flex flex-wrap gap-x-5 gap-y-1">
+            {repoSearches.map(({ label, query }) => (
+              <a
+                key={query}
+                href={challengeRepoSearchUrl(query)}
+                target="_blank"
+                rel="noreferrer"
+                title={`Search the org for ${query}`}
+                className={LINK_CLASS}
+              >
+                {label}
+                <ExternalLink size={12} />
+              </a>
+            ))}
+          </div>
+        </Row>
       )}
 
       {score ? (
-        <>
-          <div className="flex items-baseline gap-2">
-            <span className="text-text-default text-lg font-semibold">
-              {score.overall_score.toFixed(1)}
-            </span>
-            <span className="text-text-faint text-xs">
-              overall score · {score.attempt_count} finished attempt
-              {score.attempt_count === 1 ? '' : 's'}
-            </span>
-          </div>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-            {CHALLENGE_METRIC_LABEL.map(({ key, label }) => (
-              <div key={key} className="flex items-center justify-between">
-                <span className="text-text-faint text-xs">{label}</span>
-                <span className="text-text-default text-xs font-medium">
-                  {score.metrics[key].toFixed(2)}
-                </span>
-              </div>
-            ))}
-          </div>
-
-          {score.attempts.length > 1 && (
-            <button
-              type="button"
-              onClick={() => setShowHistory((v) => !v)}
-              className="text-ink inline-flex w-fit items-center gap-1 text-xs hover:underline"
-            >
-              {showHistory ? (
-                <ChevronUp size={12} />
-              ) : (
-                <ChevronDown size={12} />
-              )}
-              {showHistory ? 'Hide' : 'View'} previous attempts (
-              {score.attempts.length})
-            </button>
-          )}
-
-          {showHistory && (
-            <div className="flex flex-col gap-1.5 border-t border-gray-100 pt-2">
-              {score.attempts.map((attempt) => (
-                <div
-                  key={attempt.expedition_id}
-                  className="flex items-center justify-between text-xs"
-                >
-                  <span className="text-text-faint">
-                    {new Date(attempt.finished_at).toLocaleDateString()}
-                  </span>
-                  <span
-                    className={
-                      attempt.overall_score === score.overall_score
-                        ? 'text-ink font-medium'
-                        : 'text-text-default font-medium'
-                    }
-                  >
-                    {attempt.overall_score.toFixed(1)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </>
+        <ScoreBlock score={score} />
       ) : (
-        <p className="text-text-faint text-sm">
-          No finished challenge attempt yet.
-        </p>
+        <Row label="Score">
+          <span className="text-text-faint text-sm">
+            No finished attempt yet
+          </span>
+        </Row>
       )}
+    </div>
+  )
 
-      {repoQueries.length > 0 && (
-        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs">
-          <a
-            href={challengeRepoSearchUrl(repoQueries[0])}
-            target="_blank"
-            rel="noreferrer"
-            title="Best-effort name match — the challenge server doesn't expose the applicant's exact repo, so this searches the org for repos matching their name."
-            className="text-ink inline-flex w-fit items-center gap-1 hover:underline"
+  return bare ? body : <Card className="p-5">{body}</Card>
+}
+
+function Row({
+  label,
+  children,
+}: {
+  label: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className="flex items-baseline gap-4 border-b border-gray-100 pb-3">
+      <span className="font-display text-text-subtle w-24 shrink-0 text-[11px] tracking-wider uppercase">
+        {label}
+      </span>
+      <div className="min-w-0 flex-1">{children}</div>
+    </div>
+  )
+}
+
+function ScoreBlock({ score }: { score: ChallengeScore }) {
+  const [showHistory, setShowHistory] = useState(false)
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-end gap-x-4 gap-y-1">
+        <span className="font-display text-ink text-4xl leading-none font-bold">
+          {score.overall_score.toFixed(1)}
+        </span>
+        <span className="text-text-muted pb-0.5 text-xs">
+          Overall · {score.attempt_count} finished attempt
+          {score.attempt_count === 1 ? '' : 's'} ·{' '}
+          {formatDate(score.finished_at)}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-2 border-t border-l border-gray-200 sm:grid-cols-3">
+        {CHALLENGE_METRIC_LABEL.map(({ key, label }) => (
+          <div
+            key={key}
+            className="flex flex-col gap-1 border-r border-b border-gray-200 px-3 py-2.5"
           >
-            Find challenge repo (best-effort match)
-            <ExternalLink size={10} />
-          </a>
-          {repoQueries.length > 1 && (
-            <span className="text-text-faint">
-              · No match?{' '}
-              {repoQueries.slice(1).map((query, i) => (
-                <span key={query}>
-                  {i > 0 && ' · '}
-                  <a
-                    href={challengeRepoSearchUrl(query)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-ink hover:underline"
-                  >
-                    try {i === 0 ? 'last name only' : 'first name only'}
-                  </a>
-                </span>
-              ))}
+            <span className="font-display text-text-subtle text-[10px] tracking-wider uppercase">
+              {label}
             </span>
+            <span className="text-ink text-base font-semibold tabular-nums">
+              {score.metrics[key].toFixed(2)}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {score.attempts.length > 1 && (
+        <div className="flex flex-col gap-2">
+          <button
+            type="button"
+            onClick={() => setShowHistory((v) => !v)}
+            className="text-text-muted hover:text-ink inline-flex w-fit items-center gap-1 text-xs"
+          >
+            {showHistory ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+            {showHistory ? 'Hide' : 'Show'} all attempts (
+            {score.attempts.length})
+          </button>
+          {showHistory && (
+            <div className="flex flex-col border-t border-gray-100">
+              {score.attempts.map((attempt) => {
+                const counted = attempt.expedition_id === score.expedition_id
+                return (
+                  <div
+                    key={attempt.expedition_id}
+                    className="flex items-center justify-between gap-3 border-b border-gray-100 py-2 text-sm"
+                  >
+                    <span className="text-text-muted">
+                      {formatDate(attempt.finished_at)}
+                    </span>
+                    <span className="flex items-center gap-2">
+                      {counted && <Badge size="sm">Counted</Badge>}
+                      <span
+                        className={cn(
+                          'tabular-nums',
+                          counted
+                            ? 'text-ink font-semibold'
+                            : 'text-text-default'
+                        )}
+                      >
+                        {attempt.overall_score.toFixed(1)}
+                      </span>
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
           )}
         </div>
       )}
-    </Card>
+    </div>
   )
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"strings"
-	"time"
 
 	"github.com/GenerateNU/apportal/backend/internal/handlers/applicationtemplate"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/challenge"
@@ -13,6 +12,7 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/GenerateNU/apportal/backend/internal/middleware"
 	"github.com/GenerateNU/apportal/backend/internal/models"
+	"github.com/GenerateNU/apportal/backend/internal/pipeline"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/google/uuid"
@@ -30,6 +30,7 @@ type applicationService struct {
 	codeSubmissionDB      *codesubmission.CodeSubmissionDB
 	questionDB            *question.QuestionDB
 	roleDB                *role.RoleDB
+	gate                  *pipeline.Gate
 }
 
 func (s *applicationService) create(ctx context.Context, in *CreateApplicationInput) (*ApplicationOutput, error) {
@@ -44,12 +45,11 @@ func (s *applicationService) create(ctx context.Context, in *CreateApplicationIn
 		return nil, err
 	}
 
-	tpl, err := s.applicationTemplateDB.GetOrCreateApplicationTemplate(ctx, in.Body.CycleID, in.Body.RoleID)
-	if err != nil {
+	if _, err := s.applicationTemplateDB.GetOrCreateApplicationTemplate(ctx, in.Body.CycleID, in.Body.RoleID); err != nil {
 		return nil, utils.StoreErr(err)
 	}
-	if deadlinePassed(tpl) {
-		return nil, huma.Error403Forbidden("the application deadline has passed")
+	if err := s.gate.Opening(ctx, in.Body.CycleID, in.Body.RoleID, models.StepApplications, models.KindApplicant); err != nil {
+		return nil, err
 	}
 
 	app, err := s.applicationDB.CreateApplication(ctx, ApplicationCreate{
@@ -290,17 +290,9 @@ func (s *applicationService) update(ctx context.Context, in *UpdateApplicationIn
 		return nil, utils.StoreErr(err)
 	}
 
-	// A draft is frozen once its template's deadline has passed — no autosave,
-	// no submit, no reviewer-initiated stage change either. This is a hard
-	// stop enforced regardless of who's making the request, unlike the
-	// owner-only rules below.
 	if current.Stage == models.StageDraft {
-		tpl, err := s.applicationTemplateDB.GetOrCreateApplicationTemplate(ctx, current.CycleID, current.RoleID)
-		if err != nil {
-			return nil, utils.StoreErr(err)
-		}
-		if deadlinePassed(tpl) {
-			return nil, huma.Error403Forbidden("the application deadline has passed")
+		if err := s.gate.Opening(ctx, current.CycleID, current.RoleID, models.StepApplications, models.KindApplicant); err != nil {
+			return nil, err
 		}
 	}
 
@@ -383,12 +375,6 @@ func (s *applicationService) requireComplete(ctx context.Context, app models.App
 		}
 	}
 	return nil
-}
-
-// deadlinePassed reports whether a template's closing time has passed. A nil
-// ClosesAt means no deadline was ever set, so it never blocks.
-func deadlinePassed(tpl models.ApplicationTemplate) bool {
-	return tpl.ClosesAt != nil && time.Now().After(*tpl.ClosesAt)
 }
 
 func (s *applicationService) delete(ctx context.Context, in *ApplicationIDInput) (*struct{}, error) {

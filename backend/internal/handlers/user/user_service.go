@@ -83,7 +83,7 @@ func (s *userService) get(ctx context.Context, in *UserNUIDInput) (*UserOutput, 
 	return &UserOutput{Body: user}, nil
 }
 
-func (s *userService) me(ctx context.Context, _ *MeInput) (*MeOutput, error) {
+func (s *userService) me(ctx context.Context, _ *MeInput) (*UserOutput, error) {
 	actor, ok := middleware.ActorFrom(ctx)
 	if !ok || actor.NUID == "" {
 		return nil, huma.Error401Unauthorized("authentication required")
@@ -92,14 +92,7 @@ func (s *userService) me(ctx context.Context, _ *MeInput) (*MeOutput, error) {
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
-	staff, err := s.userDB.StaffRoles(ctx, actor.NUID)
-	if err != nil {
-		return nil, utils.StoreErr(err)
-	}
-	out := &MeOutput{}
-	out.Body.User = user
-	out.Body.Staff = staff
-	return out, nil
+	return &UserOutput{Body: user}, nil
 }
 
 // parseUserFilter reads list-users' ?role=: a global role, or a staff role

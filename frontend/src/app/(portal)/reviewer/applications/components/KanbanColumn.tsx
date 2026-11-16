@@ -8,11 +8,13 @@ export function KanbanColumn({
   applicants,
   availabilityByApplicationId,
   editable,
+  onOpen,
 }: {
   stage: ApplicationStage
   applicants: ApplicantApplication[]
   availabilityByApplicationId: Record<string, string[]>
   editable: boolean
+  onOpen: (applicationId: string) => void
 }) {
   return (
     <div className="flex w-72 shrink-0 flex-col">
@@ -30,6 +32,7 @@ export function KanbanColumn({
             applicant={a}
             availabilityDays={availabilityByApplicationId[a.id] ?? []}
             editable={editable}
+            onOpen={() => onOpen(a.id)}
           />
         ))}
         {applicants.length === 0 && (

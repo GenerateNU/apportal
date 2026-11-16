@@ -100,11 +100,6 @@ export const queryKeys = {
       [...queryKeys.cycles.all, 'template-summary', id] as const,
   },
 
-  cycleStaff: {
-    all: ['cycle-staff'] as const,
-    list: (cycleId: string) => [...queryKeys.cycleStaff.all, cycleId] as const,
-  },
-
   applicationTemplates: {
     all: ['application-templates'] as const,
     details: () => [...queryKeys.applicationTemplates.all, 'detail'] as const,
@@ -160,6 +155,9 @@ export const queryKeys = {
     lists: () => [...queryKeys.writtenReviews.all, 'list'] as const,
     list: (applicationId: string) =>
       [...queryKeys.writtenReviews.lists(), applicationId] as const,
+    bulks: () => [...queryKeys.writtenReviews.all, 'bulk'] as const,
+    bulk: (applicationIds: string[]) =>
+      [...queryKeys.writtenReviews.bulks(), applicationIds] as const,
   },
 
   chiefReviews: {
@@ -249,32 +247,6 @@ export const queryKeys = {
       ] as const,
   },
 
-  // Same shape as assignmentPlan above: read-only, driven by a meeting-day
-  // roster the chief types in, so only pool sizes are cached queries.
-  interviewAssignmentPlan: {
-    all: ['interview-assignment-plan'] as const,
-    interviewerPool: (cycleId: string, roleId: string) =>
-      [
-        ...queryKeys.interviewAssignmentPlan.all,
-        'interviewer-pool',
-        cycleId,
-        roleId,
-      ] as const,
-    reviewerPool: (cycleId: string, roleId: string) =>
-      [
-        ...queryKeys.interviewAssignmentPlan.all,
-        'reviewer-pool',
-        cycleId,
-        roleId,
-      ] as const,
-  },
-
-  interviewGroups: {
-    all: ['interview-groups'] as const,
-    list: (cycleId: string) =>
-      [...queryKeys.interviewGroups.all, cycleId] as const,
-  },
-
   reviewGates: {
     all: ['review-gates'] as const,
     lists: () => [...queryKeys.reviewGates.all, 'list'] as const,
@@ -357,5 +329,24 @@ export const queryKeys = {
     all: ['preference-list-deadline'] as const,
     detail: (cycleId: string, roleId: string) =>
       [...queryKeys.preferenceListDeadline.all, cycleId, roleId] as const,
+  },
+  cycleStaff: {
+    all: ['cycleStaff'] as const,
+    mine: () => [...queryKeys.cycleStaff.all, 'mine'] as const,
+    list: (cycleId: string) =>
+      [...queryKeys.cycleStaff.all, 'list', cycleId] as const,
+  },
+  pipeline: {
+    all: ['pipeline'] as const,
+    detail: (cycleId: string) => [...queryKeys.pipeline.all, cycleId] as const,
+  },
+  myWork: {
+    all: ['my-work'] as const,
+    detail: (cycleId: string) => [...queryKeys.myWork.all, cycleId] as const,
+  },
+  interviewBoard: {
+    all: ['interview-board'] as const,
+    detail: (cycleId: string) =>
+      [...queryKeys.interviewBoard.all, cycleId] as const,
   },
 } as const

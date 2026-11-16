@@ -128,14 +128,3 @@ func (u *UserDB) NamesByNUIDs(ctx context.Context, nuids []string) (map[string]s
 	}
 	return names, err
 }
-
-func staffRolesQuery(db *gorm.DB, nuid string) *gorm.DB {
-	return db.Table("cycle_staff").Select("cycle_id, role").
-		Where("user_nuid = ?", nuid).Order("cycle_id")
-}
-
-// StaffRoles lists the cycles the user is on, with their role on each.
-func (u *UserDB) StaffRoles(ctx context.Context, nuid string) ([]StaffRole, error) {
-	roles := []StaffRole{}
-	return roles, staffRolesQuery(u.db.WithContext(ctx), nuid).Find(&roles).Error
-}

@@ -16,6 +16,7 @@ export interface Cycle {
   closes_at?: string;
   created_at: string;
   id: string;
+  match_by_slot: boolean;
   name: string;
   opens_at?: string;
   status: CycleStatus;

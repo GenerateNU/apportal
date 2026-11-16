@@ -17,7 +17,7 @@ import {
 import type { DecisionKind, DecisionRow, DecisionStatus } from '@/lib/api/types'
 import { defaultPipelineCycleId } from '@/lib/cycles'
 import { useDecisionTemplates, useDecisions } from '@/lib/queries/decisions'
-import { useCycles } from '@/lib/queries/cycles'
+import { useStaffCycles } from '@/lib/queries/cycle-staff'
 import { KIND_LABEL, STATUS_LABEL } from './constants'
 import { DecisionListRow } from './DecisionListRow'
 import { TemplateDialog } from './TemplateDialog'
@@ -31,7 +31,7 @@ type StatusFilter = DecisionStatus | 'all'
 // one a finished letter to copy out and mark sent. Leads get a queue and a
 // per-applicant writing screen instead — see page.tsx.
 export function DecisionsClient({ currentNUID }: { currentNUID: string }) {
-  const { data: cycles = [] } = useCycles({})
+  const { data: cycles = [] } = useStaffCycles()
 
   const [cycleId, setCycleId] = useState('')
   if (!cycleId && cycles.length > 0) {

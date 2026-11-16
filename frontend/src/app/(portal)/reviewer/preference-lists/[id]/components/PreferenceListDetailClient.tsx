@@ -4,7 +4,7 @@ import { useCallback, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { LayoutGrid, Lock, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
 import { PageContainer } from '@/components/PageContainer'
-import { BackLink } from '@/components/ui/back-link'
+import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -101,11 +101,7 @@ const STATUS_LABEL: Record<PreferenceListStatus, string> = {
   submitted: 'Submitted',
 }
 
-// Matches the backend's maxPreferenceListMembers — enforced there, mirrored
-// here just to hide the picker before a rejected request round-trips.
-const MAX_PREFERENCE_LIST_MEMBERS = 4
-
-function deadlinePassed(closesAt: string | undefined | null): boolean {
+export function deadlinePassed(closesAt: string | undefined | null): boolean {
   return !!closesAt && new Date(closesAt) < new Date()
 }
 
@@ -287,13 +283,23 @@ export function PreferenceListDetailClient({
     if (!editingName) setName(list.name)
   }
 
+  const crumbs = (name?: string) => [
+    ...(isChief
+      ? [{ label: 'Preference lists', href: '/reviewer/preference-lists' }]
+      : [
+          {
+            label: 'Preference list',
+            href: '/reviewer/my-work?phase=preference',
+          },
+        ]),
+    { label: name ?? 'Group' },
+  ]
+
   if (isError) {
     const notFound = error instanceof APIError && error.status === 404
     return (
       <PageContainer>
-        <BackLink href="/reviewer/preference-lists">
-          Back to preference lists
-        </BackLink>
+        <Breadcrumbs items={crumbs()} />
         <p className="text-text-faint text-sm">
           {notFound
             ? "This preference list doesn't exist, or you don't have access to it."
@@ -445,9 +451,7 @@ export function PreferenceListDetailClient({
 
   return (
     <PageContainer>
-      <BackLink href="/reviewer/preference-lists">
-        Back to preference lists
-      </BackLink>
+      <Breadcrumbs items={crumbs(list.name)} />
 
       {/* Sticky: on a long ranking you otherwise lose the list's name, its
           status and how long is left. Not on phones, where the wrapped bar
@@ -577,7 +581,6 @@ export function PreferenceListDetailClient({
         members={list.members}
         nameByNuid={nameByNuid}
         availableToAdd={availableToAdd}
-        maxMembers={MAX_PREFERENCE_LIST_MEMBERS}
         onAddMember={(nuid) =>
           addMember.mutate({ listId: list.id, leadNuid: nuid })
         }

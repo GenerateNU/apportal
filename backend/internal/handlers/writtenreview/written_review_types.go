@@ -20,7 +20,7 @@ type ReviewAnswerSubmission struct {
 	ReviewQuestionID string          `json:"review_question_id"`
 	AnswerText       *string         `json:"answer_text,omitempty"`
 	AnswerOptions    json.RawMessage `json:"answer_options,omitempty"`
-	Score            *int            `json:"score,omitempty" minimum:"1" maximum:"10"`
+	Score            *int            `json:"score,omitempty" doc:"Within the question's score_min..score_max"`
 }
 
 type UpsertWrittenReviewInput struct {
@@ -45,4 +45,8 @@ type WrittenReviewUpsert struct {
 	ReviewerNUID  string
 	Submit        bool // when true, stamps submitted_at = NOW()
 	Answers       []ReviewAnswerInput
+}
+
+type ListBulkInput struct {
+	ApplicationIDs string `query:"application_ids" doc:"Comma-separated application IDs, at most 200"`
 }

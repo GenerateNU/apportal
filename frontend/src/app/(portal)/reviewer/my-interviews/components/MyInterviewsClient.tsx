@@ -1,5 +1,6 @@
 'use client'
 
+import { useIsChief } from '@/lib/queries/cycle-staff'
 import { useEffect, useMemo, useState } from 'react'
 import { PageContainer } from '@/components/PageContainer'
 import { ProgressBar } from '@/components/ProgressBar'
@@ -15,7 +16,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useApplications } from '@/lib/queries/applications'
-import { DEFAULT_CYCLE_ID, useCycles } from '@/lib/queries/cycles'
+import { DEFAULT_CYCLE_ID } from '@/lib/queries/cycles'
+import { useStaffCycles } from '@/lib/queries/cycle-staff'
 import { useChiefs, useCurrentUser, useLeads } from '@/lib/queries/users'
 import { useInterviewReviewersBulk } from '@/lib/queries/interview-assignments'
 import {
@@ -27,7 +29,6 @@ import { ReviewRow } from '../../my-reviews/components/ReviewRow'
 import { REVIEWING_STATE, type ReviewingState } from '../constants'
 import { InterviewRow } from './InterviewRow'
 import { useCycleRoleFilter } from '@/hooks/useRoleSelection'
-import { hasChiefAccess } from '@/types/roles'
 
 // Sentinel for "my own queue" in the viewer-selector below, since Radix
 // Select can't use an empty string as a value.
@@ -38,11 +39,11 @@ const SEARCH_DEBOUNCE_MS = 250
 
 export function MyInterviewsClient() {
   const { data: currentUser } = useCurrentUser()
-  const { data: cycles = [] } = useCycles({})
+  const { data: cycles = [] } = useStaffCycles()
   const { data: leads = [] } = useLeads()
   const { data: chiefs = [] } = useChiefs()
 
-  const isChief = hasChiefAccess(currentUser)
+  const isChief = useIsChief()
 
   // A personal queue, so role stays "all" rather than forcing a pick. Cycle
   // defaults to the pinned cycle when it's in the list, but can be widened.

@@ -49,6 +49,8 @@ type Input struct {
 	// Seed makes the shuffle reproducible. Callers should derive it from a
 	// stable key (see SeedFrom) so re-running a generate produces the same plan.
 	Seed uint64
+
+	Blocked map[string]map[string]bool
 }
 
 // LeadLoad reports one lead's workload under the plan.
@@ -115,6 +117,7 @@ type planner struct {
 	before  map[string]int          // application -> reviewers before planning
 	pairs   [][]int                 // co-review counts between team indices
 	added   []Pair
+	blocked map[string]map[string]bool
 }
 
 // Compute plans the assignments to add. It returns an error only for malformed
@@ -157,6 +160,7 @@ func newPlanner(in Input) (*planner, error) {
 		byNUID:  make(map[string]int),
 		teamsOn: make(map[string]map[int]bool),
 		depth:   make(map[string]int),
+		blocked: in.Blocked,
 	}
 
 	for ti, t := range in.Teams {
@@ -241,7 +245,7 @@ func (p *planner) assignOne(app string) {
 		if on[ti] {
 			continue
 		}
-		li := p.leastLoadedLead(ti)
+		li := p.leastLoadedLead(ti, app)
 		if li < 0 {
 			continue // every lead on this team is at cap
 		}
@@ -275,11 +279,11 @@ func (p *planner) assignOne(app string) {
 // leastLoadedLead returns the index of the team member with the most remaining
 // headroom, or -1 when every member is at cap. Ties break on NUID so the plan
 // stays deterministic.
-func (p *planner) leastLoadedLead(ti int) int {
+func (p *planner) leastLoadedLead(ti int, app string) int {
 	best := -1
 	for _, li := range p.teams[ti].leads {
 		l := p.leads[li]
-		if l.load >= l.cap {
+		if l.load >= l.cap || p.blocked[app][l.nuid] {
 			continue
 		}
 		if best < 0 || l.load < p.leads[best].load ||

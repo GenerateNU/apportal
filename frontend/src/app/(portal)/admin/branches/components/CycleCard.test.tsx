@@ -11,6 +11,7 @@ const fall: Cycle = {
   name: 'Fall 2026',
   status: 'draft',
   application_type: 'lead',
+  match_by_slot: false,
   created_at: '2026-11-01T00:00:00Z',
 }
 

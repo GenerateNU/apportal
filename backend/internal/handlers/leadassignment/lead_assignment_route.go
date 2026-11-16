@@ -3,32 +3,33 @@ package leadassignment
 import (
 	"net/http"
 
-	"github.com/GenerateNU/apportal/backend/internal/handlers/application"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/cyclestaff"
 	"github.com/danielgtaylor/huma/v2"
 	"gorm.io/gorm"
 
 	"github.com/GenerateNU/apportal/backend/internal/access"
+	"github.com/GenerateNU/apportal/backend/internal/reviewrules"
 )
 
 func Route(api huma.API, db *gorm.DB) {
-	applicationDB := application.NewApplicationDB(db)
 	leadAssignmentDB := NewLeadAssignmentDB(db)
 
-	registerLeadAssignment(api, &leadAssignmentService{access: access.NewChecker(db), applicationDB: applicationDB, leadAssignmentDB: leadAssignmentDB})
+	registerLeadAssignment(api, &leadAssignmentService{access: access.NewChecker(db), store: newManualDB(db), rules: reviewrules.NewDefault(db)})
 	registerReviewerProgress(api, &reviewerProgressService{access: access.NewChecker(db), leadAssignmentDB: leadAssignmentDB, staffDB: cyclestaff.NewCycleStaffDB(db)})
 }
 
 func registerLeadAssignment(api huma.API, s *leadAssignmentService) {
 	huma.Register(api, huma.Operation{
-		OperationID:   "assign-lead",
-		Method:        http.MethodPost,
-		Path:          "/applications/{id}/lead-assignments",
-		Summary:       "Assign a lead to write-review an application",
-		Description:   "Chief only. Chiefs assign 3 leads per application.",
+		OperationID: "assign-lead",
+		Method:      http.MethodPost,
+		Path:        "/applications/{id}/lead-assignments",
+		Summary:     "Assign a lead to write-review an application",
+		Description: "Chief only. The lead must be able to review the opening, have no conflict with the applicant, " +
+			"and the applicant must be submitted or in review and below the cycle's reviewers-each count. " +
+			"Not allowed once the next step has started for the opening.",
 		Tags:          []string{"Lead assignments"},
 		DefaultStatus: http.StatusCreated,
-		Errors:        []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusConflict},
+		Errors:        []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound, http.StatusConflict, http.StatusUnprocessableEntity},
 	}, s.create)
 
 	huma.Register(api, huma.Operation{
@@ -37,7 +38,7 @@ func registerLeadAssignment(api huma.API, s *leadAssignmentService) {
 		Path:        "/applications/{id}/lead-assignments",
 		Summary:     "List an application's lead assignments",
 		Tags:        []string{"Lead assignments"},
-		Errors:      []int{http.StatusUnauthorized},
+		Errors:      []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound, http.StatusUnprocessableEntity},
 	}, s.list)
 
 	huma.Register(api, huma.Operation{
@@ -45,10 +46,10 @@ func registerLeadAssignment(api huma.API, s *leadAssignmentService) {
 		Method:        http.MethodDelete,
 		Path:          "/lead-assignments/{id}",
 		Summary:       "Remove a lead assignment",
-		Description:   "Chief only.",
+		Description:   "Chief only. Not allowed once reviews are released or the next step has started for the opening.",
 		Tags:          []string{"Lead assignments"},
 		DefaultStatus: http.StatusNoContent,
-		Errors:        []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound},
+		Errors:        []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound, http.StatusConflict, http.StatusUnprocessableEntity},
 	}, s.delete)
 
 	huma.Register(api, huma.Operation{
@@ -57,8 +58,9 @@ func registerLeadAssignment(api huma.API, s *leadAssignmentService) {
 		Path:        "/cycles/{id}/lead-assignments",
 		Summary:     "Remove every lead assignment for a cycle's role",
 		Description: "Chief only. Deletes all written-review lead assignments " +
-			"for one applicant role in a cycle at once. Cannot be undone.",
+			"for one applicant role in a cycle at once, except ones whose review is submitted. " +
+			"Not allowed once reviews are released or the next step has started for the opening. Cannot be undone.",
 		Tags:   []string{"Lead assignments"},
-		Errors: []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusUnprocessableEntity},
+		Errors: []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound, http.StatusConflict, http.StatusUnprocessableEntity},
 	}, s.deleteAll)
 }

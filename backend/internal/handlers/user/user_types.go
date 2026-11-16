@@ -6,19 +6,6 @@ type UserOutput struct {
 	Body models.User
 }
 
-// StaffRole is one cycle the caller is on, and their role there.
-type StaffRole struct {
-	CycleID string                `json:"cycle_id"`
-	Role    models.CycleStaffRole `json:"role"`
-}
-
-type MeOutput struct {
-	Body struct {
-		models.User
-		Staff []StaffRole `json:"staff" doc:"Cycles the caller is a lead or chief on"`
-	}
-}
-
 type UsersOutput struct {
 	Body struct {
 		Users   []models.User `json:"users"`

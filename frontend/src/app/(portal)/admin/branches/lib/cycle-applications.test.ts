@@ -8,6 +8,7 @@ const fall: Cycle = {
   name: 'Fall 2026',
   status: 'open',
   application_type: 'member',
+  match_by_slot: false,
   created_at: '2026-11-01T00:00:00Z',
 }
 
@@ -35,6 +36,8 @@ describe('cycleApplicationCards', () => {
           question_count: 4,
           challenge_count: 1,
           submission_count: 9,
+          script_questions: 0,
+          script_written: false,
         },
       ]
     )

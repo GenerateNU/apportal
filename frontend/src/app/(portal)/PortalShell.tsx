@@ -6,10 +6,10 @@ import { usePathname } from 'next/navigation'
 import { Menu } from 'lucide-react'
 import { MobileNavSheet } from '@/components/nav/MobileNavSheet'
 import Sidebar from '@/components/nav/Sidebar'
+import { useStaffAccess } from '@/lib/queries/cycle-staff'
 import { useCurrentUser } from '@/lib/queries/users'
 import { SIDEBAR_COLLAPSED_COOKIE } from '@/lib/sidebar'
 import { getRoles } from '@/types/roles'
-import { hasChiefAccess } from '@/types/roles'
 
 export function PortalShell({
   initialSidebarCollapsed,
@@ -19,8 +19,8 @@ export function PortalShell({
   children: React.ReactNode
 }) {
   const { data: currentUser } = useCurrentUser()
-  const roles = currentUser ? getRoles(currentUser) : []
-  const isChief = hasChiefAccess(currentUser)
+  const { isChief, isStaff } = useStaffAccess()
+  const roles = currentUser ? getRoles(currentUser, isStaff) : []
 
   const pathname = usePathname()
   const [navOpen, setNavOpen] = useState(false)

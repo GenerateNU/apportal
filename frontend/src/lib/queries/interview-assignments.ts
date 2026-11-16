@@ -9,7 +9,6 @@ import {
   unassignAllInterviewReviewers,
   unassignAllInterviewers,
 } from '@/generated/interview-assignments/interview-assignments'
-import { assignInterviewGroup } from '@/generated/interview-groups/interview-groups'
 import type { RequestOptions } from '@/lib/api/orval-mutator'
 import type { InterviewReviewer } from '@/lib/api/types'
 import { chunkIds } from './interviews'
@@ -47,23 +46,6 @@ export function useAddInterviewer() {
       addInterviewer(
         vars.applicationId,
         { interviewer_nuid: vars.interviewerNuid },
-        vars.opts
-      ),
-    onSuccess: invalidate,
-  })
-}
-
-export function useAssignInterviewGroup() {
-  const invalidate = useInvalidateInterviewers()
-  return useMutation({
-    mutationFn: (vars: {
-      groupId: string
-      applicationIds: string[]
-      opts?: RequestOptions
-    }) =>
-      assignInterviewGroup(
-        vars.groupId,
-        { application_ids: vars.applicationIds },
         vars.opts
       ),
     onSuccess: invalidate,

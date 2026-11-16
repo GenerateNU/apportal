@@ -20,11 +20,13 @@ function DateTimePicker({
   onValueChange,
   placeholder = 'Pick a date and time',
   disabled = false,
+  trigger,
 }: {
   value?: Date
   onValueChange: (date: Date) => void
   placeholder?: string
   disabled?: boolean
+  trigger?: React.ReactElement
 }) {
   const [open, setOpen] = React.useState(false)
   // Which month the grid shows. null follows `value`, which usually arrives
@@ -102,17 +104,19 @@ function DateTimePicker({
       }}
     >
       <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          disabled={disabled}
-          className={cn(
-            'justify-start text-left font-normal',
-            !value && 'text-muted-foreground'
-          )}
-        >
-          <Calendar className="mr-2 h-4 w-4" />
-          {value ? formattedValue : placeholder}
-        </Button>
+        {trigger ?? (
+          <Button
+            variant="outline"
+            disabled={disabled}
+            className={cn(
+              'justify-start text-left font-normal',
+              !value && 'text-muted-foreground'
+            )}
+          >
+            <Calendar className="mr-2 h-4 w-4" />
+            {value ? formattedValue : placeholder}
+          </Button>
+        )}
       </PopoverTrigger>
       <PopoverContent
         className="w-80 max-w-[calc(100vw-2rem)] p-3"

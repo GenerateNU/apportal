@@ -1,37 +1,17 @@
-import type { CurrentUser } from '@/lib/api/types'
+import type { User } from '@/lib/api/types'
 
 export type Role = 'applicant' | 'reviewer' | 'admin'
 
-type RoleSource = Pick<CurrentUser, 'roles' | 'staff'>
-
-// Admin and applicant are global roles; anyone on some cycle's staff (as a
-// lead or chief) is a reviewer.
-export function getRoles(user: RoleSource): Role[] {
+// Admin and applicant are global roles. Leads and chiefs live per cycle, so
+// the caller passes whether the user is on any cycle's staff.
+export function getRoles(user: Pick<User, 'roles'>, isStaff = false): Role[] {
   const roles = new Set<Role>()
   for (const role of user.roles) {
     if (role === 'admin') roles.add('admin')
     else if (role === 'applicant') roles.add('applicant')
   }
-  if ((user.staff ?? []).length > 0) roles.add('reviewer')
+  if (isStaff) roles.add('reviewer')
   return [...roles]
-}
-
-// Admins, or a chief on at least one cycle. Gates chief-only pages; the
-// backend still checks the specific cycle on every request.
-export function hasChiefAccess(user: RoleSource | null | undefined): boolean {
-  if (!user) return false
-  return (
-    user.roles.includes('admin') ||
-    (user.staff ?? []).some((s) => s.role === 'chief')
-  )
-}
-
-// Admins, or a lead or chief on at least one cycle.
-export function hasReviewerAccess(
-  user: RoleSource | null | undefined
-): boolean {
-  if (!user) return false
-  return user.roles.includes('admin') || (user.staff ?? []).length > 0
 }
 
 // The landing page ("portal") for a user, based on the roles they hold. Users

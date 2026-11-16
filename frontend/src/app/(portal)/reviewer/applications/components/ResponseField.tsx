@@ -1,7 +1,5 @@
 import type { Question, WrittenAnswer } from '@/lib/api/types'
-import { Label } from '@/components/ui/label'
 import { AnswerCell } from './AnswerCell'
-import { Card } from '@/components/ui/card'
 
 export function ResponseField({
   question,
@@ -15,10 +13,11 @@ export function ResponseField({
   loading?: boolean
 }) {
   return (
-    <Card className="flex scroll-mt-6 flex-col gap-3 p-5">
-      <Label className="text-base">{question.question_text}</Label>
-
-      <div className="text-lg">
+    <div className="flex scroll-mt-6 flex-col gap-2 border-b border-gray-100 py-5 first:pt-0 last:border-b-0">
+      <p className="font-display text-text-subtle text-[11px] font-bold tracking-wider uppercase">
+        {question.question_text}
+      </p>
+      <div className="text-ink text-base leading-relaxed">
         <AnswerCell
           answer={answer}
           applicable={applicable}
@@ -27,6 +26,6 @@ export function ResponseField({
           loading={loading}
         />
       </div>
-    </Card>
+    </div>
   )
 }

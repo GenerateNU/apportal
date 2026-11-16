@@ -25,9 +25,9 @@ export default async function ReviewQueuePage() {
   const [me] = await Promise.all([
     getServerCurrentUser(),
     queryClient.prefetchQuery({
-      queryKey: queryKeys.cycles.list({}),
+      queryKey: queryKeys.cycles.list(),
       queryFn: async () =>
-        ((await listCycles({}, requestOptions)) ?? []) as Cycle[],
+        ((await listCycles(undefined, requestOptions)) ?? []) as Cycle[],
     }),
   ])
 

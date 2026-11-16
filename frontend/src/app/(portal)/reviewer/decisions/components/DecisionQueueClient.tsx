@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/select'
 import type { DecisionRow } from '@/lib/api/types'
 import { defaultPipelineCycleId } from '@/lib/cycles'
-import { useCycles } from '@/lib/queries/cycles'
+import { useStaffCycles } from '@/lib/queries/cycle-staff'
 import { useDecisions } from '@/lib/queries/decisions'
 import { ReviewRow } from '../../my-reviews/components/ReviewRow'
 import { feedbackState, FEEDBACK_STATE_LABEL } from './constants'
@@ -29,7 +29,7 @@ import { useCycleRoles } from '@/lib/queries/roles'
 // everyone assigned to them, unfinished on top, one click into the applicant.
 // The list is scoped server-side to applicants they interviewed.
 export function DecisionQueueClient() {
-  const { data: cycles = [] } = useCycles({})
+  const { data: cycles = [] } = useStaffCycles()
 
   const [cycleId, setCycleId] = useState('')
   if (!cycleId && cycles.length > 0) {

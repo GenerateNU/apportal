@@ -7,13 +7,12 @@ import {
 import { PageContainer } from '@/components/PageContainer'
 import { PageHeader } from '@/components/ui/page-header'
 import { getServerRequestOptions } from '@/lib/api/server-request-options'
-import { getServerCurrentUser } from '@/lib/auth/server-user'
+import { getServerIsChief } from '@/lib/auth/server-user'
 import { pickDefaultCycleId } from '@/lib/queries/cycles'
 import { queryKeys } from '@/lib/queries/keys'
 import { fetchPreferenceLists } from '@/lib/queries/preference-lists'
 import { prefetchCycles } from '@/lib/queries/server-prefetch'
 import { PreferenceListsPageClient } from './components/PreferenceListsPageClient'
-import { hasChiefAccess } from '@/types/roles'
 
 // Auth-gated, live data fetched per request from the backend — never prerender
 // this at build time (the backend isn't running then).
@@ -21,9 +20,8 @@ export const dynamic = 'force-dynamic'
 
 async function currentReviewer(): Promise<{ isChief: boolean } | null> {
   try {
-    const user = await getServerCurrentUser()
     return {
-      isChief: hasChiefAccess(user),
+      isChief: await getServerIsChief(),
     }
   } catch {
     return null

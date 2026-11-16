@@ -11,17 +11,23 @@ export function KanbanCard({
   applicant,
   availabilityDays,
   editable,
+  onOpen,
 }: {
   applicant: ApplicantApplication
   availabilityDays: string[]
   editable: boolean
+  onOpen: () => void
 }) {
   const { roleLabel, roleChipClass } = useRoleLookup()
   return (
     <Card padding="sm">
-      <p className="text-text-default truncate text-sm font-medium">
+      <button
+        type="button"
+        onClick={onOpen}
+        className="text-text-default block w-full text-left text-sm font-medium wrap-anywhere underline-offset-2 hover:underline"
+      >
         {applicant.fullName}
-      </p>
+      </button>
       <div className="mt-2.5 flex flex-wrap items-center gap-1">
         <Badge size="sm" className={roleChipClass(applicant.role)}>
           {roleLabel(applicant.role)}

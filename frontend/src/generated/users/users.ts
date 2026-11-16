@@ -33,7 +33,6 @@ import type {
   CreateUserInputBody,
   ErrorModel,
   ListUsersParams,
-  MeOutputBody,
   UpdateUserInputBody,
   User,
   UsersOutputBody
@@ -313,7 +312,7 @@ export const getCurrentUser = (
 ) => {
       
       
-      return customInstance<MeOutputBody>(
+      return customInstance<User>(
       {url: `/users/me`, method: 'GET', signal
     },
       options);

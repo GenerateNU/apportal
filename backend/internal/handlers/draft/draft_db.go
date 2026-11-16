@@ -3,11 +3,13 @@ package draft
 import (
 	"context"
 	"errors"
+	"slices"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
 	"github.com/GenerateNU/apportal/backend/internal/models"
+	"github.com/GenerateNU/apportal/backend/internal/pipeline"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 )
 
@@ -282,8 +284,30 @@ func boardStage(tx *gorm.DB, draft models.Draft, applicationID string) (string, 
 	return string(app.Stage), utils.DBErr(err)
 }
 
-func setStage(tx *gorm.DB, applicationID string, stage any) *gorm.DB {
-	return tx.Model(&models.Application{}).Where("id = ?", applicationID).UpdateColumn("stage", stage)
+func accept(ctx context.Context, tx *gorm.DB, applicationID string) error {
+	if err := pipeline.GuardMoves(ctx, tx, pipeline.Move{ApplicationID: applicationID, To: models.StageAccepted}); err != nil {
+		return err
+	}
+	return tx.Model(&models.Application{}).Where("id = ?", applicationID).UpdateColumn("stage", models.StageAccepted).Error
+}
+
+// guardRestores checks only the picks still accepted, since the restore leaves the rest alone.
+func guardRestores(ctx context.Context, tx *gorm.DB, picks ...models.DraftPick) error {
+	ids := make([]string, 0, len(picks))
+	for _, p := range picks {
+		ids = append(ids, p.ApplicationID)
+	}
+	var accepted []string
+	if err := tx.Model(&models.Application{}).Where("id IN ? AND stage = ?", ids, models.StageAccepted).Pluck("id", &accepted).Error; err != nil {
+		return err
+	}
+	moves := []pipeline.Move{}
+	for _, p := range picks {
+		if slices.Contains(accepted, p.ApplicationID) {
+			moves = append(moves, pipeline.Move{ApplicationID: p.ApplicationID, To: models.ApplicationStage(p.PreviousStage), Restore: true})
+		}
+	}
+	return pipeline.GuardMoves(ctx, tx, moves...)
 }
 
 // MakeDraftPick fills the slot (0 means whichever is on the clock) and moves
@@ -334,7 +358,7 @@ func (d *DraftDB) MakeDraftPick(ctx context.Context, draft models.Draft, slot in
 		if err != nil {
 			return err
 		}
-		return setStage(tx, applicationID, models.StageAccepted).Error
+		return accept(ctx, tx, applicationID)
 	})
 	return pick, err
 }
@@ -377,6 +401,9 @@ func (d *DraftDB) ReplaceDraftPick(ctx context.Context, draft models.Draft, pick
 		}
 		// Restore the outgoing applicant first, so a swap between two rows
 		// can't leave both in the same stage.
+		if err := guardRestores(ctx, tx, current); err != nil {
+			return err
+		}
 		err = tx.Model(&models.Application{}).
 			Where("id = ? AND stage = ?", current.ApplicationID, models.StageAccepted).
 			UpdateColumn("stage", current.PreviousStage).Error
@@ -395,7 +422,7 @@ func (d *DraftDB) ReplaceDraftPick(ctx context.Context, draft models.Draft, pick
 		if err != nil {
 			return err
 		}
-		return setStage(tx, applicationID, models.StageAccepted).Error
+		return accept(ctx, tx, applicationID)
 	})
 	return pick, err
 }
@@ -412,6 +439,9 @@ func (d *DraftDB) RemoveDraftPick(ctx context.Context, draftID string, pickNumbe
 		if res.RowsAffected == 0 {
 			return utils.ErrNotFound
 		}
+		if err := guardRestores(ctx, tx, pick); err != nil {
+			return err
+		}
 		return tx.Model(&models.Application{}).
 			Where("id = ? AND stage = ?", pick.ApplicationID, models.StageAccepted).
 			UpdateColumn("stage", pick.PreviousStage).Error
@@ -420,7 +450,14 @@ func (d *DraftDB) RemoveDraftPick(ctx context.Context, draftID string, pickNumbe
 
 // restoreDraftedStages returns every applicant the board claimed to their old
 // stage, skipping any moved since, as RemoveDraftPick does for one pick.
-func restoreDraftedStages(tx *gorm.DB, draftID string) error {
+func restoreDraftedStages(ctx context.Context, tx *gorm.DB, draftID string) error {
+	var picks []models.DraftPick
+	if err := tx.Where("draft_id = ?", draftID).Find(&picks).Error; err != nil {
+		return err
+	}
+	if err := guardRestores(ctx, tx, picks...); err != nil {
+		return err
+	}
 	picked := tx.Model(&models.DraftPick{}).Select("application_id").Where("draft_id = ?", draftID)
 	return tx.Model(&models.Application{}).
 		Where("stage = ? AND id IN (?)", models.StageAccepted, picked).
@@ -433,7 +470,7 @@ func restoreDraftedStages(tx *gorm.DB, draftID string) error {
 // stage changes. The team order survives, so a rehearsal is cheap to wipe.
 func (d *DraftDB) ResetDraft(ctx context.Context, draftID string) error {
 	return d.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := restoreDraftedStages(tx, draftID); err != nil {
+		if err := restoreDraftedStages(ctx, tx, draftID); err != nil {
 			return err
 		}
 		if err := tx.Where("draft_id = ?", draftID).Delete(&models.DraftPick{}).Error; err != nil {
@@ -454,7 +491,7 @@ func (d *DraftDB) ResetDraft(ctx context.Context, draftID string) error {
 // undone first or applicants would sit in accepted with no record of why.
 func (d *DraftDB) DeleteDraft(ctx context.Context, draftID string) error {
 	return d.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := restoreDraftedStages(tx, draftID); err != nil {
+		if err := restoreDraftedStages(ctx, tx, draftID); err != nil {
 			return err
 		}
 		res := tx.Where("id = ?", draftID).Delete(&models.Draft{})

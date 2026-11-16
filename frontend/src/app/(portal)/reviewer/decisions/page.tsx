@@ -10,7 +10,10 @@ import {
 } from '@/generated/decisions/decisions'
 import { getServerRequestOptions } from '@/lib/api/server-request-options'
 import type { DecisionRow, DecisionTemplate } from '@/lib/api/types'
-import { getServerCurrentUser } from '@/lib/auth/server-user'
+import {
+  getServerCurrentUser,
+  getServerStaffAccess,
+} from '@/lib/auth/server-user'
 import { defaultPipelineCycleId } from '@/lib/cycles'
 import type { DecisionListParams } from '@/lib/queries/decisions'
 import { queryKeys } from '@/lib/queries/keys'
@@ -21,7 +24,6 @@ import {
 } from '@/lib/queries/server-prefetch'
 import { DecisionQueueClient } from './components/DecisionQueueClient'
 import { DecisionsClient } from './components/DecisionsClient'
-import { hasChiefAccess, hasReviewerAccess } from '@/types/roles'
 
 // Auth-gated, live data fetched per request from the backend — never prerender
 // this at build time (the backend isn't running then).
@@ -34,14 +36,12 @@ export const dynamic = 'force-dynamic'
 // interviewees, and the template routes call requireChief.
 async function currentReviewer() {
   try {
-    const user = await getServerCurrentUser()
-    if (!hasReviewerAccess(user)) {
-      return null
-    }
-    return {
-      nuid: user.nuid,
-      isChief: hasChiefAccess(user),
-    }
+    const [user, access] = await Promise.all([
+      getServerCurrentUser(),
+      getServerStaffAccess(),
+    ])
+    if (!access.isStaff) return null
+    return { nuid: user.nuid, isChief: access.isChief }
   } catch {
     return null
   }

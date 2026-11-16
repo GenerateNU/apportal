@@ -13,6 +13,7 @@ function cycle(applicationType: Cycle['application_type']): Cycle {
     name: 'Fall 2026',
     status: 'open',
     application_type: applicationType,
+    match_by_slot: false,
     created_at: '2026-11-01T00:00:00Z',
   }
 }

@@ -1,8 +1,26 @@
 'use client'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
-import { ChevronsLeft, Maximize2 } from 'lucide-react'
+import { Maximize2, PanelRightClose } from 'lucide-react'
+import type { ApplicationSummary } from '@/lib/api/types'
 import type { ApplicantApplication } from './types'
 import { ApplicantOverview } from './ApplicantOverview'
+
+export function toApplicantDetail(
+  summary: ApplicationSummary
+): ApplicantApplication {
+  return {
+    id: summary.id,
+    nuid: summary.user_nuid,
+    fullName: summary.full_name,
+    email: summary.email,
+    role: summary.role_id,
+    cycleId: summary.cycle_id,
+    stage: summary.stage,
+    submittedAt: summary.submitted_at,
+    returner: summary.returner,
+  }
+}
 
 // The full "everything about this applicant" view, in a slide-over so it's
 // reachable straight from the table without losing your place in it — see
@@ -17,7 +35,8 @@ export function ApplicationDetail({
   applicant: ApplicantApplication
   onClose: () => void
 }) {
-  return (
+  if (typeof document === 'undefined') return null
+  return createPortal(
     <>
       {/* Backdrop. Both layers need an explicit z-index: being `fixed` alone
           leaves them at z-auto, which the table's sticky header (z-20) paints
@@ -32,14 +51,14 @@ export function ApplicationDetail({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex shrink-0 items-center justify-between py-2 pr-4 pl-2 sm:pr-6">
+        <div className="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-2.5 sm:px-6">
           <button
             type="button"
             onClick={onClose}
             className="text-text-muted hover:text-text-default flex items-center justify-center rounded-md px-1.5 py-1.5 transition-colors hover:bg-gray-100"
             aria-label="Close"
           >
-            <ChevronsLeft className="h-5 w-5" />
+            <PanelRightClose className="h-5 w-5" />
           </button>
           <Link
             href={`/reviewer/applications/${applicant.id}`}
@@ -63,6 +82,7 @@ export function ApplicationDetail({
           </div>
         </div>
       </div>
-    </>
+    </>,
+    document.body
   )
 }

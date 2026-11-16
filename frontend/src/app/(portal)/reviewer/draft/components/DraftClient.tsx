@@ -1,5 +1,6 @@
 'use client'
 
+import { useIsChief } from '@/lib/queries/cycle-staff'
 import { useState } from 'react'
 import { Eye, ListOrdered, Loader2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
@@ -28,7 +29,8 @@ import {
 } from '@/components/ui/select'
 import { APIError } from '@/lib/api/client'
 import { useApplications } from '@/lib/queries/applications'
-import { pickDefaultCycleId, useCycles } from '@/lib/queries/cycles'
+import { pickDefaultCycleId } from '@/lib/queries/cycles'
+import { useStaffCycles } from '@/lib/queries/cycle-staff'
 import {
   useDeleteDraft,
   useDraftBoard,
@@ -46,19 +48,16 @@ import {
   usePreferenceLists,
 } from '@/lib/queries/preference-lists'
 import { useCycleRolePicker } from '@/hooks/useRoleSelection'
-import { useCurrentUser } from '@/lib/queries/users'
 import { DRAFT_STATUS_BADGE, DRAFT_STATUS_LABEL } from './constants'
 import { DraftBoardGrid } from './DraftBoardGrid'
 import { DraftSetup } from './DraftSetup'
 import { OnTheClockPanel } from './OnTheClockPanel'
 import { ReorderTeamsDialog } from './ReorderTeamsDialog'
-import { hasChiefAccess } from '@/types/roles'
 
 export function DraftClient() {
-  const { data: currentUser } = useCurrentUser()
-  const isChief = hasChiefAccess(currentUser)
+  const isChief = useIsChief()
 
-  const { data: cycles = [] } = useCycles({})
+  const { data: cycles = [] } = useStaffCycles()
   const [cycleId, setCycleId] = useState('')
   if (!cycleId && cycles.length > 0) {
     const defaultId = pickDefaultCycleId(cycles)

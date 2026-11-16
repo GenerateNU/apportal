@@ -1,5 +1,6 @@
 'use client'
 
+import { scoreOutOf, averageLabel } from '@/lib/scores'
 import { ExternalLink } from 'lucide-react'
 import type {
   DecisionContext,
@@ -143,7 +144,9 @@ function WrittenReview({
         </span>
         <div className="flex items-center gap-2">
           {avg != null && (
-            <Badge className="text-text-default">avg {avg.toFixed(1)}/10</Badge>
+            <Badge className="text-text-default">
+              {averageLabel(avg, questions)}
+            </Badge>
           )}
           {!review.submitted_at && (
             <span className="text-text-faint text-xs">Draft</span>
@@ -158,7 +161,7 @@ function WrittenReview({
           if (!answer) return null
           const display =
             answer.score != null
-              ? `${answer.score}/10`
+              ? scoreOutOf(answer.score, q)
               : answer.answer_options?.length
                 ? answer.answer_options.join(', ')
                 : answer.answer_text

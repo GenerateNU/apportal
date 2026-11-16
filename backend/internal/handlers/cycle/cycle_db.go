@@ -8,6 +8,7 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/handlers/cyclestaff"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/GenerateNU/apportal/backend/internal/models"
+	"github.com/GenerateNU/apportal/backend/internal/pipeline"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 )
 
@@ -34,6 +35,9 @@ func (c *CycleDB) CreateCycle(ctx context.Context, in CycleCreate) (models.Cycle
 			return err
 		}
 		if err := role.CopyPreviousCycleRoles(tx, cycle.ID); err != nil {
+			return err
+		}
+		if err := pipeline.EnsureSteps(tx, cycle.ID); err != nil {
 			return err
 		}
 		return cyclestaff.CopyPreviousCycleStaff(tx, cycle.ID)
@@ -85,12 +89,25 @@ func (c *CycleDB) CycleRoleSummary(ctx context.Context, cycleID string, role str
 			Where("cycle_id = ? AND role_id = ? AND stage != ?", cycleID, role, models.StageDraft).
 			Count(&submissions).Error
 	}
-	return models.CycleRoleSummary{
+	var script []struct {
+		Questions int
+		Written   bool
+	}
+	if err == nil {
+		err = db.Raw(`SELECT jsonb_array_length(questions) AS questions,
+				(intro_speech <> '' OR jsonb_array_length(questions) > 0) AS written
+			FROM interview_script WHERE cycle_id = ? AND role_id = ?`, cycleID, role).Scan(&script).Error
+	}
+	out := models.CycleRoleSummary{
 		RoleID:          role,
 		QuestionCount:   int(questions),
 		ChallengeCount:  int(challenges),
 		SubmissionCount: int(submissions),
-	}, err
+	}
+	if len(script) > 0 {
+		out.ScriptQuestions, out.ScriptWritten = script[0].Questions, script[0].Written
+	}
+	return out, err
 }
 
 func (c *CycleDB) UpdateCycle(ctx context.Context, id string, in CycleUpdate) (models.Cycle, error) {
@@ -101,35 +118,4 @@ func (c *CycleDB) UpdateCycle(ctx context.Context, id string, in CycleUpdate) (m
 	utils.SetIf(updates, "opens_at", in.OpensAt)
 	utils.SetIf(updates, "closes_at", in.ClosesAt)
 	return utils.UpdateReturning[models.Cycle](c.db.WithContext(ctx), updates, "id = ?", id)
-}
-
-// CreateCycleStage adds a stage to a cycle's flow; (cycle_id, stage) is
-// unique, so a duplicate is a conflict.
-func (c *CycleDB) CreateCycleStage(ctx context.Context, in CycleStageCreate) (models.CycleStage, error) {
-	stage := models.CycleStage{
-		CycleID:             in.CycleID,
-		Stage:               in.Stage,
-		DisplayOrder:        in.DisplayOrder,
-		IsActive:            in.IsActive,
-		RequiredAssignments: in.RequiredAssignments,
-		Label:               in.Label,
-	}
-	err := utils.Insert(c.db.WithContext(ctx), &stage,
-		"cycle_id", "stage", "display_order", "is_active", "required_assignments", "label")
-	return stage, err
-}
-
-func (c *CycleDB) ListCycleStages(ctx context.Context, cycleID string) ([]models.CycleStage, error) {
-	stages := []models.CycleStage{}
-	err := c.db.WithContext(ctx).Where("cycle_id = ?", cycleID).Order("display_order").Find(&stages).Error
-	return stages, err
-}
-
-func (c *CycleDB) UpdateCycleStage(ctx context.Context, id string, in CycleStageUpdate) (models.CycleStage, error) {
-	updates := map[string]any{}
-	utils.SetIf(updates, "display_order", in.DisplayOrder)
-	utils.SetIf(updates, "is_active", in.IsActive)
-	utils.SetIf(updates, "required_assignments", in.RequiredAssignments)
-	utils.SetIf(updates, "label", in.Label)
-	return utils.UpdateReturning[models.CycleStage](c.db.WithContext(ctx), updates, "id = ?", id)
 }

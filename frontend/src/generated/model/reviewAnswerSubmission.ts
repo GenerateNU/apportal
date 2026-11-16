@@ -10,9 +10,6 @@ export interface ReviewAnswerSubmission {
   answer_options?: unknown;
   answer_text?: string;
   review_question_id: string;
-  /**
-   * @minimum 1
-   * @maximum 10
-   */
+  /** Within the question's score_min..score_max */
   score?: number;
 }

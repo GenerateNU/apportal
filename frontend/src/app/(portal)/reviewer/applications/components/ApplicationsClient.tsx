@@ -1,5 +1,10 @@
 'use client'
-import { PageContainer } from '@/components/PageContainer'
+
+import { useIsChief } from '@/lib/queries/cycle-staff'
+import { redirect } from 'next/navigation'
+import { cn } from '@/lib/utils'
+import { Breadcrumbs } from '@/components/ui/breadcrumbs'
+import { PAGE_TOP, PAGE_X } from '@/components/ui/page-shell'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { List, Columns } from 'lucide-react'
@@ -18,7 +23,10 @@ import {
   useInfiniteApplications,
   useUpdateApplication,
 } from '@/lib/queries/applications'
-import { pickDefaultCycleId, useCycles } from '@/lib/queries/cycles'
+import { useCycleScope } from '@/hooks/useCycleScope'
+import { pickDefaultCycleId } from '@/lib/queries/cycles'
+import { useStaffCycles } from '@/lib/queries/cycle-staff'
+import { useMyCycles } from '@/lib/queries/cycle-staff'
 import { useCurrentUser } from '@/lib/queries/users'
 import { ORDERED_STAGES, PAGE_SIZE } from './constants'
 import { BulkActionBar } from './BulkActionBar'
@@ -32,7 +40,6 @@ import { ApplicationDetail } from './ApplicationDetail'
 import { PageHeader } from '@/components/ui/page-header'
 import { SearchInput } from '@/components/ui/search-input'
 import { useCycleRoles } from '@/lib/queries/roles'
-import { hasChiefAccess } from '@/types/roles'
 
 type View = 'table' | 'kanban'
 
@@ -58,7 +65,7 @@ type StoredFilters = {
 
 export function ApplicationsClient() {
   const { data: currentUser } = useCurrentUser()
-  const isChief = hasChiefAccess(currentUser)
+  const isChief = useIsChief()
 
   const [view, setView] = useState<View>('table')
   const [activeStage, setActiveStage] = useState<ApplicationStage | 'all'>(
@@ -88,17 +95,42 @@ export function ApplicationsClient() {
     return () => clearTimeout(timer)
   }, [search])
 
-  const { data: cycles = [] } = useCycles({})
+  const { data: allCycles = [] } = useStaffCycles()
+  const { data: myCycles = [], isFetched: myCyclesFetched } = useMyCycles()
+  const isAdmin = !!currentUser?.roles.includes('admin')
+  const cycles = useMemo(
+    () =>
+      isAdmin
+        ? allCycles
+        : allCycles.filter((c) => myCycles.some((m) => m.cycle_id === c.id)),
+    [allCycles, myCycles, isAdmin]
+  )
+  const cyclesReady = isAdmin || myCyclesFetched
+  if (myCyclesFetched && !isAdmin && !isChief && myCycles.length === 0) {
+    redirect('/applicant/applications')
+  }
 
   // Default the cycle filter so reviewers land on a specific cycle instead
   // of every cycle ever run. Shared with the server prefetch in ../page.tsx,
   // which scopes its application-list prefetch to this same cycle.
+  const scope = useCycleScope(isChief ? 'chief' : 'lead')
+  const sidebarCycle = cycles.some((c) => c.id === scope.cycleId)
+    ? scope.cycleId
+    : null
   const currentCycleId = useMemo(
-    () => pickDefaultCycleId(cycles) ?? null,
-    [cycles]
+    () => sidebarCycle ?? pickDefaultCycleId(cycles) ?? null,
+    [cycles, sidebarCycle]
   )
+  const [followed, setFollowed] = useState(sidebarCycle)
+  if (sidebarCycle !== followed) {
+    setFollowed(sidebarCycle)
+    if (sidebarCycle) setActiveCycle(sidebarCycle)
+  }
 
-  if (!cycleDefaulted && currentCycleId) {
+  if (cyclesReady && activeCycle && !cycles.some((c) => c.id === activeCycle)) {
+    setActiveCycle(currentCycleId ?? '')
+  }
+  if (cyclesReady && !cycleDefaulted && currentCycleId) {
     setActiveCycle(currentCycleId)
     setCycleDefaulted(true)
   }
@@ -111,7 +143,11 @@ export function ApplicationsClient() {
       if (stored.view === 'table' || stored.view === 'kanban') {
         setView(stored.view)
       }
-      if (stored.cycleId && cycles.some((c) => c.id === stored.cycleId)) {
+      if (
+        !sidebarCycle &&
+        stored.cycleId &&
+        cycles.some((c) => c.id === stored.cycleId)
+      ) {
         setActiveCycle(stored.cycleId)
         setCycleDefaulted(true)
       }
@@ -138,7 +174,7 @@ export function ApplicationsClient() {
         setDebouncedSearch(stored.search)
       }
     },
-    [cycles]
+    [cycles, sidebarCycle]
   )
 
   // Held back until the cycle list is in hand, since a stored cycle id is only
@@ -159,10 +195,8 @@ export function ApplicationsClient() {
 
   // Which questions the chips can be built from, and the query params they
   // translate to — shared with the preference-list applicant pool.
-  // The table opens on the cycle's first role, which is what the server
-  // prefetch in ../page.tsx is keyed to. The Role chip widens it from there.
-  const { roleIds } = useCycleRoles(activeCycle)
-  const defaultRoles = useMemo(() => roleIds.slice(0, 1), [roleIds])
+  // With no Role chip, every position shows; ../page.tsx prefetches the same key.
+  const { roleIds: defaultRoles } = useCycleRoles(activeCycle)
   const {
     roleOptions,
     columns,
@@ -340,23 +374,33 @@ export function ApplicationsClient() {
   // table's full height and the ancestor in (portal)/layout.tsx scrolls
   // instead — which leaves the sticky header with no scrollport to pin against.
   return (
-    <PageContainer className="min-h-0 flex-1 overflow-hidden">
+    <div
+      className={cn(
+        'flex min-h-0 w-full flex-1 flex-col gap-8 overflow-hidden pb-6',
+        PAGE_X,
+        PAGE_TOP
+      )}
+    >
       <PageHeader
-        title="Applications"
+        back={<Breadcrumbs items={[{ label: 'Applicants' }]} />}
+        title="Applicants"
+        subtitle="Browse everyone who applied, filter by stage, role or answers, and open anyone to see their application and reviews."
         actions={
           <div className="flex flex-wrap items-center gap-3">
-            <Select value={activeCycle} onValueChange={setActiveCycle}>
-              <SelectTrigger className="w-40" aria-label="Filter by cycle">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {cycles.map((cycle) => (
-                  <SelectItem key={cycle.id} value={cycle.id}>
-                    {cycle.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {cycles.length > 1 && (
+              <Select value={activeCycle} onValueChange={setActiveCycle}>
+                <SelectTrigger className="w-40" aria-label="Filter by cycle">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {cycles.map((cycle) => (
+                    <SelectItem key={cycle.id} value={cycle.id}>
+                      {cycle.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
 
             <SearchInput
               value={search}
@@ -366,6 +410,7 @@ export function ApplicationsClient() {
             />
 
             <SegmentedTabs<View>
+              className="h-9"
               tabs={[
                 {
                   id: 'table',
@@ -441,6 +486,7 @@ export function ApplicationsClient() {
             applicants={filtered}
             availabilityByApplicationId={availabilityByApplicationId}
             editable={isChief}
+            onOpen={setSelectedApplicationId}
           />
         )}
       </div>
@@ -455,6 +501,6 @@ export function ApplicationsClient() {
             />
           ) : null
         })()}
-    </PageContainer>
+    </div>
   )
 }

@@ -2,8 +2,13 @@ package writtenreview
 
 import (
 	"context"
+	"errors"
+	"fmt"
+
+	"github.com/google/uuid"
 
 	"github.com/GenerateNU/apportal/backend/internal/handlers/reviewrelease"
+	"github.com/GenerateNU/apportal/backend/internal/pipeline"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 	"github.com/danielgtaylor/huma/v2"
 
@@ -16,6 +21,7 @@ type writtenReviewService struct {
 	access          *access.Checker
 	reviewReleaseDB *reviewrelease.ReviewReleaseDB
 	writtenReviewDB *WrittenReviewDB
+	gate            *pipeline.Gate
 }
 
 func (s *writtenReviewService) upsert(ctx context.Context, in *UpsertWrittenReviewInput) (*WrittenReviewOutput, error) {
@@ -24,10 +30,13 @@ func (s *writtenReviewService) upsert(ctx context.Context, in *UpsertWrittenRevi
 	}
 	answers := make([]ReviewAnswerInput, 0, len(in.Body.Answers))
 	for _, a := range in.Body.Answers {
-		if a.ReviewQuestionID == "" {
-			return nil, huma.Error422UnprocessableEntity("each answer requires a review_question_id")
+		if _, err := uuid.Parse(a.ReviewQuestionID); err != nil {
+			return nil, huma.Error422UnprocessableEntity("each answer requires a valid review_question_id")
 		}
 		answers = append(answers, ReviewAnswerInput(a))
+	}
+	if err := s.gate.Application(ctx, in.ID, models.StepReviews, models.KindReviewer); err != nil {
+		return nil, err
 	}
 
 	detail, err := s.writtenReviewDB.UpsertWrittenReview(ctx, WrittenReviewUpsert{
@@ -35,7 +44,13 @@ func (s *writtenReviewService) upsert(ctx context.Context, in *UpsertWrittenRevi
 		ReviewerNUID:  utils.CurrentActor(ctx).NUID,
 		Submit:        in.Body.Submit,
 		Answers:       answers,
+	}, func(questions map[string]models.ReviewQuestion) error {
+		return validateAnswers(answers, questions)
 	})
+	var se huma.StatusError
+	if errors.As(err, &se) {
+		return nil, err
+	}
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
@@ -61,4 +76,65 @@ func (s *writtenReviewService) list(ctx context.Context, in *utils.ApplicationSc
 		return nil, utils.StoreErr(err)
 	}
 	return &WrittenReviewsOutput{Body: items}, nil
+}
+
+func (s *writtenReviewService) listBulk(ctx context.Context, in *ListBulkInput) (*WrittenReviewsOutput, error) {
+	ids := utils.SplitIDs(in.ApplicationIDs)
+	if len(ids) > utils.MaxBulkApplications {
+		return nil, huma.Error422UnprocessableEntity("too many application_ids")
+	}
+	for _, id := range ids {
+		if err := utils.RequireUUIDs("application id", id); err != nil {
+			return nil, err
+		}
+	}
+	ids, err := s.access.VisibleApplicationIDs(ctx, ids, access.Review)
+	if err != nil {
+		return nil, err
+	}
+	visible, err := s.reviewReleaseDB.PeerReviewsVisible(ctx, s.access, models.ReviewKindWritten, ids)
+	if err != nil {
+		return nil, err
+	}
+	var open, blind []string
+	for _, id := range ids {
+		if visible[id] {
+			open = append(open, id)
+		} else {
+			blind = append(blind, id)
+		}
+	}
+	all, err := s.writtenReviewDB.ListWrittenReviewsForApplications(ctx, open, "")
+	if err != nil {
+		return nil, utils.StoreErr(err)
+	}
+	own, err := s.writtenReviewDB.ListWrittenReviewsForApplications(ctx, blind, utils.CurrentActor(ctx).NUID)
+	if err != nil {
+		return nil, utils.StoreErr(err)
+	}
+	items := []models.WrittenReviewDetail{}
+	for _, id := range ids {
+		items = append(items, all[id]...)
+		items = append(items, own[id]...)
+	}
+	return &WrittenReviewsOutput{Body: items}, nil
+}
+
+func validateAnswers(answers []ReviewAnswerInput, questions map[string]models.ReviewQuestion) error {
+	for _, a := range answers {
+		q, ok := questions[a.ReviewQuestionID]
+		if !ok {
+			return huma.Error422UnprocessableEntity("review_question_id " + a.ReviewQuestionID + " is not a review question for this application")
+		}
+		if a.Score == nil {
+			continue
+		}
+		if q.QuestionType != models.QuestionScore || q.ScoreMin == nil || q.ScoreMax == nil {
+			return huma.Error422UnprocessableEntity("score is only allowed on score questions")
+		}
+		if *a.Score < *q.ScoreMin || *a.Score > *q.ScoreMax {
+			return huma.Error422UnprocessableEntity(fmt.Sprintf("score for %q must be between %d and %d", q.QuestionText, *q.ScoreMin, *q.ScoreMax))
+		}
+	}
+	return nil
 }

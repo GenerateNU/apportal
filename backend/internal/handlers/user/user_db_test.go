@@ -17,11 +17,9 @@ func TestUserQueries(t *testing.T) {
 	admin := models.UserRoleAdmin
 	lead := models.CycleStaffLead
 	var users []models.User
-	var staff []StaffRole
 	all := usersQuery(db, userFilter{}).Find(&users).Statement
 	admins := usersQuery(db, userFilter{UserRole: &admin}).Find(&users).Statement
 	leads := usersQuery(db, userFilter{StaffRole: &lead}).Find(&users).Statement
-	mine := staffRolesQuery(db, "u1").Find(&staff).Statement
 
 	cases := []struct {
 		name     string
@@ -51,13 +49,6 @@ func TestUserQueries(t *testing.T) {
 			args:     leads.Vars,
 			wantSQL:  []string{`EXISTS (SELECT 1 FROM cycle_staff cs WHERE cs.user_nuid = users.nuid AND cs.role = $1)`},
 			wantArgs: []any{models.CycleStaffLead},
-		},
-		{
-			name:     "the caller's staff roles",
-			sql:      mine.SQL.String(),
-			args:     mine.Vars,
-			wantSQL:  []string{`FROM "cycle_staff"`, `user_nuid = $1`, `ORDER BY cycle_id`},
-			wantArgs: []any{"u1"},
 		},
 	}
 	for _, tc := range cases {

@@ -70,23 +70,11 @@ type Cycle struct {
 	ApplicationType ApplicationType `json:"application_type" gorm:"type:application_type;not null;default:member"`
 	OpensAt         *time.Time      `json:"opens_at,omitempty"`
 	ClosesAt        *time.Time      `json:"closes_at,omitempty"`
+	MatchBySlot     bool            `json:"match_by_slot" gorm:"not null;default:false"`
 	CreatedAt       time.Time       `json:"created_at" gorm:"not null;default:now()"`
 	Branch          Branch          `json:"-" gorm:"foreignKey:BranchID;references:ID;constraint:OnDelete:RESTRICT"`
 }
 
-// ApplicationTemplate holds per-role application content within a cycle
-// (e.g. Software Engineer vs Software Designer applications in the same
-// cycle each get their own title/description/instructions/status). Status
-// (mirroring cycle_status) is independent of the owning cycle's own status
-// once set, letting a role's application lag or lead the cycle. ClosesAt is
-// enforced (see deadlinePassed in handlers/applications.go) — new
-// applications and draft edits are rejected once it passes.
-//
-// ReviewStatus/ReviewClosesAt are a separate open/closed state and deadline
-// for when lead reviews should be done, tracked independently of the
-// application side. Unlike ClosesAt, these are purely informational: nothing
-// enforces them, so a lead can still submit a review after ReviewClosesAt
-// passes.
 type ApplicationTemplate struct {
 	ID             string      `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
 	CycleID        string      `json:"cycle_id" gorm:"type:uuid;not null;uniqueIndex:application_templates_cycle_id_role_id_key,priority:1"`
@@ -94,27 +82,14 @@ type ApplicationTemplate struct {
 	Title          string      `json:"title" gorm:"not null"`
 	Description    *string     `json:"description,omitempty"`
 	Instructions   *string     `json:"instructions,omitempty"`
-	OpensAt        *time.Time  `json:"opens_at,omitempty"`
-	ClosesAt       *time.Time  `json:"closes_at,omitempty"`
-	Status         CycleStatus `json:"status" gorm:"type:cycle_status;not null;default:draft"`
 	CreatedAt      time.Time   `json:"created_at" gorm:"not null;default:now()"`
 	UpdatedAt      time.Time   `json:"updated_at" gorm:"not null;default:now()"`
-	ReviewStatus   CycleStatus `json:"review_status" gorm:"type:cycle_status;not null;default:draft"`
-	ReviewClosesAt *time.Time  `json:"review_closes_at,omitempty"`
+	Status         CycleStatus `json:"status" gorm:"-"`
+	ClosesAt       *time.Time  `json:"closes_at,omitempty" gorm:"-"`
+	ReviewStatus   CycleStatus `json:"review_status" gorm:"-"`
+	ReviewClosesAt *time.Time  `json:"review_closes_at,omitempty" gorm:"-"`
 	Cycle          Cycle       `json:"-" gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
 	Role           Role        `json:"-" gorm:"foreignKey:RoleID;references:ID;constraint:OnDelete:RESTRICT"`
-}
-
-type CycleStage struct {
-	ID                  string           `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
-	CycleID             string           `json:"cycle_id" gorm:"type:uuid;not null;index:idx_cycle_stages_cycle;uniqueIndex:cycle_stages_cycle_id_stage_key,priority:1"`
-	Stage               ApplicationStage `json:"stage" gorm:"type:application_stage;not null;uniqueIndex:cycle_stages_cycle_id_stage_key,priority:2"`
-	DisplayOrder        int              `json:"display_order" gorm:"type:integer;not null"`
-	IsActive            bool             `json:"is_active" gorm:"not null;default:true"`
-	RequiredAssignments int              `json:"required_assignments" gorm:"type:integer;not null;default:0"`
-	Label               *string          `json:"label,omitempty"`
-	CreatedAt           time.Time        `json:"created_at" gorm:"not null;default:now()"`
-	Cycle               Cycle            `json:"-" gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
 }
 
 type Question struct {
@@ -160,6 +135,8 @@ type CycleRoleSummary struct {
 	QuestionCount   int    `json:"question_count"`
 	ChallengeCount  int    `json:"challenge_count"`
 	SubmissionCount int    `json:"submission_count"`
+	ScriptQuestions int    `json:"script_questions"`
+	ScriptWritten   bool   `json:"script_written" doc:"The interview script has an opening or a question"`
 }
 
 type Applicant struct {

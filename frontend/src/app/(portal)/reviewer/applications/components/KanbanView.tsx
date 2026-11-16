@@ -6,10 +6,12 @@ export function KanbanView({
   applicants,
   availabilityByApplicationId,
   editable,
+  onOpen,
 }: {
   applicants: ApplicantApplication[]
   availabilityByApplicationId: Record<string, string[]>
   editable: boolean
+  onOpen: (applicationId: string) => void
 }) {
   return (
     <div className="flex gap-5 overflow-x-auto pb-4">
@@ -20,6 +22,7 @@ export function KanbanView({
           applicants={applicants.filter((a) => a.stage === stage)}
           availabilityByApplicationId={availabilityByApplicationId}
           editable={editable}
+          onOpen={onOpen}
         />
       ))}
     </div>

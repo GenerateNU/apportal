@@ -16,7 +16,7 @@ import {
 } from '@/generated/users/users'
 import type { RequestOptions } from '@/lib/api/orval-mutator'
 import type { UsersOutputBody } from '@/generated/model'
-import type { CurrentUser, ReviewerRole, User } from '@/lib/api/types'
+import type { ReviewerRole, User } from '@/lib/api/types'
 import { useAuth } from '@/lib/auth/auth-context'
 import { queryKeys } from './keys'
 
@@ -120,7 +120,7 @@ export function useCurrentUser(opts?: RequestOptions) {
 
   return useQuery({
     queryKey: queryKeys.users.me(user?.id ?? ''),
-    queryFn: () => getCurrentUser(opts) as Promise<CurrentUser>,
+    queryFn: () => getCurrentUser(opts) as Promise<User>,
     enabled: !!user,
   })
 }

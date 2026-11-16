@@ -5,23 +5,24 @@ import (
 
 	"github.com/GenerateNU/apportal/backend/internal/handlers/application"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/cyclestaff"
-	"github.com/GenerateNU/apportal/backend/internal/handlers/interviewassignment"
-	"github.com/GenerateNU/apportal/backend/internal/handlers/interviewgroup"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/leadassignment"
+	"github.com/GenerateNU/apportal/backend/internal/pipeline"
 	"github.com/danielgtaylor/huma/v2"
 	"gorm.io/gorm"
 
 	"github.com/GenerateNU/apportal/backend/internal/access"
+	"github.com/GenerateNU/apportal/backend/internal/reviewrules"
 )
 
 func Route(api huma.API, db *gorm.DB) {
 	applicationDB := application.NewApplicationDB(db)
-	interviewAssignmentDB := interviewassignment.NewInterviewAssignmentDB(db)
 	leadAssignmentDB := leadassignment.NewLeadAssignmentDB(db)
 	staffDB := cyclestaff.NewCycleStaffDB(db)
 
-	registerAssignmentPlanner(api, &assignmentPlannerService{access: access.NewChecker(db), applicationDB: applicationDB, leadAssignmentDB: leadAssignmentDB, staffDB: staffDB})
-	registerInterviewAssignmentPlanner(api, &interviewAssignmentPlannerService{access: access.NewChecker(db), applicationDB: applicationDB, interviewAssignmentDB: interviewAssignmentDB, interviewGroupDB: interviewgroup.NewInterviewGroupDB(db), leadAssignmentDB: leadAssignmentDB, staffDB: staffDB})
+	conflicts := reviewrules.NewConflicts(db)
+
+	registerAssignmentPlanner(api, &assignmentPlannerService{access: access.NewChecker(db), applicationDB: applicationDB, leadAssignmentDB: leadAssignmentDB, staffDB: staffDB, conflicts: conflicts, gate: pipeline.NewGate(db)})
+	registerReviewAssignment(api, &reviewService{gate: access.NewChecker(db), store: NewReviewDB(db), rules: reviewrules.NewDefault(db)})
 }
 
 func registerAssignmentPlanner(api huma.API, s *assignmentPlannerService) {

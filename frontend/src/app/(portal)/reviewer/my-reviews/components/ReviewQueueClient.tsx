@@ -19,7 +19,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useApplications } from '@/lib/queries/applications'
-import { DEFAULT_CYCLE_ID, useCycles } from '@/lib/queries/cycles'
+import { DEFAULT_CYCLE_ID } from '@/lib/queries/cycles'
+import { useStaffCycles } from '@/lib/queries/cycle-staff'
 import { useCurrentUser } from '@/lib/queries/users'
 import { useWrittenReviewsByApplicationIds } from '@/lib/queries/written-reviews'
 import type { ReviewState } from '../constants'
@@ -34,7 +35,7 @@ const SEARCH_DEBOUNCE_MS = 250
 export function ReviewQueueClient() {
   const [scope, setScope] = useState<Scope>('mine')
   const { data: currentUser } = useCurrentUser()
-  const { data: cycles = [] } = useCycles({})
+  const { data: cycles = [] } = useStaffCycles()
 
   // Unlike the chief-only pipeline pages, this is a personal task queue, so
   // role stays "all" rather than forcing a single pick — narrowing is

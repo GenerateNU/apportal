@@ -26,7 +26,8 @@ import {
 } from '@/components/ui/select'
 import { DateTimePicker } from '@/components/ui/datetime-picker'
 import { MEETING_DAY_LABEL } from '@/app/(portal)/reviewer/applications/components/meetingAvailability'
-import { pickDefaultCycleId, useCycles } from '@/lib/queries/cycles'
+import { pickDefaultCycleId } from '@/lib/queries/cycles'
+import { useStaffCycles } from '@/lib/queries/cycle-staff'
 import {
   useCreatePreferenceList,
   usePreferenceListDeadline,
@@ -41,7 +42,7 @@ import { useCycleRoles, useRoleLookup } from '@/lib/queries/roles'
 
 export function PreferenceListsPageClient({ isChief }: { isChief: boolean }) {
   const searchParams = useSearchParams()
-  const { data: cycles = [] } = useCycles({})
+  const { data: cycles = [] } = useStaffCycles()
 
   const [cycleId, setCycleId] = useState(searchParams.get('cycle') ?? '')
   if (!cycleId && cycles.length > 0) {

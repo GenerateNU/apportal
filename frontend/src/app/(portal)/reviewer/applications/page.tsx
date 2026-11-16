@@ -9,7 +9,7 @@ import { getServerRequestOptions } from '@/lib/api/server-request-options'
 import type { Cycle } from '@/lib/api/types'
 import { defaultApplicationsCycleId } from '@/lib/cycles'
 import { queryKeys } from '@/lib/queries/keys'
-import { defaultRoleId, prefetchRoles } from '@/lib/queries/server-prefetch'
+import { cycleRoleIds, prefetchRoles } from '@/lib/queries/server-prefetch'
 import { PAGE_SIZE } from './components/constants'
 import { ApplicationsClient } from './components/ApplicationsClient'
 
@@ -27,23 +27,25 @@ export default async function ApplicationsPage() {
   // the browser silently refetches, so it costs a round trip and saves none.
   const [cycles, roles] = await Promise.all([
     queryClient.fetchQuery({
-      queryKey: queryKeys.cycles.list({}),
+      queryKey: queryKeys.cycles.list(),
       queryFn: async () =>
-        ((await listCycles({}, requestOptions)) ?? []) as Cycle[],
+        ((await listCycles(undefined, requestOptions)) ?? []) as Cycle[],
     }),
     prefetchRoles(queryClient, requestOptions),
   ])
 
   const cycleId = defaultApplicationsCycleId(cycles)
-  const roleId = cycleId && defaultRoleId(roles, cycleId)
-  if (cycleId && roleId) {
+  const roleIds = cycleId ? cycleRoleIds(roles, cycleId) : []
+  if (cycleId && roleIds.length > 0) {
     // The table scrolls to load, so this has to be an infinite prefetch: a
     // plain one caches a bare response where the client expects
     // `{ pages, pageParams }`, and the mismatch costs the round trip it was
     // meant to save. Offset is the page param, so it stays out of the key.
     const params = {
       cycle_id: cycleId,
-      role_id: roleId,
+      ...(roleIds.length === 1
+        ? { role_id: roleIds[0] }
+        : { role_ids: roleIds.join(',') }),
       limit: PAGE_SIZE,
     }
     await queryClient.prefetchInfiniteQuery({

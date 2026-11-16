@@ -9,15 +9,14 @@ import {
   listDecisionTemplates,
   listDecisions,
 } from '@/generated/decisions/decisions'
-import { listCycleReviewQuestions } from '@/generated/review-questions/review-questions'
 import type {
   Application,
   DecisionRow,
   DecisionTemplate,
   ReviewQuestion,
 } from '@/lib/api/types'
+import { listCycleReviewQuestions } from '@/generated/review-questions/review-questions'
 import { getServerRequestOptions } from '@/lib/api/server-request-options'
-import { fetchDecisionContext } from '@/lib/queries/decisions'
 import { queryKeys } from '@/lib/queries/keys'
 import { prefetchCycles } from '@/lib/queries/server-prefetch'
 import { DecisionDraftClient } from './components/DecisionDraftClient'
@@ -38,12 +37,6 @@ export default async function DecisionDraftPage({
   const queryClient = new QueryClient()
   const requestOptions = await getServerRequestOptions()
 
-  // The context doesn't depend on the application, so it starts alongside it.
-  const contextPrefetch = queryClient.prefetchQuery({
-    queryKey: queryKeys.decisions.context([id]),
-    queryFn: () => fetchDecisionContext([id], requestOptions),
-  })
-
   let application: Application
   try {
     application = (await getApplication(id, requestOptions)) as Application
@@ -54,7 +47,6 @@ export default async function DecisionDraftPage({
   const role = application.role_id
 
   await Promise.all([
-    contextPrefetch,
     prefetchCycles(queryClient, requestOptions),
     queryClient.prefetchQuery({
       queryKey: queryKeys.decisions.list(cycleId),

@@ -85,7 +85,7 @@ export function CommentThread({
                   <p className="text-text-muted text-xs">
                     {c.author_name || c.author_nuid}
                   </p>
-                  <p className="text-text-default mt-1 text-sm break-words whitespace-pre-wrap">
+                  <p className="text-text-default mt-1 text-sm wrap-anywhere whitespace-pre-wrap">
                     {c.body}
                   </p>
                   <p className="text-text-faint mt-1.5 text-xs">

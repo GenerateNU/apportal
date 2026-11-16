@@ -5,6 +5,7 @@ import (
 
 	"github.com/GenerateNU/apportal/backend/internal/handlers/interviewassignment"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/reviewrelease"
+	"github.com/GenerateNU/apportal/backend/internal/pipeline"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 	"github.com/danielgtaylor/huma/v2"
 
@@ -18,6 +19,7 @@ type recordingReviewService struct {
 	interviewAssignmentDB *interviewassignment.InterviewAssignmentDB
 	recordingReviewDB     *RecordingReviewDB
 	reviewReleaseDB       *reviewrelease.ReviewReleaseDB
+	gate                  *pipeline.Gate
 }
 
 func (s *recordingReviewService) upsert(ctx context.Context, in *UpsertRecordingReviewInput) (*RecordingReviewsOutput, error) {
@@ -35,6 +37,9 @@ func (s *recordingReviewService) upsert(ctx context.Context, in *UpsertRecording
 		if err := app.Can(access.OverrideInterviewRating); err != nil {
 			return nil, err
 		}
+	}
+	if err := s.gate.Application(ctx, in.ID, models.StepInterviews, models.KindRecordingReviewer); err != nil {
+		return nil, err
 	}
 	actor := utils.CurrentActor(ctx)
 

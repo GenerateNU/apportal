@@ -8,16 +8,16 @@ const SOFTWARE_CHIEFS = [
 export function HelpContact({ className }: { className?: string }) {
   return (
     <p className={cn('text-text-subtle text-center text-xs', className)}>
-      If you run into any issues at all with your application or this portal,
-      please reach out to the software chiefs{' '}
+      Trouble with your application or this portal? Email the software chiefs{' '}
       {SOFTWARE_CHIEFS.map((person, i) => (
         <span key={person.email}>
-          {i > 0 && ' and '}
+          {i > 0 && ' or '}
           <a
             href={`mailto:${person.email}`}
+            title={person.email}
             className="text-text-default hover:text-ink underline underline-offset-2 transition-colors"
           >
-            {person.name} ({person.email})
+            {person.name}
           </a>
         </span>
       ))}

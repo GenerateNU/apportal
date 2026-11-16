@@ -34,7 +34,6 @@ type UpdateApplicationTemplateInput struct {
 		Title          *string             `json:"title,omitempty"`
 		Description    *string             `json:"description,omitempty"`
 		Instructions   *string             `json:"instructions,omitempty"`
-		OpensAt        *time.Time          `json:"opens_at,omitempty"`
 		ClosesAt       *time.Time          `json:"closes_at,omitempty"`
 		Status         *models.CycleStatus `json:"status,omitempty"`
 		ReviewStatus   *models.CycleStatus `json:"review_status,omitempty"`
@@ -45,12 +44,7 @@ type UpdateApplicationTemplateInput struct {
 // ApplicationTemplateUpdate carries partial-update fields; nil pointers are
 // left unchanged.
 type ApplicationTemplateUpdate struct {
-	Title          *string
-	Description    *string
-	Instructions   *string
-	OpensAt        *time.Time
-	ClosesAt       *time.Time
-	Status         *models.CycleStatus
-	ReviewStatus   *models.CycleStatus
-	ReviewClosesAt *time.Time
+	Title        *string
+	Description  *string
+	Instructions *string
 }
