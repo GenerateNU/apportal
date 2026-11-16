@@ -73,7 +73,7 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
 /**
- * Reviewer only. Any lead/chief/admin can browse the reviewer directory (e.g. to invite a fellow lead onto a preference list); creating or editing a user stays chief-only.
+ * Admins, or anyone on some cycle's staff (e.g. to invite a fellow lead onto a preference list); creating or editing a user is admin only. Per-cycle leads and chiefs come from list-cycle-staff.
  * @summary List reviewers
  */
 export const listUsers = (
@@ -238,7 +238,7 @@ export function useListUsers<TData = Awaited<ReturnType<typeof listUsers>>, TErr
 
 
 /**
- * Chief only.
+ * Admin only.
  * @summary Create a reviewer
  */
 export const createUser = (
@@ -395,7 +395,7 @@ export function useGetCurrentUser<TData = Awaited<ReturnType<typeof getCurrentUs
 
 
 /**
- * Chief only.
+ * Admin only.
  * @summary Get a reviewer
  */
 export const getUser = (
@@ -487,7 +487,7 @@ export function useGetUser<TData = Awaited<ReturnType<typeof getUser>>, TError =
 
 
 /**
- * Chief only.
+ * Admin only.
  * @summary Update a reviewer
  */
 export const updateUser = (

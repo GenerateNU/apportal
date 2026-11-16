@@ -3,11 +3,13 @@ package applicationtemplate
 import (
 	"context"
 	"errors"
+	"time"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
 	"github.com/GenerateNU/apportal/backend/internal/models"
+	"github.com/GenerateNU/apportal/backend/internal/pipeline"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 )
 
@@ -47,19 +49,33 @@ func (a *ApplicationTemplateDB) GetOrCreateApplicationTemplate(ctx context.Conte
 	return template, err
 }
 
-// ListOpenApplicationTemplates returns the templates live for applicants: the
-// template and its cycle are both open and the template hasn't closed.
 func (a *ApplicationTemplateDB) ListOpenApplicationTemplates(ctx context.Context) ([]models.ApplicationTemplate, error) {
 	templates := []models.ApplicationTemplate{}
-	err := a.db.WithContext(ctx).Table("application_templates AS at").
+	q := a.db.WithContext(ctx).Table("application_templates AS at").
 		Select("at.*").
 		Joins("JOIN cycles c ON c.id = at.cycle_id").
 		Joins("JOIN roles r ON r.id = at.role_id").
-		Where("at.status = ? AND c.status = ?", models.CycleOpen, models.CycleOpen).
-		Where("at.closes_at IS NULL OR at.closes_at > now()").
+		Where("c.status = ?", models.CycleOpen)
+	err := pipeline.AcceptingApplications(q, "at").
 		Order("c.created_at DESC").Order("r.created_at").
 		Find(&templates).Error
-	return templates, err
+	if err != nil {
+		return nil, err
+	}
+	return templates, pipeline.FillTemplates(a.db.WithContext(ctx), templates, time.Now())
+}
+
+func (a *ApplicationTemplateDB) FillTimeline(ctx context.Context, t *models.ApplicationTemplate) error {
+	one := []models.ApplicationTemplate{*t}
+	if err := pipeline.FillTemplates(a.db.WithContext(ctx), one, time.Now()); err != nil {
+		return err
+	}
+	*t = one[0]
+	return nil
+}
+
+func (a *ApplicationTemplateDB) ApplyTimeline(ctx context.Context, cycleID, roleID string, in pipeline.TemplateTimeline, actor pipeline.Actor) error {
+	return pipeline.ApplyTemplateTimeline(a.db.WithContext(ctx), cycleID, roleID, in, actor, time.Now())
 }
 
 func (a *ApplicationTemplateDB) UpdateApplicationTemplate(ctx context.Context, cycleID, roleID string, in ApplicationTemplateUpdate) (models.ApplicationTemplate, error) {
@@ -67,11 +83,6 @@ func (a *ApplicationTemplateDB) UpdateApplicationTemplate(ctx context.Context, c
 	utils.SetIf(updates, "title", in.Title)
 	utils.SetIf(updates, "description", in.Description)
 	utils.SetIf(updates, "instructions", in.Instructions)
-	utils.SetIf(updates, "opens_at", in.OpensAt)
-	utils.SetIf(updates, "closes_at", in.ClosesAt)
-	utils.SetIf(updates, "status", in.Status)
-	utils.SetIf(updates, "review_status", in.ReviewStatus)
-	utils.SetIf(updates, "review_closes_at", in.ReviewClosesAt)
 	return utils.UpdateReturning[models.ApplicationTemplate](a.db.WithContext(ctx), updates,
 		"cycle_id = ? AND role_id = ?", cycleID, roleID)
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/handlers/codesubmission"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/question"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
+	"github.com/GenerateNU/apportal/backend/internal/pipeline"
 	"github.com/GenerateNU/apportal/backend/internal/storage"
 	"github.com/danielgtaylor/huma/v2"
 	"gorm.io/gorm"
@@ -24,7 +25,7 @@ func Route(api huma.API, db *gorm.DB, storageClient *storage.Client) {
 
 	registerAnswer(api, &answerService{access: access.NewChecker(db), applicationDB: applicationDB})
 	registerComment(api, &commentService{access: access.NewChecker(db), commentDB: NewCommentDB(db)})
-	registerApplication(api, &applicationService{access: access.NewChecker(db), applicationDB: applicationDB, applicationTemplateDB: applicationTemplateDB, challengeDB: challengeDB, codeSubmissionDB: codeSubmissionDB, questionDB: questionDB, roleDB: role.NewRoleDB(db)})
+	registerApplication(api, &applicationService{access: access.NewChecker(db), applicationDB: applicationDB, applicationTemplateDB: applicationTemplateDB, gate: pipeline.NewGate(db), challengeDB: challengeDB, codeSubmissionDB: codeSubmissionDB, questionDB: questionDB, roleDB: role.NewRoleDB(db)})
 	registerUpload(api, &uploadService{access: access.NewChecker(db), applicationDB: applicationDB, questionDB: questionDB, storage: storageClient})
 }
 
@@ -64,9 +65,9 @@ func registerApplication(api huma.API, s *applicationService) {
 		Method:      http.MethodPatch,
 		Path:        "/applications/{id}",
 		Summary:     "Update an application",
-		Description: "Set resume_url, availability, or advance/withdraw the stage.",
+		Description: "Set resume_url or availability, submit a draft, or change the stage within its pipeline step or to an outcome (accepted, rejected, withdrawn). Moving into another step goes through the cycle pipeline's advance; changes in a frozen step are 409 unless the caller is an admin.",
 		Tags:        []string{"Applications"},
-		Errors:      []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound, http.StatusUnprocessableEntity},
+		Errors:      []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound, http.StatusConflict, http.StatusUnprocessableEntity},
 	}, s.update)
 
 	huma.Register(api, huma.Operation{

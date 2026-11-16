@@ -69,7 +69,7 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
 /**
- * Optional ?status= filters to one status (draft, open, closed, archived); ?branch_id= to one branch.
+ * Admins see every cycle; others see open cycles, ones they applied to, and ones they staff. Optional ?status= filters to one status (draft, open, closed, archived); ?branch_id= to one branch.
  * @summary List cycles
  */
 export const listCycles = (
@@ -162,7 +162,7 @@ export function useListCycles<TData = Awaited<ReturnType<typeof listCycles>>, TE
 
 
 /**
- * Chief only. Starts with a copy of the roles of the branch's latest cycle of the same application type.
+ * Admin only. Starts with a copy of the roles and staff of the branch's latest cycle of the same application type.
  * @summary Create a cycle
  */
 export const createCycle = (
@@ -318,7 +318,7 @@ export function useGetCycle<TData = Awaited<ReturnType<typeof getCycle>>, TError
 
 
 /**
- * Chief only.
+ * Admin only.
  * @summary Update a cycle
  */
 export const updateCycle = (

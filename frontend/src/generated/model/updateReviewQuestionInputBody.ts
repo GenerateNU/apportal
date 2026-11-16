@@ -19,4 +19,10 @@ export interface UpdateReviewQuestionInputBody {
   options?: unknown;
   question_text?: string;
   question_type?: UpdateReviewQuestionInputBodyQuestionType;
+  /** Whether a score question counts toward the review ranking */
+  ranked?: boolean;
+  /** Score questions only; locked once any review has scored it */
+  score_max?: number;
+  /** Score questions only; locked once any review has scored it */
+  score_min?: number;
 }

@@ -1,6 +1,10 @@
 package access
 
-import "github.com/danielgtaylor/huma/v2"
+import (
+	"github.com/danielgtaylor/huma/v2"
+
+	"github.com/GenerateNU/apportal/backend/internal/models"
+)
 
 // CycleAction is something done to a cycle as a whole.
 type CycleAction int
@@ -74,11 +78,22 @@ var applicationPolicies = map[ApplicationAction]applicationPolicy{
 // CycleAccess is what the caller may do with one cycle.
 type CycleAccess struct {
 	level Level
+	admin bool
+	staff models.CycleStaffRole
+}
+
+func (a CycleAccess) Admin() bool { return a.admin && a.level != None }
+
+func (a CycleAccess) Staff() models.CycleStaffRole {
+	if a.level == None {
+		return ""
+	}
+	return a.staff
 }
 
 // CycleAccessAt and ApplicationAccessAt let other packages' tests stand in for a Checker.
-func CycleAccessAt(level Level) CycleAccess {
-	return CycleAccess{level: level}
+func CycleAccessAt(level Level, admin bool) CycleAccess {
+	return CycleAccess{level: level, admin: admin}
 }
 
 func ApplicationAccessAt(level Level, owner bool) ApplicationAccess {

@@ -332,7 +332,7 @@ export const useUnassignAllInterviewers = <TError = ErrorModel | ErrorModel | Er
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Reviewer only. Write-ups are omitted except the caller's own; read them from list-interview-reviewers.
+ * Reviewer only. Blind review applies: other reviewers' write-ups are omitted until a chief releases the cycle's recording reviews; chiefs always see them.
  * @summary List recording reviewers for several applications
  */
 export const listInterviewReviewersBulk = (

@@ -23,7 +23,7 @@ func TestFormVisibleSQL(t *testing.T) {
 	}
 	var n int64
 	open := openForm(db, "c1", "r1").Count(&n).Statement
-	for _, want := range []string{`JOIN cycles c ON c.id = at.cycle_id`, `at.cycle_id = $1 AND at.role_id = $2`, `at.status = $3 AND c.status = $4`} {
+	for _, want := range []string{`JOIN cycles c ON c.id = at.cycle_id`, `JOIN opening_steps os_apps ON os_apps.cycle_id = at.cycle_id`, `os_apps.released_at IS NOT NULL`, `od_apps.due_at IS NULL OR od_apps.due_at > now() OR NOT od_apps.hard`, `c.status = `} {
 		if !strings.Contains(open.SQL.String(), want) {
 			t.Errorf("sql missing %q:\n%s", want, open.SQL.String())
 		}

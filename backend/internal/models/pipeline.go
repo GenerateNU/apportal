@@ -7,8 +7,6 @@ import (
 
 // Structs for the review → interview → selection pipeline.
 
-// LeadAssignment: a chief assigns a lead to write-review an application. A cycle
-// stage's required_assignments (3 for lead_review) gates advancement.
 type LeadAssignment struct {
 	ID            string      `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
 	ApplicationID string      `json:"application_id" gorm:"type:uuid;not null;index:idx_lead_assignments_app;uniqueIndex:tl_assignments_application_id_tl_nuid_key,priority:1"`

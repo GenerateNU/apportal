@@ -5,6 +5,7 @@ import (
 
 	"github.com/GenerateNU/apportal/backend/internal/handlers/interviewassignment"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/reviewrelease"
+	"github.com/GenerateNU/apportal/backend/internal/pipeline"
 	"github.com/danielgtaylor/huma/v2"
 	"gorm.io/gorm"
 
@@ -16,6 +17,7 @@ func Route(api huma.API, db *gorm.DB) {
 		interviewAssignmentDB: interviewassignment.NewInterviewAssignmentDB(db),
 		recordingReviewDB:     NewRecordingReviewDB(db),
 		reviewReleaseDB:       reviewrelease.NewReviewReleaseDB(db),
+		gate:                  pipeline.NewGate(db),
 	}
 
 	huma.Register(api, huma.Operation{

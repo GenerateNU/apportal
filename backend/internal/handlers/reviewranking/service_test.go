@@ -10,6 +10,7 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/access"
 	"github.com/GenerateNU/apportal/backend/internal/middleware"
 	"github.com/GenerateNU/apportal/backend/internal/models"
+	"github.com/GenerateNU/apportal/backend/internal/pipeline"
 	"github.com/GenerateNU/apportal/backend/internal/testutil"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 )
@@ -56,8 +57,8 @@ func (f *fakeAuth) level(ctx context.Context, cycle string) (middleware.Actor, a
 }
 
 func (f *fakeAuth) Cycle(ctx context.Context, cycle string) (access.CycleAccess, error) {
-	_, l, err := f.level(ctx, cycle)
-	return access.CycleAccessAt(l), err
+	actor, l, err := f.level(ctx, cycle)
+	return access.CycleAccessAt(l, access.IsAdmin(actor)), err
 }
 
 func (f *fakeAuth) Application(ctx context.Context, id string) (access.ApplicationAccess, error) {
@@ -132,6 +133,7 @@ func (fakeRoles) CycleHasRole(_ context.Context, cycle, role string) (bool, erro
 type fakeRules struct {
 	reviewsIn bool
 	advanced  []string
+	actor     pipeline.Actor
 	err       error
 }
 
@@ -139,8 +141,8 @@ func (f *fakeRules) ReviewsIn(context.Context, string, string) (bool, error) {
 	return f.reviewsIn, nil
 }
 
-func (f *fakeRules) Advance(_ context.Context, _, _ string, ids []string, _ string) ([]string, error) {
-	f.advanced = ids
+func (f *fakeRules) Advance(_ context.Context, _, _ string, ids []string, actor pipeline.Actor) ([]string, error) {
+	f.advanced, f.actor = ids, actor
 	return ids, f.err
 }
 
@@ -397,6 +399,20 @@ func TestAdvance(t *testing.T) {
 		}
 		_, err := newFixture().svc.advance(ctx, in)
 		testutil.WantStatus(t, err, http.StatusUnprocessableEntity)
+	})
+	t.Run("passes who is advancing", func(t *testing.T) {
+		for _, tc := range []struct {
+			actor middleware.Actor
+			admin bool
+		}{{chiefActor, false}, {adminActor, true}} {
+			f := newFixture()
+			if _, err := f.svc.advance(testutil.WithActor(tc.actor), &AdvanceInput{ID: cycleID, RoleID: roleID}); err != nil {
+				t.Fatal(err)
+			}
+			if want := (pipeline.Actor{NUID: tc.actor.NUID, Admin: tc.admin}); f.rules.actor != want {
+				t.Fatalf("actor %+v, want %+v", f.rules.actor, want)
+			}
+		}
 	})
 	t.Run("no stage to move into", func(t *testing.T) {
 		f := newFixture()
