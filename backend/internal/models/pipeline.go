@@ -303,3 +303,13 @@ type ReviewRelease struct {
 	Releaser   User       `json:"-" gorm:"foreignKey:ReleasedBy;references:NUID"`
 	Role       Role       `json:"-" gorm:"foreignKey:RoleID;references:ID;constraint:OnDelete:RESTRICT"`
 }
+
+type ReviewConflict struct {
+	CycleID       string    `json:"cycle_id" gorm:"primaryKey;type:uuid"`
+	LeadNUID      string    `json:"lead_nuid" gorm:"primaryKey"`
+	ApplicantNUID string    `json:"applicant_nuid" gorm:"primaryKey"`
+	CreatedAt     time.Time `json:"created_at" gorm:"not null;default:now()"`
+	Cycle         Cycle     `json:"-" gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
+	Lead          User      `json:"-" gorm:"foreignKey:LeadNUID;references:NUID;constraint:OnDelete:CASCADE"`
+	Applicant     User      `json:"-" gorm:"foreignKey:ApplicantNUID;references:NUID;constraint:OnDelete:CASCADE"`
+}
