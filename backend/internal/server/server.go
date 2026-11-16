@@ -26,7 +26,6 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/handlers/draft"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/interview"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/interviewassignment"
-	"github.com/GenerateNU/apportal/backend/internal/handlers/interviewgroup"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/leadassignment"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/preferencelist"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/question"
@@ -122,7 +121,6 @@ func CreateRoutes(api huma.API, db *gorm.DB, storageClient *storage.Client, chal
 	chiefreview.Route(api, db)
 	reviewrelease.Route(api, db)
 	interviewassignment.Route(api, db)
-	interviewgroup.Route(api, db)
 	interview.Route(api, db)
 	recordingreview.Route(api, db)
 	preferencelist.Route(api, db)

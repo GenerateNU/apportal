@@ -75,3 +75,7 @@ func (DecisionStatus) Schema(huma.Registry) *huma.Schema {
 		string(DecisionPending), string(DecisionReady), string(DecisionSent),
 	)
 }
+
+func (StaffKind) Schema(huma.Registry) *huma.Schema {
+	return enumSchema(string(KindReviewer), string(KindInterviewer), string(KindRecordingReviewer))
+}

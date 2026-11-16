@@ -5,8 +5,6 @@ import (
 
 	"github.com/GenerateNU/apportal/backend/internal/handlers/application"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/cyclestaff"
-	"github.com/GenerateNU/apportal/backend/internal/handlers/interviewassignment"
-	"github.com/GenerateNU/apportal/backend/internal/handlers/interviewgroup"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/leadassignment"
 	"github.com/danielgtaylor/huma/v2"
 	"gorm.io/gorm"
@@ -16,12 +14,10 @@ import (
 
 func Route(api huma.API, db *gorm.DB) {
 	applicationDB := application.NewApplicationDB(db)
-	interviewAssignmentDB := interviewassignment.NewInterviewAssignmentDB(db)
 	leadAssignmentDB := leadassignment.NewLeadAssignmentDB(db)
 	staffDB := cyclestaff.NewCycleStaffDB(db)
 
 	registerAssignmentPlanner(api, &assignmentPlannerService{access: access.NewChecker(db), applicationDB: applicationDB, leadAssignmentDB: leadAssignmentDB, staffDB: staffDB})
-	registerInterviewAssignmentPlanner(api, &interviewAssignmentPlannerService{access: access.NewChecker(db), applicationDB: applicationDB, interviewAssignmentDB: interviewAssignmentDB, interviewGroupDB: interviewgroup.NewInterviewGroupDB(db), leadAssignmentDB: leadAssignmentDB, staffDB: staffDB})
 }
 
 func registerAssignmentPlanner(api huma.API, s *assignmentPlannerService) {
