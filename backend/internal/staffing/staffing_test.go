@@ -90,7 +90,7 @@ func TestLocked(t *testing.T) {
 	if err := snap.Locked("eng"); !errors.Is(err, ErrLocked) {
 		t.Errorf("released: %v", err)
 	}
-	if err := snap.Locked("des"); err != frozen {
+	if err := snap.Locked("des"); !errors.Is(err, frozen) {
 		t.Errorf("frozen: %v", err)
 	}
 	if err := snap.Locked("ops"); err != nil {
