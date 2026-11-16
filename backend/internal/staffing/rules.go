@@ -22,13 +22,35 @@ type InterviewRules interface {
 }
 
 type Conflicts interface {
-	Conflicted(ctx context.Context, cycleID string, applicantNUIDs []string) (map[string]map[string]bool, error)
+	Conflicted(ctx context.Context, db *gorm.DB, cycleID string, applicantNUIDs []string) (map[string]map[string]bool, error)
 }
 
 type NoConflicts struct{}
 
-func (NoConflicts) Conflicted(context.Context, string, []string) (map[string]map[string]bool, error) {
+func (NoConflicts) Conflicted(context.Context, *gorm.DB, string, []string) (map[string]map[string]bool, error) {
 	return map[string]map[string]bool{}, nil
+}
+
+type StoredConflicts struct{}
+
+func (StoredConflicts) Conflicted(ctx context.Context, db *gorm.DB, cycleID string, applicantNUIDs []string) (map[string]map[string]bool, error) {
+	out := map[string]map[string]bool{}
+	if len(applicantNUIDs) == 0 {
+		return out, nil
+	}
+	var rows []struct{ ApplicantNUID, LeadNUID string }
+	err := db.WithContext(ctx).Table("review_conflicts").Select("applicant_nuid, lead_nuid").
+		Where("cycle_id = ? AND applicant_nuid IN ?", cycleID, applicantNUIDs).Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	for _, r := range rows {
+		if out[r.ApplicantNUID] == nil {
+			out[r.ApplicantNUID] = map[string]bool{}
+		}
+		out[r.ApplicantNUID][r.LeadNUID] = true
+	}
+	return out, nil
 }
 
 type PipelineRules struct{}

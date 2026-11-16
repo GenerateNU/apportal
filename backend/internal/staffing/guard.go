@@ -17,7 +17,7 @@ type Guard struct {
 }
 
 func NewGuard() *Guard {
-	return &Guard{Rules: PipelineRules{}, Conflicts: NoConflicts{}}
+	return &Guard{Rules: PipelineRules{}, Conflicts: StoredConflicts{}}
 }
 
 type Snapshot struct {
@@ -73,7 +73,7 @@ func (g *Guard) Load(ctx context.Context, db *gorm.DB, cycleID string, applicati
 	for _, a := range snap.Applicants {
 		nuids = append(nuids, a.ApplicantNUID)
 	}
-	conflicts, err := g.Conflicts.Conflicted(ctx, cycleID, nuids)
+	conflicts, err := g.Conflicts.Conflicted(ctx, db, cycleID, nuids)
 	if err != nil {
 		return snap, err
 	}

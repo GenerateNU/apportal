@@ -8,14 +8,14 @@ import (
 
 const maxRoles = 50
 
-type BoardPerson struct {
+type InterviewBoardPerson struct {
 	AssignmentID string `json:"assignment_id"`
 	NUID         string `json:"nuid"`
 	FullName     string `json:"full_name"`
 	Done         bool   `json:"done"`
 }
 
-type BoardRow struct {
+type InterviewBoardRow struct {
 	ApplicationID      string                  `json:"application_id"`
 	ApplicantNUID      string                  `json:"applicant_nuid"`
 	FullName           string                  `json:"full_name"`
@@ -25,8 +25,8 @@ type BoardRow struct {
 	ScheduledAt        *time.Time              `json:"scheduled_at,omitempty"`
 	Started            bool                    `json:"started" doc:"Has notes, a write-up or a rating"`
 	Done               bool                    `json:"done" doc:"Interview submitted"`
-	Interviewers       []BoardPerson           `json:"interviewers" gorm:"-"`
-	RecordingReviewers []BoardPerson           `json:"recording_reviewers" gorm:"-"`
+	Interviewers       []InterviewBoardPerson  `json:"interviewers" gorm:"-"`
+	RecordingReviewers []InterviewBoardPerson  `json:"recording_reviewers" gorm:"-"`
 	SlotIDs            []string                `json:"slot_ids" gorm:"-" doc:"Meeting slots the applicant can make"`
 }
 
@@ -36,7 +36,7 @@ type BoardInput struct {
 }
 
 type BoardOutput struct {
-	Body []BoardRow
+	Body []InterviewBoardRow
 }
 
 type AutoPlanInput struct {

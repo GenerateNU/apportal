@@ -8,8 +8,8 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/models"
 )
 
-func boardApplicants(db *gorm.DB, cycleID, roleID string) ([]BoardRow, error) {
-	rows := []BoardRow{}
+func boardApplicants(db *gorm.DB, cycleID, roleID string) ([]InterviewBoardRow, error) {
+	rows := []InterviewBoardRow{}
 	q := db.Table("applications a").
 		Select("a.id AS application_id, a.user_nuid AS applicant_nuid, COALESCE(u.full_name, a.user_nuid) AS full_name, COALESCE(u.email, '') AS email, a.role_id, a.stage").
 		Joins("LEFT JOIN users u ON u.nuid = a.user_nuid").
@@ -22,20 +22,20 @@ func boardApplicants(db *gorm.DB, cycleID, roleID string) ([]BoardRow, error) {
 }
 
 type boardPersonRow struct {
-	BoardPerson
+	InterviewBoardPerson
 	ApplicationID string
 }
 
-func boardPeople(db *gorm.DB, table, nuidCol, doneExpr string, ids []string) (map[string][]BoardPerson, error) {
+func boardPeople(db *gorm.DB, table, nuidCol, doneExpr string, ids []string) (map[string][]InterviewBoardPerson, error) {
 	var rows []boardPersonRow
 	err := db.Table(table+" x").
 		Select("x.id AS assignment_id, i.application_id, x."+nuidCol+" AS nuid, COALESCE(u.full_name, x."+nuidCol+") AS full_name, "+doneExpr+" AS done").
 		Joins("JOIN interviews i ON i.id = x.interview_id").
 		Joins("LEFT JOIN users u ON u.nuid = x."+nuidCol).
 		Where("i.application_id IN ?", ids).Order("x.assigned_at").Order("x.id").Scan(&rows).Error
-	out := map[string][]BoardPerson{}
+	out := map[string][]InterviewBoardPerson{}
 	for _, r := range rows {
-		out[r.ApplicationID] = append(out[r.ApplicationID], r.BoardPerson)
+		out[r.ApplicationID] = append(out[r.ApplicationID], r.InterviewBoardPerson)
 	}
 	return out, err
 }

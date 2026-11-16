@@ -72,7 +72,7 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
 /**
- * Chief only. Creates the interview if it doesn't exist yet.
+ * Chief only. The same checks as adding an interviewer, against the recording-review team and count; never one of the applicant's interviewers. Creates the interview if it doesn't exist yet.
  * @summary Add a recording reviewer to an application
  */
 export const addInterviewReviewer = (
@@ -92,7 +92,7 @@ export const addInterviewReviewer = (
   
 
 
-export const getAddInterviewReviewerMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+export const getAddInterviewReviewerMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addInterviewReviewer>>, TError,{id: string;data: NonReadonly<AddReviewerInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
 ): UseMutationOptions<Awaited<ReturnType<typeof addInterviewReviewer>>, TError,{id: string;data: NonReadonly<AddReviewerInputBody>}, TContext> => {
 
@@ -119,12 +119,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type AddInterviewReviewerMutationResult = NonNullable<Awaited<ReturnType<typeof addInterviewReviewer>>>
     export type AddInterviewReviewerMutationBody = NonReadonly<AddReviewerInputBody>
-    export type AddInterviewReviewerMutationError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel
+    export type AddInterviewReviewerMutationError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel
 
     /**
  * @summary Add a recording reviewer to an application
  */
-export const useAddInterviewReviewer = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+export const useAddInterviewReviewer = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addInterviewReviewer>>, TError,{id: string;data: NonReadonly<AddReviewerInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof addInterviewReviewer>>,
@@ -138,7 +138,7 @@ export const useAddInterviewReviewer = <TError = ErrorModel | ErrorModel | Error
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Chief only. Creates the interview if it doesn't exist yet.
+ * Chief only. They must be on the opening's interview team, have no conflict with the applicant, not review their recording, and the applicant must have room under the cycle's interviewer count. Creates the interview if it doesn't exist yet.
  * @summary Add an interviewer to an application
  */
 export const addInterviewer = (
@@ -158,7 +158,7 @@ export const addInterviewer = (
   
 
 
-export const getAddInterviewerMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+export const getAddInterviewerMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addInterviewer>>, TError,{id: string;data: NonReadonly<AddInterviewerInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
 ): UseMutationOptions<Awaited<ReturnType<typeof addInterviewer>>, TError,{id: string;data: NonReadonly<AddInterviewerInputBody>}, TContext> => {
 
@@ -185,12 +185,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type AddInterviewerMutationResult = NonNullable<Awaited<ReturnType<typeof addInterviewer>>>
     export type AddInterviewerMutationBody = NonReadonly<AddInterviewerInputBody>
-    export type AddInterviewerMutationError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel
+    export type AddInterviewerMutationError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel
 
     /**
  * @summary Add an interviewer to an application
  */
-export const useAddInterviewer = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+export const useAddInterviewer = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addInterviewer>>, TError,{id: string;data: NonReadonly<AddInterviewerInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof addInterviewer>>,

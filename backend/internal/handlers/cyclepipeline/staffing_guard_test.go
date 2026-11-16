@@ -65,3 +65,16 @@ func TestInterviewStaffingFollowsPipeline(t *testing.T) {
 		t.Fatalf("unassign all after release: %v", err)
 	}
 }
+
+func TestStoredConflictsBlockInterviewers(t *testing.T) {
+	f := newFixture(t)
+	f.exec("INSERT INTO step_assignments (cycle_id, step, kind, per_applicant) VALUES (?, 'interviews', 'interviewer', 2)", f.cycleA)
+	app := f.application(f.cycleA, f.roleA, models.StageInterview)
+	f.exec(`INSERT INTO review_conflicts (cycle_id, lead_nuid, applicant_nuid)
+		SELECT cycle_id, ?, user_nuid FROM applications WHERE id = ?`, f.leadA.NUID, app)
+	err := staffing.NewGuard().CheckAdd(f.as(f.chiefA), f.db, app, f.leadA.NUID, models.KindInterviewer)
+	if !errors.Is(err, staffing.ErrConflicted) {
+		t.Fatalf("conflicted interviewer: %v", err)
+	}
+	f.must(staffing.NewGuard().CheckAdd(f.as(f.chiefA), f.db, app, f.chiefA.NUID, models.KindInterviewer))
+}

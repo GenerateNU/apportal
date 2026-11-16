@@ -11,6 +11,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/GenerateNU/apportal/backend/internal/access"
+	"github.com/GenerateNU/apportal/backend/internal/reviewrules"
 )
 
 func Route(api huma.API, db *gorm.DB) {
@@ -18,7 +19,10 @@ func Route(api huma.API, db *gorm.DB) {
 	leadAssignmentDB := leadassignment.NewLeadAssignmentDB(db)
 	staffDB := cyclestaff.NewCycleStaffDB(db)
 
-	registerAssignmentPlanner(api, &assignmentPlannerService{access: access.NewChecker(db), applicationDB: applicationDB, leadAssignmentDB: leadAssignmentDB, staffDB: staffDB, gate: pipeline.NewGate(db)})
+	conflicts := reviewrules.NewConflicts(db)
+
+	registerAssignmentPlanner(api, &assignmentPlannerService{access: access.NewChecker(db), applicationDB: applicationDB, leadAssignmentDB: leadAssignmentDB, staffDB: staffDB, conflicts: conflicts, gate: pipeline.NewGate(db)})
+	registerReviewAssignment(api, &reviewService{gate: access.NewChecker(db), store: NewReviewDB(db), rules: reviewrules.NewDefault(db)})
 }
 
 func registerAssignmentPlanner(api huma.API, s *assignmentPlannerService) {

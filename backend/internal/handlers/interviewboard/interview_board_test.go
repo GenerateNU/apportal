@@ -19,6 +19,10 @@ func TestPermissions(t *testing.T) {
 			_, err := s.board(ctx, &BoardInput{ID: accesstest.CycleID})
 			return err
 		},
+		"assignable staff": func(ctx context.Context, s *interviewBoardService) error {
+			_, err := s.assignable(ctx, &AssignableInput{ID: accesstest.CycleID, Kind: models.KindReviewer, ApplicationIDs: accesstest.ApplicationID})
+			return err
+		},
 		"auto plan dry run": func(ctx context.Context, s *interviewBoardService) error {
 			in := &AutoPlanInput{ID: accesstest.CycleID}
 			in.Body.DryRun = true

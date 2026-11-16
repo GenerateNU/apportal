@@ -33,4 +33,10 @@ func register(api huma.API, s *interviewBoardService) {
 			"never the applicant's current or planned interviewers. Existing assignments are kept; with dry_run false the plan is saved in one transaction.",
 		Tags: tags, Errors: append(errs, http.StatusConflict),
 	}, s.autoPlan)
+	huma.Register(api, huma.Operation{
+		OperationID: "list-assignable-staff", Method: http.MethodGet, Path: "/cycles/{id}/assignable-staff",
+		Summary:     "Who can be added to each applicant as a reviewer, interviewer or recording reviewer",
+		Description: "Chief or admin. Every cycle staff member with their name for each application, marked available or with the reason they can't be added: already assigned, not on the opening's team, conflicted, interviewing when adding a recording reviewer (or the reverse), or the applicant is full. locked is set when the opening takes no adds right now.",
+		Tags:        tags, Errors: errs,
+	}, s.assignable)
 }

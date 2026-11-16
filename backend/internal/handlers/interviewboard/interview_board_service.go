@@ -84,9 +84,9 @@ func (s *interviewBoardService) board(ctx context.Context, in *BoardInput) (*Boa
 	return &BoardOutput{Body: rows}, nil
 }
 
-func orEmpty(p []BoardPerson) []BoardPerson {
+func orEmpty(p []InterviewBoardPerson) []InterviewBoardPerson {
 	if p == nil {
-		return []BoardPerson{}
+		return []InterviewBoardPerson{}
 	}
 	return p
 }

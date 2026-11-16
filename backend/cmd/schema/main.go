@@ -47,6 +47,7 @@ func main() {
 		&models.CycleTag{}, &models.DecisionTemplate{}, &models.DecisionDraft{}, &models.ReviewRelease{},
 		&models.StaffGroup{}, &models.StaffGroupMember{}, &models.OpeningTeam{},
 		&models.MeetingSlot{}, &models.StaffSlot{}, &models.ApplicationSlot{},
+		&models.ReviewConflict{},
 		&models.ReviewCutoff{}, &models.ReviewCutoffOverride{},
 	)
 	if err != nil {
