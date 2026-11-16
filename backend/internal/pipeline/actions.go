@@ -119,11 +119,14 @@ const (
 	TaskInterview       TaskKind = "interview"
 	TaskRecordingReview TaskKind = "recording_review"
 	TaskPreferenceList  TaskKind = "preference_list"
+	TaskDraft           TaskKind = "draft"
+	TaskFeedback        TaskKind = "feedback"
 )
 
 func (TaskKind) Schema(huma.Registry) *huma.Schema {
 	return &huma.Schema{Type: huma.TypeString, Enum: []any{
 		string(TaskReview), string(TaskInterview), string(TaskRecordingReview), string(TaskPreferenceList),
+		string(TaskDraft), string(TaskFeedback),
 	}}
 }
 
@@ -132,6 +135,8 @@ var taskSteps = map[TaskKind]models.Step{
 	TaskInterview:       models.StepInterviews,
 	TaskRecordingReview: models.StepInterviews,
 	TaskPreferenceList:  models.StepDecisions,
+	TaskDraft:           models.StepDecisions,
+	TaskFeedback:        models.StepFeedback,
 }
 
 var taskDeadlineKinds = map[TaskKind]models.StepKind{
@@ -140,7 +145,7 @@ var taskDeadlineKinds = map[TaskKind]models.StepKind{
 	TaskRecordingReview: models.KindRecordingReviewer,
 }
 
-var taskOrder = []TaskKind{TaskReview, TaskInterview, TaskRecordingReview, TaskPreferenceList}
+var taskOrder = []TaskKind{TaskReview, TaskInterview, TaskRecordingReview, TaskPreferenceList, TaskDraft, TaskFeedback}
 
 type TaskCount struct {
 	Kind   TaskKind

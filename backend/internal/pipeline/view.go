@@ -178,5 +178,22 @@ func LoadTaskCounts(db *gorm.DB, cycleID, nuid string) ([]TaskCount, error) {
 		Where("pl.cycle_id = ? AND m.lead_nuid = ?", cycleID, nuid).Having("count(*) > 0")); err != nil {
 		return nil, err
 	}
+	if err := scan(TaskDraft, db.Table("drafts d").
+		Select("d.role_id, count(DISTINCT d.id) AS total, count(DISTINCT d.id) FILTER (WHERE d.status = 'complete') AS done").
+		Joins("JOIN draft_teams t ON t.draft_id = d.id").
+		Joins("JOIN preference_list_members m ON m.preference_list_id = t.preference_list_id").
+		Where("d.cycle_id = ? AND m.lead_nuid = ? AND d.status <> 'setup'", cycleID, nuid).Group("d.role_id")); err != nil {
+		return nil, err
+	}
+	if err := scan(TaskFeedback, db.Table("applications a").
+		Select(`a.role_id, count(DISTINCT a.id) AS total, count(DISTINCT a.id) FILTER (WHERE dd.sent_at IS NOT NULL
+			OR COALESCE(dd.body_override, '') <> ''
+			OR (COALESCE(dd.feedback, '') <> '' AND COALESCE(dd.compliments, '') <> '')) AS done`).
+		Joins("JOIN interviews i ON i.application_id = a.id").
+		Joins("JOIN interviewers x ON x.interview_id = i.id").
+		Joins("LEFT JOIN decision_drafts dd ON dd.application_id = a.id AND dd.kind = ?", models.DecisionRejectionPostInterview).
+		Where("a.cycle_id = ? AND a.stage = ? AND x.interviewer_nuid = ?", cycleID, models.StageRejected, nuid).Group("a.role_id")); err != nil {
+		return nil, err
+	}
 	return out, nil
 }
