@@ -75,3 +75,7 @@ func (DecisionStatus) Schema(huma.Registry) *huma.Schema {
 		string(DecisionPending), string(DecisionReady), string(DecisionSent),
 	)
 }
+
+func (CutoffMode) Schema(huma.Registry) *huma.Schema {
+	return enumSchema(string(CutoffMinScore), string(CutoffTopN))
+}
