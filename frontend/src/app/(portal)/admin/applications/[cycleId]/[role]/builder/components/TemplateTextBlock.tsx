@@ -1,5 +1,6 @@
 'use client'
 
+import { useSave } from './SaveTracker'
 import { useState } from 'react'
 import { useUpdateApplicationTemplate } from '@/lib/queries/application-templates'
 
@@ -23,6 +24,7 @@ export function TemplateTextBlock({
   value?: string
 }) {
   const updateTemplate = useUpdateApplicationTemplate()
+  const save = useSave()
 
   const persisted = value ?? ''
   const [prevValue, setPrevValue] = useState(persisted)
@@ -35,7 +37,7 @@ export function TemplateTextBlock({
   function commit() {
     const trimmed = text.trim()
     if (trimmed === persisted) return
-    updateTemplate.mutate({
+    save(updateTemplate, {
       cycleId,
       roleId: role,
       body:

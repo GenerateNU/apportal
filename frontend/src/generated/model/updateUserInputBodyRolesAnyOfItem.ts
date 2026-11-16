@@ -12,8 +12,5 @@ export type UpdateUserInputBodyRolesAnyOfItem = typeof UpdateUserInputBodyRolesA
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const UpdateUserInputBodyRolesAnyOfItem = {
   applicant: 'applicant',
-  member: 'member',
-  lead: 'lead',
-  chief: 'chief',
   admin: 'admin',
 } as const;

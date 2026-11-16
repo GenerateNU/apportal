@@ -25,6 +25,16 @@ func Route(api huma.API, db *gorm.DB) {
 	}, s.listOpen)
 
 	huma.Register(api, huma.Operation{
+		OperationID: "list-cycle-application-templates",
+		Method:      http.MethodGet,
+		Path:        "/cycles/{id}/templates",
+		Summary:     "List a cycle's application templates",
+		Description: "Staff only. One template per role of the cycle, in role order; creates the default-titled draft for any role without one.",
+		Tags:        []string{"Application Templates"},
+		Errors:      []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound},
+	}, s.listForCycle)
+
+	huma.Register(api, huma.Operation{
 		OperationID: "get-application-template",
 		Method:      http.MethodGet,
 		Path:        "/cycles/{id}/template",

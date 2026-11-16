@@ -202,6 +202,7 @@ export * from './listChiefReviews200';
 export * from './listChiefReviewsBulk200';
 export * from './listChiefReviewsBulkParams';
 export * from './listCodeSubmissions200';
+export * from './listCycleApplicationTemplates200';
 export * from './listCycleChallenges200';
 export * from './listCycleChallengesParams';
 export * from './listCycleQuestions200';

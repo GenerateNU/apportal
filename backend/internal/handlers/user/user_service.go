@@ -52,13 +52,9 @@ func (s *userService) list(ctx context.Context, in *ListUsersInput) (*UsersOutpu
 			return nil, err
 		}
 	}
-	var role *models.UserRole
-	if in.Role != "" {
-		parsed := models.UserRole(in.Role)
-		if !parsed.Valid() {
-			return nil, huma.Error422UnprocessableEntity("invalid role")
-		}
-		role = &parsed
+	filter, err := parseUserFilter(in.Role)
+	if err != nil {
+		return nil, err
 	}
 
 	var limit *int
@@ -66,7 +62,7 @@ func (s *userService) list(ctx context.Context, in *ListUsersInput) (*UsersOutpu
 		limit = &in.Limit
 	}
 
-	users, hasMore, err := s.userDB.ListUsers(ctx, role, limit, in.Offset)
+	users, hasMore, err := s.userDB.ListUsers(ctx, filter, limit, in.Offset)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
@@ -97,6 +93,21 @@ func (s *userService) me(ctx context.Context, _ *MeInput) (*UserOutput, error) {
 		return nil, utils.StoreErr(err)
 	}
 	return &UserOutput{Body: user}, nil
+}
+
+// parseUserFilter reads list-users' ?role=: a global role, or a staff role
+// meaning "on some cycle's staff with that role".
+func parseUserFilter(role string) (userFilter, error) {
+	if role == "" {
+		return userFilter{}, nil
+	}
+	if r := models.UserRole(role); r.Valid() {
+		return userFilter{UserRole: &r}, nil
+	}
+	if r := models.CycleStaffRole(role); r.Valid() {
+		return userFilter{StaffRole: &r}, nil
+	}
+	return userFilter{}, huma.Error422UnprocessableEntity("invalid role")
 }
 
 func (s *userService) update(ctx context.Context, in *UpdateUserInput) (*UserOutput, error) {

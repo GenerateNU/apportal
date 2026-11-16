@@ -13,6 +13,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
+import { useToast } from '@/components/ui/toast'
 import { APIError } from '@/lib/api/client'
 import type { Role } from '@/lib/api/types'
 import {
@@ -37,6 +38,7 @@ export function RoleDialog({
   const createRole = useCreateRole()
   const updateRole = useUpdateRole()
   const deleteRole = useDeleteRole()
+  const toast = useToast()
 
   const [name, setName] = useState(role?.name ?? '')
   const [confirmingDelete, setConfirmingDelete] = useState(false)
@@ -65,7 +67,17 @@ export function RoleDialog({
     } else {
       createRole.mutate(
         { body: { cycle_id: cycleId, name: trimmed } },
-        { onSuccess }
+        {
+          onSuccess: ({ draft }) => {
+            onSuccess()
+            toast(
+              draft
+                ? `${trimmed} added. Its draft application is ready to edit in Application Forms.`
+                : `${trimmed} added, but its draft application couldn’t be created. Open it from Application Forms to create it.`,
+              { variant: draft ? 'success' : 'error', duration: 6000 }
+            )
+          },
+        }
       )
     }
   }
@@ -88,7 +100,7 @@ export function RoleDialog({
             <DialogDescription>
               {isEdit
                 ? 'Renaming keeps every application and template attached.'
-                : 'Applicants to this cycle pick one of its roles.'}
+                : 'Applicants to this cycle pick one of its roles. A draft application is created for it, for you to fill in and open.'}
             </DialogDescription>
           </DialogHeader>
 

@@ -13292,6 +13292,62 @@ paths:
       summary: Per-role template counts for a cycle
       tags:
         - Cycles
+  /cycles/{id}/templates:
+    get:
+      description: Staff only. One template per role of the cycle, in role order; creates the default-titled draft for any role without one.
+      operationId: list-cycle-application-templates
+      parameters:
+        - description: Cycle ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Cycle ID
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/ApplicationTemplate"
+                type:
+                  - array
+                  - "null"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: List a cycle's application templates
+      tags:
+        - Application Templates
   /decisions/context:
     get:
       description: "Reviewer only. ?application_ids= is comma-separated. Returns each applicant's interview write-up, recording reviews, and lead written reviews — the material an interviewer draws on to write feedback. Blind review still applies: a lead sees only their own written review, and peers' recording comments are withheld, until a chief releases the cycle's reviews. Leads only get applicants they interviewed."
@@ -15474,12 +15530,12 @@ paths:
       description: Admins, or anyone on some cycle's staff (e.g. to invite a fellow lead onto a preference list); creating or editing a user is admin only. Per-cycle leads and chiefs come from list-cycle-staff.
       operationId: list-users
       parameters:
-        - description: Optional role filter
+        - description: "Optional filter: a global role (applicant, admin), or lead/chief for anyone with that role on some cycle"
           explode: false
           in: query
           name: role
           schema:
-            description: Optional role filter
+            description: "Optional filter: a global role (applicant, admin), or lead/chief for anyone with that role on some cycle"
             type: string
         - description: Max results per page; omit (or 0) to return all matching users
           explode: false

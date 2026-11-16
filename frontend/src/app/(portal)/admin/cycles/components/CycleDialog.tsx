@@ -19,9 +19,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import type { Cycle } from '@/lib/api/types'
+import type { Cycle, CycleStatus } from '@/lib/api/types'
 import { useCreateCycle, useUpdateCycle } from '@/lib/queries/cycles'
-import { APPLICATION_TYPES, type ApplicationType } from '../lib/cycle-meta'
+import {
+  APPLICATION_TYPES,
+  CYCLE_STATUS,
+  CYCLE_STATUS_ORDER,
+  type ApplicationType,
+} from '../lib/cycle-meta'
 
 // Pass `cycle` to edit, or `branchId` to create a cycle in that branch.
 export function CycleDialog({
@@ -43,6 +48,7 @@ export function CycleDialog({
   const [applicationType, setApplicationType] = useState<ApplicationType>(
     (cycle?.application_type as ApplicationType) ?? 'member'
   )
+  const [status, setStatus] = useState<CycleStatus>(cycle?.status ?? 'draft')
   const pending = createCycle.isPending || updateCycle.isPending
 
   function handleSubmit(event: React.FormEvent) {
@@ -57,7 +63,10 @@ export function CycleDialog({
     const onSuccess = () => onOpenChange(false)
 
     if (isEdit) {
-      updateCycle.mutate({ id: cycle.id, body }, { onSuccess })
+      updateCycle.mutate(
+        { id: cycle.id, body: { ...body, status } },
+        { onSuccess }
+      )
     } else if (branchId) {
       createCycle.mutate(
         { body: { ...body, branch_id: branchId } },
@@ -110,6 +119,33 @@ export function CycleDialog({
               </SelectContent>
             </Select>
           </div>
+
+          {isEdit && (
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="cycle-status">Status</Label>
+              <Select
+                value={status}
+                onValueChange={(val) => setStatus(val as CycleStatus)}
+              >
+                <SelectTrigger id="cycle-status">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CYCLE_STATUS_ORDER.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {CYCLE_STATUS[s].label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {updateCycle.error && (
+            <p className="text-destructive text-sm">
+              Couldn’t save this cycle.
+            </p>
+          )}
 
           <DialogFooter>
             <Button

@@ -1,6 +1,7 @@
 package access
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/GenerateNU/apportal/backend/internal/models"
@@ -51,6 +52,24 @@ func TestLevelFor(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			if got := LevelFor(tc.admin, tc.staff, tc.status, tc.typ); got != tc.want {
 				t.Errorf("LevelFor = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestStaffRolesFor(t *testing.T) {
+	cases := []struct {
+		typ  models.ApplicationType
+		want []models.CycleStaffRole
+	}{
+		{member, []models.CycleStaffRole{models.CycleStaffChief, models.CycleStaffLead}},
+		{lead, []models.CycleStaffRole{models.CycleStaffChief}},
+		{chief, nil},
+	}
+	for _, tc := range cases {
+		t.Run(string(tc.typ), func(t *testing.T) {
+			if got := StaffRolesFor(tc.typ); !slices.Equal(got, tc.want) {
+				t.Errorf("StaffRolesFor(%s) = %v, want %v", tc.typ, got, tc.want)
 			}
 		})
 	}

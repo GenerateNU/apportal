@@ -6,12 +6,19 @@ import {
 } from '@tanstack/react-query'
 import { getServerSession } from '@/lib/api/server-request-options'
 import { getServerCurrentUser } from '@/lib/auth/server-user'
+import { listMyCycles } from '@/generated/cycle-staff/cycle-staff'
+import type { CycleStaff } from '@/generated/model'
+import { getServerRequestOptions } from '@/lib/api/server-request-options'
+import { fetchBranches } from '@/lib/queries/branches'
+import { fetchCycles } from '@/lib/queries/cycles'
 import { queryKeys } from '@/lib/queries/keys'
+import { fetchRoles } from '@/lib/queries/roles'
 import { SIDEBAR_COLLAPSED_COOKIE } from '@/lib/sidebar'
 import { PortalShell } from './PortalShell'
 
-// Seeds /users/me so the sidebar and every useCurrentUser below render on the
-// server instead of waiting on a client round trip.
+// Seeds what the sidebar reads. Pages prefetch some of the same lists, but the
+// sidebar renders first, and React Query only hydrates a page's copy on the
+// client then — so without these the server and client disagree.
 export default async function PortalLayout({
   children,
 }: {
@@ -23,10 +30,29 @@ export default async function PortalLayout({
     cookies(),
   ])
   if (session) {
-    await queryClient.prefetchQuery({
-      queryKey: queryKeys.users.me(session.user.id),
-      queryFn: getServerCurrentUser,
-    })
+    const opts = await getServerRequestOptions()
+    await Promise.all([
+      queryClient.prefetchQuery({
+        queryKey: queryKeys.users.me(session.user.id),
+        queryFn: getServerCurrentUser,
+      }),
+      queryClient.prefetchQuery({
+        queryKey: queryKeys.cycleStaff.mine(),
+        queryFn: async () => ((await listMyCycles(opts)) ?? []) as CycleStaff[],
+      }),
+      queryClient.prefetchQuery({
+        queryKey: queryKeys.cycles.list(),
+        queryFn: () => fetchCycles(undefined, opts),
+      }),
+      queryClient.prefetchQuery({
+        queryKey: queryKeys.roles.list(),
+        queryFn: () => fetchRoles(opts),
+      }),
+      queryClient.prefetchQuery({
+        queryKey: queryKeys.branches.list(),
+        queryFn: () => fetchBranches(opts),
+      }),
+    ])
   }
 
   return (
