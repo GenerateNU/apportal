@@ -67,6 +67,25 @@ func (s *Store) Eligible(ctx context.Context, cycleID, roleID string, kind model
 	return o.Eligible(roleID, kind), nil
 }
 
+// NotStaff returns the nuids that aren't on the cycle's staff.
+func NotStaff(db *gorm.DB, cycleID string, nuids []string) ([]string, error) {
+	if len(nuids) == 0 {
+		return nil, nil
+	}
+	var on []string
+	if err := db.Model(&models.CycleStaff{}).Where("cycle_id = ? AND user_nuid IN ?", cycleID, nuids).
+		Pluck("user_nuid", &on).Error; err != nil {
+		return nil, err
+	}
+	var out []string
+	for _, n := range nuids {
+		if !slices.Contains(on, n) {
+			out = append(out, n)
+		}
+	}
+	return out, nil
+}
+
 func LoadOpenings(db *gorm.DB, cycleID string) (Openings, error) {
 	o := Openings{Staff: []string{}, Teams: map[string]Teams{}, Members: map[string][]string{}}
 	if err := db.Model(&models.CycleStaff{}).Where("cycle_id = ?", cycleID).

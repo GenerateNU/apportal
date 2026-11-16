@@ -2,6 +2,9 @@ package utils
 
 import (
 	"strings"
+
+	"github.com/danielgtaylor/huma/v2"
+	"github.com/google/uuid"
 )
 
 // MaxBulkApplications bounds both the query string and the fan-out of the
@@ -33,4 +36,44 @@ func SplitIDs(raw string) []string {
 		}
 	}
 	return ids
+}
+
+// RequireUUIDs takes name, value pairs and 422s on the first value that
+// isn't a UUID.
+func RequireUUIDs(pairs ...string) error {
+	for i := 0; i+1 < len(pairs); i += 2 {
+		if _, err := uuid.Parse(pairs[i+1]); err != nil {
+			return huma.Error422UnprocessableEntity("invalid " + pairs[i])
+		}
+	}
+	return nil
+}
+
+// UUIDList checks and dedupes ids, keeping their order.
+func UUIDList(name string, ids []string) ([]string, error) {
+	seen := make(map[string]bool, len(ids))
+	out := make([]string, 0, len(ids))
+	for _, id := range ids {
+		if _, err := uuid.Parse(id); err != nil {
+			return nil, huma.Error422UnprocessableEntity("invalid " + name)
+		}
+		if !seen[id] {
+			seen[id] = true
+			out = append(out, id)
+		}
+	}
+	return out, nil
+}
+
+// NUIDList trims, drops blanks and dedupes, keeping order.
+func NUIDList(nuids []string) []string {
+	seen := make(map[string]bool, len(nuids))
+	out := make([]string, 0, len(nuids))
+	for _, n := range nuids {
+		if n = strings.TrimSpace(n); n != "" && !seen[n] {
+			seen[n] = true
+			out = append(out, n)
+		}
+	}
+	return out
 }
