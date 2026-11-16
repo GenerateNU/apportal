@@ -11,8 +11,8 @@ import { useCycleScope } from '@/hooks/useCycleScope'
 import { cycleAudience } from '@/lib/cycle-type'
 import { cn } from '@/lib/utils'
 
-export function CycleSwitcher() {
-  const scope = useCycleScope('lead')
+export function CycleSwitcher({ mode = 'lead' }: { mode?: 'lead' | 'chief' }) {
+  const scope = useCycleScope(mode)
   if (!scope.cycle) return null
 
   const header = (

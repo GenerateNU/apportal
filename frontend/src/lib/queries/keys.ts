@@ -337,6 +337,8 @@ export const queryKeys = {
   pipeline: {
     all: ['pipeline'] as const,
     detail: (cycleId: string) => [...queryKeys.pipeline.all, cycleId] as const,
+    steps: (cycleId: string) =>
+      [...queryKeys.pipeline.all, 'steps', cycleId] as const,
   },
   myWork: {
     all: ['my-work'] as const,
@@ -346,5 +348,36 @@ export const queryKeys = {
     all: ['interview-board'] as const,
     detail: (cycleId: string) =>
       [...queryKeys.interviewBoard.all, cycleId] as const,
+  },
+  reviewConflicts: {
+    all: ['review-conflicts'] as const,
+    list: (cycleId: string) =>
+      [...queryKeys.reviewConflicts.all, cycleId] as const,
+  },
+  reviewBoard: {
+    all: ['review-board'] as const,
+    detail: (cycleId: string) =>
+      [...queryKeys.reviewBoard.all, cycleId] as const,
+  },
+  staffing: {
+    all: ['staffing'] as const,
+    detail: (cycleId: string) => [...queryKeys.staffing.all, cycleId] as const,
+  },
+  reviewRanking: {
+    all: ['review-ranking'] as const,
+    detail: (cycleId: string, roleId: string) =>
+      [...queryKeys.reviewRanking.all, cycleId, roleId] as const,
+  },
+  meetingSlots: {
+    all: ['meeting-slots'] as const,
+    list: (cycleId: string) =>
+      [...queryKeys.meetingSlots.all, cycleId] as const,
+    staff: (cycleId: string) =>
+      [...queryKeys.meetingSlots.all, 'staff', cycleId] as const,
+  },
+  interviewPanels: {
+    all: ['interview-panels'] as const,
+    list: (cycleId: string) =>
+      [...queryKeys.interviewPanels.all, cycleId] as const,
   },
 } as const

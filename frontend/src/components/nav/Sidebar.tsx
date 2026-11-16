@@ -14,6 +14,7 @@ import {
   LogOut,
   LayoutList,
 } from 'lucide-react'
+import { ChiefCycleNav } from './ChiefCycleNav'
 import { LeadPhaseNav } from './LeadPhaseNav'
 import { SectionCaret } from './SectionHeader'
 import NavItem, { isNavItemActive } from './NavItem'
@@ -270,10 +271,9 @@ export default function Sidebar({
 
   const { data: myCycles, isFetched: myCyclesFetched } = useMyCycles()
   const offCycle = !isChief && myCyclesFetched && (myCycles ?? []).length === 0
-  const chiefMode = !!isChief && roles.includes('reviewer')
+  const chiefMode = !!isChief
   const leadMode =
     !isChief &&
-    roles.includes('reviewer') &&
     myCyclesFetched &&
     (myCycles ?? []).length > 0
   const cycleNavMode = chiefMode ? 'chief' : leadMode ? 'lead' : null
@@ -383,7 +383,11 @@ export default function Sidebar({
       >
         {cycleNavMode && (
           <Suspense>
-            {cycleNavMode === 'lead' && <LeadPhaseNav collapsed={collapsed} />}
+            {cycleNavMode === 'chief' ? (
+              <ChiefCycleNav collapsed={collapsed} />
+            ) : (
+              <LeadPhaseNav collapsed={collapsed} />
+            )}
           </Suspense>
         )}
         {sections.map((section) => (
