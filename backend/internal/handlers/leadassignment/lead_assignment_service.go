@@ -30,11 +30,15 @@ func (s *leadAssignmentService) create(ctx context.Context, in *CreateLeadAssign
 	if err := s.gate.Application(ctx, in.ID, models.StepReviews, ""); err != nil {
 		return nil, err
 	}
-	a, err := s.leadAssignmentDB.CreateLeadAssignment(ctx, in.ID, in.Body.LeadNUID, utils.CurrentActor(ctx).NUID)
+	app, err := s.applicationDB.GetApplication(ctx, in.ID)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
-	if _, err := s.applicationDB.AdvanceApplicationsToLeadReview(ctx, []string{in.ID}); err != nil {
+	if step, _ := pipeline.StepOfStage(app.Stage); step != models.StepApplications && step != models.StepReviews {
+		return nil, huma.Error409Conflict("reviewers can only be assigned while an application is submitted or in review")
+	}
+	a, err := s.leadAssignmentDB.CreateLeadAssignment(ctx, in.ID, in.Body.LeadNUID, utils.CurrentActor(ctx).NUID)
+	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
 	return &LeadAssignmentOutput{Body: a}, nil

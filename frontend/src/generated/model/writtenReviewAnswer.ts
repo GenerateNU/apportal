@@ -12,6 +12,7 @@ export interface WrittenReviewAnswer {
   id: string;
   review_id: string;
   review_question_id: string;
+  /** Within the question's score_min..score_max */
   score?: number;
   submitted_at: string;
 }

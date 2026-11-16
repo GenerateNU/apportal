@@ -104,6 +104,38 @@ func StepOfStage(stage models.ApplicationStage) (models.Step, bool) {
 	return "", false
 }
 
+var outcomeStages = []models.ApplicationStage{models.StageAccepted, models.StageRejected, models.StageWithdrawn}
+
+func IsOutcome(stage models.ApplicationStage) bool { return slices.Contains(outcomeStages, stage) }
+
+func moveStep(stage models.ApplicationStage) models.Step {
+	if stage == models.StageDraft {
+		return models.StepApplications
+	}
+	s, _ := StepOfStage(stage)
+	return s
+}
+
+// Only a restore (undoing the decision or pick that set it) takes an applicant out of an outcome.
+func (f *Facts) MoveBlock(role string, from, to models.ApplicationStage, restore, admin bool) error {
+	if from == to {
+		return nil
+	}
+	s := moveStep(from)
+	switch {
+	case IsOutcome(from) && !IsOutcome(to) && !restore:
+		return conflict("an applicant leaves %s only when the decision that set it is undone", from)
+	case IsOutcome(from):
+		s = moveStep(to)
+	case !IsOutcome(to) && moveStep(to) != s:
+		return conflict("moving from %s to %s changes step; advance %s instead", from, to, Label(s))
+	}
+	if f.Frozen(role, s) && !admin {
+		return f.frozenErr(role, s)
+	}
+	return nil
+}
+
 type Deadline struct {
 	Kind  models.StepKind
 	DueAt time.Time

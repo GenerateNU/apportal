@@ -65,9 +65,9 @@ func registerApplication(api huma.API, s *applicationService) {
 		Method:      http.MethodPatch,
 		Path:        "/applications/{id}",
 		Summary:     "Update an application",
-		Description: "Set resume_url, availability, or advance/withdraw the stage.",
+		Description: "Set resume_url or availability, submit a draft, or change the stage within its pipeline step or to an outcome (accepted, rejected, withdrawn). Moving into another step goes through the cycle pipeline's advance; changes in a frozen step are 409 unless the caller is an admin.",
 		Tags:        []string{"Applications"},
-		Errors:      []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound, http.StatusUnprocessableEntity},
+		Errors:      []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound, http.StatusConflict, http.StatusUnprocessableEntity},
 	}, s.update)
 
 	huma.Register(api, huma.Operation{

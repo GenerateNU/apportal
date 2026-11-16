@@ -495,3 +495,43 @@ func TestTasks(t *testing.T) {
 		t.Errorf("interview task: %+v", tasks[1])
 	}
 }
+
+func TestMoveBlock(t *testing.T) {
+	interviewsStarted := newTestFacts()
+	interviewsStarted.SetRelease(swe, models.StepInterviews, past)
+	cases := []struct {
+		name     string
+		f        *Facts
+		from, to models.ApplicationStage
+		restore  bool
+		admin    bool
+		want     int
+	}{
+		{"no change", newTestFacts(), models.StageLeadReview, models.StageLeadReview, false, false, 0},
+		{"within a step", newTestFacts(), models.StageInterview, models.StageInterviewScheduled, false, false, 0},
+		{"submitting a draft", newTestFacts(), models.StageDraft, models.StageSubmitted, false, false, 0},
+		{"into the next step", newTestFacts(), models.StageSubmitted, models.StageLeadReview, false, false, http.StatusConflict},
+		{"skipping steps", newTestFacts(), models.StageLeadReview, models.StageSelection, false, false, http.StatusConflict},
+		{"backwards across steps", newTestFacts(), models.StageInterview, models.StageChiefReview, false, false, http.StatusConflict},
+		{"cross-step even as admin", newTestFacts(), models.StageSubmitted, models.StageInterview, false, true, http.StatusConflict},
+		{"out of a draft past applications", newTestFacts(), models.StageDraft, models.StageLeadReview, false, false, http.StatusConflict},
+		{"to an outcome", newTestFacts(), models.StageLeadReview, models.StageRejected, false, false, 0},
+		{"withdrawing", newTestFacts(), models.StageSubmitted, models.StageWithdrawn, false, false, 0},
+		{"out of an outcome", newTestFacts(), models.StageRejected, models.StageInterview, false, false, http.StatusConflict},
+		{"restoring an outcome", newTestFacts(), models.StageRejected, models.StageInterview, true, false, 0},
+		{"between outcomes", newTestFacts(), models.StageAccepted, models.StageRejected, false, false, 0},
+		{"within a frozen step", interviewsStarted, models.StageLeadReview, models.StageChiefReview, false, false, http.StatusConflict},
+		{"within a frozen step as admin", interviewsStarted, models.StageLeadReview, models.StageChiefReview, false, true, 0},
+		{"outcome from a frozen step", interviewsStarted, models.StageChiefReview, models.StageRejected, false, false, http.StatusConflict},
+		{"outcome from a frozen step as admin", interviewsStarted, models.StageChiefReview, models.StageRejected, false, true, 0},
+		{"restoring into a frozen step", interviewsStarted, models.StageRejected, models.StageLeadReview, true, false, http.StatusConflict},
+		{"within the step that started", interviewsStarted, models.StageInterview, models.StageInterviewReview, false, false, 0},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := statusOf(tc.f.MoveBlock(swe, tc.from, tc.to, tc.restore, tc.admin)); got != tc.want {
+				t.Fatalf("got %d, want %d", got, tc.want)
+			}
+		})
+	}
+}

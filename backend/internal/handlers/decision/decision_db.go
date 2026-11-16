@@ -8,6 +8,7 @@ import (
 	"gorm.io/gorm/clause"
 
 	"github.com/GenerateNU/apportal/backend/internal/models"
+	"github.com/GenerateNU/apportal/backend/internal/pipeline"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 )
 
@@ -259,7 +260,7 @@ func (d *DecisionDB) UpsertDecisionDraft(ctx context.Context, applicationID stri
 		}
 
 		if in.MarkSent != nil {
-			return applyDecisionStage(tx, applicationID, *in.MarkSent)
+			return applyDecisionStage(ctx, tx, applicationID, *in.MarkSent)
 		}
 		return nil
 	})
@@ -269,17 +270,31 @@ func (d *DecisionDB) UpsertDecisionDraft(ctx context.Context, applicationID stri
 	return d.GetDecisionRow(ctx, applicationID)
 }
 
-// applyDecisionStage rejects the applicant when marked sent and restores their
-// old stage when unmarked, but only from rejected, so a manual move survives.
-func applyDecisionStage(tx *gorm.DB, applicationID string, sent bool) error {
+func applyDecisionStage(ctx context.Context, tx *gorm.DB, applicationID string, sent bool) error {
 	apps := tx.Model(&models.Application{}).Where("id = ?", applicationID)
 	if sent {
+		if err := pipeline.GuardMoves(ctx, tx, pipeline.Move{ApplicationID: applicationID, To: models.StageRejected}); err != nil {
+			return err
+		}
 		return apps.UpdateColumn("stage", models.StageRejected).Error
 	}
-	stamped := tx.Model(&decisionDraft{}).Select("application_id").Where("previous_stage IS NOT NULL")
-	return apps.Where("stage = ? AND id IN (?)", models.StageRejected, stamped).
-		UpdateColumn("stage", gorm.Expr("(SELECT d.previous_stage FROM decision_drafts d WHERE d.application_id = applications.id)")).
-		Error
+	var rows []struct {
+		Stage         models.ApplicationStage
+		PreviousStage *models.ApplicationStage
+	}
+	if err := tx.Table("applications a").Select("a.stage, d.previous_stage").
+		Joins("JOIN decision_drafts d ON d.application_id = a.id").
+		Where("a.id = ?", applicationID).Scan(&rows).Error; err != nil {
+		return err
+	}
+	if len(rows) == 0 || rows[0].Stage != models.StageRejected || rows[0].PreviousStage == nil {
+		return nil
+	}
+	prev := *rows[0].PreviousStage
+	if err := pipeline.GuardMoves(ctx, tx, pipeline.Move{ApplicationID: applicationID, To: prev, Restore: true}); err != nil {
+		return err
+	}
+	return apps.UpdateColumn("stage", prev).Error
 }
 
 func toDecisionRow(r decisionRow) models.DecisionRow {

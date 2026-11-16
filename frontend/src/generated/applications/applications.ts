@@ -379,7 +379,7 @@ export function useGetApplication<TData = Awaited<ReturnType<typeof getApplicati
 
 
 /**
- * Set resume_url, availability, or advance/withdraw the stage.
+ * Set resume_url or availability, submit a draft, or change the stage within its pipeline step or to an outcome (accepted, rejected, withdrawn). Moving into another step goes through the cycle pipeline's advance; changes in a frozen step are 409 unless the caller is an admin.
  * @summary Update an application
  */
 export const updateApplication = (
@@ -398,7 +398,7 @@ export const updateApplication = (
   
 
 
-export const getUpdateApplicationMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+export const getUpdateApplicationMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateApplication>>, TError,{id: string;data: NonReadonly<UpdateApplicationInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
 ): UseMutationOptions<Awaited<ReturnType<typeof updateApplication>>, TError,{id: string;data: NonReadonly<UpdateApplicationInputBody>}, TContext> => {
 
@@ -425,12 +425,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type UpdateApplicationMutationResult = NonNullable<Awaited<ReturnType<typeof updateApplication>>>
     export type UpdateApplicationMutationBody = NonReadonly<UpdateApplicationInputBody>
-    export type UpdateApplicationMutationError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel
+    export type UpdateApplicationMutationError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel
 
     /**
  * @summary Update an application
  */
-export const useUpdateApplication = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+export const useUpdateApplication = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateApplication>>, TError,{id: string;data: NonReadonly<UpdateApplicationInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof updateApplication>>,

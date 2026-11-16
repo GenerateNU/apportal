@@ -5659,7 +5659,7 @@ paths:
       tags:
         - Applications
     patch:
-      description: Set resume_url, availability, or advance/withdraw the stage.
+      description: Set resume_url or availability, submit a draft, or change the stage within its pipeline step or to an outcome (accepted, rejected, withdrawn). Moving into another step goes through the cycle pipeline's advance; changes in a frozen step are 409 unless the caller is an admin.
       operationId: update-application
       parameters:
         - in: path
@@ -5698,6 +5698,12 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorModel"
           description: Not Found
+        "409":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Conflict
         "422":
           content:
             application/problem+json:
