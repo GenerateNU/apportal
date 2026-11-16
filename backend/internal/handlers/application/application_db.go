@@ -9,8 +9,8 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/GenerateNU/apportal/backend/internal/models"
-	"github.com/GenerateNU/apportal/backend/internal/pipeline"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
+	"github.com/GenerateNU/apportal/backend/internal/workflow"
 )
 
 type ApplicationDB struct {
@@ -239,7 +239,7 @@ func (a *ApplicationDB) AdvanceApplicationToInterviewReview(ctx context.Context,
 		if len(stage) == 0 || !slices.Contains(preInterviewReview, stage[0]) {
 			return nil
 		}
-		if err := pipeline.GuardMoves(ctx, tx, pipeline.Move{ApplicationID: applicationID, To: models.StageInterviewReview}); err != nil {
+		if err := workflow.GuardMoves(ctx, tx, workflow.Move{ApplicationID: applicationID, To: models.StageInterviewReview}); err != nil {
 			return err
 		}
 		return tx.Model(&models.Application{}).Where("id = ? AND stage IN ?", applicationID, preInterviewReview).
@@ -262,7 +262,7 @@ func (a *ApplicationDB) UpdateApplication(ctx context.Context, id string, in App
 	var out models.Application
 	err := a.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if in.Stage != nil {
-			if err := pipeline.GuardMoves(ctx, tx, pipeline.Move{ApplicationID: id, To: *in.Stage}); err != nil {
+			if err := workflow.GuardMoves(ctx, tx, workflow.Move{ApplicationID: id, To: *in.Stage}); err != nil {
 				return err
 			}
 		}

@@ -1,6 +1,7 @@
 package leadassignment
 
 import (
+	"context"
 	"testing"
 
 	"github.com/google/uuid"
@@ -8,9 +9,9 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/access"
 	"github.com/GenerateNU/apportal/backend/internal/middleware"
 	"github.com/GenerateNU/apportal/backend/internal/models"
-	"github.com/GenerateNU/apportal/backend/internal/pipeline"
-	"github.com/GenerateNU/apportal/backend/internal/reviewrules"
+	"github.com/GenerateNU/apportal/backend/internal/staffing"
 	"github.com/GenerateNU/apportal/backend/internal/testutil"
+	"github.com/GenerateNU/apportal/backend/internal/workflow"
 )
 
 func TestAssigningAReviewerKeepsTheStage(t *testing.T) {
@@ -46,11 +47,11 @@ func TestAssigningAReviewerKeepsTheStage(t *testing.T) {
 	}
 
 	perApplicant := 2
-	if err := pipeline.SetAssignment(db, cycle, models.StepReviews, models.KindReviewer, &perApplicant); err != nil {
+	if _, err := workflow.NewService(db).SetAssignment(context.Background(), cycle, models.StepReviews, models.KindReviewer, &perApplicant); err != nil {
 		t.Fatal(err)
 	}
 
-	s := &leadAssignmentService{access: access.NewChecker(db), store: newManualDB(db), rules: reviewrules.NewDefault(db)}
+	s := &leadAssignmentService{access: access.NewChecker(db), db: NewLeadAssignmentDB(db), guard: staffing.NewGuard()}
 	ctx := testutil.WithActor(middleware.Actor{NUID: chief, Roles: []models.UserRole{models.UserRoleApplicant}})
 	assign := func(id string) error {
 		in := &CreateLeadAssignmentInput{ID: id}

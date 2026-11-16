@@ -68,6 +68,12 @@ func (q *QuestionDB) UpdateQuestion(ctx context.Context, id string, in QuestionU
 	return utils.UpdateReturning[models.Question](q.db.WithContext(ctx), updates, "id = ?", id)
 }
 
+func (q *QuestionDB) Answered(ctx context.Context, id string) (bool, error) {
+	var answered bool
+	err := q.db.WithContext(ctx).Raw("SELECT EXISTS (SELECT 1 FROM written_answers WHERE question_id = ?)", id).Scan(&answered).Error
+	return answered, err
+}
+
 func (q *QuestionDB) DeleteQuestion(ctx context.Context, id string) error {
 	res := q.db.WithContext(ctx).Where("id = ?", id).Delete(&models.Question{})
 	if res.Error != nil {

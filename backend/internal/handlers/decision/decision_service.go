@@ -4,9 +4,10 @@ import (
 	"context"
 	"slices"
 
+	"github.com/GenerateNU/apportal/backend/internal/workflow"
+
 	"github.com/GenerateNU/apportal/backend/internal/handlers/interview"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/interviewassignment"
-	"github.com/GenerateNU/apportal/backend/internal/handlers/reviewrelease"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/writtenreview"
 	"github.com/GenerateNU/apportal/backend/internal/models"
@@ -25,9 +26,9 @@ type decisionService struct {
 	decisionDB            *DecisionDB
 	interviewDB           *interview.InterviewDB
 	interviewAssignmentDB *interviewassignment.InterviewAssignmentDB
-	reviewReleaseDB       *reviewrelease.ReviewReleaseDB
 	writtenReviewDB       *writtenreview.WrittenReviewDB
 	roleDB                *role.RoleDB
+	workflow              *workflow.Service
 }
 
 func parseDecisionKind(raw string) (models.DecisionKind, error) {
@@ -64,6 +65,9 @@ func (s *decisionService) updateTemplate(ctx context.Context, in *UpdateDecision
 		return nil, err
 	}
 	if err := role.RequireCycleRole(ctx, s.roleDB, in.ID, in.RoleID); err != nil {
+		return nil, err
+	}
+	if err := s.workflow.RequireSetupEditable(ctx, in.ID, in.RoleID, workflow.SetupDecisionLetters); err != nil {
 		return nil, err
 	}
 	// Seed first so editing a letter nobody has opened yet updates rather than
@@ -190,7 +194,20 @@ func (s *decisionService) context(ctx context.Context, in *ListDecisionContextIn
 		allowed[i] = r.ApplicationID
 	}
 
-	interviews, err := s.interviewDB.ListInterviewDetails(ctx, allowed)
+	interviewReads, err := s.access.Readable(ctx, allowed, access.Review, workflow.WorkInterview)
+	if err != nil {
+		return nil, err
+	}
+	recordingReads, err := s.access.Readable(ctx, allowed, access.Review, workflow.WorkRecordingReview)
+	if err != nil {
+		return nil, err
+	}
+	writtenReads, err := s.access.Readable(ctx, allowed, access.Review, workflow.WorkWrittenReview)
+	if err != nil {
+		return nil, err
+	}
+
+	interviews, err := s.interviewDB.ListInterviewDetails(ctx, interviewReads.IDs)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
@@ -199,7 +216,7 @@ func (s *decisionService) context(ctx context.Context, in *ListDecisionContextIn
 		interviewByApplication[iv.ApplicationID] = iv
 	}
 
-	reviewers, err := s.interviewAssignmentDB.ListReviewers(ctx, allowed)
+	reviewers, err := s.interviewAssignmentDB.ListReviewers(ctx, recordingReads.IDs)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
@@ -211,19 +228,11 @@ func (s *decisionService) context(ctx context.Context, in *ListDecisionContextIn
 	// Fetched unscoped and narrowed below, because release is per cycle × role
 	// and one batch can span both roles — a single SQL-level onlyReviewer (what
 	// the one-application route uses) can't express that.
-	writtenReviews, err := s.writtenReviewDB.ListWrittenReviewsForApplications(ctx, allowed, "")
+	writtenReviews, err := s.writtenReviewDB.ListWrittenReviewsForApplications(ctx, writtenReads.IDs, "")
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
-
-	writtenVisible, err := s.reviewReleaseDB.PeerReviewsVisible(ctx, s.access, models.ReviewKindWritten, allowed)
-	if err != nil {
-		return nil, err
-	}
-	recordingVisible, err := s.reviewReleaseDB.PeerReviewsVisible(ctx, s.access, models.ReviewKindRecording, allowed)
-	if err != nil {
-		return nil, err
-	}
+	writtenVisible := writtenReads.Peers
 
 	out := make([]models.DecisionContext, 0, len(allowed))
 	for _, applicationID := range allowed {
@@ -239,7 +248,7 @@ func (s *decisionService) context(ctx context.Context, in *ListDecisionContextIn
 		if !writtenVisible[applicationID] {
 			entry.WrittenReviews, entry.WrittenReviewsBlind = ownWrittenReviews(entry.WrittenReviews, actor.NUID)
 		}
-		entry.RecordingReviewsBlind = reviewrelease.HidePeerWriteups(entry.RecordingReviews, actor.NUID, recordingVisible)
+		entry.RecordingReviewsBlind = recordingReads.HidePeerWriteups(entry.RecordingReviews, actor.NUID)
 
 		if entry.WrittenReviews == nil {
 			entry.WrittenReviews = []models.WrittenReviewDetail{}

@@ -9,11 +9,12 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 
 	"github.com/GenerateNU/apportal/backend/internal/access"
+	"github.com/GenerateNU/apportal/backend/internal/workflow"
 )
 
 func Route(api huma.API, db *gorm.DB) {
 	challengeDB := NewChallengeDB(db)
-	s := &challengeService{access: access.NewChecker(db), challengeDB: challengeDB, roleDB: role.NewRoleDB(db)}
+	s := &challengeService{workflow: workflow.NewService(db), access: access.NewChecker(db), challengeDB: challengeDB, roleDB: role.NewRoleDB(db)}
 
 	huma.Register(api, huma.Operation{
 		OperationID: "list-cycle-challenges",

@@ -30,3 +30,29 @@ func TestCycleCreateRequiresBranch(t *testing.T) {
 	_, err := s.create(testutil.WithActor(admin), in)
 	testutil.WantStatus(t, err, http.StatusUnprocessableEntity)
 }
+
+func TestArchiveOnly(t *testing.T) {
+	cases := []struct {
+		from, to models.CycleStatus
+		want     int
+	}{
+		{models.CycleClosed, models.CycleArchived, 0},
+		{models.CycleArchived, models.CycleClosed, 0},
+		{models.CycleOpen, models.CycleOpen, 0},
+		{models.CycleDraft, models.CycleOpen, http.StatusConflict},
+		{models.CycleOpen, models.CycleClosed, http.StatusConflict},
+		{models.CycleClosed, models.CycleOpen, http.StatusConflict},
+		{models.CycleOpen, models.CycleArchived, http.StatusConflict},
+		{models.CycleClosed, "finished", http.StatusUnprocessableEntity},
+	}
+	for _, tc := range cases {
+		err := archiveOnly(tc.from, tc.to)
+		if tc.want == 0 {
+			if err != nil {
+				t.Errorf("%s -> %s: %v", tc.from, tc.to, err)
+			}
+			continue
+		}
+		testutil.WantStatus(t, err, tc.want)
+	}
+}

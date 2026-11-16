@@ -3,6 +3,8 @@ package chiefreview
 import (
 	"context"
 
+	"github.com/GenerateNU/apportal/backend/internal/workflow"
+
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
@@ -92,6 +94,7 @@ func (c *ChiefReviewDB) withReviewerNames(ctx context.Context, reviews []models.
 	for i, r := range reviews {
 		details[i].ChiefReview = r
 		details[i].ReviewerName = names[r.ReviewerNUID]
+		details[i].StepRef = workflow.Ref(models.StepReviews)
 	}
 	return details, nil
 }

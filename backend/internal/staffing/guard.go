@@ -7,44 +7,50 @@ import (
 	"gorm.io/gorm/clause"
 
 	"github.com/GenerateNU/apportal/backend/internal/models"
-	"github.com/GenerateNU/apportal/backend/internal/pipeline"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
+	"github.com/GenerateNU/apportal/backend/internal/workflow"
 )
 
 type Guard struct {
-	Rules     InterviewRules
+	Rules     StaffingRules
 	Conflicts Conflicts
 }
 
 func NewGuard() *Guard {
-	return &Guard{Rules: PipelineRules{}, Conflicts: StoredConflicts{}}
+	return &Guard{Rules: WorkflowRules{}, Conflicts: StoredConflicts{}}
 }
 
 type Snapshot struct {
 	CycleID    string
 	Openings   Openings
 	Limits     map[models.StepKind]int
-	Released   map[string]bool
-	Frozen     map[string]error
+	Adds       Permissions
+	Removes    Permissions
 	Applicants map[string]*Applicant
+	record     func(tx *gorm.DB, roleID string, kind models.StepKind, remove bool) error
+}
+
+func (s Snapshot) Authorize(tx *gorm.DB, roleID string, kind models.StepKind, remove bool) error {
+	if s.record == nil {
+		return nil
+	}
+	return s.record(tx, roleID, kind, remove)
 }
 
 func (s Snapshot) Rules(roleID string, kind models.StepKind) Rules {
-	return Rules{Frozen: s.Frozen[roleID], Released: s.Released[roleID], Limit: s.Limits[kind], Eligible: s.Openings.Eligible(roleID, kind)}
+	return Rules{Blocked: s.Adds.Of(kind, roleID), Limit: s.Limits[kind], Eligible: s.Openings.Eligible(roleID, kind)}
 }
 
 func (s Snapshot) RequireLimit(kind models.StepKind) error {
 	return Rules{Limit: s.Limits[kind]}.RequireLimit(kind)
 }
 
-func (s Snapshot) Locked(roleID string) error {
-	if err := s.Frozen[roleID]; err != nil {
-		return err
-	}
-	if s.Released[roleID] {
-		return ErrLocked
-	}
-	return nil
+func (s Snapshot) AddBlocked(roleID string, kind models.StepKind) error {
+	return s.Adds.Of(kind, roleID)
+}
+
+func (s Snapshot) RemoveBlocked(roleID string, kind models.StepKind) error {
+	return s.Removes.Of(kind, roleID)
 }
 
 func (s Snapshot) Check(applicationID, nuid string, kind models.StepKind) error {
@@ -65,7 +71,7 @@ func (g *Guard) Load(ctx context.Context, db *gorm.DB, cycleID string, applicati
 	if err != nil {
 		return snap, err
 	}
-	snap.Limits, snap.Released, snap.Frozen = p.Limits, p.Released, p.Frozen
+	snap.Limits, snap.Adds, snap.Removes, snap.record = p.Limits, p.Adds, p.Removes, p.Record
 	if snap.Applicants, err = loadApplicants(db, cycleID, applicationIDs); err != nil {
 		return snap, err
 	}
@@ -83,10 +89,10 @@ func (g *Guard) Load(ctx context.Context, db *gorm.DB, cycleID string, applicati
 	return snap, nil
 }
 
-// Hold takes the cycle before the applications' rows, the order pipeline moves use, so a release or
+// Hold takes the cycle before the applications' rows, the order workflow moves use, so a release or
 // advance can't land between check and write, and two adds can't both see room under the cap.
 func Hold(tx *gorm.DB, cycleID string, applicationIDs []string) error {
-	if err := pipeline.HoldCycle(tx, cycleID); err != nil {
+	if err := workflow.HoldCycle(tx, cycleID); err != nil {
 		return err
 	}
 	if len(applicationIDs) == 0 {
@@ -110,30 +116,39 @@ func (g *Guard) held(ctx context.Context, tx *gorm.DB, applicationID string) (Sn
 }
 
 func (g *Guard) CheckAdd(ctx context.Context, tx *gorm.DB, applicationID, nuid string, kind models.StepKind) error {
-	snap, _, err := g.held(ctx, tx, applicationID)
-	if err != nil {
-		return err
-	}
-	return snap.Check(applicationID, nuid, kind)
-}
-
-func (g *Guard) CheckRemove(ctx context.Context, tx *gorm.DB, applicationID string) error {
 	snap, roleID, err := g.held(ctx, tx, applicationID)
 	if err != nil {
 		return err
 	}
-	return snap.Locked(roleID)
+	if err := snap.Check(applicationID, nuid, kind); err != nil {
+		return err
+	}
+	return snap.Authorize(tx, roleID, kind, false)
 }
 
-func (g *Guard) CheckOpening(ctx context.Context, tx *gorm.DB, cycleID, roleID string) error {
-	if err := pipeline.HoldCycle(tx, cycleID); err != nil {
+func (g *Guard) CheckRemove(ctx context.Context, tx *gorm.DB, applicationID string, kind models.StepKind) error {
+	snap, roleID, err := g.held(ctx, tx, applicationID)
+	if err != nil {
+		return err
+	}
+	if err := snap.RemoveBlocked(roleID, kind); err != nil {
+		return err
+	}
+	return snap.Authorize(tx, roleID, kind, true)
+}
+
+func (g *Guard) CheckOpening(ctx context.Context, tx *gorm.DB, cycleID, roleID string, kind models.StepKind) error {
+	if err := workflow.HoldCycle(tx, cycleID); err != nil {
 		return err
 	}
 	snap, err := g.Load(ctx, tx, cycleID, nil)
 	if err != nil {
 		return err
 	}
-	return snap.Locked(roleID)
+	if err := snap.RemoveBlocked(roleID, kind); err != nil {
+		return err
+	}
+	return snap.Authorize(tx, roleID, kind, true)
 }
 
 func loadApplicants(db *gorm.DB, cycleID string, ids []string) (map[string]*Applicant, error) {

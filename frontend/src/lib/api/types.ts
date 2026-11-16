@@ -38,7 +38,6 @@ import type {
   InterviewScript as GenInterviewScript,
   PreferenceList as GenPreferenceList,
   PreferenceListCommentDetail as GenPreferenceListCommentDetail,
-  PreferenceListDeadline as GenPreferenceListDeadline,
   PreferenceListDetail as GenPreferenceListDetail,
   PreferenceListEntry as GenPreferenceListEntry,
   PreferenceListEntryDetail as GenPreferenceListEntryDetail,
@@ -300,8 +299,6 @@ export type PreferenceListDetail = Omit<
   comments: PreferenceListComment[]
   meeting_day?: MeetingDay
 }
-
-export type PreferenceListDeadline = Omit<GenPreferenceListDeadline, '$schema'>
 
 // The snake draft board. Orval leaves the generated members/teams/picks
 // collections nullable and the status as a loose string; these pin the

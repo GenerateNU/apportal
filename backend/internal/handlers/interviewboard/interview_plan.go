@@ -41,7 +41,7 @@ func buildPlan(snap staffing.Snapshot, f facts, opt options) InterviewPlan {
 		ShortInterviewers: []string{}, ShortRecording: []string{}, NoSlotMatch: []string{}, Loads: []PlanLoad{}, Warnings: []string{}}
 	roles := []string{}
 	for _, r := range f.roles {
-		if err := snap.Locked(r); err != nil {
+		if err := snap.AddBlocked(r, models.KindInterviewer); err != nil {
 			out.Warnings = append(out.Warnings, fmt.Sprintf("Opening %s was skipped: %s.", r, err))
 			continue
 		}

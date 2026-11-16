@@ -10,7 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { TABLE_FRAME, TABLE_ROW } from '@/components/ui/table-styles'
 import { cn, formatDate } from '@/lib/utils'
 import { DueLine } from '@/components/ui/due-line'
-import { useMyPipeline } from '@/lib/queries/my-work'
+import { useWorkflow } from '@/lib/queries/workflow'
 import { PAGE_TOP, PAGE_X } from '@/components/ui/page-shell'
 
 import { LeadPreferenceListClient } from '../preference-lists/[id]/components/LeadPreferenceListClient'
@@ -64,7 +64,7 @@ export function LeadHomeClient() {
     loading: loadingWork,
   } = useLeadWork()
   const requestedPhase = useSearchParams().get('phase')
-  const { data: mine } = useMyPipeline(cycle?.id ?? '')
+  const { data: mine } = useWorkflow(cycle?.id ?? '')
   const reviewDue = (roleId: string) =>
     mine?.tasks?.find((t) => t.kind === 'review' && t.role_id === roleId)
       ?.due_at

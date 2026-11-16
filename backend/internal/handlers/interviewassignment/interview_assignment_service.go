@@ -4,13 +4,13 @@ import (
 	"context"
 	"errors"
 
+	"github.com/GenerateNU/apportal/backend/internal/workflow"
+
 	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 	"github.com/danielgtaylor/huma/v2"
 
 	"github.com/GenerateNU/apportal/backend/internal/access"
-
-	"github.com/GenerateNU/apportal/backend/internal/handlers/reviewrelease"
 
 	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/staffing"
@@ -22,7 +22,6 @@ type interviewAssignmentService struct {
 	guard                 *staffing.Guard
 	access                *access.Checker
 	interviewAssignmentDB *InterviewAssignmentDB
-	reviewReleaseDB       *reviewrelease.ReviewReleaseDB
 }
 
 func (s *interviewAssignmentService) addInterviewer(ctx context.Context, in *AddInterviewerInput) (*InterviewerOutput, error) {
@@ -46,7 +45,7 @@ func (s *interviewAssignmentService) removeInterviewer(ctx context.Context, in *
 	if err := s.access.CanInterviewRow(ctx, access.ManageApplication, "interviewers", in.ID); err != nil {
 		return nil, err
 	}
-	if err := s.interviewAssignmentDB.RemoveInterviewer(ctx, in.ID, s.removeCheck(ctx)); err != nil {
+	if err := s.interviewAssignmentDB.RemoveInterviewer(ctx, in.ID, s.removeCheck(ctx, models.KindInterviewer)); err != nil {
 		if errors.Is(err, utils.ErrConflict) {
 			return nil, huma.Error409Conflict("the interviewer has already submitted notes or the interview was conducted")
 		}
@@ -76,7 +75,7 @@ func (s *interviewAssignmentService) removeReviewer(ctx context.Context, in *uti
 	if err := s.access.CanInterviewRow(ctx, access.ManageApplication, "interview_reviewers", in.ID); err != nil {
 		return nil, err
 	}
-	if err := s.interviewAssignmentDB.RemoveReviewer(ctx, in.ID, s.removeCheck(ctx)); err != nil {
+	if err := s.interviewAssignmentDB.RemoveReviewer(ctx, in.ID, s.removeCheck(ctx, models.KindRecordingReviewer)); err != nil {
 		if errors.Is(err, utils.ErrConflict) {
 			return nil, huma.Error409Conflict("the reviewer has already submitted their review")
 		}
@@ -90,37 +89,33 @@ func (s *interviewAssignmentService) listReviewersBulk(ctx context.Context, in *
 	if len(ids) > utils.MaxBulkApplications {
 		return nil, huma.Error422UnprocessableEntity("too many application_ids")
 	}
-	ids, err := s.access.VisibleApplicationIDs(ctx, ids, access.Review)
+	r, err := s.access.Readable(ctx, ids, access.Review, workflow.WorkRecordingReview)
 	if err != nil {
 		return nil, err
 	}
-	items, err := s.interviewAssignmentDB.ListReviewers(ctx, ids)
+	items, err := s.interviewAssignmentDB.ListReviewers(ctx, r.IDs)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
-	visible, err := s.reviewReleaseDB.PeerReviewsVisible(ctx, s.access, models.ReviewKindRecording, ids)
-	if err != nil {
-		return nil, err
-	}
-	reviewrelease.HidePeerWriteups(items, utils.CurrentActor(ctx).NUID, visible)
+	r.HidePeerWriteups(items, utils.CurrentActor(ctx).NUID)
 	return &InterviewReviewersOutput{Body: items}, nil
 }
 
 func (s *interviewAssignmentService) unassignAllInterviewers(ctx context.Context, in *UnassignAllInput) (*UnassignAllOutput, error) {
-	return s.unassignAll(ctx, in, s.interviewAssignmentDB.DeleteInterviewersForCycle)
+	return s.unassignAll(ctx, in, models.KindInterviewer, s.interviewAssignmentDB.DeleteInterviewersForCycle)
 }
 
 func (s *interviewAssignmentService) unassignAllReviewers(ctx context.Context, in *UnassignAllInput) (*UnassignAllOutput, error) {
-	return s.unassignAll(ctx, in, s.interviewAssignmentDB.DeleteReviewersForCycle)
+	return s.unassignAll(ctx, in, models.KindRecordingReviewer, s.interviewAssignmentDB.DeleteReviewersForCycle)
 }
 
-func (s *interviewAssignmentService) removeCheck(ctx context.Context) RemoveCheck {
+func (s *interviewAssignmentService) removeCheck(ctx context.Context, kind models.StepKind) RemoveCheck {
 	return func(tx *gorm.DB, applicationID string) error {
-		return s.guard.CheckRemove(ctx, tx, applicationID)
+		return s.guard.CheckRemove(ctx, tx, applicationID, kind)
 	}
 }
 
-func (s *interviewAssignmentService) unassignAll(ctx context.Context, in *UnassignAllInput, del func(context.Context, string, string, Check) (int, error)) (*UnassignAllOutput, error) {
+func (s *interviewAssignmentService) unassignAll(ctx context.Context, in *UnassignAllInput, kind models.StepKind, del func(context.Context, string, string, Check) (int, error)) (*UnassignAllOutput, error) {
 	if err := role.ParseRoleID(in.RoleID); err != nil {
 		return nil, err
 	}
@@ -128,7 +123,7 @@ func (s *interviewAssignmentService) unassignAll(ctx context.Context, in *Unassi
 		return nil, err
 	}
 	deleted, err := del(ctx, in.ID, in.RoleID, func(tx *gorm.DB) error {
-		return s.guard.CheckOpening(ctx, tx, in.ID, in.RoleID)
+		return s.guard.CheckOpening(ctx, tx, in.ID, in.RoleID, kind)
 	})
 	if err != nil {
 		return nil, staffing.HTTPError(err)

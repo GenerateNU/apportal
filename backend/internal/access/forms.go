@@ -6,8 +6,8 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/GenerateNU/apportal/backend/internal/models"
-	"github.com/GenerateNU/apportal/backend/internal/pipeline"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
+	"github.com/GenerateNU/apportal/backend/internal/workflow"
 )
 
 // RequireForm lets staff who can review the cycle read any of its forms, and
@@ -65,7 +65,7 @@ func openForm(db *gorm.DB, cycleID, roleID string) *gorm.DB {
 		Joins("JOIN cycles c ON c.id = at.cycle_id").
 		Where("at.cycle_id = ? AND at.role_id = ?", cycleID, roleID).
 		Where("c.status = ?", models.CycleOpen)
-	return pipeline.AcceptingApplications(q, "at")
+	return workflow.AcceptingApplications(q, "at")
 }
 
 func ownApplication(db *gorm.DB, cycleID, roleID, nuid string) *gorm.DB {

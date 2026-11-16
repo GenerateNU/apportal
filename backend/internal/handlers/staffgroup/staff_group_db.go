@@ -115,6 +115,13 @@ func (d *StaffGroupDB) RemoveMember(ctx context.Context, cycleID, groupID, nuid 
 		Delete(&models.StaffGroupMember{}).Error
 }
 
+// TeamsUsing lists the opening teams a group is part of.
+func (d *StaffGroupDB) TeamsUsing(ctx context.Context, cycleID, groupID string) ([]models.OpeningTeam, error) {
+	var teams []models.OpeningTeam
+	err := d.db.WithContext(ctx).Where("cycle_id = ? AND group_id = ?", cycleID, groupID).Find(&teams).Error
+	return teams, err
+}
+
 func (d *StaffGroupDB) ListTeams(ctx context.Context, cycleID string) ([]OpeningTeam, error) {
 	var rows []models.OpeningTeam
 	if err := d.db.WithContext(ctx).Where("cycle_id = ?", cycleID).

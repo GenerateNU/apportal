@@ -13,21 +13,15 @@ const admin = {
 }
 
 describe('withApplyItems', () => {
-  it('joins an untitled first section, like a lead’s My work', () => {
+  it('puts a staff member’s applications under Applying, after their staff work', () => {
     expect(withApplyItems([myWork, admin], apply)).toEqual([
-      { ...myWork, items: [...myWork.items, ...apply] },
+      myWork,
       admin,
+      { id: 'apply', label: 'Applying', items: apply },
     ])
   })
 
-  it('gets its own untitled section above a titled one, like Admin', () => {
-    expect(withApplyItems([admin], apply)).toEqual([
-      { id: 'apply', items: apply },
-      admin,
-    ])
-  })
-
-  it('stands alone when there are no staff sections', () => {
+  it('stands alone, untitled, for someone who is only an applicant', () => {
     expect(withApplyItems([], apply)).toEqual([{ id: 'apply', items: apply }])
   })
 })

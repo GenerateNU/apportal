@@ -7,9 +7,11 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 
 	"github.com/GenerateNU/apportal/backend/internal/access"
+	"github.com/GenerateNU/apportal/backend/internal/workflow"
 )
 
 type challengeService struct {
+	workflow    *workflow.Service
 	access      *access.Checker
 	challengeDB *ChallengeDB
 	roleDB      *role.RoleDB
@@ -20,6 +22,9 @@ func (s *challengeService) create(ctx context.Context, in *CreateChallengeInput)
 		return nil, err
 	}
 	if err := role.RequireCycleRole(ctx, s.roleDB, in.ID, in.Body.RoleID); err != nil {
+		return nil, err
+	}
+	if err := s.workflow.RequireSetupEditable(ctx, in.ID, in.Body.RoleID, workflow.SetupApplicationForm); err != nil {
 		return nil, err
 	}
 

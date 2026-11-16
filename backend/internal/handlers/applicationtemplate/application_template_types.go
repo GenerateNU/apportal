@@ -1,8 +1,6 @@
 package applicationtemplate
 
 import (
-	"time"
-
 	"github.com/GenerateNU/apportal/backend/internal/models"
 )
 
@@ -31,13 +29,9 @@ type UpdateApplicationTemplateInput struct {
 	ID     string `path:"id" doc:"Cycle ID"`
 	RoleID string `query:"role_id" doc:"Applicant role"`
 	Body   struct {
-		Title          *string             `json:"title,omitempty"`
-		Description    *string             `json:"description,omitempty"`
-		Instructions   *string             `json:"instructions,omitempty"`
-		ClosesAt       *time.Time          `json:"closes_at,omitempty"`
-		Status         *models.CycleStatus `json:"status,omitempty"`
-		ReviewStatus   *models.CycleStatus `json:"review_status,omitempty"`
-		ReviewClosesAt *time.Time          `json:"review_closes_at,omitempty"`
+		Title        *string `json:"title,omitempty"`
+		Description  *string `json:"description,omitempty"`
+		Instructions *string `json:"instructions,omitempty"`
 	}
 }
 

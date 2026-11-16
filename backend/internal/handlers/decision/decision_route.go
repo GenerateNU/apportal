@@ -5,22 +5,21 @@ import (
 
 	"github.com/GenerateNU/apportal/backend/internal/handlers/interview"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/interviewassignment"
-	"github.com/GenerateNU/apportal/backend/internal/handlers/reviewrelease"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/writtenreview"
 	"github.com/danielgtaylor/huma/v2"
 	"gorm.io/gorm"
 
 	"github.com/GenerateNU/apportal/backend/internal/access"
+	"github.com/GenerateNU/apportal/backend/internal/workflow"
 )
 
 func Route(api huma.API, db *gorm.DB) {
 	decisionDB := NewDecisionDB(db)
 	interviewDB := interview.NewInterviewDB(db)
 	interviewAssignmentDB := interviewassignment.NewInterviewAssignmentDB(db)
-	reviewReleaseDB := reviewrelease.NewReviewReleaseDB(db)
 	writtenReviewDB := writtenreview.NewWrittenReviewDB(db)
-	s := &decisionService{access: access.NewChecker(db), decisionDB: decisionDB, interviewDB: interviewDB, interviewAssignmentDB: interviewAssignmentDB, reviewReleaseDB: reviewReleaseDB, writtenReviewDB: writtenReviewDB, roleDB: role.NewRoleDB(db)}
+	s := &decisionService{workflow: workflow.NewService(db), access: access.NewChecker(db), decisionDB: decisionDB, interviewDB: interviewDB, interviewAssignmentDB: interviewAssignmentDB, writtenReviewDB: writtenReviewDB, roleDB: role.NewRoleDB(db)}
 
 	huma.Register(api, huma.Operation{
 		OperationID: "list-decision-templates",

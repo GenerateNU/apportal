@@ -6,7 +6,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/GenerateNU/apportal/backend/internal/models"
-	"github.com/GenerateNU/apportal/backend/internal/staffing"
+	"github.com/GenerateNU/apportal/backend/internal/workflow"
 )
 
 func boardApplicants(db *gorm.DB, cycleID, roleID string) ([]InterviewBoardRow, error) {
@@ -89,7 +89,7 @@ func staffSlots(db *gorm.DB, cycleID string) (map[string]string, error) {
 
 func staffNames(db *gorm.DB, cycleID string) (map[string]string, error) {
 	var rows []struct{ NUID, FullName string }
-	err := db.Table("(?) AS p", staffing.Pool(db, cycleID)).Select("p.user_nuid AS nuid, u.full_name").
+	err := db.Table("(?) AS p", workflow.StaffPool(db, cycleID)).Select("p.user_nuid AS nuid, u.full_name").
 		Joins("JOIN users u ON u.nuid = p.user_nuid").Scan(&rows).Error
 	out := make(map[string]string, len(rows))
 	for _, r := range rows {

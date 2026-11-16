@@ -13,17 +13,26 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/handlers/staffgroup"
 	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
+	"github.com/GenerateNU/apportal/backend/internal/workflow"
 )
 
 type interviewPanelService struct {
-	gate   access.Gate
-	db     *gorm.DB
-	panels *InterviewPanelDB
-	roleDB *role.RoleDB
+	workflow *workflow.Service
+	gate     access.Gate
+	db       *gorm.DB
+	panels   *InterviewPanelDB
+	roleDB   *role.RoleDB
 }
 
 func newService(gate access.Gate, db *gorm.DB) *interviewPanelService {
-	return &interviewPanelService{gate: gate, db: db, panels: NewInterviewPanelDB(db), roleDB: role.NewRoleDB(db)}
+	return &interviewPanelService{workflow: workflow.NewService(db), gate: gate, db: db, panels: NewInterviewPanelDB(db), roleDB: role.NewRoleDB(db)}
+}
+
+func (s *interviewPanelService) edit(ctx context.Context, cycleID string, ids ...string) error {
+	if err := s.manage(ctx, cycleID, ids...); err != nil {
+		return err
+	}
+	return s.workflow.RequireSetupEditable(ctx, cycleID, "", workflow.SetupInterviewLogistics)
 }
 
 func (s *interviewPanelService) manage(ctx context.Context, cycleID string, ids ...string) error {
@@ -68,11 +77,11 @@ func (s *interviewPanelService) get(ctx context.Context, cycleID, panelID string
 }
 
 func (s *interviewPanelService) create(ctx context.Context, in *CreatePanelInput) (*PanelOutput, error) {
-	if err := s.manage(ctx, in.ID); err != nil {
-		return nil, err
-	}
 	n, err := name(in.Body.Name)
 	if err != nil {
+		return nil, err
+	}
+	if err := s.edit(ctx, in.ID); err != nil {
 		return nil, err
 	}
 	nuids := utils.NUIDList(in.Body.MemberNUIDs)
@@ -90,11 +99,11 @@ func (s *interviewPanelService) create(ctx context.Context, in *CreatePanelInput
 }
 
 func (s *interviewPanelService) rename(ctx context.Context, in *RenamePanelInput) (*PanelOutput, error) {
-	if err := s.manage(ctx, in.ID, "panel_id", in.PanelID); err != nil {
-		return nil, err
-	}
 	n, err := name(in.Body.Name)
 	if err != nil {
+		return nil, err
+	}
+	if err := s.edit(ctx, in.ID, "panel_id", in.PanelID); err != nil {
 		return nil, err
 	}
 	if err := s.panels.Rename(ctx, in.ID, in.PanelID, n); err != nil {
@@ -104,7 +113,7 @@ func (s *interviewPanelService) rename(ctx context.Context, in *RenamePanelInput
 }
 
 func (s *interviewPanelService) remove(ctx context.Context, in *PanelPathInput) (*struct{}, error) {
-	if err := s.manage(ctx, in.ID, "panel_id", in.PanelID); err != nil {
+	if err := s.edit(ctx, in.ID, "panel_id", in.PanelID); err != nil {
 		return nil, err
 	}
 	if err := s.panels.Delete(ctx, in.ID, in.PanelID); err != nil {
@@ -114,7 +123,7 @@ func (s *interviewPanelService) remove(ctx context.Context, in *PanelPathInput) 
 }
 
 func (s *interviewPanelService) addMember(ctx context.Context, in *MemberPathInput) (*PanelOutput, error) {
-	if err := s.manage(ctx, in.ID, "panel_id", in.PanelID); err != nil {
+	if err := s.edit(ctx, in.ID, "panel_id", in.PanelID); err != nil {
 		return nil, err
 	}
 	if err := staffgroup.RequireStaff(ctx, s.db, in.ID, []string{in.NUID}); err != nil {
@@ -127,7 +136,7 @@ func (s *interviewPanelService) addMember(ctx context.Context, in *MemberPathInp
 }
 
 func (s *interviewPanelService) removeMember(ctx context.Context, in *MemberPathInput) (*struct{}, error) {
-	if err := s.manage(ctx, in.ID, "panel_id", in.PanelID); err != nil {
+	if err := s.edit(ctx, in.ID, "panel_id", in.PanelID); err != nil {
 		return nil, err
 	}
 	if err := s.panels.RemoveMember(ctx, in.ID, in.PanelID, in.NUID); err != nil {
@@ -140,7 +149,12 @@ func (s *interviewPanelService) auto(ctx context.Context, in *AutoPanelsInput) (
 	if in.Body.Size < 1 || in.Body.Size > maxMembers {
 		return nil, huma.Error422UnprocessableEntity("size must be between 1 and 20")
 	}
-	if err := s.manage(ctx, in.ID); err != nil {
+	if in.Body.RoleID != "" {
+		if err := role.ParseRoleID(in.Body.RoleID); err != nil {
+			return nil, err
+		}
+	}
+	if err := s.edit(ctx, in.ID); err != nil {
 		return nil, err
 	}
 	if in.Body.RoleID != "" {

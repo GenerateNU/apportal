@@ -33,10 +33,8 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import type { CycleStatus, Question } from '@/lib/api/types'
-import {
-  useApplicationTemplate,
-  useUpdateApplicationTemplate,
-} from '@/lib/queries/application-templates'
+import { useApplicationTemplate } from '@/lib/queries/application-templates'
+import { useSetOpeningStep } from '@/lib/queries/workflow'
 import {
   useDeleteQuestion,
   useQuestions,
@@ -73,7 +71,7 @@ function FormBuilder({
   const { data: reviewQuestions = [] } = useReviewQuestions(cycleId, role)
 
   const { data: template } = useApplicationTemplate(cycleId, role)
-  const updateTemplate = useUpdateApplicationTemplate()
+  const setOpeningStep = useSetOpeningStep()
   const save = useSave()
   const { data: cycle } = useCycle(cycleId)
   // The backend refuses every edit once a cycle closes.
@@ -81,30 +79,26 @@ function FormBuilder({
 
   const [mode, setMode] = useState<'application' | 'review'>('application')
 
-  // Each side's status and deadline drive its pipeline step (release, close).
+  // Each side's status and deadline are its workflow step's release and deadline.
   const status =
     mode === 'application' ? template?.status : template?.review_status
   const closesAt =
     mode === 'application' ? template?.closes_at : template?.review_closes_at
 
+  const step = mode === 'application' ? 'applications' : 'reviews'
+
   function changeStatus(next: CycleStatus) {
     if (!template || next === status) return
-    save(updateTemplate, {
-      cycleId,
-      roleId: role,
-      body: mode === 'application' ? { status: next } : { review_status: next },
-    })
+    save(setOpeningStep, { cycleId, roleId: role, step, status: next })
   }
 
   function changeDeadline(date: Date) {
     if (!template) return
-    save(updateTemplate, {
+    save(setOpeningStep, {
       cycleId,
       roleId: role,
-      body:
-        mode === 'application'
-          ? { closes_at: date.toISOString() }
-          : { review_closes_at: date.toISOString() },
+      step,
+      dueAt: date.toISOString(),
     })
   }
 

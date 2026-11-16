@@ -8,11 +8,10 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 
 	"github.com/GenerateNU/apportal/backend/internal/access"
-	"github.com/GenerateNU/apportal/backend/internal/middleware"
 	"github.com/GenerateNU/apportal/backend/internal/models"
-	"github.com/GenerateNU/apportal/backend/internal/pipeline"
 	"github.com/GenerateNU/apportal/backend/internal/staffing"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
+	"github.com/GenerateNU/apportal/backend/internal/workflow"
 )
 
 type AssignableReason string
@@ -76,7 +75,7 @@ func (s *interviewBoardService) assignable(ctx context.Context, in *AssignableIn
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
-	facts, err := pipeline.Load(db, in.ID)
+	facts, err := workflow.Load(db, in.ID)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
@@ -84,8 +83,10 @@ func (s *interviewBoardService) assignable(ctx context.Context, in *AssignableIn
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
-	actor, _ := middleware.ActorFrom(ctx)
-	admin := actor.HasRole(models.UserRoleAdmin)
+	caller, err := workflow.CallerOn(ctx, db, in.ID)
+	if err != nil {
+		return nil, utils.StoreErr(err)
+	}
 	limit := snap.Limits[in.Kind]
 
 	out := make([]AssignableApplication, 0, len(ids))
@@ -94,7 +95,7 @@ func (s *interviewBoardService) assignable(ctx context.Context, in *AssignableIn
 		if a == nil {
 			return nil, huma.Error404NotFound("application " + id + " isn't in this cycle")
 		}
-		row := AssignableApplication{ApplicationID: id, RoleID: a.RoleID, Locked: lockedReason(facts, *a, in.Kind, limit, admin)}
+		row := AssignableApplication{ApplicationID: id, RoleID: a.RoleID, Locked: lockedReason(facts, *a, in.Kind, limit, caller)}
 		rules := staffing.Rules{Limit: limit, Eligible: snap.Openings.Eligible(a.RoleID, in.Kind)}
 		if limit <= 0 {
 			rules.Limit = len(snap.Openings.Staff) + 1
@@ -114,20 +115,16 @@ func (s *interviewBoardService) assignable(ctx context.Context, in *AssignableIn
 	return &AssignableOutput{Body: out}, nil
 }
 
-func lockedReason(f *pipeline.Facts, a staffing.Applicant, kind models.StepKind, limit int, admin bool) string {
-	roleID := a.RoleID
-	step := models.StepInterviews
+func lockedReason(f *workflow.CycleState, a staffing.Applicant, kind models.StepKind, limit int, caller workflow.Caller) string {
+	work := workflow.WorkInterviewAssignment
 	if kind == models.KindReviewer {
-		step = models.StepReviews
-		if s, _ := pipeline.StepOfStage(a.Stage); s != models.StepApplications && s != models.StepReviews {
+		work = workflow.WorkReviewAssignment
+		if s, _ := workflow.StepOfStage(a.Stage); s != models.StepApplications && s != models.StepReviews {
 			return "reviewers can only be assigned while an application is submitted or in review"
 		}
 	}
-	if err := f.Lock(pipeline.Action{Op: pipeline.OpAssign, Step: step, RoleID: roleID, Admin: admin}); err != nil {
+	if err := f.AssignmentPermission(caller, work, a.RoleID, false); err != nil {
 		return errMessage(err)
-	}
-	if step == models.StepInterviews && f.Released(roleID, step) {
-		return staffing.ErrLocked.Error()
 	}
 	if limit <= 0 {
 		if err := (staffing.Rules{}).RequireLimit(kind); err != nil {

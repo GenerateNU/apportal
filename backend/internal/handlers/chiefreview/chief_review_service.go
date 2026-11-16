@@ -9,11 +9,13 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 
 	"github.com/GenerateNU/apportal/backend/internal/access"
+	"github.com/GenerateNU/apportal/backend/internal/workflow"
 )
 
 type chiefReviewService struct {
 	access        *access.Checker
 	chiefReviewDB *ChiefReviewDB
+	workflow      *workflow.Service
 }
 
 func (s *chiefReviewService) listBulk(ctx context.Context, in *ListChiefReviewsBulkInput) (*ChiefReviewsOutput, error) {
@@ -29,11 +31,11 @@ func (s *chiefReviewService) listBulk(ctx context.Context, in *ListChiefReviewsB
 	if len(ids) > utils.MaxBulkApplications {
 		return nil, huma.Error422UnprocessableEntity("too many application_ids")
 	}
-	ids, err := s.access.VisibleApplicationIDs(ctx, ids, access.Manage)
+	r, err := s.access.Readable(ctx, ids, access.Manage, workflow.WorkChiefReview)
 	if err != nil {
 		return nil, err
 	}
-	items, err := s.chiefReviewDB.ListChiefReviewsForApplications(ctx, ids)
+	items, err := s.chiefReviewDB.ListChiefReviewsForApplications(ctx, r.IDs)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
@@ -47,6 +49,9 @@ func (s *chiefReviewService) upsert(ctx context.Context, in *UpsertChiefReviewIn
 	if in.Body.Vote != nil && !in.Body.Vote.Valid() {
 		return nil, huma.Error422UnprocessableEntity("invalid vote")
 	}
+	if err := s.workflow.RequireWorkEditable(ctx, in.ID, workflow.WorkChiefReview); err != nil {
+		return nil, err
+	}
 	review, err := s.chiefReviewDB.UpsertChiefReview(ctx, ChiefReviewUpsert{
 		ApplicationID: in.ID,
 		ReviewerNUID:  utils.CurrentActor(ctx).NUID,
@@ -59,8 +64,12 @@ func (s *chiefReviewService) upsert(ctx context.Context, in *UpsertChiefReviewIn
 }
 
 func (s *chiefReviewService) list(ctx context.Context, in *utils.ApplicationScopedInput) (*ChiefReviewsOutput, error) {
-	if err := s.access.CanApplication(ctx, access.ManageApplication, in.ID); err != nil {
+	r, err := s.access.CanRead(ctx, in.ID, access.ManageApplication, access.Manage, workflow.WorkChiefReview)
+	if err != nil {
 		return nil, err
+	}
+	if !r.Has(in.ID) {
+		return &ChiefReviewsOutput{Body: []models.ChiefReviewDetail{}}, nil
 	}
 	items, err := s.chiefReviewDB.ListChiefReviews(ctx, in.ID)
 	if err != nil {

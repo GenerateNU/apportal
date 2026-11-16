@@ -9,12 +9,25 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 
 	"github.com/GenerateNU/apportal/backend/internal/access"
+	"github.com/GenerateNU/apportal/backend/internal/workflow"
 )
 
 type questionService struct {
 	access     *access.Checker
 	questionDB *QuestionDB
 	roleDB     *role.RoleDB
+	workflow   *workflow.Service
+}
+
+func (s *questionService) existing(ctx context.Context, id string) (models.Question, error) {
+	if err := s.access.CanCycleOf(ctx, access.ManageCycle, "questions", id); err != nil {
+		return models.Question{}, err
+	}
+	q, err := s.questionDB.GetQuestion(ctx, id)
+	if err != nil {
+		return q, utils.StoreErr(err)
+	}
+	return q, s.workflow.RequireSetupEditable(ctx, q.CycleID, utils.Deref(q.RoleID), workflow.SetupApplicationForm)
 }
 
 func (s *questionService) create(ctx context.Context, in *CreateQuestionInput) (*QuestionOutput, error) {
@@ -35,6 +48,9 @@ func (s *questionService) create(ctx context.Context, in *CreateQuestionInput) (
 	}
 	if in.Body.PageTitle != nil && in.Body.RoleID == nil {
 		return nil, huma.Error422UnprocessableEntity("only role-specific questions may start a page")
+	}
+	if err := s.workflow.RequireSetupEditable(ctx, in.ID, utils.Deref(in.Body.RoleID), workflow.SetupApplicationForm); err != nil {
+		return nil, err
 	}
 	required := true
 	if in.Body.IsRequired != nil {
@@ -77,11 +93,21 @@ func (s *questionService) list(ctx context.Context, in *ListQuestionsInput) (*Qu
 }
 
 func (s *questionService) update(ctx context.Context, in *UpdateQuestionInput) (*QuestionOutput, error) {
-	if err := s.access.CanCycleOf(ctx, access.ManageCycle, "questions", in.ID); err != nil {
-		return nil, err
-	}
 	if in.Body.QuestionType != nil && !in.Body.QuestionType.Valid() {
 		return nil, huma.Error422UnprocessableEntity("invalid question_type")
+	}
+	cur, err := s.existing(ctx, in.ID)
+	if err != nil {
+		return nil, err
+	}
+	if in.Body.QuestionType != nil && *in.Body.QuestionType != cur.QuestionType {
+		answered, err := s.questionDB.Answered(ctx, in.ID)
+		if err != nil {
+			return nil, utils.StoreErr(err)
+		}
+		if answered {
+			return nil, huma.Error409Conflict("applicants have already answered this question, so its type can't change; add a new question instead")
+		}
 	}
 
 	q, err := s.questionDB.UpdateQuestion(ctx, in.ID, QuestionUpdate{
@@ -100,7 +126,7 @@ func (s *questionService) update(ctx context.Context, in *UpdateQuestionInput) (
 }
 
 func (s *questionService) delete(ctx context.Context, in *DeleteQuestionInput) (*struct{}, error) {
-	if err := s.access.CanCycleOf(ctx, access.ManageCycle, "questions", in.ID); err != nil {
+	if _, err := s.existing(ctx, in.ID); err != nil {
 		return nil, err
 	}
 	if err := s.questionDB.DeleteQuestion(ctx, in.ID); err != nil {

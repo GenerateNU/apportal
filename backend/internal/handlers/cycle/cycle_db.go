@@ -8,8 +8,8 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/handlers/cyclestaff"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/GenerateNU/apportal/backend/internal/models"
-	"github.com/GenerateNU/apportal/backend/internal/pipeline"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
+	"github.com/GenerateNU/apportal/backend/internal/workflow"
 )
 
 type CycleDB struct {
@@ -37,7 +37,7 @@ func (c *CycleDB) CreateCycle(ctx context.Context, in CycleCreate) (models.Cycle
 		if err := role.CopyPreviousCycleRoles(tx, cycle.ID); err != nil {
 			return err
 		}
-		if err := pipeline.EnsureSteps(tx, cycle.ID); err != nil {
+		if err := workflow.EnsureSteps(tx, cycle.ID); err != nil {
 			return err
 		}
 		return cyclestaff.CopyPreviousCycleStaff(tx, cycle.ID)

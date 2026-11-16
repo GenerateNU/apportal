@@ -1,6 +1,7 @@
 package models
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -38,24 +39,26 @@ const (
 	KindReviewer          StepKind = "reviewer"
 	KindInterviewer       StepKind = "interviewer"
 	KindRecordingReviewer StepKind = "recording_reviewer"
+	KindPreferenceList    StepKind = "preference_list"
 )
 
 func (k StepKind) Valid() bool {
 	switch k {
-	case KindApplicant, KindReviewer, KindInterviewer, KindRecordingReviewer:
+	case KindApplicant, KindReviewer, KindInterviewer, KindRecordingReviewer, KindPreferenceList:
 		return true
 	}
 	return false
 }
 
 func (StepKind) Schema(huma.Registry) *huma.Schema {
-	return enumSchema(string(KindApplicant), string(KindReviewer), string(KindInterviewer), string(KindRecordingReviewer))
+	return enumSchema(string(KindApplicant), string(KindReviewer), string(KindInterviewer), string(KindRecordingReviewer), string(KindPreferenceList))
 }
 
 type CycleStep struct {
 	CycleID     string            `json:"cycle_id" gorm:"primaryKey;type:uuid"`
 	Step        Step              `json:"step" gorm:"primaryKey;type:text;check:cycle_steps_step_check,step IN ('applications','reviews','interviews','decisions','feedback')"`
 	Enabled     bool              `json:"enabled" gorm:"not null;default:true"`
+	Position    int               `json:"position" gorm:"not null;default:0"`
 	CompletedAt *time.Time        `json:"completed_at,omitempty"`
 	Cycle       Cycle             `json:"-" gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
 	Assignments []StepAssignment  `json:"-" gorm:"foreignKey:CycleID,Step;references:CycleID,Step;constraint:OnDelete:CASCADE"`
@@ -84,7 +87,7 @@ type OpeningDeadline struct {
 	CycleID string    `json:"cycle_id" gorm:"primaryKey;type:uuid"`
 	RoleID  string    `json:"role_id" gorm:"primaryKey;type:uuid"`
 	Step    Step      `json:"step" gorm:"primaryKey;type:text"`
-	Kind    StepKind  `json:"kind" gorm:"primaryKey;type:text;check:opening_deadlines_kind_check,kind IN ('applicant','reviewer','interviewer','recording_reviewer')"`
+	Kind    StepKind  `json:"kind" gorm:"primaryKey;type:text;check:opening_deadlines_kind_check,kind IN ('applicant','reviewer','interviewer','recording_reviewer','preference_list')"`
 	DueAt   time.Time `json:"due_at" gorm:"not null"`
 	Hard    bool      `json:"hard" gorm:"not null;default:true"`
 	Role    Role      `json:"-" gorm:"foreignKey:RoleID;references:ID;constraint:OnDelete:CASCADE"`
@@ -104,4 +107,19 @@ type ApplicationMove struct {
 	Application   Application      `json:"-" gorm:"foreignKey:ApplicationID;references:ID;constraint:OnDelete:CASCADE"`
 	Mover         User             `json:"-" gorm:"foreignKey:MovedBy;references:NUID"`
 	Undoer        *User            `json:"-" gorm:"foreignKey:UndoneBy;references:NUID"`
+}
+
+type WorkflowOverride struct {
+	ID        string          `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	CycleID   string          `json:"cycle_id" gorm:"type:uuid;not null;index:idx_workflow_overrides_cycle"`
+	RoleID    *string         `json:"role_id,omitempty" gorm:"type:uuid"`
+	Step      Step            `json:"step" gorm:"type:text;not null"`
+	Op        string          `json:"op" gorm:"not null"`
+	Level     string          `json:"level" gorm:"not null"`
+	ActorNUID string          `json:"actor_nuid" gorm:"not null"`
+	Reason    string          `json:"reason" gorm:"not null"`
+	Plan      json.RawMessage `json:"plan,omitempty" gorm:"type:jsonb"`
+	CreatedAt time.Time       `json:"created_at" gorm:"not null;default:now()"`
+	Cycle     Cycle           `json:"-" gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
+	Actor     User            `json:"-" gorm:"foreignKey:ActorNUID;references:NUID"`
 }

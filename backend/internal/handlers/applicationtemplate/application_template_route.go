@@ -9,11 +9,12 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 
 	"github.com/GenerateNU/apportal/backend/internal/access"
+	"github.com/GenerateNU/apportal/backend/internal/workflow"
 )
 
 func Route(api huma.API, db *gorm.DB) {
 	applicationTemplateDB := NewApplicationTemplateDB(db)
-	s := &applicationTemplateService{access: access.NewChecker(db), applicationTemplateDB: applicationTemplateDB, roleDB: role.NewRoleDB(db)}
+	s := &applicationTemplateService{workflow: workflow.NewService(db), access: access.NewChecker(db), applicationTemplateDB: applicationTemplateDB, roleDB: role.NewRoleDB(db)}
 
 	huma.Register(api, huma.Operation{
 		OperationID: "list-open-application-templates",

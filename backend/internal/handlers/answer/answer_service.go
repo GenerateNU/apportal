@@ -1,0 +1,94 @@
+package answer
+
+import (
+	"context"
+
+	"github.com/danielgtaylor/huma/v2"
+
+	"github.com/GenerateNU/apportal/backend/internal/models"
+	"github.com/GenerateNU/apportal/backend/internal/utils"
+
+	"github.com/GenerateNU/apportal/backend/internal/access"
+	"github.com/GenerateNU/apportal/backend/internal/workflow"
+)
+
+type answerService struct {
+	access   *access.Checker
+	answers  *AnswerDB
+	workflow *workflow.Service
+}
+
+func (s *answerService) listBulk(ctx context.Context, in *ListAnswersBulkInput) (*AnswersOutput, error) {
+	if err := access.RequireActor(ctx); err != nil {
+		return nil, err
+	}
+	ids := utils.SplitIDs(in.ApplicationIDs)
+	if len(ids) == 0 {
+		return &AnswersOutput{Body: []models.WrittenAnswer{}}, nil
+	}
+	if len(ids) > utils.MaxBulkApplications {
+		return nil, huma.Error422UnprocessableEntity("too many application_ids")
+	}
+	ids, err := s.access.VisibleApplicationIDs(ctx, ids, access.Review)
+	if err != nil {
+		return nil, err
+	}
+	answers, err := s.answers.ListAnswersForApplications(ctx, ids)
+	if err != nil {
+		return nil, utils.StoreErr(err)
+	}
+	return &AnswersOutput{Body: answers}, nil
+}
+
+func (s *answerService) upsert(ctx context.Context, in *UpsertAnswersInput) (*AnswersOutput, error) {
+	if err := s.access.CanApplication(ctx, access.EditOwnApplication, in.ID); err != nil {
+		return nil, err
+	}
+	app, err := s.answers.GetApplication(ctx, in.ID)
+	if err != nil {
+		return nil, utils.StoreErr(err)
+	}
+	// Once submitted, answers are frozen — otherwise a stale autosave from a
+	// second tab/session (whose local form state predates the submit) can
+	// silently overwrite or delete already-submitted answers, since a bulk
+	// upsert always writes every question including ones the stale session
+	// never saw filled in.
+	if app.Stage != models.StageDraft {
+		return nil, huma.Error403Forbidden("answers can only be edited while the application is a draft")
+	}
+	if err := s.workflow.RequireWorkEditable(ctx, in.ID, workflow.WorkApplication); err != nil {
+		return nil, err
+	}
+
+	inputs := make([]AnswerInput, 0, len(in.Body.Answers))
+	for _, a := range in.Body.Answers {
+		if a.QuestionID == "" {
+			return nil, huma.Error422UnprocessableEntity("each answer requires a question_id")
+		}
+		inputs = append(inputs, AnswerInput{
+			QuestionID:     a.QuestionID,
+			AnswerText:     a.AnswerText,
+			AnswerOptions:  a.AnswerOptions,
+			AnswerFilePath: a.AnswerFilePath,
+			AnswerFileName: a.AnswerFileName,
+		})
+	}
+
+	answers, err := s.answers.UpsertAnswers(ctx, in.ID, inputs)
+	if err != nil {
+		return nil, utils.StoreErr(err)
+	}
+	return &AnswersOutput{Body: answers}, nil
+}
+
+func (s *answerService) list(ctx context.Context, in *ListAnswersInput) (*AnswersOutput, error) {
+	if err := s.access.CanApplication(ctx, access.ViewApplication, in.ID); err != nil {
+		return nil, err
+	}
+
+	answers, err := s.answers.ListAnswers(ctx, in.ID)
+	if err != nil {
+		return nil, utils.StoreErr(err)
+	}
+	return &AnswersOutput{Body: answers}, nil
+}

@@ -7,11 +7,12 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/GenerateNU/apportal/backend/internal/access"
+	"github.com/GenerateNU/apportal/backend/internal/workflow"
 )
 
 func Route(api huma.API, db *gorm.DB) {
 	selectionDB := NewSelectionDB(db)
-	s := &selectionService{access: access.NewChecker(db), selectionDB: selectionDB}
+	s := &selectionService{access: access.NewChecker(db), selectionDB: selectionDB, workflow: workflow.NewService(db)}
 
 	huma.Register(api, huma.Operation{
 		OperationID: "select-application",
