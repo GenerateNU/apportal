@@ -2,6 +2,10 @@ package writtenreview
 
 import (
 	"context"
+	"errors"
+	"fmt"
+
+	"github.com/google/uuid"
 
 	"github.com/GenerateNU/apportal/backend/internal/handlers/reviewrelease"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
@@ -24,8 +28,8 @@ func (s *writtenReviewService) upsert(ctx context.Context, in *UpsertWrittenRevi
 	}
 	answers := make([]ReviewAnswerInput, 0, len(in.Body.Answers))
 	for _, a := range in.Body.Answers {
-		if a.ReviewQuestionID == "" {
-			return nil, huma.Error422UnprocessableEntity("each answer requires a review_question_id")
+		if _, err := uuid.Parse(a.ReviewQuestionID); err != nil {
+			return nil, huma.Error422UnprocessableEntity("each answer requires a valid review_question_id")
 		}
 		answers = append(answers, ReviewAnswerInput(a))
 	}
@@ -35,7 +39,13 @@ func (s *writtenReviewService) upsert(ctx context.Context, in *UpsertWrittenRevi
 		ReviewerNUID:  utils.CurrentActor(ctx).NUID,
 		Submit:        in.Body.Submit,
 		Answers:       answers,
+	}, func(questions map[string]models.ReviewQuestion) error {
+		return validateAnswers(answers, questions)
 	})
+	var se huma.StatusError
+	if errors.As(err, &se) {
+		return nil, err
+	}
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
@@ -61,4 +71,23 @@ func (s *writtenReviewService) list(ctx context.Context, in *utils.ApplicationSc
 		return nil, utils.StoreErr(err)
 	}
 	return &WrittenReviewsOutput{Body: items}, nil
+}
+
+func validateAnswers(answers []ReviewAnswerInput, questions map[string]models.ReviewQuestion) error {
+	for _, a := range answers {
+		q, ok := questions[a.ReviewQuestionID]
+		if !ok {
+			return huma.Error422UnprocessableEntity("review_question_id " + a.ReviewQuestionID + " is not a review question for this application")
+		}
+		if a.Score == nil {
+			continue
+		}
+		if q.QuestionType != models.QuestionScore || q.ScoreMin == nil || q.ScoreMax == nil {
+			return huma.Error422UnprocessableEntity("score is only allowed on score questions")
+		}
+		if *a.Score < *q.ScoreMin || *a.Score > *q.ScoreMax {
+			return huma.Error422UnprocessableEntity(fmt.Sprintf("score for %q must be between %d and %d", q.QuestionText, *q.ScoreMin, *q.ScoreMax))
+		}
+	}
+	return nil
 }

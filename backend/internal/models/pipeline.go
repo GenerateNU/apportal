@@ -47,6 +47,9 @@ type ReviewQuestion struct {
 	DisplayOrder int             `json:"display_order" gorm:"type:integer;not null;default:0"`
 	Options      json.RawMessage `json:"options,omitempty" gorm:"serializer:jsonb;type:jsonb"`
 	Description  *string         `json:"description,omitempty"`
+	ScoreMin     *int            `json:"score_min,omitempty" gorm:"type:integer;check:review_questions_score_scale_check,CASE WHEN question_type = 'score' THEN score_min IS NOT NULL AND score_max IS NOT NULL AND score_min < score_max ELSE score_min IS NULL AND score_max IS NULL END"`
+	ScoreMax     *int            `json:"score_max,omitempty" gorm:"type:integer"`
+	Ranked       bool            `json:"ranked" doc:"Whether a score question counts toward the review ranking" gorm:"not null;default:true"`
 	CreatedAt    time.Time       `json:"created_at" gorm:"not null;default:now()"`
 	Cycle        Cycle           `json:"-" gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
 	Role         *Role           `json:"-" gorm:"foreignKey:RoleID;references:ID;constraint:OnDelete:RESTRICT"`
@@ -60,7 +63,7 @@ type WrittenReviewAnswer struct {
 	ReviewQuestionID string          `json:"review_question_id" gorm:"type:uuid;not null;uniqueIndex:written_review_answers_review_id_review_question_id_key,priority:2"`
 	AnswerText       *string         `json:"answer_text,omitempty"`
 	AnswerOptions    json.RawMessage `json:"answer_options,omitempty" gorm:"serializer:jsonb;type:jsonb"`
-	Score            *int            `json:"score,omitempty" gorm:"type:integer;check:written_review_answers_score_check,score >= 1 AND score <= 10"`
+	Score            *int            `json:"score,omitempty" doc:"Within the question's score_min..score_max" gorm:"type:integer"`
 	SubmittedAt      time.Time       `json:"submitted_at" gorm:"not null;default:now()"`
 	Review           WrittenReview   `json:"-" gorm:"foreignKey:ReviewID;references:ID;constraint:OnDelete:CASCADE"`
 	ReviewQuestion   ReviewQuestion  `json:"-" gorm:"foreignKey:ReviewQuestionID;references:ID"`
