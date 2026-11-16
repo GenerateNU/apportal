@@ -10,6 +10,7 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/middleware"
 	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/pipeline"
+	"github.com/GenerateNU/apportal/backend/internal/staffing"
 )
 
 // Maps are keyed by role (opening) ID and cover every opening on the cycle.
@@ -80,16 +81,17 @@ func (d *Default) byOpening(ctx context.Context, cycleID string, pick func(*pipe
 
 func (d *Default) Eligible(ctx context.Context, cycleID string) (map[string][]string, error) {
 	db := d.db.WithContext(ctx)
-	var roles, staff []string
+	var roles []string
 	if err := db.Model(&models.Role{}).Where("cycle_id = ?", cycleID).Order("id").Pluck("id", &roles).Error; err != nil {
 		return nil, err
 	}
-	if err := db.Model(&models.CycleStaff{}).Where("cycle_id = ?", cycleID).Order("user_nuid").Pluck("user_nuid", &staff).Error; err != nil {
+	o, err := staffing.LoadOpenings(db, cycleID)
+	if err != nil {
 		return nil, err
 	}
 	out := make(map[string][]string, len(roles))
 	for _, r := range roles {
-		out[r] = staff
+		out[r] = o.Eligible(r, models.KindReviewer)
 	}
 	return out, nil
 }

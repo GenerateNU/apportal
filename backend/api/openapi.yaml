@@ -259,6 +259,37 @@ components:
         - created_at
         - updated_at
       type: object
+    ApplicationSlots:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/ApplicationSlots.json
+          format: uri
+          readOnly: true
+          type: string
+        editable:
+          type: boolean
+        options:
+          description: The cycle's meeting slots
+          items:
+            $ref: "#/components/schemas/MeetingSlot"
+          type:
+            - array
+            - "null"
+        slot_ids:
+          description: The ones the applicant can make
+          items:
+            type: string
+          type:
+            - array
+            - "null"
+      required:
+        - options
+        - slot_ids
+        - editable
+      type: object
     ApplicationSummary:
       additionalProperties: false
       properties:
@@ -424,49 +455,50 @@ components:
         - total
         - stage_counts
       type: object
-    AssignGroupInputBody:
+    AssignableApplication:
       additionalProperties: false
       properties:
-        $schema:
-          description: A URL to the JSON Schema for this object.
-          examples:
-            - https://example.com/schemas/AssignGroupInputBody.json
-          format: uri
-          readOnly: true
+        application_id:
           type: string
-        application_ids:
+        locked:
+          description: Why nobody can be added to this applicant right now
+          type: string
+        role_id:
+          type: string
+        staff:
           items:
-            type: string
-          maxItems: 200
-          minItems: 1
+            $ref: "#/components/schemas/AssignableStaff"
           type:
             - array
             - "null"
       required:
-        - application_ids
+        - application_id
+        - role_id
+        - staff
       type: object
-    AssignGroupOutputBody:
+    AssignableStaff:
       additionalProperties: false
       properties:
-        $schema:
-          description: A URL to the JSON Schema for this object.
-          examples:
-            - https://example.com/schemas/AssignGroupOutputBody.json
-          format: uri
-          readOnly: true
+        available:
+          type: boolean
+        full_name:
           type: string
-        added:
-          format: int64
-          type: integer
-        interviewers:
-          items:
-            $ref: "#/components/schemas/InterviewerDetail"
-          type:
-            - array
-            - "null"
+        nuid:
+          type: string
+        reason:
+          description: Why they can't be added; assigned_other_kind means they interview this applicant and so can't review the recording, or the reverse
+          enum:
+            - already_assigned
+            - not_on_team
+            - conflicted
+            - assigned_other_kind
+            - full
+            - unavailable
+          type: string
       required:
-        - added
-        - interviewers
+        - nuid
+        - full_name
+        - available
       type: object
     AssignmentPlanPreview:
       additionalProperties: false
@@ -631,6 +663,58 @@ components:
         - added
         - short
         - warnings
+      type: object
+    AutoPanelsInputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/AutoPanelsInputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        role_id:
+          description: Only people who may interview for this opening; empty means anyone who may interview for some opening
+          type: string
+        size:
+          format: int64
+          maximum: 20
+          minimum: 1
+          type: integer
+      required:
+        - size
+      type: object
+    AutoPlanInputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/AutoPlanInputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        by_panel:
+          description: Give each unstaffed applicant one whole panel
+          type: boolean
+        dry_run:
+          description: Return the plan without saving it
+          type: boolean
+        match_slots:
+          description: Prefer interviewers on a slot the applicant can make; defaults to the cycle's match_by_slot
+          type: boolean
+        role_ids:
+          description: Openings to plan; empty means all
+          items:
+            type: string
+          maxItems: 50
+          type:
+            - array
+            - "null"
+        with_recording:
+          description: Also plan recording reviewers, after interviewers
+          type: boolean
       type: object
     BoardReviewer:
       additionalProperties: false
@@ -1052,44 +1136,6 @@ components:
         - submission_url
         - submitted_at
       type: object
-    CommitInterviewReviewerPlanOutputBody:
-      additionalProperties: false
-      properties:
-        $schema:
-          description: A URL to the JSON Schema for this object.
-          examples:
-            - https://example.com/schemas/CommitInterviewReviewerPlanOutputBody.json
-          format: uri
-          readOnly: true
-          type: string
-        created:
-          format: int64
-          type: integer
-        plan:
-          $ref: "#/components/schemas/InterviewReviewPlanPreview"
-      required:
-        - created
-        - plan
-      type: object
-    CommitInterviewerPlanOutputBody:
-      additionalProperties: false
-      properties:
-        $schema:
-          description: A URL to the JSON Schema for this object.
-          examples:
-            - https://example.com/schemas/CommitInterviewerPlanOutputBody.json
-          format: uri
-          readOnly: true
-          type: string
-        created:
-          format: int64
-          type: integer
-        plan:
-          $ref: "#/components/schemas/InterviewerPlanPreview"
-      required:
-        - created
-        - plan
-      type: object
     CommitPlanOutputBody:
       additionalProperties: false
       properties:
@@ -1276,26 +1322,30 @@ components:
       required:
         - url
       type: object
-    CreateGroupsInputBody:
+    CreateGroupInputBody:
       additionalProperties: false
       properties:
         $schema:
           description: A URL to the JSON Schema for this object.
           examples:
-            - https://example.com/schemas/CreateGroupsInputBody.json
+            - https://example.com/schemas/CreateGroupInputBody.json
           format: uri
           readOnly: true
           type: string
-        groups:
+        member_nuids:
+          description: Must be on the cycle's staff
           items:
-            $ref: "#/components/schemas/GroupBody"
-          maxItems: 100
-          minItems: 1
+            type: string
+          maxItems: 200
           type:
             - array
             - "null"
+        name:
+          maxLength: 100
+          minLength: 1
+          type: string
       required:
-        - groups
+        - name
       type: object
     CreateLeadAssignmentInputBody:
       additionalProperties: false
@@ -1311,6 +1361,31 @@ components:
           type: string
       required:
         - lead_nuid
+      type: object
+    CreatePanelInputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/CreatePanelInputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        member_nuids:
+          description: Cycle staff not already on another panel
+          items:
+            type: string
+          maxItems: 20
+          type:
+            - array
+            - "null"
+        name:
+          maxLength: 100
+          minLength: 1
+          type: string
+      required:
+        - name
       type: object
     CreatePreferenceListCommentInputBody:
       additionalProperties: false
@@ -1452,6 +1527,24 @@ components:
         - cycle_id
         - name
       type: object
+    CreateSlotInputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/CreateSlotInputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        label:
+          description: e.g. Tuesday 7pm
+          maxLength: 100
+          minLength: 1
+          type: string
+      required:
+        - label
+      type: object
     CreateTagInputBody:
       additionalProperties: false
       properties:
@@ -1567,6 +1660,8 @@ components:
           type: string
         id:
           type: string
+        match_by_slot:
+          type: boolean
         name:
           type: string
         opens_at:
@@ -1585,6 +1680,7 @@ components:
         - name
         - status
         - application_type
+        - match_by_slot
         - created_at
       type: object
     CycleRoleSummary:
@@ -2174,77 +2270,102 @@ components:
           format: uri
           type: string
       type: object
-    GroupBody:
+    GroupMember:
       additionalProperties: false
       properties:
-        $schema:
-          description: A URL to the JSON Schema for this object.
-          examples:
-            - https://example.com/schemas/GroupBody.json
-          format: uri
-          readOnly: true
+        full_name:
           type: string
-        meeting_slot:
+        user_nuid:
+          type: string
+      required:
+        - user_nuid
+        - full_name
+      type: object
+    InterviewBoardPerson:
+      additionalProperties: false
+      properties:
+        assignment_id:
+          type: string
+        done:
+          type: boolean
+        full_name:
+          type: string
+        nuid:
+          type: string
+      required:
+        - assignment_id
+        - nuid
+        - full_name
+        - done
+      type: object
+    InterviewBoardRow:
+      additionalProperties: false
+      properties:
+        applicant_nuid:
+          type: string
+        application_id:
+          type: string
+        done:
+          description: Interview submitted
+          type: boolean
+        email:
+          type: string
+        full_name:
+          type: string
+        interviewers:
+          items:
+            $ref: "#/components/schemas/InterviewBoardPerson"
+          type:
+            - array
+            - "null"
+        recording_reviewers:
+          items:
+            $ref: "#/components/schemas/InterviewBoardPerson"
+          type:
+            - array
+            - "null"
+        role_id:
+          type: string
+        scheduled_at:
           format: date-time
           type: string
-        member_nuids:
+        slot_ids:
+          description: Meeting slots the applicant can make
           items:
             type: string
           type:
             - array
             - "null"
-        name:
-          minLength: 1
+        stage:
+          enum:
+            - draft
+            - submitted
+            - lead_review
+            - chief_review
+            - interview
+            - interview_scheduled
+            - interview_conducted
+            - interview_review
+            - selection
+            - accepted
+            - rejected
+            - withdrawn
           type: string
-      required:
-        - name
-        - member_nuids
-      type: object
-    InterviewCapacity:
-      additionalProperties: false
-      properties:
-        $schema:
-          description: A URL to the JSON Schema for this object.
-          examples:
-            - https://example.com/schemas/InterviewCapacity.json
-          format: uri
-          readOnly: true
-          type: string
-        applicants:
-          format: int64
-          type: integer
-        coverage:
-          format: int64
-          type: integer
-        feasible:
+        started:
+          description: Has notes, a write-up or a rating
           type: boolean
-        leads:
-          format: int64
-          type: integer
-        min_cap:
-          format: int64
-          type: integer
-        notes:
-          items:
-            type: string
-          type:
-            - array
-            - "null"
-        required_slots:
-          format: int64
-          type: integer
-        suggested_cap:
-          format: int64
-          type: integer
       required:
-        - applicants
-        - leads
-        - coverage
-        - required_slots
-        - feasible
-        - min_cap
-        - suggested_cap
-        - notes
+        - application_id
+        - applicant_nuid
+        - full_name
+        - email
+        - role_id
+        - stage
+        - started
+        - done
+        - interviewers
+        - recording_reviewers
+        - slot_ids
       type: object
     InterviewDetail:
       additionalProperties: false
@@ -2302,13 +2423,13 @@ components:
         - created_at
         - updated_at
       type: object
-    InterviewGroupDetail:
+    InterviewPanelDetail:
       additionalProperties: false
       properties:
         $schema:
           description: A URL to the JSON Schema for this object.
           examples:
-            - https://example.com/schemas/InterviewGroupDetail.json
+            - https://example.com/schemas/InterviewPanelDetail.json
           format: uri
           readOnly: true
           type: string
@@ -2321,12 +2442,9 @@ components:
           type: string
         id:
           type: string
-        meeting_slot:
-          format: date-time
-          type: string
         members:
           items:
-            $ref: "#/components/schemas/InterviewGroupMemberDetail"
+            $ref: "#/components/schemas/PanelMember"
           type:
             - array
             - "null"
@@ -2344,83 +2462,56 @@ components:
         - created_at
         - updated_at
       type: object
-    InterviewGroupMemberDetail:
-      additionalProperties: false
-      properties:
-        full_name:
-          type: string
-        member_nuid:
-          type: string
-      required:
-        - member_nuid
-        - full_name
-      type: object
-    InterviewPoolOutputBody:
+    InterviewPlan:
       additionalProperties: false
       properties:
         $schema:
           description: A URL to the JSON Schema for this object.
           examples:
-            - https://example.com/schemas/InterviewPoolOutputBody.json
+            - https://example.com/schemas/InterviewPlan.json
           format: uri
           readOnly: true
           type: string
-        applicants:
+        interviewers:
           items:
-            $ref: "#/components/schemas/PoolApplicant"
+            $ref: "#/components/schemas/PlannedAssignment"
           type:
             - array
             - "null"
-        lead_count:
-          format: int64
-          type: integer
-        pool_size:
-          format: int64
-          type: integer
-      required:
-        - pool_size
-        - lead_count
-        - applicants
-      type: object
-    InterviewReviewPlanPreview:
-      additionalProperties: false
-      properties:
-        $schema:
-          description: A URL to the JSON Schema for this object.
-          examples:
-            - https://example.com/schemas/InterviewReviewPlanPreview.json
-          format: uri
-          readOnly: true
-          type: string
-        coverage:
-          format: int64
-          type: integer
-        coverage_counts:
-          additionalProperties:
-            format: int64
-            type: integer
-          type: object
-        no_day_match:
+        loads:
           items:
-            $ref: "#/components/schemas/PlannedApplication"
+            $ref: "#/components/schemas/PlanLoad"
           type:
             - array
             - "null"
-        pool_size:
-          format: int64
-          type: integer
-        reviewers:
+        match_slots:
+          type: boolean
+        no_slot_match:
+          description: Applications assigned someone who doesn't share any of their slots
           items:
-            $ref: "#/components/schemas/PlannedReviewer"
+            type: string
           type:
             - array
             - "null"
-        total_added:
-          format: int64
-          type: integer
-        under_covered:
+        recording_reviewers:
           items:
-            $ref: "#/components/schemas/PlannedApplication"
+            $ref: "#/components/schemas/PlannedAssignment"
+          type:
+            - array
+            - "null"
+        saved:
+          type: boolean
+        short_interviewers:
+          description: Applications still below the interviewer count
+          items:
+            type: string
+          type:
+            - array
+            - "null"
+        short_recording:
+          description: Applications still below the recording reviewer count
+          items:
+            type: string
           type:
             - array
             - "null"
@@ -2431,14 +2522,15 @@ components:
             - array
             - "null"
       required:
-        - pool_size
-        - coverage
-        - reviewers
-        - coverage_counts
-        - under_covered
-        - no_day_match
+        - saved
+        - match_slots
+        - interviewers
+        - recording_reviewers
+        - short_interviewers
+        - short_recording
+        - no_slot_match
+        - loads
         - warnings
-        - total_added
       type: object
     InterviewReviewerDetail:
       additionalProperties: false
@@ -2527,39 +2619,6 @@ components:
         - created_at
         - updated_at
       type: object
-    InterviewerCapacityInputBody:
-      additionalProperties: false
-      properties:
-        $schema:
-          description: A URL to the JSON Schema for this object.
-          examples:
-            - https://example.com/schemas/InterviewerCapacityInputBody.json
-          format: uri
-          readOnly: true
-          type: string
-        excluded_application_ids:
-          items:
-            type: string
-          type:
-            - array
-            - "null"
-        groups:
-          items:
-            $ref: "#/components/schemas/PlanGroupDay"
-          type:
-            - array
-            - "null"
-        leads:
-          items:
-            $ref: "#/components/schemas/PlanLeadDay"
-          type:
-            - array
-            - "null"
-        role_id:
-          type: string
-      required:
-        - role_id
-      type: object
     InterviewerDetail:
       additionalProperties: false
       properties:
@@ -2592,112 +2651,6 @@ components:
         - interviewer_nuid
         - assigned_by
         - assigned_at
-      type: object
-    InterviewerPlanPreview:
-      additionalProperties: false
-      properties:
-        $schema:
-          description: A URL to the JSON Schema for this object.
-          examples:
-            - https://example.com/schemas/InterviewerPlanPreview.json
-          format: uri
-          readOnly: true
-          type: string
-        groups:
-          items:
-            $ref: "#/components/schemas/PlannedGroup"
-          type:
-            - array
-            - "null"
-        interviewers:
-          items:
-            $ref: "#/components/schemas/PlannedInterviewer"
-          type:
-            - array
-            - "null"
-        no_day_match:
-          items:
-            $ref: "#/components/schemas/PlannedApplication"
-          type:
-            - array
-            - "null"
-        pool_size:
-          format: int64
-          type: integer
-        total_added:
-          format: int64
-          type: integer
-        unassigned:
-          items:
-            $ref: "#/components/schemas/PlannedApplication"
-          type:
-            - array
-            - "null"
-        warnings:
-          items:
-            type: string
-          type:
-            - array
-            - "null"
-      required:
-        - pool_size
-        - interviewers
-        - groups
-        - unassigned
-        - no_day_match
-        - warnings
-        - total_added
-      type: object
-    InterviewerPreviewInputBody:
-      additionalProperties: false
-      properties:
-        $schema:
-          description: A URL to the JSON Schema for this object.
-          examples:
-            - https://example.com/schemas/InterviewerPreviewInputBody.json
-          format: uri
-          readOnly: true
-          type: string
-        cap:
-          format: int64
-          minimum: 1
-          type: integer
-        cap_overrides:
-          additionalProperties:
-            format: int64
-            type: integer
-          description: Per-unit cap overrides, keyed by lead NUID or, when planning by group, group ID
-          type: object
-        conflicts:
-          description: Leads ineligible to interview a specific applicant
-          items:
-            $ref: "#/components/schemas/PlanConflict"
-          type:
-            - array
-            - "null"
-        excluded_application_ids:
-          items:
-            type: string
-          type:
-            - array
-            - "null"
-        groups:
-          items:
-            $ref: "#/components/schemas/PlanGroupDay"
-          type:
-            - array
-            - "null"
-        leads:
-          items:
-            $ref: "#/components/schemas/PlanLeadDay"
-          type:
-            - array
-            - "null"
-        role_id:
-          type: string
-      required:
-        - role_id
-        - cap
       type: object
     Item:
       additionalProperties: false
@@ -2817,6 +2770,65 @@ components:
       required:
         - application_id
       type: object
+    MatchBySlotInputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/MatchBySlotInputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        enabled:
+          type: boolean
+      required:
+        - enabled
+      type: object
+    MatchBySlotOutputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/MatchBySlotOutputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        match_by_slot:
+          type: boolean
+      required:
+        - match_by_slot
+      type: object
+    MeetingSlot:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/MeetingSlot.json
+          format: uri
+          readOnly: true
+          type: string
+        created_at:
+          format: date-time
+          type: string
+        cycle_id:
+          type: string
+        id:
+          type: string
+        label:
+          type: string
+        position:
+          format: int64
+          type: integer
+      required:
+        - id
+        - cycle_id
+        - label
+        - position
+        - created_at
+      type: object
     MyPipeline:
       additionalProperties: false
       properties:
@@ -2923,6 +2935,36 @@ components:
       required:
         - role_id
       type: object
+    OpeningTeam:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/OpeningTeam.json
+          format: uri
+          readOnly: true
+          type: string
+        group_ids:
+          items:
+            type: string
+          type:
+            - array
+            - "null"
+        kind:
+          enum:
+            - applicant
+            - reviewer
+            - interviewer
+            - recording_reviewer
+          type: string
+        role_id:
+          type: string
+      required:
+        - role_id
+        - kind
+        - group_ids
+      type: object
     OpeningView:
       additionalProperties: false
       properties:
@@ -2955,40 +2997,43 @@ components:
         - applicant_count
         - deadlines
       type: object
-    PlanConflict:
+    PanelMember:
       additionalProperties: false
       properties:
-        application_id:
+        full_name:
           type: string
-        lead_nuid:
+        user_nuid:
           type: string
       required:
-        - lead_nuid
-        - application_id
+        - user_nuid
+        - full_name
       type: object
-    PlanGroupDay:
+    PlanLoad:
       additionalProperties: false
       properties:
-        day:
-          description: Empty matches any day
+        added:
+          format: int64
+          type: integer
+        existing:
+          format: int64
+          type: integer
+        full_name:
           type: string
-        group_id:
+        kind:
+          enum:
+            - applicant
+            - reviewer
+            - interviewer
+            - recording_reviewer
+          type: string
+        nuid:
           type: string
       required:
-        - group_id
-        - day
-      type: object
-    PlanLeadDay:
-      additionalProperties: false
-      properties:
-        day:
-          description: The lead's meeting-day key for this run (matches an applicant availability key); empty matches any day
-          type: string
-        lead_nuid:
-          type: string
-      required:
-        - lead_nuid
-        - day
+        - nuid
+        - full_name
+        - kind
+        - existing
+        - added
       type: object
     PlanTeam:
       additionalProperties: false
@@ -3028,86 +3073,29 @@ components:
         - email
         - already_assigned
       type: object
-    PlannedGroup:
+    PlannedAssignment:
       additionalProperties: false
       properties:
-        added:
-          format: int64
-          type: integer
-        applications:
-          items:
-            $ref: "#/components/schemas/PlannedApplication"
-          type:
-            - array
-            - "null"
-        cap:
-          format: int64
-          type: integer
-        day:
+        application_id:
           type: string
-        existing:
-          format: int64
-          type: integer
-        group_id:
-          type: string
-        members:
-          items:
-            $ref: "#/components/schemas/InterviewGroupMemberDetail"
-          type:
-            - array
-            - "null"
-        name:
-          type: string
-        total:
-          format: int64
-          type: integer
-      required:
-        - group_id
-        - name
-        - day
-        - cap
-        - existing
-        - added
-        - total
-        - members
-        - applications
-      type: object
-    PlannedInterviewer:
-      additionalProperties: false
-      properties:
-        added:
-          format: int64
-          type: integer
-        applications:
-          items:
-            $ref: "#/components/schemas/PlannedApplication"
-          type:
-            - array
-            - "null"
-        cap:
-          format: int64
-          type: integer
-        day:
-          type: string
-        existing:
-          format: int64
-          type: integer
         full_name:
           type: string
-        lead_nuid:
+        kind:
+          enum:
+            - applicant
+            - reviewer
+            - interviewer
+            - recording_reviewer
           type: string
-        total:
-          format: int64
-          type: integer
+        nuid:
+          type: string
+        panel_id:
+          type: string
       required:
-        - lead_nuid
+        - application_id
+        - kind
+        - nuid
         - full_name
-        - day
-        - cap
-        - existing
-        - added
-        - total
-        - applications
       type: object
     PlannedLead:
       additionalProperties: false
@@ -3156,43 +3144,6 @@ components:
       required:
         - application_id
         - lead_nuid
-      type: object
-    PlannedReviewer:
-      additionalProperties: false
-      properties:
-        added:
-          format: int64
-          type: integer
-        applications:
-          items:
-            $ref: "#/components/schemas/PlannedApplication"
-          type:
-            - array
-            - "null"
-        cap:
-          format: int64
-          type: integer
-        day:
-          type: string
-        existing:
-          format: int64
-          type: integer
-        full_name:
-          type: string
-        lead_nuid:
-          type: string
-        total:
-          format: int64
-          type: integer
-      required:
-        - lead_nuid
-        - full_name
-        - day
-        - cap
-        - existing
-        - added
-        - total
-        - applications
       type: object
     PoolApplicant:
       additionalProperties: false
@@ -3798,6 +3749,57 @@ components:
         - avg_score
         - count
       type: object
+    RenameGroupInputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/RenameGroupInputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        name:
+          maxLength: 100
+          minLength: 1
+          type: string
+      required:
+        - name
+      type: object
+    RenamePanelInputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/RenamePanelInputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        name:
+          maxLength: 100
+          minLength: 1
+          type: string
+      required:
+        - name
+      type: object
+    RenameSlotInputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/RenameSlotInputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        label:
+          maxLength: 100
+          minLength: 1
+          type: string
+      required:
+        - label
+      type: object
     ReorderPreferenceListEntriesInputBody:
       additionalProperties: false
       properties:
@@ -3835,6 +3837,27 @@ components:
             - "null"
       required:
         - application_ids
+      type: object
+    ReorderSlotsInputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/ReorderSlotsInputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        slot_ids:
+          description: Every slot in the cycle, in the new order
+          items:
+            type: string
+          maxItems: 100
+          type:
+            - array
+            - "null"
+      required:
+        - slot_ids
       type: object
     ReplaceDraftPickInputBody:
       additionalProperties: false
@@ -4117,89 +4140,6 @@ components:
         - above_cutoff
         - included
       type: object
-    ReviewerCapacityInputBody:
-      additionalProperties: false
-      properties:
-        $schema:
-          description: A URL to the JSON Schema for this object.
-          examples:
-            - https://example.com/schemas/ReviewerCapacityInputBody.json
-          format: uri
-          readOnly: true
-          type: string
-        coverage:
-          format: int64
-          minimum: 1
-          type: integer
-        excluded_application_ids:
-          items:
-            type: string
-          type:
-            - array
-            - "null"
-        leads:
-          items:
-            $ref: "#/components/schemas/PlanLeadDay"
-          type:
-            - array
-            - "null"
-        role_id:
-          type: string
-      required:
-        - role_id
-        - leads
-        - coverage
-      type: object
-    ReviewerPreviewInputBody:
-      additionalProperties: false
-      properties:
-        $schema:
-          description: A URL to the JSON Schema for this object.
-          examples:
-            - https://example.com/schemas/ReviewerPreviewInputBody.json
-          format: uri
-          readOnly: true
-          type: string
-        cap:
-          format: int64
-          minimum: 1
-          type: integer
-        cap_overrides:
-          additionalProperties:
-            format: int64
-            type: integer
-          type: object
-        conflicts:
-          description: Leads ineligible to review a specific applicant's interview
-          items:
-            $ref: "#/components/schemas/PlanConflict"
-          type:
-            - array
-            - "null"
-        coverage:
-          format: int64
-          minimum: 1
-          type: integer
-        excluded_application_ids:
-          items:
-            type: string
-          type:
-            - array
-            - "null"
-        leads:
-          items:
-            $ref: "#/components/schemas/PlanLeadDay"
-          type:
-            - array
-            - "null"
-        role_id:
-          type: string
-      required:
-        - role_id
-        - leads
-        - coverage
-        - cap
-      type: object
     ReviewerProgress:
       additionalProperties: false
       properties:
@@ -4266,6 +4206,26 @@ components:
         - cycle_id
         - name
         - created_at
+      type: object
+    SetApplicationSlotsInputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/SetApplicationSlotsInputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        slot_ids:
+          items:
+            type: string
+          maxItems: 100
+          type:
+            - array
+            - "null"
+      required:
+        - slot_ids
       type: object
     SetApplicationTagsInputBody:
       additionalProperties: false
@@ -4344,6 +4304,27 @@ components:
       required:
         - preference_list_ids
       type: object
+    SetOpeningTeamInputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/SetOpeningTeamInputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        group_ids:
+          description: Empty means everyone on the cycle's staff
+          items:
+            type: string
+          maxItems: 50
+          type:
+            - array
+            - "null"
+      required:
+        - group_ids
+      type: object
     SetPreferenceListDeadlineInputBody:
       additionalProperties: false
       properties:
@@ -4415,6 +4396,22 @@ components:
       required:
         - role
       type: object
+    SetStaffSlotInputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/SetStaffSlotInputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        slot_id:
+          description: One of the cycle's meeting slots
+          type: string
+      required:
+        - slot_id
+      type: object
     SetStepInputBody:
       additionalProperties: false
       properties:
@@ -4429,6 +4426,59 @@ components:
           type: boolean
       required:
         - enabled
+      type: object
+    StaffGroup:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/StaffGroup.json
+          format: uri
+          readOnly: true
+          type: string
+        created_at:
+          format: date-time
+          type: string
+        cycle_id:
+          type: string
+        id:
+          type: string
+        members:
+          items:
+            $ref: "#/components/schemas/GroupMember"
+          type:
+            - array
+            - "null"
+        name:
+          type: string
+      required:
+        - id
+        - cycle_id
+        - name
+        - created_at
+        - members
+      type: object
+    StaffSlot:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/StaffSlot.json
+          format: uri
+          readOnly: true
+          type: string
+        cycle_id:
+          type: string
+        slot_id:
+          type: string
+        user_nuid:
+          type: string
+      required:
+        - cycle_id
+        - user_nuid
+        - slot_id
       type: object
     StepConfig:
       additionalProperties: false
@@ -6926,7 +6976,7 @@ paths:
       tags:
         - Recording reviews
     post:
-      description: Chief only. Creates the interview if it doesn't exist yet.
+      description: Chief only. The same checks as adding an interviewer, against the recording-review team and count; never one of the applicant's interviewers. Creates the interview if it doesn't exist yet.
       operationId: add-interview-reviewer
       parameters:
         - description: Application ID
@@ -6961,6 +7011,12 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorModel"
           description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
         "409":
           content:
             application/problem+json:
@@ -6984,7 +7040,7 @@ paths:
         - Interview assignments
   /applications/{id}/interviewers:
     post:
-      description: Chief only. Creates the interview if it doesn't exist yet.
+      description: Chief only. They must be on the opening's interview team, have no conflict with the applicant, not review their recording, and the applicant must have room under the cycle's interviewer count. Creates the interview if it doesn't exist yet.
       operationId: add-interviewer
       parameters:
         - description: Application ID
@@ -7019,6 +7075,12 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorModel"
           description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
         "409":
           content:
             application/problem+json:
@@ -7367,6 +7429,121 @@ paths:
       summary: Mark an application as wanted for your team
       tags:
         - Selections
+  /applications/{id}/slots:
+    get:
+      description: The applicant, or staff who can see the application.
+      operationId: get-application-slots
+      parameters:
+        - description: Application ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Application ID
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationSlots"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Get the meeting slots an applicant can make
+      tags:
+        - Meeting slots
+    put:
+      description: The applicant only, from their cycle's slots, until the interview is being scheduled. Replaces the set.
+      operationId: set-application-slots
+      parameters:
+        - description: Application ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Application ID
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetApplicationSlotsInputBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationSlots"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "409":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Conflict
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Set the meeting slots you can make
+      tags:
+        - Meeting slots
   /applications/{id}/tags:
     put:
       description: Lead, chief or admin. At most 3 tags, all from the application's cycle.
@@ -7953,6 +8130,80 @@ paths:
       summary: Update a cycle
       tags:
         - Cycles
+  /cycles/{id}/assignable-staff:
+    get:
+      description: "Chief or admin. Every cycle staff member with their name for each application, marked available or with the reason they can't be added: already assigned, not on the opening's team, conflicted, interviewing when adding a recording reviewer (or the reverse), or the applicant is full. locked is set when the opening takes no adds right now."
+      operationId: list-assignable-staff
+      parameters:
+        - description: Cycle ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Cycle ID
+            type: string
+        - explode: false
+          in: query
+          name: kind
+          required: true
+          schema:
+            enum:
+              - reviewer
+              - interviewer
+              - recording_reviewer
+            type: string
+        - description: Comma-separated application ids, at most 200
+          explode: false
+          in: query
+          name: application_ids
+          required: true
+          schema:
+            description: Comma-separated application ids, at most 200
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/AssignableApplication"
+                type:
+                  - array
+                  - "null"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Who can be added to each applicant as a reviewer, interviewer or recording reviewer
+      tags:
+        - Interview planning
   /cycles/{id}/assignment-plan/auto:
     post:
       description: Chief only. Tops every waiting applicant up to the cycle's reviewers-each count, balancing load across every opening and skipping conflicts and openings whose next step has started. Keeps existing assignments. dry_run plans without saving.
@@ -8719,114 +8970,10 @@ paths:
       summary: Which applicants a cycle's drafts have already claimed
       tags:
         - Draft
-  /cycles/{id}/interview-assignment-plan/interviewer/capacity:
-    post:
-      description: Chief only. Read-only. Reports the minimum and suggested per-lead cap for the cycle's interview-stage pool, given how many leads are available.
-      operationId: suggest-interviewer-capacity
-      parameters:
-        - description: Cycle ID
-          in: path
-          name: id
-          required: true
-          schema:
-            description: Cycle ID
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/InterviewerCapacityInputBody"
-        required: true
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/InterviewCapacity"
-          description: OK
-        "401":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unauthorized
-        "403":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Forbidden
-        "422":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unprocessable Entity
-        "500":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Internal Server Error
-      summary: Suggest a per-lead interview cap
-      tags:
-        - Interview assignment planning
-  /cycles/{id}/interview-assignment-plan/interviewer/commit:
-    post:
-      description: Chief only. Writes the plan's interviewer assignments. Recomputed server-side against the pool as it stands now rather than trusting a supplied list.
-      operationId: commit-interviewer-plan
-      parameters:
-        - description: Cycle ID
-          in: path
-          name: id
-          required: true
-          schema:
-            description: Cycle ID
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/InterviewerPreviewInputBody"
-        required: true
-      responses:
-        "201":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CommitInterviewerPlanOutputBody"
-          description: Created
-        "401":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unauthorized
-        "403":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Forbidden
-        "422":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unprocessable Entity
-        "500":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Internal Server Error
-      summary: Assign interviewers according to a plan
-      tags:
-        - Interview assignment planning
-  /cycles/{id}/interview-assignment-plan/interviewer/pool:
+  /cycles/{id}/interview-board:
     get:
-      description: Chief only. Every application in the interview stage, for sizing caps before any meeting days are declared.
-      operationId: get-interviewer-pool
+      description: "Chief or admin. One request for the whole board: interviewers, recording reviewers, names, scheduled time, progress and the applicant's meeting slots."
+      operationId: get-interview-board
       parameters:
         - description: Cycle ID
           in: path
@@ -8835,317 +8982,12 @@ paths:
           schema:
             description: Cycle ID
             type: string
-        - description: Applicant role
+        - description: Only this opening
           explode: false
           in: query
           name: role_id
           schema:
-            description: Applicant role
-            type: string
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/InterviewPoolOutputBody"
-          description: OK
-        "401":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unauthorized
-        "403":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Forbidden
-        "422":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unprocessable Entity
-        "500":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Internal Server Error
-      summary: Count the applications awaiting an interviewer
-      tags:
-        - Interview assignment planning
-  /cycles/{id}/interview-assignment-plan/interviewer/preview:
-    post:
-      description: Chief only. Read-only — computes who would interview whom and returns it without saving. Applications that already have an interviewer are left alone.
-      operationId: preview-interviewer-plan
-      parameters:
-        - description: Cycle ID
-          in: path
-          name: id
-          required: true
-          schema:
-            description: Cycle ID
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/InterviewerPreviewInputBody"
-        required: true
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/InterviewerPlanPreview"
-          description: OK
-        "401":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unauthorized
-        "403":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Forbidden
-        "422":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unprocessable Entity
-        "500":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Internal Server Error
-      summary: Preview interviewer assignments for a meeting-day roster
-      tags:
-        - Interview assignment planning
-  /cycles/{id}/interview-assignment-plan/reviewer/capacity:
-    post:
-      operationId: suggest-interview-reviewer-capacity
-      parameters:
-        - description: Cycle ID
-          in: path
-          name: id
-          required: true
-          schema:
-            description: Cycle ID
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ReviewerCapacityInputBody"
-        required: true
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/InterviewCapacity"
-          description: OK
-        "401":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unauthorized
-        "403":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Forbidden
-        "422":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unprocessable Entity
-        "500":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Internal Server Error
-      summary: Suggest a per-lead interview-review cap
-      tags:
-        - Interview assignment planning
-  /cycles/{id}/interview-assignment-plan/reviewer/commit:
-    post:
-      operationId: commit-interview-reviewer-plan
-      parameters:
-        - description: Cycle ID
-          in: path
-          name: id
-          required: true
-          schema:
-            description: Cycle ID
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ReviewerPreviewInputBody"
-        required: true
-      responses:
-        "201":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CommitInterviewReviewerPlanOutputBody"
-          description: Created
-        "401":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unauthorized
-        "403":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Forbidden
-        "422":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unprocessable Entity
-        "500":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Internal Server Error
-      summary: Assign interview reviewers according to a plan
-      tags:
-        - Interview assignment planning
-  /cycles/{id}/interview-assignment-plan/reviewer/pool:
-    get:
-      description: Chief only. Interview-stage applications that already have an interviewer assigned — applicants still needing an interviewer are not counted here (assign an interviewer first).
-      operationId: get-interview-reviewer-pool
-      parameters:
-        - description: Cycle ID
-          in: path
-          name: id
-          required: true
-          schema:
-            description: Cycle ID
-            type: string
-        - description: Applicant role
-          explode: false
-          in: query
-          name: role_id
-          schema:
-            description: Applicant role
-            type: string
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/InterviewPoolOutputBody"
-          description: OK
-        "401":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unauthorized
-        "403":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Forbidden
-        "422":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unprocessable Entity
-        "500":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Internal Server Error
-      summary: Count the applications awaiting interview reviewers
-      tags:
-        - Interview assignment planning
-  /cycles/{id}/interview-assignment-plan/reviewer/preview:
-    post:
-      description: Chief only. Read-only. Only considers applications that already have an interviewer committed.
-      operationId: preview-interview-reviewer-plan
-      parameters:
-        - description: Cycle ID
-          in: path
-          name: id
-          required: true
-          schema:
-            description: Cycle ID
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ReviewerPreviewInputBody"
-        required: true
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/InterviewReviewPlanPreview"
-          description: OK
-        "401":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unauthorized
-        "403":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Forbidden
-        "422":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unprocessable Entity
-        "500":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Internal Server Error
-      summary: Preview interview-review assignments for a meeting-day roster
-      tags:
-        - Interview assignment planning
-  /cycles/{id}/interview-groups:
-    get:
-      description: Chief only. Members are included.
-      operationId: list-interview-groups
-      parameters:
-        - description: Cycle ID
-          in: path
-          name: id
-          required: true
-          schema:
-            description: Cycle ID
+            description: Only this opening
             type: string
       responses:
         "200":
@@ -9153,7 +8995,7 @@ paths:
             application/json:
               schema:
                 items:
-                  $ref: "#/components/schemas/InterviewGroupDetail"
+                  $ref: "#/components/schemas/InterviewBoardRow"
                 type:
                   - array
                   - "null"
@@ -9170,6 +9012,12 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorModel"
           description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
         "422":
           content:
             application/problem+json:
@@ -9182,12 +9030,68 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorModel"
           description: Internal Server Error
-      summary: List a cycle's interview groups
+      summary: Every applicant in interviews, with who interviews and reviews them
       tags:
-        - Interview groups
+        - Interview planning
+  /cycles/{id}/interview-panels:
+    get:
+      description: Chief or admin.
+      operationId: list-interview-panels
+      parameters:
+        - description: Cycle ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Cycle ID
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/InterviewPanelDetail"
+                type:
+                  - array
+                  - "null"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: List a cycle's interview panels with their members
+      tags:
+        - Interview panels
     post:
-      description: Chief only. Names are unique within a cycle.
-      operationId: create-interview-group
+      description: Chief or admin. Members must be cycle staff, and each person sits on at most one panel per cycle.
+      operationId: create-interview-panel
       parameters:
         - description: Cycle ID
           in: path
@@ -9200,14 +9104,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/GroupBody"
+              $ref: "#/components/schemas/CreatePanelInputBody"
         required: true
       responses:
         "201":
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/InterviewGroupDetail"
+                $ref: "#/components/schemas/InterviewPanelDetail"
           description: Created
         "401":
           content:
@@ -9221,6 +9125,12 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorModel"
           description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
         "409":
           content:
             application/problem+json:
@@ -9239,13 +9149,13 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorModel"
           description: Internal Server Error
-      summary: Create an interview group
+      summary: Create an interview panel
       tags:
-        - Interview groups
-  /cycles/{id}/interview-groups/batch:
+        - Interview panels
+  /cycles/{id}/interview-panels/auto:
     post:
-      description: "Chief only. All or nothing: if any group is invalid, none are created."
-      operationId: create-interview-groups
+      description: Chief or admin. Uses people who may interview (for role_id, or for any opening), keeps people with the same meeting slot together, and saves every panel in one transaction. The last panel may be short.
+      operationId: auto-create-interview-panels
       parameters:
         - description: Cycle ID
           in: path
@@ -9258,7 +9168,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateGroupsInputBody"
+              $ref: "#/components/schemas/AutoPanelsInputBody"
         required: true
       responses:
         "201":
@@ -9266,7 +9176,7 @@ paths:
             application/json:
               schema:
                 items:
-                  $ref: "#/components/schemas/InterviewGroupDetail"
+                  $ref: "#/components/schemas/InterviewPanelDetail"
                 type:
                   - array
                   - "null"
@@ -9283,6 +9193,12 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorModel"
           description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
         "409":
           content:
             application/problem+json:
@@ -9301,9 +9217,319 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorModel"
           description: Internal Server Error
-      summary: Create several interview groups at once
+      summary: Make panels of a given size from everyone not on one yet
       tags:
-        - Interview groups
+        - Interview panels
+  /cycles/{id}/interview-panels/{panel_id}:
+    delete:
+      description: Chief or admin. Existing interview assignments stay.
+      operationId: delete-interview-panel
+      parameters:
+        - description: Cycle ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Cycle ID
+            type: string
+        - in: path
+          name: panel_id
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Delete an interview panel
+      tags:
+        - Interview panels
+    patch:
+      description: Chief or admin.
+      operationId: rename-interview-panel
+      parameters:
+        - description: Cycle ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Cycle ID
+            type: string
+        - in: path
+          name: panel_id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RenamePanelInputBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InterviewPanelDetail"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "409":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Conflict
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Rename an interview panel
+      tags:
+        - Interview panels
+  /cycles/{id}/interview-panels/{panel_id}/members/{nuid}:
+    delete:
+      description: Chief or admin.
+      operationId: remove-interview-panel-member
+      parameters:
+        - description: Cycle ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Cycle ID
+            type: string
+        - in: path
+          name: panel_id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: nuid
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Take someone off a panel
+      tags:
+        - Interview panels
+    put:
+      description: Chief or admin. 409 if they're on another panel this cycle.
+      operationId: add-interview-panel-member
+      parameters:
+        - description: Cycle ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Cycle ID
+            type: string
+        - in: path
+          name: panel_id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: nuid
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InterviewPanelDetail"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "409":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Conflict
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Put someone on a panel
+      tags:
+        - Interview panels
+  /cycles/{id}/interview-plan/auto:
+    post:
+      description: Chief or admin. Fills each applicant up to the cycle's counts, balanced across openings, from each opening's team, skipping conflicts. by_panel assigns whole panels to applicants with no interviewer yet. With slot matching, people on a slot the applicant can make come first; applicants who gave no slots are neither filtered nor flagged, and those with no shared slot are assigned anyway and listed in no_slot_match. Recording reviewers are planned after interviewers and are never the applicant's current or planned interviewers. Existing assignments are kept; with dry_run false the plan is saved in one transaction.
+      operationId: auto-plan-interviews
+      parameters:
+        - description: Cycle ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Cycle ID
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AutoPlanInputBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InterviewPlan"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "409":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Conflict
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Plan interviewers (and optionally recording reviewers) for the openings
+      tags:
+        - Interview planning
   /cycles/{id}/interview-reviewers:
     delete:
       description: Chief only. Skips reviewers who have already submitted.
@@ -9586,6 +9812,366 @@ paths:
       summary: Remove every lead assignment for a cycle's role
       tags:
         - Lead assignments
+  /cycles/{id}/match-by-slot:
+    put:
+      description: Chief or admin. The default for the interview auto-plan's match_slots.
+      operationId: set-match-by-slot
+      parameters:
+        - description: Cycle ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Cycle ID
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MatchBySlotInputBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MatchBySlotOutputBody"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Turn meeting-slot matching on or off
+      tags:
+        - Meeting slots
+  /cycles/{id}/meeting-slots:
+    get:
+      description: Chief or admin.
+      operationId: list-meeting-slots
+      parameters:
+        - description: Cycle ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Cycle ID
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/MeetingSlot"
+                type:
+                  - array
+                  - "null"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: List a cycle's meeting slots in order
+      tags:
+        - Meeting slots
+    post:
+      description: Chief or admin. Labels are unique per cycle.
+      operationId: create-meeting-slot
+      parameters:
+        - description: Cycle ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Cycle ID
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSlotInputBody"
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeetingSlot"
+          description: Created
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "409":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Conflict
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Add a meeting slot at the end
+      tags:
+        - Meeting slots
+  /cycles/{id}/meeting-slots/order:
+    put:
+      description: Chief or admin. Must list every slot exactly once.
+      operationId: reorder-meeting-slots
+      parameters:
+        - description: Cycle ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Cycle ID
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReorderSlotsInputBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/MeetingSlot"
+                type:
+                  - array
+                  - "null"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Reorder a cycle's meeting slots
+      tags:
+        - Meeting slots
+  /cycles/{id}/meeting-slots/{slot_id}:
+    delete:
+      description: Chief or admin. Clears it from staff and applicants who had it.
+      operationId: delete-meeting-slot
+      parameters:
+        - description: Cycle ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Cycle ID
+            type: string
+        - in: path
+          name: slot_id
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Delete a meeting slot
+      tags:
+        - Meeting slots
+    patch:
+      description: Chief or admin.
+      operationId: rename-meeting-slot
+      parameters:
+        - description: Cycle ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Cycle ID
+            type: string
+        - in: path
+          name: slot_id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RenameSlotInputBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeetingSlot"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "409":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Conflict
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Rename a meeting slot
+      tags:
+        - Meeting slots
   /cycles/{id}/my-pipeline:
     get:
       description: Staff on the cycle. Chiefs and admins get next actions; everyone gets their own tasks.
@@ -9638,6 +10224,135 @@ paths:
       summary: The caller's place in a cycle's pipeline
       tags:
         - Pipeline
+  /cycles/{id}/opening-teams:
+    get:
+      description: Chief or admin. An opening with no groups for a kind is staffed by the whole cycle staff; recording reviews with none fall back to the interviewers' groups.
+      operationId: list-opening-teams
+      parameters:
+        - description: Cycle ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Cycle ID
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/OpeningTeam"
+                type:
+                  - array
+                  - "null"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: List which groups staff each opening
+      tags:
+        - Staff groups
+  /cycles/{id}/opening-teams/{role_id}/{kind}:
+    put:
+      description: Chief or admin. Replaces the set; empty clears it.
+      operationId: set-opening-team
+      parameters:
+        - description: Cycle ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Cycle ID
+            type: string
+        - in: path
+          name: role_id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: kind
+          required: true
+          schema:
+            enum:
+              - applicant
+              - reviewer
+              - interviewer
+              - recording_reviewer
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetOpeningTeamInputBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpeningTeam"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Choose the groups that do one kind of work on an opening
+      tags:
+        - Staff groups
   /cycles/{id}/openings/{role_id}/steps/{step}/deadlines/{kind}:
     put:
       description: Chief only. Frozen once the next step starts, except for admins. Extending a passed deadline reopens the step.
@@ -11156,6 +11871,536 @@ paths:
       summary: List a cycle's leads and chiefs
       tags:
         - Cycle staff
+  /cycles/{id}/staff-groups:
+    get:
+      description: Chief or admin.
+      operationId: list-staff-groups
+      parameters:
+        - description: Cycle ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Cycle ID
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/StaffGroup"
+                type:
+                  - array
+                  - "null"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: List a cycle's staff groups with their members
+      tags:
+        - Staff groups
+    post:
+      description: Chief or admin. Members must already be on the cycle's staff; groups never add or remove staff.
+      operationId: create-staff-group
+      parameters:
+        - description: Cycle ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Cycle ID
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateGroupInputBody"
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StaffGroup"
+          description: Created
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "409":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Conflict
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Create a staff group
+      tags:
+        - Staff groups
+  /cycles/{id}/staff-groups/{group_id}:
+    delete:
+      description: Chief or admin. Also removes it from any opening team.
+      operationId: delete-staff-group
+      parameters:
+        - description: Cycle ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Cycle ID
+            type: string
+        - in: path
+          name: group_id
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Delete a staff group
+      tags:
+        - Staff groups
+    patch:
+      description: Chief or admin.
+      operationId: rename-staff-group
+      parameters:
+        - description: Cycle ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Cycle ID
+            type: string
+        - in: path
+          name: group_id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RenameGroupInputBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StaffGroup"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "409":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Conflict
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Rename a staff group
+      tags:
+        - Staff groups
+  /cycles/{id}/staff-groups/{group_id}/members/{nuid}:
+    delete:
+      description: Chief or admin.
+      operationId: remove-staff-group-member
+      parameters:
+        - description: Cycle ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Cycle ID
+            type: string
+        - in: path
+          name: group_id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: nuid
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Remove someone from a staff group
+      tags:
+        - Staff groups
+    put:
+      description: Chief or admin. They must be on the cycle's staff.
+      operationId: add-staff-group-member
+      parameters:
+        - description: Cycle ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Cycle ID
+            type: string
+        - in: path
+          name: group_id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: nuid
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StaffGroup"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Add someone to a staff group
+      tags:
+        - Staff groups
+  /cycles/{id}/staff-slots:
+    get:
+      description: Chief or admin.
+      operationId: list-staff-slots
+      parameters:
+        - description: Cycle ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Cycle ID
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/StaffSlot"
+                type:
+                  - array
+                  - "null"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: List each staff member's meeting slot
+      tags:
+        - Meeting slots
+  /cycles/{id}/staff-slots/{nuid}:
+    delete:
+      description: Chief or admin.
+      operationId: clear-staff-slot
+      parameters:
+        - description: Cycle ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Cycle ID
+            type: string
+        - in: path
+          name: nuid
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Clear a staff member's meeting slot
+      tags:
+        - Meeting slots
+    put:
+      description: Chief or admin. One slot per person per cycle.
+      operationId: set-staff-slot
+      parameters:
+        - description: Cycle ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Cycle ID
+            type: string
+        - in: path
+          name: nuid
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetStaffSlotInputBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StaffSlot"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Set a staff member's meeting slot
+      tags:
+        - Meeting slots
   /cycles/{id}/staff/{nuid}:
     delete:
       description: Admin only.
@@ -12495,179 +13740,6 @@ paths:
       summary: Set the draft order
       tags:
         - Draft
-  /interview-groups/{id}:
-    delete:
-      description: Chief only. Interviewers already assigned from this group are left alone.
-      operationId: delete-interview-group
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-      responses:
-        "204":
-          description: No Content
-        "401":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unauthorized
-        "403":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Forbidden
-        "404":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Not Found
-        "422":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unprocessable Entity
-        "500":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Internal Server Error
-      summary: Delete an interview group
-      tags:
-        - Interview groups
-    put:
-      description: Chief only. Interviewers already assigned from this group are left alone.
-      operationId: update-interview-group
-      parameters:
-        - description: Interview group ID
-          in: path
-          name: id
-          required: true
-          schema:
-            description: Interview group ID
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/GroupBody"
-        required: true
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/InterviewGroupDetail"
-          description: OK
-        "401":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unauthorized
-        "403":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Forbidden
-        "404":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Not Found
-        "409":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Conflict
-        "422":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unprocessable Entity
-        "500":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Internal Server Error
-      summary: Replace an interview group's name, meeting slot, and members
-      tags:
-        - Interview groups
-  /interview-groups/{id}/assignments:
-    post:
-      description: Chief only. An application gets at most one group, so the request is rejected if any application already has interviewers.
-      operationId: assign-interview-group
-      parameters:
-        - description: Interview group ID
-          in: path
-          name: id
-          required: true
-          schema:
-            description: Interview group ID
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/AssignGroupInputBody"
-        required: true
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AssignGroupOutputBody"
-          description: OK
-        "401":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unauthorized
-        "403":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Forbidden
-        "404":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Not Found
-        "409":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Conflict
-        "422":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unprocessable Entity
-        "500":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Internal Server Error
-      summary: Assign a group as the interviewers on each application
-      tags:
-        - Interview groups
   /interview-reviewers:
     get:
       description: "Reviewer only. Blind review applies: other reviewers' write-ups are omitted until a chief releases the cycle's recording reviews; chiefs always see them."

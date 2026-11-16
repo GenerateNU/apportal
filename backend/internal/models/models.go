@@ -70,6 +70,7 @@ type Cycle struct {
 	ApplicationType ApplicationType `json:"application_type" gorm:"type:application_type;not null;default:member"`
 	OpensAt         *time.Time      `json:"opens_at,omitempty"`
 	ClosesAt        *time.Time      `json:"closes_at,omitempty"`
+	MatchBySlot     bool            `json:"match_by_slot" gorm:"not null;default:false"`
 	CreatedAt       time.Time       `json:"created_at" gorm:"not null;default:now()"`
 	Branch          Branch          `json:"-" gorm:"foreignKey:BranchID;references:ID;constraint:OnDelete:RESTRICT"`
 }

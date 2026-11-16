@@ -3,28 +3,28 @@ package interviewassignment
 import (
 	"net/http"
 
-	"github.com/GenerateNU/apportal/backend/internal/pipeline"
 	"github.com/danielgtaylor/huma/v2"
 	"gorm.io/gorm"
 
 	"github.com/GenerateNU/apportal/backend/internal/access"
-	"github.com/GenerateNU/apportal/backend/internal/reviewrules"
+	"github.com/GenerateNU/apportal/backend/internal/staffing"
 
 	"github.com/GenerateNU/apportal/backend/internal/handlers/reviewrelease"
 )
 
 func Route(api huma.API, db *gorm.DB) {
-	s := &interviewAssignmentService{access: access.NewChecker(db), interviewAssignmentDB: NewInterviewAssignmentDB(db), reviewReleaseDB: reviewrelease.NewReviewReleaseDB(db), conflicts: reviewrules.NewConflicts(db), gate: pipeline.NewGate(db)}
+	checker := access.NewChecker(db)
+	s := &interviewAssignmentService{gate: checker, guard: staffing.NewGuard(), access: checker, interviewAssignmentDB: NewInterviewAssignmentDB(db), reviewReleaseDB: reviewrelease.NewReviewReleaseDB(db)}
 
 	huma.Register(api, huma.Operation{
 		OperationID:   "add-interviewer",
 		Method:        http.MethodPost,
 		Path:          "/applications/{id}/interviewers",
 		Summary:       "Add an interviewer to an application",
-		Description:   "Chief only. Creates the interview if it doesn't exist yet.",
+		Description:   "Chief only. They must be on the opening's interview team, have no conflict with the applicant, not review their recording, and the applicant must have room under the cycle's interviewer count. Creates the interview if it doesn't exist yet.",
 		Tags:          []string{"Interview assignments"},
 		DefaultStatus: http.StatusCreated,
-		Errors:        []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusConflict, http.StatusUnprocessableEntity},
+		Errors:        []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound, http.StatusConflict, http.StatusUnprocessableEntity},
 	}, s.addInterviewer)
 
 	huma.Register(api, huma.Operation{
@@ -53,10 +53,10 @@ func Route(api huma.API, db *gorm.DB) {
 		Method:        http.MethodPost,
 		Path:          "/applications/{id}/interview-reviewers",
 		Summary:       "Add a recording reviewer to an application",
-		Description:   "Chief only. Creates the interview if it doesn't exist yet.",
+		Description:   "Chief only. The same checks as adding an interviewer, against the recording-review team and count; never one of the applicant's interviewers. Creates the interview if it doesn't exist yet.",
 		Tags:          []string{"Interview assignments"},
 		DefaultStatus: http.StatusCreated,
-		Errors:        []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusConflict, http.StatusUnprocessableEntity},
+		Errors:        []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound, http.StatusConflict, http.StatusUnprocessableEntity},
 	}, s.addReviewer)
 
 	huma.Register(api, huma.Operation{

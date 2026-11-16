@@ -5,7 +5,6 @@ import (
 	"errors"
 
 	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
-	"github.com/GenerateNU/apportal/backend/internal/pipeline"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 	"github.com/danielgtaylor/huma/v2"
 
@@ -14,41 +13,31 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/handlers/reviewrelease"
 
 	"github.com/GenerateNU/apportal/backend/internal/models"
-	"github.com/GenerateNU/apportal/backend/internal/reviewrules"
+	"github.com/GenerateNU/apportal/backend/internal/staffing"
+	"gorm.io/gorm"
 )
 
 type interviewAssignmentService struct {
+	gate                  access.Gate
+	guard                 *staffing.Guard
 	access                *access.Checker
 	interviewAssignmentDB *InterviewAssignmentDB
 	reviewReleaseDB       *reviewrelease.ReviewReleaseDB
-	conflicts             *reviewrules.Conflicts
-	gate                  *pipeline.Gate
-}
-
-func (s *interviewAssignmentService) noConflict(ctx context.Context, applicationID, nuid string) error {
-	conflicted, err := s.conflicts.Conflicted(ctx, applicationID, nuid)
-	if err != nil {
-		return utils.StoreErr(err)
-	}
-	if conflicted {
-		return huma.Error409Conflict("This person has a conflict of interest with this applicant.")
-	}
-	return nil
 }
 
 func (s *interviewAssignmentService) addInterviewer(ctx context.Context, in *AddInterviewerInput) (*InterviewerOutput, error) {
-	if err := s.access.CanApplication(ctx, access.ManageApplication, in.ID); err != nil {
+	if err := utils.RequireUUIDs("application id", in.ID); err != nil {
 		return nil, err
 	}
-	if err := s.noConflict(ctx, in.ID, in.Body.InterviewerNUID); err != nil {
+	if err := s.gate.CanApplication(ctx, access.ManageApplication, in.ID); err != nil {
 		return nil, err
 	}
-	if err := s.gate.Application(ctx, in.ID, models.StepInterviews, ""); err != nil {
-		return nil, err
-	}
-	row, err := s.interviewAssignmentDB.AddInterviewer(ctx, in.ID, in.Body.InterviewerNUID, utils.CurrentActor(ctx).NUID)
+	nuid := in.Body.InterviewerNUID
+	row, err := s.interviewAssignmentDB.AddInterviewer(ctx, in.ID, nuid, utils.CurrentActor(ctx).NUID, func(tx *gorm.DB) error {
+		return s.guard.CheckAdd(ctx, tx, in.ID, nuid, models.KindInterviewer)
+	})
 	if err != nil {
-		return nil, utils.StoreErr(err)
+		return nil, staffing.HTTPError(err)
 	}
 	return &InterviewerOutput{Body: row}, nil
 }
@@ -57,28 +46,28 @@ func (s *interviewAssignmentService) removeInterviewer(ctx context.Context, in *
 	if err := s.access.CanInterviewRow(ctx, access.ManageApplication, "interviewers", in.ID); err != nil {
 		return nil, err
 	}
-	if err := s.interviewAssignmentDB.RemoveInterviewer(ctx, in.ID); err != nil {
+	if err := s.interviewAssignmentDB.RemoveInterviewer(ctx, in.ID, s.removeCheck(ctx)); err != nil {
 		if errors.Is(err, utils.ErrConflict) {
 			return nil, huma.Error409Conflict("the interviewer has already submitted notes or the interview was conducted")
 		}
-		return nil, utils.StoreErr(err)
+		return nil, staffing.HTTPError(err)
 	}
 	return nil, nil
 }
 
 func (s *interviewAssignmentService) addReviewer(ctx context.Context, in *AddReviewerInput) (*InterviewReviewerOutput, error) {
-	if err := s.access.CanApplication(ctx, access.ManageApplication, in.ID); err != nil {
+	if err := utils.RequireUUIDs("application id", in.ID); err != nil {
 		return nil, err
 	}
-	if err := s.noConflict(ctx, in.ID, in.Body.ReviewerNUID); err != nil {
+	if err := s.gate.CanApplication(ctx, access.ManageApplication, in.ID); err != nil {
 		return nil, err
 	}
-	if err := s.gate.Application(ctx, in.ID, models.StepInterviews, ""); err != nil {
-		return nil, err
-	}
-	row, err := s.interviewAssignmentDB.AddReviewer(ctx, in.ID, in.Body.ReviewerNUID, utils.CurrentActor(ctx).NUID)
+	nuid := in.Body.ReviewerNUID
+	row, err := s.interviewAssignmentDB.AddReviewer(ctx, in.ID, nuid, utils.CurrentActor(ctx).NUID, func(tx *gorm.DB) error {
+		return s.guard.CheckAdd(ctx, tx, in.ID, nuid, models.KindRecordingReviewer)
+	})
 	if err != nil {
-		return nil, utils.StoreErr(err)
+		return nil, staffing.HTTPError(err)
 	}
 	return &InterviewReviewerOutput{Body: row}, nil
 }
@@ -87,11 +76,11 @@ func (s *interviewAssignmentService) removeReviewer(ctx context.Context, in *uti
 	if err := s.access.CanInterviewRow(ctx, access.ManageApplication, "interview_reviewers", in.ID); err != nil {
 		return nil, err
 	}
-	if err := s.interviewAssignmentDB.RemoveReviewer(ctx, in.ID); err != nil {
+	if err := s.interviewAssignmentDB.RemoveReviewer(ctx, in.ID, s.removeCheck(ctx)); err != nil {
 		if errors.Is(err, utils.ErrConflict) {
 			return nil, huma.Error409Conflict("the reviewer has already submitted their review")
 		}
-		return nil, utils.StoreErr(err)
+		return nil, staffing.HTTPError(err)
 	}
 	return nil, nil
 }
@@ -125,16 +114,24 @@ func (s *interviewAssignmentService) unassignAllReviewers(ctx context.Context, i
 	return s.unassignAll(ctx, in, s.interviewAssignmentDB.DeleteReviewersForCycle)
 }
 
-func (s *interviewAssignmentService) unassignAll(ctx context.Context, in *UnassignAllInput, del func(context.Context, string, string) (int, error)) (*UnassignAllOutput, error) {
+func (s *interviewAssignmentService) removeCheck(ctx context.Context) RemoveCheck {
+	return func(tx *gorm.DB, applicationID string) error {
+		return s.guard.CheckRemove(ctx, tx, applicationID)
+	}
+}
+
+func (s *interviewAssignmentService) unassignAll(ctx context.Context, in *UnassignAllInput, del func(context.Context, string, string, Check) (int, error)) (*UnassignAllOutput, error) {
 	if err := role.ParseRoleID(in.RoleID); err != nil {
 		return nil, err
 	}
 	if err := s.access.CanCycle(ctx, access.ManageCycle, in.ID); err != nil {
 		return nil, err
 	}
-	deleted, err := del(ctx, in.ID, in.RoleID)
+	deleted, err := del(ctx, in.ID, in.RoleID, func(tx *gorm.DB) error {
+		return s.guard.CheckOpening(ctx, tx, in.ID, in.RoleID)
+	})
 	if err != nil {
-		return nil, utils.StoreErr(err)
+		return nil, staffing.HTTPError(err)
 	}
 	out := &UnassignAllOutput{}
 	out.Body.Deleted = deleted

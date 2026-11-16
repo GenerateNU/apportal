@@ -53,10 +53,12 @@ func (s *interviewService) upsert(ctx context.Context, in *UpsertInterviewInput)
 			return nil, err
 		}
 	}
+	var deadline models.StepKind
 	if in.Body.Submit || in.Body.Writeup != nil || in.Body.Rating != nil {
-		if err := s.gate.Application(ctx, in.ID, models.StepInterviews, models.KindInterviewer); err != nil {
-			return nil, err
-		}
+		deadline = models.KindInterviewer
+	}
+	if err := s.gate.Application(ctx, in.ID, models.StepInterviews, deadline); err != nil {
+		return nil, err
 	}
 	actor := utils.CurrentActor(ctx)
 	current, err := s.interviewDB.GetInterviewDetail(ctx, in.ID)

@@ -27,6 +27,15 @@ func lockCycle(tx *gorm.DB, cycleID string) error {
 	return tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("cycle_id = ?", cycleID).Find(&steps).Error
 }
 
+// HoldCycle makes releases and advances wait for tx without blocking other holders.
+func HoldCycle(tx *gorm.DB, cycleID string) error {
+	if err := EnsureSteps(tx, cycleID); err != nil {
+		return err
+	}
+	var steps []models.CycleStep
+	return tx.Clauses(clause.Locking{Strength: "SHARE"}).Where("cycle_id = ?", cycleID).Find(&steps).Error
+}
+
 func Load(db *gorm.DB, cycleID string) (*Facts, error) {
 	f := NewFacts(cycleID)
 

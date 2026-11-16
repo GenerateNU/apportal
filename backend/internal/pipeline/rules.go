@@ -451,6 +451,7 @@ const (
 	OpSubmit        Op = "submit"
 	OpAdvance       Op = "advance"
 	OpUndo          Op = "undo"
+	OpAssign        Op = "assign"
 )
 
 // Step is the step moved out of for OpAdvance, and the step moved into for OpUndo.
@@ -474,7 +475,7 @@ func (f *Facts) Lock(a Action) error {
 		if f.StartedAnywhere(a.Step) {
 			return conflict("%s settings are locked once the step starts", Label(a.Step))
 		}
-	case OpSetDeadline, OpRelease, OpUnrelease, OpSubmit, OpUndo:
+	case OpSetDeadline, OpRelease, OpUnrelease, OpSubmit, OpUndo, OpAssign:
 		if f.Frozen(a.RoleID, a.Step) && !a.Admin {
 			return f.frozenErr(a.RoleID, a.Step)
 		}
