@@ -248,7 +248,7 @@ function PipelineSection({ cycleId }: { cycleId: string }) {
   return (
     <section className="flex flex-col gap-3">
       <SectionIntro title="Pipeline">
-        <Tooltip label="Custom workflows are in progress">
+        <Tooltip label="Adding your own steps is coming soon">
           <Info size={13} className="text-text-subtle" />
         </Tooltip>
       </SectionIntro>
