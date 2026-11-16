@@ -3,6 +3,7 @@ package answer
 import (
 	"context"
 	"encoding/json"
+	"slices"
 	"strings"
 
 	"gorm.io/gorm"
@@ -47,37 +48,41 @@ func (in AnswerInput) isEmpty() bool {
 // (application_id, question_id), and returns the full current set.
 func (a *AnswerDB) UpsertAnswers(ctx context.Context, applicationID string, inputs []AnswerInput) ([]models.WrittenAnswer, error) {
 	err := a.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var cleared []string
+		answers := make([]models.WrittenAnswer, 0, len(inputs))
 		for _, in := range inputs {
+			answers = slices.DeleteFunc(answers, func(x models.WrittenAnswer) bool { return x.QuestionID == in.QuestionID })
 			if in.isEmpty() {
-				err := tx.Where("application_id = ? AND question_id = ?", applicationID, in.QuestionID).
-					Delete(&models.WrittenAnswer{}).Error
-				if err != nil {
-					return err
-				}
+				cleared = append(cleared, in.QuestionID)
 				continue
 			}
-			answer := models.WrittenAnswer{
+			answers = append(answers, models.WrittenAnswer{
 				ApplicationID:  applicationID,
 				QuestionID:     in.QuestionID,
 				AnswerText:     in.AnswerText,
 				AnswerOptions:  in.AnswerOptions,
 				AnswerFilePath: in.AnswerFilePath,
 				AnswerFileName: in.AnswerFileName,
-			}
-			err := tx.Select("application_id", "question_id", "answer_text", "answer_options", "answer_file_path", "answer_file_name").
-				Clauses(clause.OnConflict{
-					Columns: []clause.Column{{Name: "application_id"}, {Name: "question_id"}},
-					DoUpdates: append(
-						clause.AssignmentColumns([]string{"answer_text", "answer_options", "answer_file_path", "answer_file_name"}),
-						clause.Assignment{Column: clause.Column{Name: "submitted_at"}, Value: gorm.Expr("NOW()")},
-					),
-				}).
-				Create(&answer).Error
-			if err != nil {
-				return utils.DBErr(err)
+			})
+		}
+		if len(cleared) > 0 {
+			if err := tx.Where("application_id = ? AND question_id IN ?", applicationID, cleared).Delete(&models.WrittenAnswer{}).Error; err != nil {
+				return err
 			}
 		}
-		return nil
+		if len(answers) == 0 {
+			return nil
+		}
+		err := tx.Select("application_id", "question_id", "answer_text", "answer_options", "answer_file_path", "answer_file_name").
+			Clauses(clause.OnConflict{
+				Columns: []clause.Column{{Name: "application_id"}, {Name: "question_id"}},
+				DoUpdates: append(
+					clause.AssignmentColumns([]string{"answer_text", "answer_options", "answer_file_path", "answer_file_name"}),
+					clause.Assignment{Column: clause.Column{Name: "submitted_at"}, Value: gorm.Expr("NOW()")},
+				),
+			}).
+			Create(&answers).Error
+		return utils.DBErr(err)
 	})
 	if err != nil {
 		return nil, err

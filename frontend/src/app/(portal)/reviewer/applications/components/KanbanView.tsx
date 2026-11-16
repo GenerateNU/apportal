@@ -14,7 +14,7 @@ export function KanbanView({
   onOpen: (applicationId: string) => void
 }) {
   return (
-    <div className="flex gap-5 overflow-x-auto pb-4">
+    <div className="flex min-h-0 flex-1 gap-5 overflow-x-auto pb-4">
       {ORDERED_STAGES.map((stage) => (
         <KanbanColumn
           key={stage}

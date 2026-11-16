@@ -98,6 +98,8 @@ export const queryKeys = {
     detail: (id: string) => [...queryKeys.cycles.details(), id] as const,
     templateSummary: (id: string) =>
       [...queryKeys.cycles.all, 'template-summary', id] as const,
+    templateSummaries: (ids: string[]) =>
+      [...queryKeys.cycles.all, 'template-summaries', ids] as const,
   },
 
   applicationTemplates: {

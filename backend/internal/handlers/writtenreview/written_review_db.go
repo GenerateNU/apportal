@@ -3,6 +3,7 @@ package writtenreview
 import (
 	"context"
 	"encoding/json"
+	"slices"
 	"strings"
 
 	"github.com/GenerateNU/apportal/backend/internal/workflow"
@@ -101,36 +102,39 @@ func (w *WrittenReviewDB) UpsertWrittenReview(ctx context.Context, in WrittenRev
 			}
 		}
 
+		var cleared []string
+		answers := make([]models.WrittenReviewAnswer, 0, len(in.Answers))
 		for _, a := range in.Answers {
+			answers = slices.DeleteFunc(answers, func(x models.WrittenReviewAnswer) bool { return x.ReviewQuestionID == a.ReviewQuestionID })
 			if a.isEmpty() {
-				err := tx.Where("review_id = ? AND review_question_id = ?", review.ID, a.ReviewQuestionID).
-					Delete(&models.WrittenReviewAnswer{}).Error
-				if err != nil {
-					return err
-				}
+				cleared = append(cleared, a.ReviewQuestionID)
 				continue
 			}
-			answer := models.WrittenReviewAnswer{
+			answers = append(answers, models.WrittenReviewAnswer{
 				ReviewID:         review.ID,
 				ReviewQuestionID: a.ReviewQuestionID,
 				AnswerText:       a.AnswerText,
 				AnswerOptions:    a.AnswerOptions,
 				Score:            a.Score,
-			}
-			err := tx.Select("review_id", "review_question_id", "answer_text", "answer_options", "score").
-				Clauses(clause.OnConflict{
-					Columns: []clause.Column{{Name: "review_id"}, {Name: "review_question_id"}},
-					DoUpdates: append(
-						clause.AssignmentColumns([]string{"answer_text", "answer_options", "score"}),
-						clause.Assignment{Column: clause.Column{Name: "submitted_at"}, Value: gorm.Expr("NOW()")},
-					),
-				}).
-				Create(&answer).Error
-			if err != nil {
+			})
+		}
+		if len(cleared) > 0 {
+			if err := tx.Where("review_id = ? AND review_question_id IN ?", review.ID, cleared).Delete(&models.WrittenReviewAnswer{}).Error; err != nil {
 				return err
 			}
 		}
-		return nil
+		if len(answers) == 0 {
+			return nil
+		}
+		return tx.Select("review_id", "review_question_id", "answer_text", "answer_options", "score").
+			Clauses(clause.OnConflict{
+				Columns: []clause.Column{{Name: "review_id"}, {Name: "review_question_id"}},
+				DoUpdates: append(
+					clause.AssignmentColumns([]string{"answer_text", "answer_options", "score"}),
+					clause.Assignment{Column: clause.Column{Name: "submitted_at"}, Value: gorm.Expr("NOW()")},
+				),
+			}).
+			Create(&answers).Error
 	})
 	if err != nil {
 		return detail, err

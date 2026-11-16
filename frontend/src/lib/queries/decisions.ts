@@ -13,6 +13,7 @@ import type {
   DecisionRow,
   DecisionTemplate,
 } from '@/lib/api/types'
+import { chunkIds } from './interviews'
 import { queryKeys } from './keys'
 
 export interface DecisionListParams {
@@ -63,10 +64,16 @@ export async function fetchDecisionContext(
   applicationIds: string[],
   opts?: RequestOptions
 ) {
-  const entries = ((await listDecisionContext(
-    { application_ids: applicationIds.join(',') },
-    opts
-  )) ?? []) as DecisionContext[]
+  const batches = await Promise.all(
+    chunkIds(applicationIds).map(
+      async (ids) =>
+        ((await listDecisionContext(
+          { application_ids: ids.join(',') },
+          opts
+        )) ?? []) as DecisionContext[]
+    )
+  )
+  const entries = batches.flat()
 
   const byApplicationId: Record<string, DecisionContext> = {}
   for (const entry of entries) byApplicationId[entry.application_id] = entry

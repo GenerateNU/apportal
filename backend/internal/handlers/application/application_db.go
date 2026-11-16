@@ -6,7 +6,9 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/danielgtaylor/huma/v2"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
@@ -283,6 +285,29 @@ func (a *ApplicationDB) UpdateApplication(ctx context.Context, id string, in App
 		var err error
 		out, err = utils.UpdateReturning[models.Application](tx, updates, "id = ?", id)
 		return err
+	})
+	return out, err
+}
+
+// SetStages moves submitted applications to stage together: one guard, so at most one override to confirm.
+func (a *ApplicationDB) SetStages(ctx context.Context, ids []string, stage models.ApplicationStage) ([]models.Application, error) {
+	out := []models.Application{}
+	err := a.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var drafts int64
+		if err := tx.Model(&models.Application{}).Where("id IN ? AND stage = ?", ids, models.StageDraft).Count(&drafts).Error; err != nil {
+			return err
+		}
+		if drafts > 0 {
+			return huma.Error422UnprocessableEntity("drafts can't be moved; only their applicant can submit them")
+		}
+		moves := make([]workflow.Move, 0, len(ids))
+		for _, id := range ids {
+			moves = append(moves, workflow.Move{ApplicationID: id, To: stage})
+		}
+		if err := workflow.GuardMoves(ctx, tx, moves...); err != nil {
+			return err
+		}
+		return tx.Model(&out).Clauses(clause.Returning{}).Where("id IN ?", ids).UpdateColumn("stage", stage).Error
 	})
 	return out, err
 }

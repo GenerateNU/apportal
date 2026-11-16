@@ -7,6 +7,7 @@ import {
 } from '@/generated/chief-reviews/chief-reviews'
 import type { RequestOptions } from '@/lib/api/orval-mutator'
 import type { ChiefReview } from '@/lib/api/types'
+import { chunkIds } from './interviews'
 import { queryKeys } from './keys'
 
 // Shared by the client hook below and the queue page's server-side prefetch,
@@ -17,10 +18,16 @@ export async function fetchChiefReviewsBatch(
   queryClient: QueryClient,
   opts?: RequestOptions
 ): Promise<Record<string, ChiefReview[]>> {
-  const reviews = ((await listChiefReviewsBulk(
-    { application_ids: applicationIds.join(',') },
-    opts
-  )) ?? []) as ChiefReview[]
+  const batches = await Promise.all(
+    chunkIds(applicationIds).map(
+      async (ids) =>
+        ((await listChiefReviewsBulk(
+          { application_ids: ids.join(',') },
+          opts
+        )) ?? []) as ChiefReview[]
+    )
+  )
+  const reviews = batches.flat()
 
   const byApplicationId: Record<string, ChiefReview[]> = {}
   for (const id of applicationIds) byApplicationId[id] = []

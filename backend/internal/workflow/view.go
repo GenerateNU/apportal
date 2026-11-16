@@ -137,33 +137,32 @@ func (f *CycleState) Overview(c Caller, now time.Time, late LateCounts, counts [
 
 func loadLate(db *gorm.DB, cycleID string) (LateCounts, error) {
 	late := LateCounts{}
+	deadline := "JOIN opening_deadlines d ON d.cycle_id = a.cycle_id AND d.role_id = a.role_id AND d.step = ? AND d.kind = ?"
 	var rows []struct {
+		Step   models.Step
+		Kind   models.StepKind
 		RoleID string
 		N      int
 	}
-	add := func(s models.Step, k models.StepKind) {
-		for _, r := range rows {
-			kk := key{r.RoleID, s}
-			if late[kk] == nil {
-				late[kk] = map[models.StepKind]int{}
-			}
-			late[kk][k] = r.N
+	err := db.Raw("? UNION ALL ?",
+		db.Table("applications a").Select("? AS step, ? AS kind, a.role_id, count(*) AS n", models.StepApplications, models.KindApplicant).
+			Joins(deadline, models.StepApplications, models.KindApplicant).
+			Where("a.cycle_id = ? AND a.submitted_at > d.due_at", cycleID).Group("a.role_id"),
+		db.Table("written_reviews w").Select("? AS step, ? AS kind, a.role_id, count(*) AS n", models.StepReviews, models.KindReviewer).
+			Joins("JOIN applications a ON a.id = w.application_id").
+			Joins(deadline, models.StepReviews, models.KindReviewer).
+			Where("a.cycle_id = ? AND w.submitted_at > d.due_at", cycleID).Group("a.role_id"),
+	).Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	for _, r := range rows {
+		k := key{r.RoleID, r.Step}
+		if late[k] == nil {
+			late[k] = map[models.StepKind]int{}
 		}
+		late[k][r.Kind] = r.N
 	}
-	if err := db.Table("applications a").Select("a.role_id, count(*) AS n").
-		Joins("JOIN opening_deadlines d ON d.cycle_id = a.cycle_id AND d.role_id = a.role_id AND d.step = ? AND d.kind = ?", models.StepApplications, models.KindApplicant).
-		Where("a.cycle_id = ? AND a.submitted_at > d.due_at", cycleID).Group("a.role_id").Scan(&rows).Error; err != nil {
-		return nil, err
-	}
-	add(models.StepApplications, models.KindApplicant)
-	rows = nil
-	if err := db.Table("written_reviews w").Select("a.role_id, count(*) AS n").
-		Joins("JOIN applications a ON a.id = w.application_id").
-		Joins("JOIN opening_deadlines d ON d.cycle_id = a.cycle_id AND d.role_id = a.role_id AND d.step = ? AND d.kind = ?", models.StepReviews, models.KindReviewer).
-		Where("a.cycle_id = ? AND w.submitted_at > d.due_at", cycleID).Group("a.role_id").Scan(&rows).Error; err != nil {
-		return nil, err
-	}
-	add(models.StepReviews, models.KindReviewer)
 	return late, nil
 }
 
@@ -173,63 +172,39 @@ func loadTaskCounts(db *gorm.DB, cycleID, nuid string) ([]TaskCount, error) {
 	if in, err := InStaffPool(db, cycleID, nuid); err != nil || !in {
 		return out, err
 	}
-	scan := func(kind TaskKind, q *gorm.DB) error {
-		var rows []struct {
-			RoleID string
-			Total  int
-			Done   int
-		}
-		if err := q.Scan(&rows).Error; err != nil {
-			return err
-		}
-		for _, r := range rows {
-			out = append(out, TaskCount{Kind: kind, RoleID: r.RoleID, Total: r.Total, Done: r.Done})
-		}
-		return nil
-	}
-	if err := scan(TaskReview, db.Table("lead_assignments la").
-		Select("a.role_id, count(*) AS total, count(w.submitted_at) AS done").
-		Joins("JOIN applications a ON a.id = la.application_id").
-		Joins("LEFT JOIN written_reviews w ON w.application_id = la.application_id AND w.reviewer_nuid = la.lead_nuid").
-		Where("a.cycle_id = ? AND la.lead_nuid = ?", cycleID, nuid).Group("a.role_id")); err != nil {
-		return nil, err
-	}
-	if err := scan(TaskInterview, db.Table("interviewers x").
-		Select("a.role_id, count(*) AS total, count(i.submitted_at) AS done").
-		Joins("JOIN interviews i ON i.id = x.interview_id").
-		Joins("JOIN applications a ON a.id = i.application_id").
-		Where("a.cycle_id = ? AND x.interviewer_nuid = ?", cycleID, nuid).Group("a.role_id")); err != nil {
-		return nil, err
-	}
-	if err := scan(TaskRecordingReview, db.Table("interview_reviewers r").
-		Select("a.role_id, count(*) AS total, count(r.writeup_submitted_at) AS done").
-		Joins("JOIN interviews i ON i.id = r.interview_id").
-		Joins("JOIN applications a ON a.id = i.application_id").
-		Where("a.cycle_id = ? AND r.reviewer_nuid = ?", cycleID, nuid).Group("a.role_id")); err != nil {
-		return nil, err
-	}
-	if err := scan(TaskPreferenceList, db.Table("preference_list_members m").
-		Select("'' AS role_id, count(*) AS total, count(*) FILTER (WHERE pl.status = ?) AS done", models.PreferenceListSubmitted).
-		Joins("JOIN preference_lists pl ON pl.id = m.preference_list_id").
-		Where("pl.cycle_id = ? AND m.lead_nuid = ?", cycleID, nuid).Having("count(*) > 0")); err != nil {
-		return nil, err
-	}
-	if err := scan(TaskDraft, db.Table("drafts d").
-		Select("d.role_id, count(DISTINCT d.id) AS total, count(DISTINCT d.id) FILTER (WHERE d.status = 'complete') AS done").
-		Joins("JOIN draft_teams t ON t.draft_id = d.id").
-		Joins("JOIN preference_list_members m ON m.preference_list_id = t.preference_list_id").
-		Where("d.cycle_id = ? AND m.lead_nuid = ? AND d.status <> 'setup'", cycleID, nuid).Group("d.role_id")); err != nil {
-		return nil, err
-	}
-	if err := scan(TaskFeedback, db.Table("applications a").
-		Select(`a.role_id, count(DISTINCT a.id) AS total, count(DISTINCT a.id) FILTER (WHERE dd.sent_at IS NOT NULL
-			OR COALESCE(dd.body_override, '') <> ''
-			OR (COALESCE(dd.feedback, '') <> '' AND COALESCE(dd.compliments, '') <> '')) AS done`).
-		Joins("JOIN interviews i ON i.application_id = a.id").
-		Joins("JOIN interviewers x ON x.interview_id = i.id").
-		Joins("LEFT JOIN decision_drafts dd ON dd.application_id = a.id AND dd.kind = ?", models.DecisionRejectionPostInterview).
-		Where("a.cycle_id = ? AND a.stage = ? AND x.interviewer_nuid = ?", cycleID, models.StageRejected, nuid).Group("a.role_id")); err != nil {
-		return nil, err
-	}
-	return out, nil
+	err := db.Raw("? UNION ALL ? UNION ALL ? UNION ALL ? UNION ALL ? UNION ALL ?",
+		db.Table("lead_assignments la").
+			Select("? AS kind, a.role_id::text AS role_id, count(*) AS total, count(w.submitted_at) AS done", TaskReview).
+			Joins("JOIN applications a ON a.id = la.application_id").
+			Joins("LEFT JOIN written_reviews w ON w.application_id = la.application_id AND w.reviewer_nuid = la.lead_nuid").
+			Where("a.cycle_id = ? AND la.lead_nuid = ?", cycleID, nuid).Group("a.role_id"),
+		db.Table("interviewers x").
+			Select("? AS kind, a.role_id::text AS role_id, count(*) AS total, count(i.submitted_at) AS done", TaskInterview).
+			Joins("JOIN interviews i ON i.id = x.interview_id").
+			Joins("JOIN applications a ON a.id = i.application_id").
+			Where("a.cycle_id = ? AND x.interviewer_nuid = ?", cycleID, nuid).Group("a.role_id"),
+		db.Table("interview_reviewers r").
+			Select("? AS kind, a.role_id::text AS role_id, count(*) AS total, count(r.writeup_submitted_at) AS done", TaskRecordingReview).
+			Joins("JOIN interviews i ON i.id = r.interview_id").
+			Joins("JOIN applications a ON a.id = i.application_id").
+			Where("a.cycle_id = ? AND r.reviewer_nuid = ?", cycleID, nuid).Group("a.role_id"),
+		db.Table("preference_list_members m").
+			Select("? AS kind, '' AS role_id, count(*) AS total, count(*) FILTER (WHERE pl.status = ?) AS done", TaskPreferenceList, models.PreferenceListSubmitted).
+			Joins("JOIN preference_lists pl ON pl.id = m.preference_list_id").
+			Where("pl.cycle_id = ? AND m.lead_nuid = ?", cycleID, nuid).Having("count(*) > 0"),
+		db.Table("drafts d").
+			Select("? AS kind, d.role_id::text AS role_id, count(DISTINCT d.id) AS total, count(DISTINCT d.id) FILTER (WHERE d.status = 'complete') AS done", TaskDraft).
+			Joins("JOIN draft_teams t ON t.draft_id = d.id").
+			Joins("JOIN preference_list_members m ON m.preference_list_id = t.preference_list_id").
+			Where("d.cycle_id = ? AND m.lead_nuid = ? AND d.status <> 'setup'", cycleID, nuid).Group("d.role_id"),
+		db.Table("applications a").
+			Select(`? AS kind, a.role_id::text AS role_id, count(DISTINCT a.id) AS total, count(DISTINCT a.id) FILTER (WHERE dd.sent_at IS NOT NULL
+				OR COALESCE(dd.body_override, '') <> ''
+				OR (COALESCE(dd.feedback, '') <> '' AND COALESCE(dd.compliments, '') <> '')) AS done`, TaskFeedback).
+			Joins("JOIN interviews i ON i.application_id = a.id").
+			Joins("JOIN interviewers x ON x.interview_id = i.id").
+			Joins("LEFT JOIN decision_drafts dd ON dd.application_id = a.id AND dd.kind = ?", models.DecisionRejectionPostInterview).
+			Where("a.cycle_id = ? AND a.stage = ? AND x.interviewer_nuid = ?", cycleID, models.StageRejected, nuid).Group("a.role_id"),
+	).Scan(&out).Error
+	return out, err
 }

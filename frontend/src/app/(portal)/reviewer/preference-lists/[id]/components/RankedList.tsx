@@ -170,7 +170,7 @@ export function RankedList({
             items={visible.map((e) => e.application_id)}
             strategy={verticalListSortingStrategy}
           >
-            <ol className="flex flex-col gap-2">
+            <ol className="flex flex-col gap-2 lg:max-h-[calc(100dvh-20rem)] lg:overflow-y-auto">
               {visible.map((entry) => (
                 <EntryRow
                   key={entry.id}

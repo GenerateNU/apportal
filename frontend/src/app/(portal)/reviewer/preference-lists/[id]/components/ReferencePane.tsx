@@ -46,7 +46,7 @@ export function ReferencePane({
       {entries.length === 0 ? (
         <p className="text-text-faint text-sm">{emptyText}</p>
       ) : (
-        <ol className="flex flex-col gap-2">
+        <ol className="flex flex-col gap-2 lg:max-h-[calc(100dvh-20rem)] lg:overflow-y-auto">
           {entries.map((entry, index) => {
             const already = presentIds.has(entry.application_id)
             const badge = availabilityBadgeFor(entry.application_id, role)

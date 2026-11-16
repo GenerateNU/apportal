@@ -264,7 +264,7 @@ function TeamRow({
   roles: { roleId: string; picks: DraftPickDetail[]; picking: boolean }[]
   roleLabel: (id: string) => string
 }) {
-  const [open, setOpen] = useState(true)
+  const [open, setOpen] = useState(ours)
   const pickingNow = roles.some((r) => r.picking)
 
   return (

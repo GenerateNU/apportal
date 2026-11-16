@@ -6,15 +6,13 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"gorm.io/gorm"
 
-	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
-
 	"github.com/GenerateNU/apportal/backend/internal/access"
 )
 
 func Route(api huma.API, db *gorm.DB) {
 	cycleDB := NewCycleDB(db)
 
-	registerCycle(api, &cycleService{access: access.NewChecker(db), cycleDB: cycleDB, roleDB: role.NewRoleDB(db)})
+	registerCycle(api, &cycleService{access: access.NewChecker(db), cycleDB: cycleDB})
 }
 
 func registerCycle(api huma.API, s *cycleService) {
@@ -37,11 +35,20 @@ func registerCycle(api huma.API, s *cycleService) {
 	}, s.get)
 
 	huma.Register(api, huma.Operation{
+		OperationID: "cycle-template-summaries",
+		Method:      http.MethodGet,
+		Path:        "/cycles/template-summaries",
+		Summary:     "Per-role template summaries for several cycles",
+		Description: "The template summary of each requested cycle the caller can review, in one call. Cycles the caller can't review are left out.",
+		Tags:        []string{"Cycles"},
+	}, s.templateSummaries)
+
+	huma.Register(api, huma.Operation{
 		OperationID: "cycle-template-summary",
 		Method:      http.MethodGet,
 		Path:        "/cycles/{id}/template-summary",
 		Summary:     "Per-role template counts for a cycle",
-		Description: "One entry per role of the cycle: question count (role-specific plus global), code challenge count, and submitted application count — computed via COUNT queries instead of requiring the full row sets.",
+		Description: "One entry per role of the cycle: question count (role-specific plus global), code challenge count, and submitted application count — plus the form title and whether applications are open.",
 		Tags:        []string{"Cycles"},
 	}, s.templateSummary)
 

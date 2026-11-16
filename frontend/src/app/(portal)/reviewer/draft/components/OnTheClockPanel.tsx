@@ -118,7 +118,7 @@ export function OnTheClockPanel({
             This group hasn&apos;t ranked anyone for this role.
           </p>
         ) : (
-          <ol className="flex flex-col gap-2">
+          <ol className="flex max-h-96 flex-col gap-2 overflow-y-auto">
             {entries.map((entry) => {
               const takenBy = takenByApplicationId[entry.application_id]
               return (

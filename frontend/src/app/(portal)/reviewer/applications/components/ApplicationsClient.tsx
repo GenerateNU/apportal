@@ -14,8 +14,9 @@ import { SegmentedTabs } from '@/components/ui/segmented-tabs'
 import { useAnswersByApplicationIdBatches } from '@/lib/queries/answers'
 import {
   useInfiniteApplications,
-  useUpdateApplication,
+  useUpdateApplicationStages,
 } from '@/lib/queries/applications'
+import { chunkIds } from '@/lib/queries/interviews'
 import { useCycleScope } from '@/hooks/useCycleScope'
 import { useMyCycles } from '@/lib/queries/cycle-staff'
 import { useCurrentUser } from '@/lib/queries/users'
@@ -70,7 +71,7 @@ export function ApplicationsClient() {
   const [bulkStage, setBulkStage] = useState<ApplicationStage | ''>('')
   const [applyingBulk, setApplyingBulk] = useState(false)
   const [bulkFailed, setBulkFailed] = useState(0)
-  const updateApplication = useUpdateApplication()
+  const updateStages = useUpdateApplicationStages()
 
   // The search box stays instant while the request it drives waits for a
   // pause in typing.
@@ -302,12 +303,17 @@ export function ApplicationsClient() {
     if (!bulkStage || selectedIds.size === 0) return
     setApplyingBulk(true)
     setBulkFailed(0)
-    const results = await Promise.allSettled(
-      [...selectedIds].map((id) =>
-        updateApplication.mutateAsync({ id, body: { stage: bulkStage } })
-      )
-    )
-    const failures = results.filter((r) => r.status === 'rejected').length
+    let failures = 0
+    for (const ids of chunkIds([...selectedIds])) {
+      try {
+        await updateStages.mutateAsync({
+          application_ids: ids,
+          stage: bulkStage,
+        })
+      } catch {
+        failures += ids.length
+      }
+    }
     setBulkFailed(failures)
     if (failures === 0) setSelectedIds(new Set())
     setApplyingBulk(false)

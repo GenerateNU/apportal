@@ -32,7 +32,10 @@ describe('cycleApplicationCards', () => {
       [template('r2', 'Mobile Application'), template('r1', 'Web Application')],
       [
         {
+          cycle_id: fall.id,
           role_id: 'r1',
+          title: 'Web Application',
+          status: 'draft',
           question_count: 4,
           challenge_count: 1,
           submission_count: 9,

@@ -10,6 +10,7 @@ import {
   getApplication,
   listApplications,
   updateApplication,
+  updateApplicationStages,
 } from '@/generated/applications/applications'
 import type { RequestOptions } from '@/lib/api/orval-mutator'
 import type {
@@ -173,6 +174,22 @@ export function useUpdateApplication() {
     }) => updateApplication(vars.id, vars.body, vars.opts),
     onSuccess: (data, vars) => {
       queryClient.setQueryData(queryKeys.applications.detail(vars.id), data)
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.applications.lists(),
+      })
+    },
+  })
+}
+
+export function useUpdateApplicationStages() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (vars: Parameters<typeof updateApplicationStages>[0]) =>
+      updateApplicationStages(vars),
+    onSuccess: (data) => {
+      for (const app of data ?? []) {
+        queryClient.setQueryData(queryKeys.applications.detail(app.id), app)
+      }
       queryClient.invalidateQueries({
         queryKey: queryKeys.applications.lists(),
       })

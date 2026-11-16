@@ -2,11 +2,12 @@ package cycle
 
 import (
 	"context"
+	"slices"
 
-	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
+	"github.com/danielgtaylor/huma/v2"
+
 	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
-	"github.com/danielgtaylor/huma/v2"
 
 	"github.com/GenerateNU/apportal/backend/internal/access"
 )
@@ -14,7 +15,6 @@ import (
 type cycleService struct {
 	access  *access.Checker
 	cycleDB *CycleDB
-	roleDB  *role.RoleDB
 }
 
 func (s *cycleService) create(ctx context.Context, in *CreateCycleInput) (*CycleOutput, error) {
@@ -67,15 +67,27 @@ func (s *cycleService) templateSummary(ctx context.Context, in *CycleIDInput) (*
 	if err := s.access.CanCycle(ctx, access.ReviewCycle, in.ID); err != nil {
 		return nil, err
 	}
-	roles, err := s.roleDB.ListCycleRoles(ctx, in.ID)
+	summaries, err := s.cycleDB.CycleRoleSummaries(ctx, []string{in.ID})
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
-	ids := make([]string, len(roles))
-	for i, r := range roles {
-		ids[i] = r.ID
+	return &CycleTemplateSummaryOutput{Body: summaries}, nil
+}
+
+// templateSummaries skips cycles the caller can't review rather than failing the batch.
+func (s *cycleService) templateSummaries(ctx context.Context, in *TemplateSummariesInput) (*CycleTemplateSummaryOutput, error) {
+	requested := utils.SplitIDs(in.CycleIDs)
+	if len(requested) > maxBulkCycles {
+		return nil, huma.Error422UnprocessableEntity("too many cycle_ids")
 	}
-	summaries, err := s.cycleDB.CycleRoleSummaries(ctx, in.ID, ids)
+	var visible []string
+	if len(requested) > 0 {
+		if err := s.access.VisibleCycleIDs(ctx, access.Review).Where("c.id IN ?", requested).Pluck("c.id", &visible).Error; err != nil {
+			return nil, utils.StoreErr(err)
+		}
+	}
+	ids := slices.DeleteFunc(requested, func(id string) bool { return !slices.Contains(visible, id) })
+	summaries, err := s.cycleDB.CycleRoleSummaries(ctx, ids)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}

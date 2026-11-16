@@ -2,6 +2,8 @@ package cycle
 
 import (
 	"context"
+	"slices"
+	"time"
 
 	"gorm.io/gorm"
 
@@ -71,63 +73,89 @@ func (c *CycleDB) GetCycle(ctx context.Context, id string, f CycleFilter) (model
 	return cycle, utils.DBErr(err)
 }
 
-func (c *CycleDB) CycleRoleSummaries(ctx context.Context, cycleID string, roleIDs []string) ([]models.CycleRoleSummary, error) {
+// CycleRoleSummaries reports every role of the given cycles, in cycle order then role order.
+func (c *CycleDB) CycleRoleSummaries(ctx context.Context, cycleIDs []string) ([]models.CycleRoleSummary, error) {
 	db := c.db.WithContext(ctx)
+	out := []models.CycleRoleSummary{}
+	if len(cycleIDs) == 0 {
+		return out, nil
+	}
+	if err := db.Table("roles r").
+		Select("r.cycle_id, r.id AS role_id, COALESCE(at.title, r.name || ' Application') AS title").
+		Joins("LEFT JOIN application_templates at ON at.cycle_id = r.cycle_id AND at.role_id = r.id").
+		Where("r.cycle_id IN ?", cycleIDs).
+		Order("r.created_at").Order("r.name").
+		Scan(&out).Error; err != nil {
+		return nil, err
+	}
+	slices.SortStableFunc(out, func(a, b models.CycleRoleSummary) int {
+		return slices.Index(cycleIDs, a.CycleID) - slices.Index(cycleIDs, b.CycleID)
+	})
 	type count struct {
-		RoleID *string
-		N      int
+		CycleID string
+		RoleID  *string
+		N       int
 	}
-	grouped := func(q *gorm.DB) (map[string]int, int, error) {
+	type at struct{ cycle, role string }
+	grouped := func(q *gorm.DB) (map[at]int, error) {
 		var rows []count
-		if err := q.Select("role_id, count(*) AS n").Group("role_id").Scan(&rows).Error; err != nil {
-			return nil, 0, err
+		if err := q.Select("cycle_id, role_id, count(*) AS n").Where("cycle_id IN ?", cycleIDs).Group("cycle_id, role_id").Scan(&rows).Error; err != nil {
+			return nil, err
 		}
-		out, global := map[string]int{}, 0
+		m := map[at]int{}
 		for _, r := range rows {
-			if r.RoleID == nil {
-				global = r.N
-			} else {
-				out[*r.RoleID] = r.N
+			role := ""
+			if r.RoleID != nil {
+				role = *r.RoleID
 			}
+			m[at{r.CycleID, role}] = r.N
 		}
-		return out, global, nil
+		return m, nil
 	}
-	questions, globalQuestions, err := grouped(db.Model(&models.Question{}).Where("cycle_id = ?", cycleID))
+	questions, err := grouped(db.Model(&models.Question{}))
 	if err != nil {
 		return nil, err
 	}
-	challenges, _, err := grouped(db.Model(&models.CodeChallenge{}).Where("cycle_id = ?", cycleID))
+	challenges, err := grouped(db.Model(&models.CodeChallenge{}))
 	if err != nil {
 		return nil, err
 	}
-	submissions, _, err := grouped(db.Model(&models.Application{}).Where("cycle_id = ? AND stage != ?", cycleID, models.StageDraft))
+	submissions, err := grouped(db.Model(&models.Application{}).Where("stage != ?", models.StageDraft))
 	if err != nil {
 		return nil, err
 	}
 	var scripts []struct {
+		CycleID   string
 		RoleID    string
 		Questions int
 		Written   bool
 	}
-	if err := db.Raw(`SELECT role_id, jsonb_array_length(questions) AS questions,
+	if err := db.Raw(`SELECT cycle_id, role_id, jsonb_array_length(questions) AS questions,
 			(intro_speech <> '' OR jsonb_array_length(questions) > 0) AS written
-		FROM interview_script WHERE cycle_id = ?`, cycleID).Scan(&scripts).Error; err != nil {
+		FROM interview_script WHERE cycle_id IN ?`, cycleIDs).Scan(&scripts).Error; err != nil {
 		return nil, err
 	}
-	out := make([]models.CycleRoleSummary, 0, len(roleIDs))
-	for _, id := range roleIDs {
-		sum := models.CycleRoleSummary{
-			RoleID:          id,
-			QuestionCount:   globalQuestions + questions[id],
-			ChallengeCount:  challenges[id],
-			SubmissionCount: submissions[id],
+	script := map[at]int{}
+	for i, sc := range scripts {
+		script[at{sc.CycleID, sc.RoleID}] = i
+	}
+	templates := make([]models.ApplicationTemplate, len(out))
+	for i, sum := range out {
+		templates[i] = models.ApplicationTemplate{CycleID: sum.CycleID, RoleID: sum.RoleID}
+	}
+	if err := workflow.FillTemplates(db, templates, time.Now()); err != nil {
+		return nil, err
+	}
+	for i := range out {
+		sum := &out[i]
+		k := at{sum.CycleID, sum.RoleID}
+		sum.QuestionCount = questions[at{sum.CycleID, ""}] + questions[k]
+		sum.ChallengeCount = challenges[k]
+		sum.SubmissionCount = submissions[k]
+		sum.Status = templates[i].Status
+		if j, ok := script[k]; ok {
+			sum.ScriptQuestions, sum.ScriptWritten = scripts[j].Questions, scripts[j].Written
 		}
-		for _, sc := range scripts {
-			if sc.RoleID == id {
-				sum.ScriptQuestions, sum.ScriptWritten = sc.Questions, sc.Written
-			}
-		}
-		out = append(out, sum)
 	}
 	return out, nil
 }

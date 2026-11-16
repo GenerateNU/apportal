@@ -32,7 +32,9 @@ import type {
   CreateApplicationInputBody,
   ErrorModel,
   ListApplicationsParams,
-  UpdateApplicationInputBody
+  UpdateApplicationInputBody,
+  UpdateApplicationStages200,
+  UpdateApplicationStagesInputBody
 } from '.././model';
 
 import { customInstance } from '../../lib/api/orval-mutator';
@@ -163,6 +165,70 @@ export function useListApplications<TData = Awaited<ReturnType<typeof listApplic
 
 
 /**
+ * Moves several submitted applications at once, all or none, under the same workflow rules as a single stage change.
+ * @summary Move applications to a stage
+ */
+export const updateApplicationStages = (
+    updateApplicationStagesInputBody: NonReadonly<UpdateApplicationStagesInputBody>,
+ options?: SecondParameter<typeof customInstance>,) => {
+      
+      
+      return customInstance<UpdateApplicationStages200>(
+      {url: `/applications`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: updateApplicationStagesInputBody
+    },
+      options);
+    }
+  
+
+
+export const getUpdateApplicationStagesMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateApplicationStages>>, TError,{data: NonReadonly<UpdateApplicationStagesInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateApplicationStages>>, TError,{data: NonReadonly<UpdateApplicationStagesInputBody>}, TContext> => {
+
+const mutationKey = ['updateApplicationStages'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateApplicationStages>>, {data: NonReadonly<UpdateApplicationStagesInputBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateApplicationStages(data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateApplicationStagesMutationResult = NonNullable<Awaited<ReturnType<typeof updateApplicationStages>>>
+    export type UpdateApplicationStagesMutationBody = NonReadonly<UpdateApplicationStagesInputBody>
+    export type UpdateApplicationStagesMutationError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel
+
+    /**
+ * @summary Move applications to a stage
+ */
+export const useUpdateApplicationStages = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateApplicationStages>>, TError,{data: NonReadonly<UpdateApplicationStagesInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof updateApplicationStages>>,
+        TError,
+        {data: NonReadonly<UpdateApplicationStagesInputBody>},
+        TContext
+      > => {
+
+      const mutationOptions = getUpdateApplicationStagesMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
  * One application per applicant, role, and cycle.
  * @summary Submit an application
  */

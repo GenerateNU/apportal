@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/testutil"
 )
 
@@ -29,14 +30,26 @@ func TestCycleRoleSummariesBatched(t *testing.T) {
 		exec("INSERT INTO applications (cycle_id, user_nuid, role_id, stage) VALUES (?, ?, ?, ?)", cycle, nuid, eng, stage)
 	}
 
-	got, err := NewCycleDB(db).CycleRoleSummaries(context.Background(), cycle, []string{eng, design})
+	other, otherRole := uuid.NewString(), uuid.NewString()
+	exec("INSERT INTO cycles (id, branch_id, name, status, application_type) VALUES (?, ?, 'Other', 'open', 'member')", other, branch)
+	exec("INSERT INTO roles (id, cycle_id, name) VALUES (?, ?, 'Eng')", otherRole, other)
+	exec("INSERT INTO application_templates (cycle_id, role_id, title) VALUES (?, ?, 'Join Eng')", cycle, eng)
+
+	got, err := NewCycleDB(db).CycleRoleSummaries(context.Background(), []string{other, cycle})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got[0].QuestionCount != 2 || got[0].SubmissionCount != 2 {
-		t.Errorf("eng: %+v", got[0])
+	if len(got) != 3 || got[0].RoleID != otherRole || got[0].QuestionCount != 0 {
+		t.Fatalf("cycles should come back in the order asked, without each other's counts: %+v", got)
 	}
-	if got[1].QuestionCount != 1 || got[1].SubmissionCount != 0 {
-		t.Errorf("design: %+v", got[1])
+	by := map[string]models.CycleRoleSummary{}
+	for _, s := range got {
+		by[s.RoleID] = s
+	}
+	if e := by[eng]; e.QuestionCount != 2 || e.SubmissionCount != 2 || e.Title != "Join Eng" || e.Status != models.CycleDraft {
+		t.Errorf("eng: %+v", e)
+	}
+	if d := by[design]; d.QuestionCount != 1 || d.SubmissionCount != 0 || d.Title != "Design Application" {
+		t.Errorf("design: %+v", d)
 	}
 }

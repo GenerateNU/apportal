@@ -87,6 +87,17 @@ type UpdateApplicationInput struct {
 	}
 }
 
+type UpdateApplicationStagesInput struct {
+	Body struct {
+		ApplicationIDs []string                `json:"application_ids" minItems:"1" maxItems:"200"`
+		Stage          models.ApplicationStage `json:"stage"`
+	}
+}
+
+type ApplicationStagesOutput struct {
+	Body []models.Application
+}
+
 type ApplicationCreate struct {
 	CycleID      string
 	UserNUID     string

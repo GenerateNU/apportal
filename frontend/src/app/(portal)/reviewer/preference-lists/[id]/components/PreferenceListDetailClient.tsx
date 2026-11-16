@@ -31,6 +31,7 @@ import type {
 } from '@/lib/api/types'
 import { useAnswersByApplicationIdBatches } from '@/lib/queries/answers'
 import { useApplication, useApplications } from '@/lib/queries/applications'
+import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { useDraftedApplications } from '@/lib/queries/drafts'
 import {
   useAddPreferenceListMember,
@@ -56,6 +57,7 @@ import {
   useLeads,
   useReviewerNames,
 } from '@/lib/queries/users'
+import { chunkIds } from '@/lib/queries/interviews'
 import { useQuestionsByCycleRoles } from '@/lib/queries/questions'
 import { useCycleRoles } from '@/lib/queries/roles'
 import { usePersistedFilters } from '@/hooks/usePersistedFilters'
@@ -164,10 +166,20 @@ export function PreferenceListDetailClient({
 
   // The same chips the applications table uses, narrowing the candidates
   // offered in the add-applicant pickers below — applied in SQL, not here.
+  const [candidateQuery, setCandidateQuery] = useState('')
+  const candidateSearch = useDebouncedValue(candidateQuery.trim())
   const { data: applications = [] } = useApplications(
-    list ? { cycle_id: list.cycle_id, ...filterParams } : undefined,
+    list
+      ? {
+          cycle_id: list.cycle_id,
+          ...filterParams,
+          role_id: activeRole || undefined,
+          search: candidateSearch || undefined,
+          limit: CANDIDATE_PAGE,
+        }
+      : undefined,
     undefined,
-    { enabled: !!list }
+    { enabled: !!list && !!activeRole }
   )
 
   // Per list, so a filter set built while drafting one group doesn't follow
@@ -227,10 +239,17 @@ export function PreferenceListDetailClient({
         ),
       ]
     : []
-  const [availabilityAnswers] = useAnswersByApplicationIdBatches([
-    applicationIdsForAvailability,
-  ])
-  const answersByApplicationId = availabilityAnswers?.data ?? {}
+  const availabilityKey = applicationIdsForAvailability.join(',')
+  const availabilityBatches = useMemo(
+    () => chunkIds(availabilityKey ? availabilityKey.split(',') : []),
+    [availabilityKey]
+  )
+  const availabilityAnswers =
+    useAnswersByApplicationIdBatches(availabilityBatches)
+  const answersByApplicationId = Object.assign(
+    {},
+    ...availabilityAnswers.map((q) => q.data ?? {})
+  ) as NonNullable<(typeof availabilityAnswers)[number]['data']>
 
   // Deadlines are still per (cycle, role) — a group covers every role, so we
   // need every role's deadline to know both the current tab's lock state
@@ -664,6 +683,7 @@ export function PreferenceListDetailClient({
             role={activeRole}
             entries={entries}
             candidates={candidatesFor(activeRole, takenIds)}
+            onSearchCandidates={setCandidateQuery}
             locked={editLocked}
             emptyText={
               editingGroup

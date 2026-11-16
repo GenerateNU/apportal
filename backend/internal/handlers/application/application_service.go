@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"encoding/json"
+	"slices"
 	"strings"
 
 	"github.com/GenerateNU/apportal/backend/internal/handlers/answer"
@@ -338,6 +339,25 @@ func (s *applicationService) update(ctx context.Context, in *UpdateApplicationIn
 		return nil, utils.StoreErr(err)
 	}
 	return &ApplicationOutput{Body: updated}, nil
+}
+
+func (s *applicationService) updateStages(ctx context.Context, in *UpdateApplicationStagesInput) (*ApplicationStagesOutput, error) {
+	if !in.Body.Stage.Valid() || in.Body.Stage == models.StageDraft || in.Body.Stage == models.StageSubmitted {
+		return nil, huma.Error422UnprocessableEntity("invalid stage")
+	}
+	ids := slices.Compact(slices.Sorted(slices.Values(in.Body.ApplicationIDs)))
+	managed, err := s.access.VisibleApplicationIDs(ctx, ids, access.Manage)
+	if err != nil {
+		return nil, err
+	}
+	if len(managed) != len(ids) {
+		return nil, huma.Error403Forbidden("chief role required to change an application's stage")
+	}
+	apps, err := s.applicationDB.SetStages(ctx, ids, in.Body.Stage)
+	if err != nil {
+		return nil, utils.StoreErr(err)
+	}
+	return &ApplicationStagesOutput{Body: apps}, nil
 }
 
 // requireComplete checks, server-side, that an application is actually ready

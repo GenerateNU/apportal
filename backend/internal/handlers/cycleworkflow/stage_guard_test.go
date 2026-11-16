@@ -211,3 +211,27 @@ func TestMyWorkflowTasks(t *testing.T) {
 		t.Fatalf("an admin on the staff gets their own tasks, got %+v", got)
 	}
 }
+
+func TestPatchStagesAllOrNone(t *testing.T) {
+	f := newFixture(t)
+	apps := application.NewApplicationDB(f.db)
+	chief, admin := f.as(f.chiefA), f.confirmed(f.admin)
+
+	f.freeze(f.roleA, models.StepReviews)
+	_, err := apps.SetStages(chief, f.apps, models.StageRejected)
+	testutil.WantStatus(t, err, 409)
+	f.wantStage(f.apps[0], models.StageSubmitted)
+	f.wantStage(f.apps[1], models.StageSubmitted)
+
+	moved, err := apps.SetStages(admin, f.apps, models.StageRejected)
+	f.must(err)
+	if len(moved) != 2 || moved[0].Stage != models.StageRejected {
+		t.Fatalf("moved: %+v", moved)
+	}
+	f.wantStage(f.apps[1], models.StageRejected)
+
+	draft := f.application(f.cycleA, f.roleA, models.StageDraft)
+	_, err = apps.SetStages(admin, []string{f.apps[0], draft}, models.StageWithdrawn)
+	testutil.WantStatus(t, err, 422)
+	f.wantStage(f.apps[0], models.StageRejected)
+}

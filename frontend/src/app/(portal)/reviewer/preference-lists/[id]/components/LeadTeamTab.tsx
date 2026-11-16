@@ -325,7 +325,7 @@ export function LeadTeamTab({
               }
             />
           ) : (
-            <ul className="border border-gray-200">
+            <ul className="border border-gray-200 lg:max-h-[calc(100dvh-16rem)] lg:overflow-y-auto">
               {available.map((a) => {
                 const others = alsoOn.get(a.id)?.length ?? 0
                 return (
@@ -420,7 +420,7 @@ export function LeadTeamTab({
                 title={`${viewing.name} hasn't ranked anyone for ${roleLabel(role)} yet.`}
               />
             ) : (
-              <ol className="border border-gray-200">
+              <ol className="border border-gray-200 lg:max-h-[calc(100dvh-16rem)] lg:overflow-y-auto">
                 {viewingEntries.map((e, i) => (
                   <li
                     key={e.id}
@@ -477,7 +477,7 @@ export function LeadTeamTab({
                 items={entries.map((e) => e.application_id)}
                 strategy={verticalListSortingStrategy}
               >
-                <ol className="border border-gray-200">
+                <ol className="border border-gray-200 lg:max-h-[calc(100dvh-16rem)] lg:overflow-y-auto">
                   {entries.map((entry, i) => (
                     <RankRow
                       key={entry.id}

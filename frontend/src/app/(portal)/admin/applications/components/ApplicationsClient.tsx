@@ -8,11 +8,7 @@ import { SectionLabel } from '@/components/ui/section-label'
 import { useMemo, useState } from 'react'
 import { ChevronRight, Folder } from 'lucide-react'
 import type { Cycle } from '@/lib/api/types'
-import { useApplicationTemplatesByCycleRoles } from '@/lib/queries/application-templates'
-import {
-  useCycles,
-  useCycleTemplateSummariesByCycles,
-} from '@/lib/queries/cycles'
+import { useCycles, useCycleTemplateSummaries } from '@/lib/queries/cycles'
 import type { ApplicationTemplateCard } from './types'
 import { cycleStatusDot, cycleStatusLabel } from './constants'
 import { ApplicationRow } from './ApplicationRow'
@@ -46,34 +42,7 @@ export function ApplicationsClient() {
   )
 
   const cycleIds = useMemo(() => cycles.map((c) => c.id), [cycles])
-  const summaryQueries = useCycleTemplateSummariesByCycles(cycleIds)
-  const summaryByCycle = useMemo(() => {
-    const map: Record<string, (typeof summaryQueries)[number]['data']> = {}
-    cycleIds.forEach((id, i) => {
-      map[id] = summaryQueries[i]?.data
-    })
-    return map
-  }, [cycleIds, summaryQueries])
-
-  // A cycle's summaries carry one entry per role of the cycle.
-  const cycleRolePairs = useMemo(
-    () =>
-      cycleIds.flatMap((cycleId) =>
-        (summaryByCycle[cycleId] ?? []).map((s) => ({
-          cycleId,
-          roleId: s.role_id,
-        }))
-      ),
-    [cycleIds, summaryByCycle]
-  )
-  const templateQueries = useApplicationTemplatesByCycleRoles(cycleRolePairs)
-  const templateByCycleRole = useMemo(() => {
-    const map: Record<string, (typeof templateQueries)[number]['data']> = {}
-    cycleRolePairs.forEach(({ cycleId, roleId }, i) => {
-      map[`${cycleId}-${roleId}`] = templateQueries[i]?.data
-    })
-    return map
-  }, [cycleRolePairs, templateQueries])
+  const { data: summaryByCycle = {} } = useCycleTemplateSummaries(cycleIds)
 
   const templatesByCycle = useMemo(() => {
     const map: Record<string, ApplicationTemplateCard[]> = {}
@@ -81,15 +50,14 @@ export function ApplicationsClient() {
       const summaries = summaryByCycle[cycle.id] ?? []
       map[cycle.id] = summaries.map((summary) => {
         const role = summary.role_id
-        const template = templateByCycleRole[`${cycle.id}-${role}`]
         return {
           cycleId: cycle.id,
           cycleName: cycle.name,
           cycleStatus: cycle.status,
           cycleColorIndex,
           role,
-          title: template?.title ?? `${roleLabel(role)} Application`,
-          status: template?.status ?? 'draft',
+          title: summary.title || `${roleLabel(role)} Application`,
+          status: summary.status,
           questionCount: summary.question_count,
           challengeCount: summary.challenge_count,
           submissionCount: summary.submission_count,
@@ -97,7 +65,7 @@ export function ApplicationsClient() {
       })
     })
     return map
-  }, [cycles, summaryByCycle, templateByCycleRole, roleLabel])
+  }, [cycles, summaryByCycle, roleLabel])
 
   const openTemplates = useMemo(
     () => openCycles.flatMap((cycle) => templatesByCycle[cycle.id] ?? []),

@@ -64,6 +64,7 @@ type decisionRow struct {
 	Email            string
 	Stage            models.ApplicationStage
 	Kind             models.DecisionKind
+	Status           models.DecisionStatus
 	InterviewerNUIDs []string `gorm:"serializer:pgarray"`
 	InterviewerNames []string `gorm:"serializer:pgarray"`
 	Feedback         *string
@@ -109,8 +110,17 @@ const decisionKindExpr = `COALESCE(dd.kind, CASE
 		ELSE 'rejection_generic'::decision_kind
 	END)`
 
+// decisionStatusExpr: a generic rejection is ready as soon as it exists; a post-interview one waits on both paragraphs unless a chief rewrote it.
+const decisionStatusExpr = `CASE
+		WHEN dd.sent_at IS NOT NULL THEN 'sent'
+		WHEN COALESCE(dd.body_override, '') <> '' THEN 'ready'
+		WHEN ` + decisionKindExpr + ` = 'rejection_generic' THEN 'ready'
+		WHEN COALESCE(dd.feedback, '') <> '' AND COALESCE(dd.compliments, '') <> '' THEN 'ready'
+		ELSE 'pending'
+	END`
+
 const decisionRowColumns = `a.id AS application_id, a.cycle_id, a.role_id, a.user_nuid AS applicant_nuid,
-	u.full_name, u.email, a.stage, ` + decisionKindExpr + ` AS kind,
+	u.full_name, u.email, a.stage, ` + decisionKindExpr + ` AS kind, ` + decisionStatusExpr + ` AS status,
 	ivs.nuids AS interviewer_nuids, ivs.names AS interviewer_names,
 	dd.feedback, dd.compliments, dd.body_override, dd.author_nuid, au.full_name AS author_name,
 	dd.sent_at, dd.sent_by, dd.updated_at`
@@ -159,24 +169,44 @@ func decisionsFrom(db *gorm.DB, f DecisionFilter, applicationID string) *gorm.DB
 	return q
 }
 
-// ListDecisions returns every applicant in the cycle getting a rejection, with
-// whatever's been written for them, in one query.
-func (d *DecisionDB) ListDecisions(ctx context.Context, f DecisionFilter) ([]models.DecisionRow, error) {
-	var rows []decisionRow
+// ListDecisions returns the matching applicants getting a rejection, a page at a time when f.Limit is set,
+// with every match counted by status ignoring f.Status.
+func (d *DecisionDB) ListDecisions(ctx context.Context, f DecisionFilter) (DecisionPage, error) {
+	db := d.db.WithContext(ctx)
+	page := DecisionPage{Rows: []models.DecisionRow{}, StatusCounts: map[models.DecisionStatus]int{}}
+	var counts []struct {
+		Status models.DecisionStatus
+		N      int
+	}
+	if err := db.Table("(?) AS m", decisionsFrom(db, f, "")).Select("m.status, count(*) AS n").Group("m.status").Scan(&counts).Error; err != nil {
+		return page, err
+	}
+	for _, c := range counts {
+		page.StatusCounts[c.Status] = c.N
+		if f.Status == nil || *f.Status == c.Status {
+			page.Total += c.N
+		}
+	}
+	q := decisionsFrom(db, f, "")
+	if f.Status != nil {
+		q = q.Where(decisionStatusExpr+" = ?", *f.Status)
+	}
 	// Unwritten feedback first, then the longest-waiting applicants.
-	err := decisionsFrom(d.db.WithContext(ctx), f, "").
-		Order("(dd.feedback IS NULL OR dd.feedback = '') DESC").
+	q = q.Order("(dd.feedback IS NULL OR dd.feedback = '') DESC").
 		Order("a.submitted_at ASC NULLS LAST").
 		Order("u.full_name ASC").
-		Scan(&rows).Error
-	if err != nil {
-		return nil, err
+		Order("a.id")
+	if f.Limit > 0 {
+		q = q.Limit(f.Limit).Offset(f.Offset)
 	}
-	out := make([]models.DecisionRow, len(rows))
-	for i, r := range rows {
-		out[i] = toDecisionRow(r)
+	var rows []decisionRow
+	if err := q.Scan(&rows).Error; err != nil {
+		return page, err
 	}
-	return out, nil
+	for _, r := range rows {
+		page.Rows = append(page.Rows, toDecisionRow(r))
+	}
+	return page, nil
 }
 
 // GetDecisionRow reads one application's row, so a write knows who owes the
@@ -307,7 +337,7 @@ func toDecisionRow(r decisionRow) models.DecisionRow {
 		Email:         r.Email,
 		Stage:         r.Stage,
 		Kind:          r.Kind,
-		Status:        DecisionStatusFor(r.Kind, r.Feedback, r.Compliments, r.BodyOverride, r.SentAt),
+		Status:        r.Status,
 		Interviewers:  interviewersOf(r),
 		Feedback:      r.Feedback,
 		Compliments:   r.Compliments,
@@ -331,23 +361,3 @@ func interviewersOf(r decisionRow) []models.DecisionInterviewer {
 	return out
 }
 
-// DecisionStatusFor derives a row's status. A generic rejection is ready the
-// moment it exists — its template has no blanks to fill. A post-interview one
-// waits on both of the interviewer's paragraphs, unless a chief has already
-// rewritten the message by hand.
-func DecisionStatusFor(kind models.DecisionKind, feedback, compliments, bodyOverride *string, sentAt *time.Time) models.DecisionStatus {
-	switch {
-	case sentAt != nil:
-		return models.DecisionSent
-	case nonEmpty(bodyOverride):
-		return models.DecisionReady
-	case kind == models.DecisionRejectionGeneric:
-		return models.DecisionReady
-	case nonEmpty(feedback) && nonEmpty(compliments):
-		return models.DecisionReady
-	default:
-		return models.DecisionPending
-	}
-}
-
-func nonEmpty(s *string) bool { return s != nil && *s != "" }

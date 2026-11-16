@@ -1,9 +1,4 @@
-import {
-  useMutation,
-  useQueries,
-  useQuery,
-  useQueryClient,
-} from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   assignLead,
   listLeadAssignments,
@@ -24,21 +19,6 @@ export function useLeadAssignments(
       ((await listLeadAssignments(applicationId, opts)) ??
         []) as LeadAssignment[],
     enabled: !!applicationId,
-  })
-}
-
-// One query per application, sharing cache with useLeadAssignments — used to
-// show current assignees across a list of applications.
-export function useLeadAssignmentsByApplications(
-  applicationIds: string[],
-  opts?: RequestOptions
-) {
-  return useQueries({
-    queries: applicationIds.map((id) => ({
-      queryKey: queryKeys.leadAssignments.list(id),
-      queryFn: async () =>
-        ((await listLeadAssignments(id, opts)) ?? []) as LeadAssignment[],
-    })),
   })
 }
 

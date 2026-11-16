@@ -48,66 +48,68 @@ export function CommentThread({
 
   return (
     <div className="flex flex-col gap-3">
-      {comments.map((c) => {
-        const editing = editingCommentId === c.id
-        const edited = c.updated_at !== c.created_at
-        const isOwn = c.author_nuid === currentUserNuid
-        return (
-          <Card key={c.id} variant="flat">
-            {editing ? (
-              <div className="flex flex-col gap-2">
-                <textarea
-                  value={editingBody}
-                  onChange={(e) => setEditingBody(e.target.value)}
-                  rows={3}
-                  autoFocus
-                  aria-label="Edit comment"
-                  className="focus:border-ink text-text-default placeholder:text-text-subtle w-full border border-gray-200 p-3 text-sm focus:outline-none"
-                />
-                <div className="flex items-center gap-2">
-                  <Button
-                    onClick={saveEdit}
-                    disabled={isEditing || !editingBody.trim()}
-                  >
-                    Save
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => setEditingCommentId(null)}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-text-muted text-xs">
-                    {c.author_name || c.author_nuid}
-                  </p>
-                  <p className="text-text-default mt-1 text-sm wrap-anywhere whitespace-pre-wrap">
-                    {c.body}
-                  </p>
-                  <p className="text-text-faint mt-1.5 text-xs">
-                    {new Date(c.created_at).toLocaleString()}
-                    {edited && ' · edited'}
-                  </p>
-                </div>
-                {isOwn && (
-                  <button
-                    type="button"
-                    onClick={() => startEditing(c)}
-                    className="text-text-faint hover:text-text-muted shrink-0 pointer-coarse:-m-2 pointer-coarse:p-2"
+      <div className="flex max-h-96 flex-col gap-3 overflow-y-auto">
+        {comments.map((c) => {
+          const editing = editingCommentId === c.id
+          const edited = c.updated_at !== c.created_at
+          const isOwn = c.author_nuid === currentUserNuid
+          return (
+            <Card key={c.id} variant="flat">
+              {editing ? (
+                <div className="flex flex-col gap-2">
+                  <textarea
+                    value={editingBody}
+                    onChange={(e) => setEditingBody(e.target.value)}
+                    rows={3}
+                    autoFocus
                     aria-label="Edit comment"
-                  >
-                    <Pencil size={14} />
-                  </button>
-                )}
-              </div>
-            )}
-          </Card>
-        )
-      })}
+                    className="focus:border-ink text-text-default placeholder:text-text-subtle w-full border border-gray-200 p-3 text-sm focus:outline-none"
+                  />
+                  <div className="flex items-center gap-2">
+                    <Button
+                      onClick={saveEdit}
+                      disabled={isEditing || !editingBody.trim()}
+                    >
+                      Save
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => setEditingCommentId(null)}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-text-muted text-xs">
+                      {c.author_name || c.author_nuid}
+                    </p>
+                    <p className="text-text-default mt-1 text-sm wrap-anywhere whitespace-pre-wrap">
+                      {c.body}
+                    </p>
+                    <p className="text-text-faint mt-1.5 text-xs">
+                      {new Date(c.created_at).toLocaleString()}
+                      {edited && ' · edited'}
+                    </p>
+                  </div>
+                  {isOwn && (
+                    <button
+                      type="button"
+                      onClick={() => startEditing(c)}
+                      className="text-text-faint hover:text-text-muted shrink-0 pointer-coarse:-m-2 pointer-coarse:p-2"
+                      aria-label="Edit comment"
+                    >
+                      <Pencil size={14} />
+                    </button>
+                  )}
+                </div>
+              )}
+            </Card>
+          )
+        })}
+      </div>
 
       <Card variant="flat">
         <textarea
