@@ -47,6 +47,45 @@ components:
       required:
         - reviewer_nuid
       type: object
+    AdvanceBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/AdvanceBody.json
+          format: uri
+          readOnly: true
+          type: string
+        application_ids:
+          description: Defaults to everyone on the shortlist; each must be on it
+          items:
+            type: string
+          maxItems: 200
+          type:
+            - array
+            - "null"
+      type: object
+    AdvanceOutputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/AdvanceOutputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        moved:
+          description: Applications moved forward; anyone already past review is left alone
+          items:
+            type: string
+          type:
+            - array
+            - "null"
+      required:
+        - moved
+      type: object
     Applicant:
       additionalProperties: false
       properties:
@@ -1173,9 +1212,20 @@ components:
             - url
             - score
           type: string
+        ranked:
+          description: Whether a score question counts toward the review ranking; defaults to true
+          type: boolean
         role_id:
           description: Omit for a global question shown for all roles
           type: string
+        score_max:
+          description: Score questions only; defaults to 10
+          format: int64
+          type: integer
+        score_min:
+          description: Score questions only; defaults to 1
+          format: int64
+          type: integer
       required:
         - question_text
       type: object
@@ -3319,6 +3369,45 @@ components:
         - coverage
         - cap
       type: object
+    PutCutoffInputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/PutCutoffInputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        mode:
+          enum:
+            - min_score
+            - top_n
+          type: string
+        value:
+          description: "top_n: a whole number >= 0; min_score: any finite normalized score"
+          format: double
+          type: number
+      required:
+        - mode
+        - value
+      type: object
+    PutOverrideInputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/PutOverrideInputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        included:
+          description: true adds the application to the shortlist, false removes it
+          type: boolean
+      required:
+        - included
+      type: object
     Question:
       additionalProperties: false
       properties:
@@ -3445,12 +3534,72 @@ components:
         review_question_id:
           type: string
         score:
+          description: Within the question's score_min..score_max
           format: int64
-          maximum: 10
-          minimum: 1
           type: integer
       required:
         - review_question_id
+      type: object
+    ReviewCutoff:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/ReviewCutoff.json
+          format: uri
+          readOnly: true
+          type: string
+        cycle_id:
+          type: string
+        mode:
+          enum:
+            - min_score
+            - top_n
+          type: string
+        role_id:
+          type: string
+        updated_at:
+          format: date-time
+          type: string
+        updated_by:
+          type: string
+        value:
+          description: Minimum normalized score for min_score; how many to take for top_n
+          format: double
+          type: number
+      required:
+        - cycle_id
+        - role_id
+        - mode
+        - value
+        - updated_by
+        - updated_at
+      type: object
+    ReviewCutoffOverride:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/ReviewCutoffOverride.json
+          format: uri
+          readOnly: true
+          type: string
+        application_id:
+          type: string
+        included:
+          type: boolean
+        set_by:
+          type: string
+        updated_at:
+          format: date-time
+          type: string
+      required:
+        - application_id
+        - included
+        - set_by
+        - updated_at
       type: object
     ReviewGate:
       additionalProperties: false
@@ -3526,8 +3675,17 @@ components:
             - url
             - score
           type: string
+        ranked:
+          description: Whether a score question counts toward the review ranking
+          type: boolean
         role_id:
           type: string
+        score_max:
+          format: int64
+          type: integer
+        score_min:
+          format: int64
+          type: integer
       required:
         - id
         - cycle_id
@@ -3535,6 +3693,7 @@ components:
         - question_type
         - is_required
         - display_order
+        - ranked
         - created_at
       type: object
     ReviewQuestionAverage:
@@ -3554,6 +3713,83 @@ components:
         - lead_nuid
         - full_name
         - scores
+      type: object
+    ReviewRanking:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/ReviewRanking.json
+          format: uri
+          readOnly: true
+          type: string
+        cutoff:
+          $ref: "#/components/schemas/ReviewCutoff"
+        entries:
+          items:
+            $ref: "#/components/schemas/ReviewRankingEntry"
+          type:
+            - array
+            - "null"
+        reviews_in:
+          description: Every assigned review is submitted or the review due date has passed; until then the cutoff, hand-picks and advancing are locked
+          type: boolean
+      required:
+        - cutoff
+        - reviews_in
+        - entries
+      type: object
+    ReviewRankingEntry:
+      additionalProperties: false
+      properties:
+        above_cutoff:
+          type: boolean
+        application_id:
+          type: string
+        included:
+          description: The override if set, otherwise above_cutoff
+          type: boolean
+        normalized_score:
+          description: Mean of per-reviewer z-scores; 0 is an average review
+          format: double
+          type: number
+        override:
+          description: A manual include (true) or exclude (false)
+          type: boolean
+        rank:
+          description: 1-based; omitted until the application has a score
+          format: int64
+          type: integer
+        review_count:
+          description: Submitted written reviews with at least one ranked score
+          format: int64
+          type: integer
+        scaled_average:
+          description: Raw scores mapped onto 0-1 by each question's scale, then averaged
+          format: double
+          type: number
+        stage:
+          enum:
+            - draft
+            - submitted
+            - lead_review
+            - chief_review
+            - interview
+            - interview_scheduled
+            - interview_conducted
+            - interview_review
+            - selection
+            - accepted
+            - rejected
+            - withdrawn
+          type: string
+      required:
+        - application_id
+        - stage
+        - review_count
+        - above_cutoff
+        - included
       type: object
     ReviewerCapacityInputBody:
       additionalProperties: false
@@ -4175,6 +4411,17 @@ components:
             - url
             - score
           type: string
+        ranked:
+          description: Whether a score question counts toward the review ranking
+          type: boolean
+        score_max:
+          description: Score questions only; locked once any review has scored it
+          format: int64
+          type: integer
+        score_min:
+          description: Score questions only; locked once any review has scored it
+          format: int64
+          type: integer
       type: object
     UpdateRoleInputBody:
       additionalProperties: false
@@ -4586,6 +4833,7 @@ components:
         review_question_id:
           type: string
         score:
+          description: Within the question's score_min..score_max
           format: int64
           type: integer
         submitted_at:
@@ -6346,6 +6594,123 @@ paths:
       summary: Assign a lead to write-review an application
       tags:
         - Lead assignments
+  /applications/{id}/review-cutoff-override:
+    delete:
+      description: Chiefs and admins. Refused with 409 until the opening's reviews are in.
+      operationId: delete-review-cutoff-override
+      parameters:
+        - description: Application ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Application ID
+            type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "409":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Conflict
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Return an application to whatever the cutoff decides
+      tags:
+        - Review ranking
+    put:
+      description: Chiefs and admins. Survives cutoff changes until cleared. Refused with 409 until the opening's reviews are in.
+      operationId: put-review-cutoff-override
+      parameters:
+        - description: Application ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Application ID
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PutOverrideInputBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewCutoffOverride"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "409":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Conflict
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Hand-pick an application onto or off the shortlist
+      tags:
+        - Review ranking
   /applications/{id}/selection:
     delete:
       operationId: deselect-application
@@ -8775,6 +9140,201 @@ paths:
       summary: Create a question
       tags:
         - Questions
+  /cycles/{id}/review-cutoff:
+    delete:
+      description: Chiefs and admins. Refused with 409 until the opening's reviews are in.
+      operationId: delete-review-cutoff
+      parameters:
+        - description: Cycle ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Cycle ID
+            type: string
+        - description: Applicant role
+          explode: false
+          in: query
+          name: role_id
+          required: true
+          schema:
+            description: Applicant role
+            type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "409":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Conflict
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Clear an opening's review cutoff
+      tags:
+        - Review ranking
+    put:
+      description: Chiefs and admins. min_score keeps applications at or above a normalized score; top_n keeps the N highest ranked plus anyone tied with the Nth. Refused with 409 until the opening's reviews are in.
+      operationId: put-review-cutoff
+      parameters:
+        - description: Cycle ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Cycle ID
+            type: string
+        - description: Applicant role
+          explode: false
+          in: query
+          name: role_id
+          required: true
+          schema:
+            description: Applicant role
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PutCutoffInputBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewCutoff"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "409":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Conflict
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Set an opening's review cutoff
+      tags:
+        - Review ranking
+  /cycles/{id}/review-cutoff-overrides:
+    delete:
+      description: Chiefs and admins. Refused with 409 until the opening's reviews are in.
+      operationId: delete-review-cutoff-overrides
+      parameters:
+        - description: Cycle ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Cycle ID
+            type: string
+        - description: Applicant role
+          explode: false
+          in: query
+          name: role_id
+          required: true
+          schema:
+            description: Applicant role
+            type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "409":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Conflict
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Clear every hand-pick for an opening
+      tags:
+        - Review ranking
   /cycles/{id}/review-gates:
     get:
       description: "Reviewer only. One entry per applicant role × review kind (written, recording): how many reviewers are assigned, how many have submitted, and whether reviews have been released to everyone."
@@ -9029,6 +9589,66 @@ paths:
       summary: Create a review question
       tags:
         - Review questions
+  /cycles/{id}/review-ranking:
+    get:
+      description: Chiefs and admins. Scores are z-scored against each reviewer's own scores on each question, so harsh and lenient reviewers count equally. Each entry is marked against the saved cutoff, then any hand-pick.
+      operationId: get-review-ranking
+      parameters:
+        - description: Cycle ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Cycle ID
+            type: string
+        - description: Applicant role
+          explode: false
+          in: query
+          name: role_id
+          required: true
+          schema:
+            description: Applicant role
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewRanking"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Rank an opening's applications by normalized written-review score
+      tags:
+        - Review ranking
   /cycles/{id}/reviewer-progress:
     get:
       description: Chief only. One entry per lead with any assignment or lead on the cycle's staff, listing every application assigned to them and whether their written review is submitted.
@@ -9137,6 +9757,77 @@ paths:
       summary: List a cycle's lead selections
       tags:
         - Selections
+  /cycles/{id}/shortlist/advance:
+    post:
+      description: Chiefs and admins. Moves shortlisted applications still in review to the interview stage, or the next enabled stage when interviews are off, in one transaction. Refused with 409 until the opening's reviews are in.
+      operationId: advance-shortlist
+      parameters:
+        - description: Cycle ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Cycle ID
+            type: string
+        - description: Applicant role
+          explode: false
+          in: query
+          name: role_id
+          required: true
+          schema:
+            description: Applicant role
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdvanceBody"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdvanceOutputBody"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "409":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Conflict
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Move the shortlist on to interviews
+      tags:
+        - Review ranking
   /cycles/{id}/staff:
     get:
       description: Admins, or a chief who manages the cycle. Chiefs first, then by name.
