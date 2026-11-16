@@ -10,6 +10,9 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 )
 
+// Check runs inside the add's transaction, before the row is written.
+type Check func(tx *gorm.DB) error
+
 type InterviewAssignmentDB struct {
 	db *gorm.DB
 }
@@ -103,9 +106,12 @@ func (d *InterviewAssignmentDB) InterviewSubmitted(ctx context.Context, applicat
 	return n > 0, err
 }
 
-func (d *InterviewAssignmentDB) AddInterviewer(ctx context.Context, applicationID, nuid, assignedBy string) (models.InterviewerDetail, error) {
+func (d *InterviewAssignmentDB) AddInterviewer(ctx context.Context, applicationID, nuid, assignedBy string, check Check) (models.InterviewerDetail, error) {
 	var id string
 	err := d.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := check(tx); err != nil {
+			return err
+		}
 		if err := ensureInterviews(tx, []string{applicationID}); err != nil {
 			return err
 		}
@@ -224,9 +230,12 @@ func (d *InterviewAssignmentDB) IsReviewer(ctx context.Context, applicationID, n
 	return n > 0, err
 }
 
-func (d *InterviewAssignmentDB) AddReviewer(ctx context.Context, applicationID, nuid, assignedBy string) (models.InterviewReviewerDetail, error) {
+func (d *InterviewAssignmentDB) AddReviewer(ctx context.Context, applicationID, nuid, assignedBy string, check Check) (models.InterviewReviewerDetail, error) {
 	var id string
 	err := d.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := check(tx); err != nil {
+			return err
+		}
 		if err := ensureInterviews(tx, []string{applicationID}); err != nil {
 			return err
 		}

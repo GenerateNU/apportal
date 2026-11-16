@@ -13,21 +13,31 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/handlers/reviewrelease"
 
 	"github.com/GenerateNU/apportal/backend/internal/models"
+	"github.com/GenerateNU/apportal/backend/internal/staffing"
+	"gorm.io/gorm"
 )
 
 type interviewAssignmentService struct {
+	gate                  access.Gate
+	guard                 *staffing.Guard
 	access                *access.Checker
 	interviewAssignmentDB *InterviewAssignmentDB
 	reviewReleaseDB       *reviewrelease.ReviewReleaseDB
 }
 
 func (s *interviewAssignmentService) addInterviewer(ctx context.Context, in *AddInterviewerInput) (*InterviewerOutput, error) {
-	if err := s.access.CanApplication(ctx, access.ManageApplication, in.ID); err != nil {
+	if err := utils.RequireUUIDs("application id", in.ID); err != nil {
 		return nil, err
 	}
-	row, err := s.interviewAssignmentDB.AddInterviewer(ctx, in.ID, in.Body.InterviewerNUID, utils.CurrentActor(ctx).NUID)
+	if err := s.gate.CanApplication(ctx, access.ManageApplication, in.ID); err != nil {
+		return nil, err
+	}
+	nuid := in.Body.InterviewerNUID
+	row, err := s.interviewAssignmentDB.AddInterviewer(ctx, in.ID, nuid, utils.CurrentActor(ctx).NUID, func(tx *gorm.DB) error {
+		return s.guard.CheckAdd(ctx, tx, in.ID, nuid, models.KindInterviewer)
+	})
 	if err != nil {
-		return nil, utils.StoreErr(err)
+		return nil, staffing.HTTPError(err)
 	}
 	return &InterviewerOutput{Body: row}, nil
 }
@@ -46,12 +56,18 @@ func (s *interviewAssignmentService) removeInterviewer(ctx context.Context, in *
 }
 
 func (s *interviewAssignmentService) addReviewer(ctx context.Context, in *AddReviewerInput) (*InterviewReviewerOutput, error) {
-	if err := s.access.CanApplication(ctx, access.ManageApplication, in.ID); err != nil {
+	if err := utils.RequireUUIDs("application id", in.ID); err != nil {
 		return nil, err
 	}
-	row, err := s.interviewAssignmentDB.AddReviewer(ctx, in.ID, in.Body.ReviewerNUID, utils.CurrentActor(ctx).NUID)
+	if err := s.gate.CanApplication(ctx, access.ManageApplication, in.ID); err != nil {
+		return nil, err
+	}
+	nuid := in.Body.ReviewerNUID
+	row, err := s.interviewAssignmentDB.AddReviewer(ctx, in.ID, nuid, utils.CurrentActor(ctx).NUID, func(tx *gorm.DB) error {
+		return s.guard.CheckAdd(ctx, tx, in.ID, nuid, models.KindRecordingReviewer)
+	})
 	if err != nil {
-		return nil, utils.StoreErr(err)
+		return nil, staffing.HTTPError(err)
 	}
 	return &InterviewReviewerOutput{Body: row}, nil
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
@@ -77,11 +78,25 @@ func (g *Guard) Load(ctx context.Context, db *gorm.DB, cycleID string, applicati
 	return snap, nil
 }
 
-// CheckAdd loads one applicant through tx and runs Check.
+// LockApplicants holds the applications' rows until tx ends, so two adds
+// can't both see room under the cap.
+func LockApplicants(tx *gorm.DB, ids []string) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	var locked []string
+	return tx.Model(&models.Application{}).Clauses(clause.Locking{Strength: "UPDATE"}).
+		Where("id IN ?", ids).Order("id").Pluck("id", &locked).Error
+}
+
+// CheckAdd locks and loads one applicant through tx and runs Check.
 func (g *Guard) CheckAdd(ctx context.Context, tx *gorm.DB, applicationID, nuid string, kind models.StaffKind) error {
 	var app models.Application
 	if err := tx.Select("id", "cycle_id").Where("id = ?", applicationID).Take(&app).Error; err != nil {
 		return utils.DBErr(err)
+	}
+	if err := LockApplicants(tx, []string{applicationID}); err != nil {
+		return err
 	}
 	snap, err := g.Load(ctx, tx, app.CycleID, []string{applicationID})
 	if err != nil {
