@@ -60,12 +60,18 @@ func (l *LeadAssignmentDB) ListLeadAssignmentsForCycle(ctx context.Context, cycl
 }
 
 // DeleteLeadAssignmentsForCycle clears one role's assignments in a cycle, for
-// a chief undoing a bad run, and returns how many were removed.
+// a chief undoing a bad run, and returns how many were removed. Reviewers who
+// already submitted keep their assignment.
 func (l *LeadAssignmentDB) DeleteLeadAssignmentsForCycle(ctx context.Context, cycleID string, role string) (int, error) {
-	db := l.db.WithContext(ctx)
-	apps := db.Model(&models.Application{}).Select("id").Where("cycle_id = ? AND role_id = ?", cycleID, role)
-	res := db.Where("application_id IN (?)", apps).Delete(&models.LeadAssignment{})
+	res := deleteUnsubmittedQuery(l.db.WithContext(ctx), cycleID, role).Delete(&models.LeadAssignment{})
 	return int(res.RowsAffected), res.Error
+}
+
+func deleteUnsubmittedQuery(db *gorm.DB, cycleID, role string) *gorm.DB {
+	apps := db.Session(&gorm.Session{NewDB: true}).Model(&models.Application{}).Select("id").Where("cycle_id = ? AND role_id = ?", cycleID, role)
+	return db.Where("application_id IN (?)", apps).
+		Where(`NOT EXISTS (SELECT 1 FROM written_reviews wr WHERE wr.application_id = lead_assignments.application_id
+			AND wr.reviewer_nuid = lead_assignments.lead_nuid AND wr.submitted_at IS NOT NULL)`)
 }
 
 // ListReviewerProgressForCycle pairs every assignment for one role in a cycle
