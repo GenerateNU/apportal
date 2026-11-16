@@ -3,8 +3,7 @@ package writtenreview
 import (
 	"net/http"
 
-	"github.com/GenerateNU/apportal/backend/internal/handlers/reviewrelease"
-	"github.com/GenerateNU/apportal/backend/internal/pipeline"
+	"github.com/GenerateNU/apportal/backend/internal/workflow"
 	"github.com/danielgtaylor/huma/v2"
 	"gorm.io/gorm"
 
@@ -12,9 +11,8 @@ import (
 )
 
 func Route(api huma.API, db *gorm.DB) {
-	reviewReleaseDB := reviewrelease.NewReviewReleaseDB(db)
 	writtenReviewDB := NewWrittenReviewDB(db)
-	s := &writtenReviewService{access: access.NewChecker(db), reviewReleaseDB: reviewReleaseDB, writtenReviewDB: writtenReviewDB, gate: pipeline.NewGate(db)}
+	s := &writtenReviewService{access: access.NewChecker(db), writtenReviewDB: writtenReviewDB, workflow: workflow.NewService(db)}
 
 	huma.Register(api, huma.Operation{
 		OperationID: "upsert-written-review",

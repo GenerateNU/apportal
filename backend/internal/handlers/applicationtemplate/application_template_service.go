@@ -4,14 +4,14 @@ import (
 	"context"
 
 	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
-	"github.com/GenerateNU/apportal/backend/internal/pipeline"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
-	"github.com/danielgtaylor/huma/v2"
 
 	"github.com/GenerateNU/apportal/backend/internal/access"
+	"github.com/GenerateNU/apportal/backend/internal/workflow"
 )
 
 type applicationTemplateService struct {
+	workflow              *workflow.Service
 	access                *access.Checker
 	applicationTemplateDB *ApplicationTemplateDB
 	roleDB                *role.RoleDB
@@ -52,27 +52,14 @@ func (s *applicationTemplateService) update(ctx context.Context, in *UpdateAppli
 	if err := s.access.CanCycle(ctx, access.ManageCycle, in.ID); err != nil {
 		return nil, err
 	}
-	if in.Body.Status != nil && !in.Body.Status.Valid() {
-		return nil, huma.Error422UnprocessableEntity("invalid status")
-	}
-	if in.Body.ReviewStatus != nil && !in.Body.ReviewStatus.Valid() {
-		return nil, huma.Error422UnprocessableEntity("invalid review_status")
-	}
 	if err := role.RequireCycleRole(ctx, s.roleDB, in.ID, in.RoleID); err != nil {
+		return nil, err
+	}
+	if err := s.workflow.RequireSetupEditable(ctx, in.ID, in.RoleID, workflow.SetupApplicationForm); err != nil {
 		return nil, err
 	}
 	if _, err := s.applicationTemplateDB.GetOrCreateApplicationTemplate(ctx, in.ID, in.RoleID); err != nil {
 		return nil, utils.StoreErr(err)
-	}
-
-	actor := utils.CurrentActor(ctx)
-	if err := s.applicationTemplateDB.ApplyTimeline(ctx, in.ID, in.RoleID, pipeline.TemplateTimeline{
-		ClosesAt:       in.Body.ClosesAt,
-		Status:         in.Body.Status,
-		ReviewClosesAt: in.Body.ReviewClosesAt,
-		ReviewStatus:   in.Body.ReviewStatus,
-	}, pipeline.Actor{NUID: actor.NUID, Admin: access.IsAdmin(actor)}); err != nil {
-		return nil, pipeline.HTTPErr(err)
 	}
 
 	t, err := s.applicationTemplateDB.UpdateApplicationTemplate(ctx, in.ID, in.RoleID, ApplicationTemplateUpdate{

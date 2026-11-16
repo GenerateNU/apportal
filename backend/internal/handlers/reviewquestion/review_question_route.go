@@ -8,6 +8,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/GenerateNU/apportal/backend/internal/access"
+	"github.com/GenerateNU/apportal/backend/internal/workflow"
 
 	"github.com/GenerateNU/apportal/backend/internal/handlers/cyclestaff"
 )
@@ -16,7 +17,7 @@ func Route(api huma.API, db *gorm.DB) {
 	reviewQuestionDB := NewReviewQuestionDB(db)
 
 	registerReviewQuestionAverage(api, &reviewQuestionAverageService{access: access.NewChecker(db), reviewQuestionDB: reviewQuestionDB, staffDB: cyclestaff.NewCycleStaffDB(db)})
-	registerReviewQuestion(api, &reviewQuestionService{access: access.NewChecker(db), reviewQuestionDB: reviewQuestionDB, roleDB: role.NewRoleDB(db)})
+	registerReviewQuestion(api, &reviewQuestionService{access: access.NewChecker(db), reviewQuestionDB: reviewQuestionDB, roleDB: role.NewRoleDB(db), workflow: workflow.NewService(db)})
 }
 
 func registerReviewQuestion(api huma.API, s *reviewQuestionService) {

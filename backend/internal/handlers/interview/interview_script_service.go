@@ -9,9 +9,11 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 
 	"github.com/GenerateNU/apportal/backend/internal/access"
+	"github.com/GenerateNU/apportal/backend/internal/workflow"
 )
 
 type interviewScriptService struct {
+	workflow    *workflow.Service
 	access      *access.Checker
 	interviewDB *InterviewDB
 	roleDB      *role.RoleDB
@@ -19,6 +21,9 @@ type interviewScriptService struct {
 
 func (s *interviewScriptService) get(ctx context.Context, in *GetInterviewScriptInput) (*InterviewScriptOutput, error) {
 	if err := s.access.CanCycle(ctx, access.ReviewCycle, in.ID); err != nil {
+		return nil, err
+	}
+	if err := s.workflow.RequireSetupVisible(ctx, in.ID, workflow.SetupInterviewScript); err != nil {
 		return nil, err
 	}
 	if err := role.RequireCycleRole(ctx, s.roleDB, in.ID, in.RoleID); err != nil {
@@ -36,6 +41,9 @@ func (s *interviewScriptService) update(ctx context.Context, in *UpdateInterview
 		return nil, err
 	}
 	if err := s.access.CanCycle(ctx, access.ManageCycle, in.ID); err != nil {
+		return nil, err
+	}
+	if err := s.workflow.RequireSetupEditable(ctx, in.ID, in.RoleID, workflow.SetupInterviewScript); err != nil {
 		return nil, err
 	}
 	if !json.Valid(in.Body.Questions) {

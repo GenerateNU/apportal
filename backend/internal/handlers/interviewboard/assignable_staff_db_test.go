@@ -9,9 +9,9 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/access"
 	"github.com/GenerateNU/apportal/backend/internal/middleware"
 	"github.com/GenerateNU/apportal/backend/internal/models"
-	"github.com/GenerateNU/apportal/backend/internal/pipeline"
-	"github.com/GenerateNU/apportal/backend/internal/reviewrules"
+	"github.com/GenerateNU/apportal/backend/internal/staffing"
 	"github.com/GenerateNU/apportal/backend/internal/testutil"
+	"github.com/GenerateNU/apportal/backend/internal/workflow"
 )
 
 func TestAssignableStaffAndReviewerTeams(t *testing.T) {
@@ -32,7 +32,7 @@ func TestAssignableStaffAndReviewerTeams(t *testing.T) {
 	branch, cycle, eng, design, group := uuid.NewString(), uuid.NewString(), uuid.NewString(), uuid.NewString(), uuid.NewString()
 	exec("INSERT INTO branches (id, name) VALUES (?, ?)", branch, "test-"+branch)
 	exec("INSERT INTO cycles (id, branch_id, name, status, application_type) VALUES (?, ?, 'Test', 'open', 'member')", cycle, branch)
-	if err := pipeline.EnsureSteps(db, cycle); err != nil {
+	if err := workflow.EnsureSteps(db, cycle); err != nil {
 		t.Fatal(err)
 	}
 	exec("INSERT INTO roles (id, cycle_id, name) VALUES (?, ?, 'Engineer'), (?, ?, 'Designer')", eng, cycle, design, cycle)
@@ -48,10 +48,11 @@ func TestAssignableStaffAndReviewerTeams(t *testing.T) {
 	exec("INSERT INTO review_conflicts (cycle_id, lead_nuid, applicant_nuid) VALUES (?, ?, ?)", cycle, conflicted, applicant)
 
 	ctx := testutil.WithActor(middleware.Actor{NUID: chief, Roles: []models.UserRole{models.UserRoleAdmin}})
-	eligible, err := reviewrules.NewDefault(db).Eligible(ctx, cycle)
+	pool, err := staffing.NewService(db).Pool(ctx, cycle, models.KindReviewer)
 	if err != nil {
 		t.Fatal(err)
 	}
+	eligible := pool.Eligible
 	if got := eligible[eng]; len(got) != 2 || !slices.Contains(got, onTeam) || !slices.Contains(got, conflicted) {
 		t.Errorf("engineer reviewers follow the team: %v", got)
 	}

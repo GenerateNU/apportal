@@ -4,6 +4,7 @@ package server
 
 import (
 	"context"
+	"slices"
 	"time"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -12,17 +13,19 @@ import (
 	"gorm.io/gorm"
 
 	appdb "github.com/GenerateNU/apportal/backend/internal/db"
+	"github.com/GenerateNU/apportal/backend/internal/handlers/answer"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/applicant"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/application"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/applicationtemplate"
-	"github.com/GenerateNU/apportal/backend/internal/handlers/assignmentplanner"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/branch"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/challenge"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/chiefreview"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/codesubmission"
+	"github.com/GenerateNU/apportal/backend/internal/handlers/comment"
+	"github.com/GenerateNU/apportal/backend/internal/handlers/conflict"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/cycle"
-	"github.com/GenerateNU/apportal/backend/internal/handlers/cyclepipeline"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/cyclestaff"
+	"github.com/GenerateNU/apportal/backend/internal/handlers/cycleworkflow"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/decision"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/draft"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/interview"
@@ -34,9 +37,9 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/handlers/preferencelist"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/question"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/recordingreview"
+	"github.com/GenerateNU/apportal/backend/internal/handlers/reviewboard"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/reviewquestion"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/reviewranking"
-	"github.com/GenerateNU/apportal/backend/internal/handlers/reviewrelease"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/selection"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/staffgroup"
@@ -86,6 +89,7 @@ func CreateApp(db *gorm.DB, cfg Config) *fiber.App {
 	app.Use(middleware.Logging())
 	app.Use(middleware.WithTimeout(requestTimeout))
 	app.Use(middleware.WithActor(verifier, user.NewUserDB(db).GetUserByEmail))
+	app.Use(middleware.ReadIntent())
 
 	app.Get("/", root)
 	app.Get("/healthz", health)
@@ -101,7 +105,7 @@ func CreateApp(db *gorm.DB, cfg Config) *fiber.App {
 func humaConfig() huma.Config {
 	config := huma.DefaultConfig("apportal API", "0.1.0")
 	config.DocsRenderer = huma.DocsRendererScalar
-	config.Info.Description = "Generate application portal — applications, reviews, and the hiring pipeline."
+	config.Info.Description = "Generate application portal — applications, reviews, and the hiring workflow."
 	return config
 }
 
@@ -109,24 +113,26 @@ func CreateRoutes(api huma.API, db *gorm.DB, storageClient *storage.Client, chal
 	branch.Route(api, db)
 	role.Route(api, db)
 	cycle.Route(api, db)
-	cyclepipeline.Route(api, db)
+	cycleworkflow.Route(api, db)
 	cyclestaff.Route(api, db)
 	applicationtemplate.Route(api, db)
 	question.Route(api, db)
 	challenge.Route(api, db)
 	user.Route(api, db)
 	applicant.Route(api, db, challengeClient)
-	application.Route(api, db, storageClient)
+	application.Route(api, db)
+	answer.Route(api, db, storageClient)
+	comment.Route(api, db)
 	codesubmission.Route(api, db)
 	tag.Route(api, db)
 
-	// Review → interview → selection pipeline.
+	// Review → interview → selection workflow.
 	leadassignment.Route(api, db)
-	assignmentplanner.Route(api, db)
+	reviewboard.Route(api, db)
+	conflict.Route(api, db)
 	reviewquestion.Route(api, db)
 	writtenreview.Route(api, db)
 	chiefreview.Route(api, db)
-	reviewrelease.Route(api, db)
 	staffgroup.Route(api, db)
 	meetingslot.Route(api, db)
 	interviewpanel.Route(api, db)
@@ -139,6 +145,23 @@ func CreateRoutes(api huma.API, db *gorm.DB, storageClient *storage.Client, chal
 	selection.Route(api, db)
 	draft.Route(api, db)
 	decision.Route(api, db)
+	documentConfirm(api)
+}
+
+// documentConfirm declares the confirm_override query that middleware.ReadIntent reads, on every write that can need it.
+func documentConfirm(api huma.API) {
+	param := &huma.Param{
+		Name: "confirm_override", In: "query", Schema: &huma.Schema{Type: huma.TypeBoolean},
+		Description: "Chiefs and admins: go ahead with an override or destructive change the workflow flags; it is recorded",
+	}
+	for _, item := range api.OpenAPI().Paths {
+		for _, op := range []*huma.Operation{item.Post, item.Put, item.Patch, item.Delete} {
+			if op == nil || slices.ContainsFunc(op.Parameters, func(p *huma.Param) bool { return p.Name == param.Name }) {
+				continue
+			}
+			op.Parameters = append(op.Parameters, param)
+		}
+	}
 }
 
 // OpenAPIYAML registers the same routes as the server over a dry-run database

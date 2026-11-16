@@ -4,22 +4,18 @@ import (
 	"context"
 
 	"github.com/GenerateNU/apportal/backend/internal/handlers/interviewassignment"
-	"github.com/GenerateNU/apportal/backend/internal/handlers/reviewrelease"
-	"github.com/GenerateNU/apportal/backend/internal/pipeline"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
+	"github.com/GenerateNU/apportal/backend/internal/workflow"
 	"github.com/danielgtaylor/huma/v2"
 
 	"github.com/GenerateNU/apportal/backend/internal/access"
-
-	"github.com/GenerateNU/apportal/backend/internal/models"
 )
 
 type recordingReviewService struct {
 	access                *access.Checker
 	interviewAssignmentDB *interviewassignment.InterviewAssignmentDB
 	recordingReviewDB     *RecordingReviewDB
-	reviewReleaseDB       *reviewrelease.ReviewReleaseDB
-	gate                  *pipeline.Gate
+	workflow              *workflow.Service
 }
 
 func (s *recordingReviewService) upsert(ctx context.Context, in *UpsertRecordingReviewInput) (*RecordingReviewsOutput, error) {
@@ -38,7 +34,7 @@ func (s *recordingReviewService) upsert(ctx context.Context, in *UpsertRecording
 			return nil, err
 		}
 	}
-	if err := s.gate.Application(ctx, in.ID, models.StepInterviews, models.KindRecordingReviewer); err != nil {
+	if err := s.workflow.RequireWorkEditable(ctx, in.ID, workflow.WorkRecordingReview); err != nil {
 		return nil, err
 	}
 	actor := utils.CurrentActor(ctx)
@@ -65,17 +61,14 @@ func (s *recordingReviewService) upsert(ctx context.Context, in *UpsertRecording
 }
 
 func (s *recordingReviewService) list(ctx context.Context, in *utils.ApplicationScopedInput) (*RecordingReviewsOutput, error) {
-	if err := s.access.CanApplication(ctx, access.ReviewApplication, in.ID); err != nil {
+	r, err := s.access.CanRead(ctx, in.ID, access.ReviewApplication, access.Review, workflow.WorkRecordingReview)
+	if err != nil {
 		return nil, err
 	}
-	items, err := s.interviewAssignmentDB.ListReviewers(ctx, []string{in.ID})
+	items, err := s.interviewAssignmentDB.ListReviewers(ctx, r.IDs)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
-	visible, err := s.reviewReleaseDB.PeerReviewsVisible(ctx, s.access, models.ReviewKindRecording, []string{in.ID})
-	if err != nil {
-		return nil, err
-	}
-	reviewrelease.HidePeerWriteups(items, utils.CurrentActor(ctx).NUID, visible)
+	r.HidePeerWriteups(items, utils.CurrentActor(ctx).NUID)
 	return &RecordingReviewsOutput{Body: items}, nil
 }

@@ -15,7 +15,7 @@ type Level int
 const (
 	None   Level = iota
 	Review       // read applications and write reviews
-	Manage       // also set up forms and run the pipeline
+	Manage       // also set up forms and run the workflow
 )
 
 type rule struct {

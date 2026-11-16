@@ -7,3 +7,11 @@ func SetIf[T any](updates map[string]any, col string, v *T) {
 		updates[col] = *v
 	}
 }
+
+func Deref[T any](p *T) T {
+	var zero T
+	if p == nil {
+		return zero
+	}
+	return *p
+}

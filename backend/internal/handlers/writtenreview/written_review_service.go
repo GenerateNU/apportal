@@ -7,9 +7,8 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/GenerateNU/apportal/backend/internal/handlers/reviewrelease"
-	"github.com/GenerateNU/apportal/backend/internal/pipeline"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
+	"github.com/GenerateNU/apportal/backend/internal/workflow"
 	"github.com/danielgtaylor/huma/v2"
 
 	"github.com/GenerateNU/apportal/backend/internal/access"
@@ -19,9 +18,8 @@ import (
 
 type writtenReviewService struct {
 	access          *access.Checker
-	reviewReleaseDB *reviewrelease.ReviewReleaseDB
 	writtenReviewDB *WrittenReviewDB
-	gate            *pipeline.Gate
+	workflow        *workflow.Service
 }
 
 func (s *writtenReviewService) upsert(ctx context.Context, in *UpsertWrittenReviewInput) (*WrittenReviewOutput, error) {
@@ -35,7 +33,7 @@ func (s *writtenReviewService) upsert(ctx context.Context, in *UpsertWrittenRevi
 		}
 		answers = append(answers, ReviewAnswerInput(a))
 	}
-	if err := s.gate.Application(ctx, in.ID, models.StepReviews, models.KindReviewer); err != nil {
+	if err := s.workflow.RequireWorkEditable(ctx, in.ID, workflow.WorkWrittenReview); err != nil {
 		return nil, err
 	}
 
@@ -58,24 +56,12 @@ func (s *writtenReviewService) upsert(ctx context.Context, in *UpsertWrittenRevi
 }
 
 func (s *writtenReviewService) list(ctx context.Context, in *utils.ApplicationScopedInput) (*WrittenReviewsOutput, error) {
-	if err := s.access.CanApplication(ctx, access.ReviewApplication, in.ID); err != nil {
-		return nil, err
-	}
-	// Blind review: until released, a lead sees only their own.
-	visible, err := s.reviewReleaseDB.PeerReviewsVisible(ctx, s.access, models.ReviewKindWritten, []string{in.ID})
+	r, err := s.access.CanRead(ctx, in.ID, access.ReviewApplication, access.Review, workflow.WorkWrittenReview)
 	if err != nil {
 		return nil, err
 	}
-	onlyReviewer := ""
-	if !visible[in.ID] {
-		onlyReviewer = utils.CurrentActor(ctx).NUID
-	}
-
-	items, err := s.writtenReviewDB.ListWrittenReviews(ctx, in.ID, onlyReviewer)
-	if err != nil {
-		return nil, utils.StoreErr(err)
-	}
-	return &WrittenReviewsOutput{Body: items}, nil
+	items, err := s.readable(ctx, r)
+	return &WrittenReviewsOutput{Body: items}, err
 }
 
 func (s *writtenReviewService) listBulk(ctx context.Context, in *ListBulkInput) (*WrittenReviewsOutput, error) {
@@ -88,36 +74,30 @@ func (s *writtenReviewService) listBulk(ctx context.Context, in *ListBulkInput) 
 			return nil, err
 		}
 	}
-	ids, err := s.access.VisibleApplicationIDs(ctx, ids, access.Review)
+	r, err := s.access.Readable(ctx, ids, access.Review, workflow.WorkWrittenReview)
 	if err != nil {
 		return nil, err
 	}
-	visible, err := s.reviewReleaseDB.PeerReviewsVisible(ctx, s.access, models.ReviewKindWritten, ids)
-	if err != nil {
-		return nil, err
-	}
-	var open, blind []string
-	for _, id := range ids {
-		if visible[id] {
-			open = append(open, id)
-		} else {
-			blind = append(blind, id)
-		}
-	}
-	all, err := s.writtenReviewDB.ListWrittenReviewsForApplications(ctx, open, "")
+	items, err := s.readable(ctx, r)
+	return &WrittenReviewsOutput{Body: items}, err
+}
+
+func (s *writtenReviewService) readable(ctx context.Context, r access.Readable) ([]models.WrittenReviewDetail, error) {
+	peers, ownOnly := r.Split()
+	all, err := s.writtenReviewDB.ListWrittenReviewsForApplications(ctx, peers, "")
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
-	own, err := s.writtenReviewDB.ListWrittenReviewsForApplications(ctx, blind, utils.CurrentActor(ctx).NUID)
+	own, err := s.writtenReviewDB.ListWrittenReviewsForApplications(ctx, ownOnly, utils.CurrentActor(ctx).NUID)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
 	items := []models.WrittenReviewDetail{}
-	for _, id := range ids {
+	for _, id := range r.IDs {
 		items = append(items, all[id]...)
 		items = append(items, own[id]...)
 	}
-	return &WrittenReviewsOutput{Body: items}, nil
+	return items, nil
 }
 
 func validateAnswers(answers []ReviewAnswerInput, questions map[string]models.ReviewQuestion) error {

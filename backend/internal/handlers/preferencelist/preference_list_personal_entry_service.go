@@ -3,9 +3,10 @@ package preferencelist
 import (
 	"context"
 
+	"github.com/danielgtaylor/huma/v2"
+
 	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
-	"github.com/danielgtaylor/huma/v2"
 )
 
 func (s *preferenceListService) upsertPersonalEntry(ctx context.Context, in *UpsertPreferenceListPersonalEntryInput) (*PreferenceListPersonalEntryOutput, error) {

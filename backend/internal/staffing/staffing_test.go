@@ -10,9 +10,10 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
+	"github.com/GenerateNU/apportal/backend/internal/middleware"
 	"github.com/GenerateNU/apportal/backend/internal/models"
-	"github.com/GenerateNU/apportal/backend/internal/pipeline"
 	"github.com/GenerateNU/apportal/backend/internal/testutil"
+	"github.com/GenerateNU/apportal/backend/internal/workflow"
 )
 
 func TestEligibleDefaults(t *testing.T) {
@@ -43,30 +44,29 @@ func TestEligibleDefaults(t *testing.T) {
 	}
 }
 
-func TestPolicyFromPipeline(t *testing.T) {
-	f := pipeline.NewFacts("c")
-	f.Openings = []pipeline.Opening{{RoleID: "eng"}, {RoleID: "des"}}
+func TestPolicyFromWorkflow(t *testing.T) {
+	f := workflow.NewCycleState("c")
+	f.Openings = []workflow.Opening{{RoleID: "eng"}, {RoleID: "des"}}
 	f.SetAssignment(models.StepInterviews, models.KindInterviewer, 3)
 	f.SetRelease("eng", models.StepInterviews, time.Now())
 	f.SetRelease("des", models.StepDecisions, time.Now())
 
-	p := PolicyFrom(f, false)
+	p := PolicyFrom(f, workflow.Caller{Tier: workflow.TierChief})
 	if p.Limits[models.KindInterviewer] != 3 || p.Limits[models.KindRecordingReviewer] != 0 || p.Limits[models.KindReviewer] != 0 {
 		t.Errorf("limits = %v", p.Limits)
 	}
-	if !p.Released["eng"] || p.Released["des"] {
-		t.Errorf("released = %v", p.Released)
-	}
-	testutil.WantStatus(t, p.Frozen["des"], http.StatusConflict)
-	if p.Frozen["eng"] != nil {
-		t.Errorf("eng isn't frozen: %v", p.Frozen["eng"])
-	}
-	if admin := PolicyFrom(f, true); admin.Frozen["des"] != nil {
-		t.Errorf("admins override the freeze: %v", admin.Frozen["des"])
+	testutil.WantStatus(t, p.Adds.Of(models.KindInterviewer, "eng"), http.StatusConflict)
+	testutil.WantStatus(t, p.Removes.Of(models.KindInterviewer, "eng"), http.StatusConflict)
+	testutil.WantStatus(t, p.Adds.Of(models.KindInterviewer, "des"), http.StatusConflict)
+	admin := PolicyFrom(f, workflow.Caller{Tier: workflow.TierAdmin, Intent: middleware.Intent{Confirm: true}})
+	for role, err := range map[string]error{"eng add": admin.Adds.Of(models.KindInterviewer, "eng"), "eng remove": admin.Removes.Of(models.KindInterviewer, "eng"), "des add": admin.Adds.Of(models.KindInterviewer, "des")} {
+		if err != nil {
+			t.Errorf("a confirmed admin overrides %s: %v", role, err)
+		}
 	}
 
 	f.Enabled[models.StepInterviews] = false
-	if n := PolicyFrom(f, false).Limits[models.KindInterviewer]; n != 0 {
+	if n := PolicyFrom(f, workflow.Caller{Tier: workflow.TierChief}).Limits[models.KindInterviewer]; n != 0 {
 		t.Errorf("interviews off: limit %d", n)
 	}
 }
@@ -84,17 +84,17 @@ func TestUnsetCounts(t *testing.T) {
 	}
 }
 
-func TestLocked(t *testing.T) {
+func TestBlocked(t *testing.T) {
 	frozen := huma.Error409Conflict("frozen")
-	snap := Snapshot{Released: map[string]bool{"eng": true}, Frozen: map[string]error{"des": frozen}}
-	if err := snap.Locked("eng"); !errors.Is(err, ErrLocked) {
-		t.Errorf("released: %v", err)
+	snap := Snapshot{Adds: Permissions{models.KindInterviewer: {"des": frozen}}, Removes: Permissions{models.KindInterviewer: {"eng": frozen}}}
+	if err := snap.AddBlocked("des", models.KindInterviewer); !errors.Is(err, frozen) {
+		t.Errorf("add: %v", err)
 	}
-	if err := snap.Locked("des"); !errors.Is(err, frozen) {
-		t.Errorf("frozen: %v", err)
+	if err := snap.RemoveBlocked("eng", models.KindInterviewer); !errors.Is(err, frozen) {
+		t.Errorf("remove: %v", err)
 	}
-	if err := snap.Locked("ops"); err != nil {
-		t.Errorf("open: %v", err)
+	if err := snap.AddBlocked("ops", models.KindInterviewer); err != nil {
+		t.Errorf("open opening: %v", err)
 	}
 }
 
@@ -121,9 +121,8 @@ func TestCheck(t *testing.T) {
 		want  error
 	}{
 		{"ok", open, "bob", models.KindInterviewer, nil},
-		{"locked", Rules{Released: true, Limit: 2, Eligible: open.Eligible}, "bob", models.KindInterviewer, ErrLocked},
 		{"off", Rules{Eligible: open.Eligible}, "bob", models.KindRecordingReviewer, ErrOff},
-		{"frozen", Rules{Frozen: ErrFull, Limit: 2, Eligible: open.Eligible}, "bob", models.KindInterviewer, ErrFull},
+		{"blocked", Rules{Blocked: ErrFull, Limit: 2, Eligible: open.Eligible}, "bob", models.KindInterviewer, ErrFull},
 		{"already", open, "ann", models.KindInterviewer, ErrAlready},
 		{"not eligible", open, "eve", models.KindInterviewer, ErrNotEligible},
 		{"conflict", open, "cat", models.KindInterviewer, ErrConflicted},
@@ -148,7 +147,7 @@ func TestSnapshotCheckUsesOpeningRules(t *testing.T) {
 	snap := Snapshot{
 		Openings:   Openings{Staff: []string{"ann", "bob"}, Teams: map[string]Teams{"eng": {models.KindInterviewer: {"g"}}}, Members: map[string][]string{"g": {"bob"}}},
 		Limits:     map[models.StepKind]int{models.KindInterviewer: 2},
-		Released:   map[string]bool{},
+		Adds:       Permissions{models.KindInterviewer: {}},
 		Applicants: map[string]*Applicant{"a1": {ApplicationID: "a1", RoleID: "eng", Assigned: map[models.StepKind][]string{}}},
 	}
 	if err := snap.Check("a1", "ann", models.KindInterviewer); !errors.Is(err, ErrNotEligible) {
@@ -157,8 +156,26 @@ func TestSnapshotCheckUsesOpeningRules(t *testing.T) {
 	if err := snap.Check("a1", "bob", models.KindInterviewer); err != nil {
 		t.Errorf("bob: %v", err)
 	}
-	snap.Released["eng"] = true
-	if err := snap.Check("a1", "bob", models.KindInterviewer); !errors.Is(err, ErrLocked) {
+	released := errors.New("interviews are released")
+	snap.Adds[models.KindInterviewer]["eng"] = released
+	if err := snap.Check("a1", "bob", models.KindInterviewer); !errors.Is(err, released) {
 		t.Errorf("released opening: %v", err)
+	}
+}
+
+func TestReviewersOnlyWhileInReview(t *testing.T) {
+	r := Rules{Limit: 2, Eligible: []string{"ann"}}
+	for stage, ok := range map[models.ApplicationStage]bool{
+		models.StageSubmitted: true, models.StageLeadReview: true, models.StageChiefReview: true,
+		models.StageInterview: false, models.StageRejected: false, models.StageSelection: false,
+	} {
+		app := Applicant{Stage: stage, Assigned: map[models.StepKind][]string{}}
+		err := Check(app, r, "ann", models.KindReviewer)
+		if ok != (err == nil) || (!ok && !errors.Is(err, ErrNotInReview)) {
+			t.Errorf("%s: %v", stage, err)
+		}
+	}
+	if err := Check(Applicant{Stage: models.StageInterview, Assigned: map[models.StepKind][]string{}}, r, "ann", models.KindInterviewer); err != nil {
+		t.Errorf("the stage rule is only for reviewers: %v", err)
 	}
 }

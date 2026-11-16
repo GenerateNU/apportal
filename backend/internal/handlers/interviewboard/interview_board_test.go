@@ -2,9 +2,12 @@ package interviewboard
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"slices"
 	"testing"
+
+	"github.com/GenerateNU/apportal/backend/internal/middleware"
 
 	"github.com/GenerateNU/apportal/backend/internal/access"
 	"github.com/GenerateNU/apportal/backend/internal/access/accesstest"
@@ -24,9 +27,7 @@ func TestPermissions(t *testing.T) {
 			return err
 		},
 		"auto plan dry run": func(ctx context.Context, s *interviewBoardService) error {
-			in := &AutoPlanInput{ID: accesstest.CycleID}
-			in.Body.DryRun = true
-			_, err := s.autoPlan(ctx, in)
+			_, err := s.autoPlan(middleware.WithIntent(ctx, middleware.Intent{DryRun: true}), &AutoPlanInput{ID: accesstest.CycleID})
 			return err
 		},
 		"auto plan save": func(ctx context.Context, s *interviewBoardService) error {
@@ -73,7 +74,7 @@ func snapshot(apps ...*staffing.Applicant) staffing.Snapshot {
 	s := staffing.Snapshot{
 		Openings: staffing.Openings{Staff: []string{"ann", "bob", "cat", "dan", "eve"}, Teams: map[string]staffing.Teams{}, Members: map[string][]string{}},
 		Limits:   map[models.StepKind]int{models.KindInterviewer: 2, models.KindRecordingReviewer: 1},
-		Released: map[string]bool{}, Applicants: map[string]*staffing.Applicant{},
+		Adds:     staffing.Permissions{models.KindInterviewer: {}}, Applicants: map[string]*staffing.Applicant{},
 	}
 	for _, a := range apps {
 		s.Applicants[a.ApplicationID] = a
@@ -149,7 +150,7 @@ func otherKind(k models.StepKind) models.StepKind {
 func TestPlanRecordingOffAndReleased(t *testing.T) {
 	snap := snapshot(applicant("x", "eng", models.StageInterview, nil), applicant("y", "des", models.StageInterview, nil))
 	snap.Limits[models.KindRecordingReviewer] = 0
-	snap.Released["des"] = true
+	snap.Adds[models.KindInterviewer]["des"] = errors.New("interviews are released for des")
 	plan := buildPlan(snap, facts{roles: []string{"eng", "des"}}, options{withRecording: true})
 	if len(plan.RecordingReviewers) != 0 || len(who(plan.Interviewers, "y")) != 0 {
 		t.Errorf("%+v", plan)

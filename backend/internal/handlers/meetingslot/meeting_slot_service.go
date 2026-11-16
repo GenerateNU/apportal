@@ -12,6 +12,7 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/handlers/staffgroup"
 	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
+	"github.com/GenerateNU/apportal/backend/internal/workflow"
 )
 
 var editableStages = []models.ApplicationStage{
@@ -19,13 +20,21 @@ var editableStages = []models.ApplicationStage{
 }
 
 type meetingSlotService struct {
-	gate  access.Gate
-	db    *gorm.DB
-	slots *MeetingSlotDB
+	workflow *workflow.Service
+	gate     access.Gate
+	db       *gorm.DB
+	slots    *MeetingSlotDB
 }
 
 func newService(gate access.Gate, db *gorm.DB) *meetingSlotService {
-	return &meetingSlotService{gate: gate, db: db, slots: NewMeetingSlotDB(db)}
+	return &meetingSlotService{workflow: workflow.NewService(db), gate: gate, db: db, slots: NewMeetingSlotDB(db)}
+}
+
+func (s *meetingSlotService) edit(ctx context.Context, cycleID string, ids ...string) error {
+	if err := s.manage(ctx, cycleID, ids...); err != nil {
+		return err
+	}
+	return s.workflow.RequireSetupEditable(ctx, cycleID, "", workflow.SetupInterviewLogistics)
 }
 
 func (s *meetingSlotService) manage(ctx context.Context, cycleID string, ids ...string) error {
@@ -55,11 +64,11 @@ func label(raw string) (string, error) {
 }
 
 func (s *meetingSlotService) create(ctx context.Context, in *CreateSlotInput) (*SlotOutput, error) {
-	if err := s.manage(ctx, in.ID); err != nil {
-		return nil, err
-	}
 	l, err := label(in.Body.Label)
 	if err != nil {
+		return nil, err
+	}
+	if err := s.edit(ctx, in.ID); err != nil {
 		return nil, err
 	}
 	existing, err := s.slots.List(ctx, in.ID)
@@ -77,11 +86,11 @@ func (s *meetingSlotService) create(ctx context.Context, in *CreateSlotInput) (*
 }
 
 func (s *meetingSlotService) rename(ctx context.Context, in *RenameSlotInput) (*SlotOutput, error) {
-	if err := s.manage(ctx, in.ID, "slot_id", in.SlotID); err != nil {
-		return nil, err
-	}
 	l, err := label(in.Body.Label)
 	if err != nil {
+		return nil, err
+	}
+	if err := s.edit(ctx, in.ID, "slot_id", in.SlotID); err != nil {
 		return nil, err
 	}
 	row, err := s.slots.Rename(ctx, in.ID, in.SlotID, l)
@@ -92,7 +101,7 @@ func (s *meetingSlotService) rename(ctx context.Context, in *RenameSlotInput) (*
 }
 
 func (s *meetingSlotService) remove(ctx context.Context, in *SlotPathInput) (*struct{}, error) {
-	if err := s.manage(ctx, in.ID, "slot_id", in.SlotID); err != nil {
+	if err := s.edit(ctx, in.ID, "slot_id", in.SlotID); err != nil {
 		return nil, err
 	}
 	if err := s.slots.Delete(ctx, in.ID, in.SlotID); err != nil {
@@ -102,15 +111,15 @@ func (s *meetingSlotService) remove(ctx context.Context, in *SlotPathInput) (*st
 }
 
 func (s *meetingSlotService) reorder(ctx context.Context, in *ReorderSlotsInput) (*SlotsOutput, error) {
-	if err := s.manage(ctx, in.ID); err != nil {
-		return nil, err
-	}
 	ids, err := utils.UUIDList("slot_ids", in.Body.SlotIDs)
 	if err != nil {
 		return nil, err
 	}
 	if len(ids) != len(in.Body.SlotIDs) {
 		return nil, huma.Error422UnprocessableEntity("slot_ids has duplicates")
+	}
+	if err := s.edit(ctx, in.ID); err != nil {
+		return nil, err
 	}
 	ok, err := s.slots.Reorder(ctx, in.ID, ids)
 	if err != nil {
@@ -134,7 +143,7 @@ func (s *meetingSlotService) listStaffSlots(ctx context.Context, in *utils.Cycle
 }
 
 func (s *meetingSlotService) setStaffSlot(ctx context.Context, in *SetStaffSlotInput) (*StaffSlotOutput, error) {
-	if err := s.manage(ctx, in.ID, "slot_id", in.Body.SlotID); err != nil {
+	if err := s.edit(ctx, in.ID, "slot_id", in.Body.SlotID); err != nil {
 		return nil, err
 	}
 	if err := staffgroup.RequireStaff(ctx, s.db, in.ID, []string{in.NUID}); err != nil {
@@ -151,7 +160,7 @@ func (s *meetingSlotService) setStaffSlot(ctx context.Context, in *SetStaffSlotI
 }
 
 func (s *meetingSlotService) clearStaffSlot(ctx context.Context, in *StaffSlotPathInput) (*struct{}, error) {
-	if err := s.manage(ctx, in.ID); err != nil {
+	if err := s.edit(ctx, in.ID); err != nil {
 		return nil, err
 	}
 	if err := s.slots.ClearStaffSlot(ctx, in.ID, in.NUID); err != nil {
@@ -161,7 +170,7 @@ func (s *meetingSlotService) clearStaffSlot(ctx context.Context, in *StaffSlotPa
 }
 
 func (s *meetingSlotService) setMatchBySlot(ctx context.Context, in *MatchBySlotInput) (*MatchBySlotOutput, error) {
-	if err := s.manage(ctx, in.ID); err != nil {
+	if err := s.edit(ctx, in.ID); err != nil {
 		return nil, err
 	}
 	if err := s.slots.SetMatchBySlot(ctx, in.ID, in.Body.Enabled); err != nil {

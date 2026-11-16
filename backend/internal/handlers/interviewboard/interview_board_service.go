@@ -12,6 +12,7 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/handlers/interviewassignment"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/interviewpanel"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
+	"github.com/GenerateNU/apportal/backend/internal/middleware"
 	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/staffing"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
@@ -105,16 +106,23 @@ func (s *interviewBoardService) autoPlan(ctx context.Context, in *AutoPlanInput)
 	if err := s.gate.CanCycle(ctx, access.ManageCycle, in.ID); err != nil {
 		return nil, err
 	}
+	dryRun := middleware.IntentFrom(ctx).DryRun
 	var plan InterviewPlan
 	run := func(tx *gorm.DB) error {
+		var snap staffing.Snapshot
 		var err error
-		plan, err = s.plan(ctx, tx, in.ID, roleIDs, in, !in.Body.DryRun)
-		if err != nil || in.Body.DryRun {
+		plan, snap, err = s.plan(ctx, tx, in.ID, roleIDs, in, !dryRun)
+		if err != nil || dryRun {
 			return err
+		}
+		for _, k := range plannedOpenings(snap, plan) {
+			if err := snap.Authorize(tx, k.roleID, k.kind, false); err != nil {
+				return err
+			}
 		}
 		return save(ctx, tx, plan, utils.CurrentActor(ctx).NUID)
 	}
-	if in.Body.DryRun {
+	if dryRun {
 		err = run(s.db.WithContext(ctx))
 	} else {
 		err = s.db.WithContext(ctx).Transaction(run)
@@ -126,18 +134,36 @@ func (s *interviewBoardService) autoPlan(ctx context.Context, in *AutoPlanInput)
 		}
 		return nil, utils.StoreErr(err)
 	}
-	plan.Saved = !in.Body.DryRun
+	plan.Saved = !dryRun
 	return &AutoPlanOutput{Body: plan}, nil
 }
 
-func (s *interviewBoardService) plan(ctx context.Context, db *gorm.DB, cycleID string, roleIDs []string, in *AutoPlanInput, lock bool) (InterviewPlan, error) {
+type plannedOpening struct {
+	roleID string
+	kind   models.StepKind
+}
+
+func plannedOpenings(snap staffing.Snapshot, plan InterviewPlan) []plannedOpening {
+	seen := map[plannedOpening]bool{}
+	var out []plannedOpening
+	for _, p := range append(slices.Clone(plan.Interviewers), plan.RecordingReviewers...) {
+		a, ok := snap.Applicants[p.ApplicationID]
+		if k := (plannedOpening{a.RoleID, p.Kind}); ok && !seen[k] {
+			seen[k] = true
+			out = append(out, k)
+		}
+	}
+	return out
+}
+
+func (s *interviewBoardService) plan(ctx context.Context, db *gorm.DB, cycleID string, roleIDs []string, in *AutoPlanInput, lock bool) (InterviewPlan, staffing.Snapshot, error) {
 	all, err := cycleRoles(db, cycleID)
 	if err != nil {
-		return InterviewPlan{}, err
+		return InterviewPlan{}, staffing.Snapshot{}, err
 	}
 	for _, r := range roleIDs {
 		if !slices.Contains(all, r) {
-			return InterviewPlan{}, huma.Error422UnprocessableEntity("role_ids must be roles in this cycle")
+			return InterviewPlan{}, staffing.Snapshot{}, huma.Error422UnprocessableEntity("role_ids must be roles in this cycle")
 		}
 	}
 	if len(roleIDs) == 0 {
@@ -145,42 +171,42 @@ func (s *interviewBoardService) plan(ctx context.Context, db *gorm.DB, cycleID s
 	}
 	ids, err := plannableIDs(db, cycleID)
 	if err != nil {
-		return InterviewPlan{}, err
+		return InterviewPlan{}, staffing.Snapshot{}, err
 	}
 	if lock {
 		if err := staffing.Hold(db, cycleID, ids); err != nil {
-			return InterviewPlan{}, err
+			return InterviewPlan{}, staffing.Snapshot{}, err
 		}
 	}
 	snap, err := s.guard.Load(ctx, db, cycleID, ids)
 	if err != nil {
-		return InterviewPlan{}, err
+		return InterviewPlan{}, staffing.Snapshot{}, err
 	}
 	if err := snap.RequireLimit(models.KindInterviewer); err != nil {
-		return InterviewPlan{}, staffing.HTTPError(err)
+		return InterviewPlan{}, staffing.Snapshot{}, staffing.HTTPError(err)
 	}
 	f := facts{roles: roleIDs}
 	if f.staffSlot, err = staffSlots(db, cycleID); err != nil {
-		return InterviewPlan{}, err
+		return InterviewPlan{}, staffing.Snapshot{}, err
 	}
 	if f.appSlots, err = applicationSlots(db, ids); err != nil {
-		return InterviewPlan{}, err
+		return InterviewPlan{}, staffing.Snapshot{}, err
 	}
 	if f.names, err = staffNames(db, cycleID); err != nil {
-		return InterviewPlan{}, err
+		return InterviewPlan{}, staffing.Snapshot{}, err
 	}
 	if in.Body.ByPanel {
 		if f.panels, err = interviewpanel.ListPanels(db, cycleID); err != nil {
-			return InterviewPlan{}, err
+			return InterviewPlan{}, staffing.Snapshot{}, err
 		}
 	}
 	match := false
 	if in.Body.MatchSlots != nil {
 		match = *in.Body.MatchSlots
 	} else if match, err = matchBySlot(db, cycleID); err != nil {
-		return InterviewPlan{}, err
+		return InterviewPlan{}, staffing.Snapshot{}, err
 	}
-	return buildPlan(snap, f, options{byPanel: in.Body.ByPanel, matchSlots: match, withRecording: in.Body.WithRecording}), nil
+	return buildPlan(snap, f, options{byPanel: in.Body.ByPanel, matchSlots: match, withRecording: in.Body.WithRecording}), snap, nil
 }
 
 func save(ctx context.Context, tx *gorm.DB, plan InterviewPlan, by string) error {

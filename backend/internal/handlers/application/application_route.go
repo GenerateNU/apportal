@@ -3,30 +3,28 @@ package application
 import (
 	"net/http"
 
+	"github.com/danielgtaylor/huma/v2"
+	"gorm.io/gorm"
+
+	"github.com/GenerateNU/apportal/backend/internal/handlers/answer"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/applicationtemplate"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/challenge"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/codesubmission"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/question"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
-	"github.com/GenerateNU/apportal/backend/internal/pipeline"
-	"github.com/GenerateNU/apportal/backend/internal/storage"
-	"github.com/danielgtaylor/huma/v2"
-	"gorm.io/gorm"
+	"github.com/GenerateNU/apportal/backend/internal/workflow"
 
 	"github.com/GenerateNU/apportal/backend/internal/access"
 )
 
-func Route(api huma.API, db *gorm.DB, storageClient *storage.Client) {
+func Route(api huma.API, db *gorm.DB) {
 	applicationDB := NewApplicationDB(db)
 	applicationTemplateDB := applicationtemplate.NewApplicationTemplateDB(db)
 	challengeDB := challenge.NewChallengeDB(db)
 	codeSubmissionDB := codesubmission.NewCodeSubmissionDB(db)
 	questionDB := question.NewQuestionDB(db)
 
-	registerAnswer(api, &answerService{access: access.NewChecker(db), applicationDB: applicationDB})
-	registerComment(api, &commentService{access: access.NewChecker(db), commentDB: NewCommentDB(db)})
-	registerApplication(api, &applicationService{access: access.NewChecker(db), applicationDB: applicationDB, applicationTemplateDB: applicationTemplateDB, gate: pipeline.NewGate(db), challengeDB: challengeDB, codeSubmissionDB: codeSubmissionDB, questionDB: questionDB, roleDB: role.NewRoleDB(db)})
-	registerUpload(api, &uploadService{access: access.NewChecker(db), applicationDB: applicationDB, questionDB: questionDB, storage: storageClient})
+	registerApplication(api, &applicationService{access: access.NewChecker(db), applicationDB: applicationDB, applicationTemplateDB: applicationTemplateDB, answers: answer.NewAnswerDB(db), workflow: workflow.NewService(db), challengeDB: challengeDB, codeSubmissionDB: codeSubmissionDB, questionDB: questionDB, roleDB: role.NewRoleDB(db)})
 }
 
 func registerApplication(api huma.API, s *applicationService) {
@@ -65,7 +63,7 @@ func registerApplication(api huma.API, s *applicationService) {
 		Method:      http.MethodPatch,
 		Path:        "/applications/{id}",
 		Summary:     "Update an application",
-		Description: "Set resume_url or availability, submit a draft, or change the stage within its pipeline step or to an outcome (accepted, rejected, withdrawn). Moving into another step goes through the cycle pipeline's advance; changes in a frozen step are 409 unless the caller is an admin.",
+		Description: "Set resume_url or availability, submit a draft, or change the stage within its workflow step or to an outcome (accepted, rejected, withdrawn). Moving into another step goes through the workflow advance; changes in a frozen step are an override chiefs and admins confirm with confirm_override=true.",
 		Tags:        []string{"Applications"},
 		Errors:      []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound, http.StatusConflict, http.StatusUnprocessableEntity},
 	}, s.update)

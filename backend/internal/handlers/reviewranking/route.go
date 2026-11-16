@@ -15,7 +15,7 @@ func Route(api huma.API, db *gorm.DB) {
 		access: access.NewChecker(db),
 		store:  NewRankingDB(db),
 		roles:  role.NewRoleDB(db),
-		rules:  NewPipelineRules(db),
+		rules:  NewWorkflowRules(db),
 	})
 }
 

@@ -4,9 +4,7 @@ import (
 	"time"
 )
 
-// PreferenceListStatus is a lead-toggleable status flag, not a hard lock —
-// the (cycle, role) deadline in PreferenceListDeadline is what actually
-// stops edits.
+// PreferenceListStatus is a lead's own flag; the decisions step's preference_list deadline is what locks edits.
 type PreferenceListStatus string
 
 const (
@@ -158,19 +156,4 @@ type PreferenceListDetail struct {
 	Entries         []PreferenceListEntryDetail         `json:"entries"`
 	PersonalEntries []PreferenceListPersonalEntryDetail `json:"personal_entries"`
 	Comments        []PreferenceListCommentDetail       `json:"comments"`
-}
-
-// PreferenceListDeadline is a per-(cycle, role) settings row — not a column
-// on PreferenceList itself, since one deadline governs every list sharing
-// that (cycle, role), not just the list that happens to store it.
-type PreferenceListDeadline struct {
-	ID            string     `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
-	CycleID       string     `json:"cycle_id" gorm:"type:uuid;not null;uniqueIndex:preference_list_deadlines_cycle_id_role_id_key,priority:1"`
-	RoleID        string     `json:"role_id" gorm:"type:uuid;not null;uniqueIndex:preference_list_deadlines_cycle_id_role_id_key,priority:2"`
-	ClosesAt      *time.Time `json:"closes_at,omitempty"`
-	UpdatedAt     time.Time  `json:"updated_at" gorm:"not null;default:now()"`
-	UpdatedBy     *string    `json:"updated_by,omitempty"`
-	Cycle         Cycle      `json:"-" gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
-	UpdatedByUser *User      `json:"-" gorm:"foreignKey:UpdatedBy;references:NUID"`
-	Role          Role       `json:"-" gorm:"foreignKey:RoleID;references:ID;constraint:OnDelete:RESTRICT"`
 }

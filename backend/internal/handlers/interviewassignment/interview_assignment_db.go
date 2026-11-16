@@ -3,6 +3,8 @@ package interviewassignment
 import (
 	"context"
 
+	"github.com/GenerateNU/apportal/backend/internal/workflow"
+
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
@@ -219,12 +221,13 @@ func (d *InterviewAssignmentDB) ListReviewers(ctx context.Context, applicationID
 		Where("i.application_id IN ?", applicationIDs).
 		Order("i.application_id").Order("r.assigned_at").Order("r.id").
 		Scan(&out).Error
-	return out, err
+	return withStep(out), err
 }
 
 func (d *InterviewAssignmentDB) GetReviewer(ctx context.Context, id string) (models.InterviewReviewerDetail, error) {
 	var out models.InterviewReviewerDetail
 	err := reviewerDetails(d.db.WithContext(ctx)).Where("r.id = ?", id).Take(&out).Error
+	out.StepRef = workflow.Ref(models.StepInterviews)
 	return out, utils.DBErr(err)
 }
 
@@ -235,7 +238,14 @@ func (d *InterviewAssignmentDB) ListReviewersForCycle(ctx context.Context, cycle
 		Where("r.interview_id IN (?)", cycleInterviews(db, cycleID, role)).
 		Order("r.assigned_at").Order("r.id").
 		Scan(&out).Error
-	return out, err
+	return withStep(out), err
+}
+
+func withStep(rows []models.InterviewReviewerDetail) []models.InterviewReviewerDetail {
+	for i := range rows {
+		rows[i].StepRef = workflow.Ref(models.StepInterviews)
+	}
+	return rows
 }
 
 func (d *InterviewAssignmentDB) IsReviewer(ctx context.Context, applicationID, nuid string) (bool, error) {

@@ -9,8 +9,8 @@ import (
 	"gorm.io/gorm/clause"
 
 	"github.com/GenerateNU/apportal/backend/internal/models"
-	"github.com/GenerateNU/apportal/backend/internal/pipeline"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
+	"github.com/GenerateNU/apportal/backend/internal/workflow"
 )
 
 type DraftDB struct {
@@ -285,7 +285,7 @@ func boardStage(tx *gorm.DB, draft models.Draft, applicationID string) (string, 
 }
 
 func accept(ctx context.Context, tx *gorm.DB, applicationID string) error {
-	if err := pipeline.GuardMoves(ctx, tx, pipeline.Move{ApplicationID: applicationID, To: models.StageAccepted}); err != nil {
+	if err := workflow.GuardMoves(ctx, tx, workflow.Move{ApplicationID: applicationID, To: models.StageAccepted}); err != nil {
 		return err
 	}
 	return tx.Model(&models.Application{}).Where("id = ?", applicationID).UpdateColumn("stage", models.StageAccepted).Error
@@ -301,13 +301,13 @@ func guardRestores(ctx context.Context, tx *gorm.DB, picks ...models.DraftPick) 
 	if err := tx.Model(&models.Application{}).Where("id IN ? AND stage = ?", ids, models.StageAccepted).Pluck("id", &accepted).Error; err != nil {
 		return err
 	}
-	moves := []pipeline.Move{}
+	moves := []workflow.Move{}
 	for _, p := range picks {
 		if slices.Contains(accepted, p.ApplicationID) {
-			moves = append(moves, pipeline.Move{ApplicationID: p.ApplicationID, To: models.ApplicationStage(p.PreviousStage), Restore: true})
+			moves = append(moves, workflow.Move{ApplicationID: p.ApplicationID, To: models.ApplicationStage(p.PreviousStage), Restore: true})
 		}
 	}
-	return pipeline.GuardMoves(ctx, tx, moves...)
+	return workflow.GuardMoves(ctx, tx, moves...)
 }
 
 // MakeDraftPick fills the slot (0 means whichever is on the clock) and moves

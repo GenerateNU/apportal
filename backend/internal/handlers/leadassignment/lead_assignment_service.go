@@ -3,122 +3,54 @@ package leadassignment
 import (
 	"context"
 	"errors"
-	"fmt"
-	"slices"
 
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/google/uuid"
+	"gorm.io/gorm"
 
 	"github.com/GenerateNU/apportal/backend/internal/access"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/GenerateNU/apportal/backend/internal/models"
-	"github.com/GenerateNU/apportal/backend/internal/pipeline"
-	"github.com/GenerateNU/apportal/backend/internal/reviewrules"
+	"github.com/GenerateNU/apportal/backend/internal/staffing"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 )
 
 type leadAssignmentService struct {
-	access applicationGate
-	store  manualStore
-	rules  reviewrules.Rules
-}
-
-func errReleased() error {
-	return huma.Error409Conflict("Reviews are already out for this opening, so reviewers can't be removed.")
-}
-
-func parseID(id, name string) error {
-	if _, err := uuid.Parse(id); err != nil {
-		return huma.Error422UnprocessableEntity("invalid " + name)
-	}
-	return nil
-}
-
-func statusErr(err error) error {
-	var se huma.StatusError
-	if errors.As(err, &se) {
-		return err
-	}
-	return utils.StoreErr(err)
+	access *access.Checker
+	db     *LeadAssignmentDB
+	guard  *staffing.Guard
 }
 
 func (s *leadAssignmentService) create(ctx context.Context, in *CreateLeadAssignmentInput) (*LeadAssignmentOutput, error) {
-	if err := access.RequireActor(ctx); err != nil {
-		return nil, err
-	}
-	if err := parseID(in.ID, "application id"); err != nil {
+	if err := utils.RequireUUIDs("application id", in.ID); err != nil {
 		return nil, err
 	}
 	if err := s.access.CanApplication(ctx, access.ManageApplication, in.ID); err != nil {
 		return nil, err
 	}
-	if in.Body.LeadNUID == "" {
+	nuid := in.Body.LeadNUID
+	if nuid == "" {
 		return nil, huma.Error422UnprocessableEntity("lead_nuid is required")
 	}
-	o, err := s.store.ApplicationOpening(ctx, in.ID)
-	if err != nil {
-		return nil, utils.StoreErr(err)
-	}
-	if step, _ := pipeline.StepOfStage(o.Stage); step != models.StepApplications && step != models.StepReviews {
-		return nil, huma.Error409Conflict("reviewers can only be assigned while an application is submitted or in review")
-	}
-	if err := s.writable(ctx, o); err != nil {
-		return nil, err
-	}
-	eligible, err := s.rules.Eligible(ctx, o.CycleID)
-	if err != nil {
-		return nil, utils.StoreErr(err)
-	}
-	if !slices.Contains(eligible[o.RoleID], in.Body.LeadNUID) {
-		return nil, huma.Error422UnprocessableEntity("lead_nuid can't review this opening")
-	}
-	perApplicant, err := s.rules.PerApplicant(ctx, o.CycleID)
-	if err != nil {
-		return nil, utils.StoreErr(err)
-	}
-	if perApplicant <= 0 {
-		return nil, reviewrules.ErrNoPerApplicant()
-	}
-
-	var out models.LeadAssignment
-	err = s.store.Locked(ctx, o.CycleID, func(tx manualStore) error {
-		conflicted, err := tx.Conflicted(ctx, in.ID, in.Body.LeadNUID)
-		if err != nil {
-			return err
-		}
-		if conflicted {
-			return huma.Error409Conflict("This reviewer has a conflict of interest with this applicant.")
-		}
-		n, err := tx.CountAssignments(ctx, in.ID)
-		if err != nil {
-			return err
-		}
-		if n >= perApplicant {
-			return huma.Error409Conflict(fmt.Sprintf("This applicant already has %d reviewers, the most each applicant gets.", n))
-		}
-		out, err = tx.Create(ctx, in.ID, in.Body.LeadNUID, utils.CurrentActor(ctx).NUID)
-		if errors.Is(err, utils.ErrConflict) {
-			return huma.Error409Conflict("This reviewer is already assigned to this applicant.")
-		}
-		return err
+	row, err := s.db.Assign(ctx, in.ID, nuid, utils.CurrentActor(ctx).NUID, func(tx *gorm.DB) error {
+		return s.guard.CheckAdd(ctx, tx, in.ID, nuid, models.KindReviewer)
 	})
-	if err != nil {
-		return nil, statusErr(err)
+	if errors.Is(err, utils.ErrConflict) {
+		return nil, huma.Error409Conflict("this reviewer is already assigned to this applicant")
 	}
-	return &LeadAssignmentOutput{Body: out}, nil
+	if err != nil {
+		return nil, staffing.HTTPError(err)
+	}
+	return &LeadAssignmentOutput{Body: row}, nil
 }
 
 func (s *leadAssignmentService) list(ctx context.Context, in *utils.ApplicationScopedInput) (*LeadAssignmentsOutput, error) {
-	if err := access.RequireActor(ctx); err != nil {
-		return nil, err
-	}
-	if err := parseID(in.ID, "application id"); err != nil {
+	if err := utils.RequireUUIDs("application id", in.ID); err != nil {
 		return nil, err
 	}
 	if err := s.access.CanApplication(ctx, access.ReviewApplication, in.ID); err != nil {
 		return nil, err
 	}
-	items, err := s.store.List(ctx, in.ID)
+	items, err := s.db.ListLeadAssignments(ctx, in.ID)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
@@ -126,78 +58,45 @@ func (s *leadAssignmentService) list(ctx context.Context, in *utils.ApplicationS
 }
 
 func (s *leadAssignmentService) delete(ctx context.Context, in *utils.IDInput) (*struct{}, error) {
-	if err := access.RequireActor(ctx); err != nil {
-		return nil, err
-	}
-	if err := parseID(in.ID, "assignment id"); err != nil {
+	if err := utils.RequireUUIDs("assignment id", in.ID); err != nil {
 		return nil, err
 	}
 	if err := s.access.CanApplicationOf(ctx, access.ManageApplication, "lead_assignments", in.ID); err != nil {
 		return nil, err
 	}
-	o, err := s.store.AssignmentOpening(ctx, in.ID)
+	err := s.db.Unassign(ctx, in.ID, func(tx *gorm.DB, applicationID string) error {
+		return s.guard.CheckRemove(ctx, tx, applicationID, models.KindReviewer)
+	})
 	if err != nil {
-		return nil, utils.StoreErr(err)
-	}
-	if err := s.removable(ctx, o); err != nil {
-		return nil, err
-	}
-	if err := s.store.Delete(ctx, in.ID); err != nil {
-		return nil, utils.StoreErr(err)
+		return nil, staffing.HTTPError(err)
 	}
 	return nil, nil
 }
 
 func (s *leadAssignmentService) deleteAll(ctx context.Context, in *DeleteAllLeadAssignmentsInput) (*DeleteAllLeadAssignmentsOutput, error) {
-	if err := access.RequireActor(ctx); err != nil {
-		return nil, err
-	}
 	if err := role.ParseRoleID(in.RoleID); err != nil {
 		return nil, err
 	}
-	if err := parseID(in.ID, "cycle id"); err != nil {
+	if err := utils.RequireUUIDs("cycle id", in.ID); err != nil {
 		return nil, err
 	}
 	if err := s.access.CanCycle(ctx, access.ManageCycle, in.ID); err != nil {
 		return nil, err
 	}
-	ok, err := s.store.RoleInCycle(ctx, in.ID, in.RoleID)
+	ok, err := s.db.RoleInCycle(ctx, in.ID, in.RoleID)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
 	if !ok {
 		return nil, huma.Error422UnprocessableEntity("role_id isn't an opening on this cycle")
 	}
-	if err := s.removable(ctx, opening{CycleID: in.ID, RoleID: in.RoleID}); err != nil {
-		return nil, err
-	}
-	deleted, err := s.store.DeleteUnsubmitted(ctx, in.ID, in.RoleID)
+	deleted, err := s.db.UnassignUnsubmitted(ctx, in.ID, in.RoleID, func(tx *gorm.DB) error {
+		return s.guard.CheckOpening(ctx, tx, in.ID, in.RoleID, models.KindReviewer)
+	})
 	if err != nil {
-		return nil, utils.StoreErr(err)
+		return nil, staffing.HTTPError(err)
 	}
 	out := &DeleteAllLeadAssignmentsOutput{}
 	out.Body.Deleted = deleted
 	return out, nil
-}
-
-func (s *leadAssignmentService) writable(ctx context.Context, o opening) error {
-	frozen, err := s.rules.Frozen(ctx, o.CycleID)
-	if err != nil {
-		return utils.StoreErr(err)
-	}
-	if frozen[o.RoleID] {
-		return reviewrules.ErrFrozen()
-	}
-	return nil
-}
-
-func (s *leadAssignmentService) removable(ctx context.Context, o opening) error {
-	released, err := s.rules.Released(ctx, o.CycleID)
-	if err != nil {
-		return utils.StoreErr(err)
-	}
-	if released[o.RoleID] {
-		return errReleased()
-	}
-	return s.writable(ctx, o)
 }

@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"strings"
 
+	"github.com/GenerateNU/apportal/backend/internal/workflow"
+
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
@@ -151,45 +153,6 @@ func (w *WrittenReviewDB) UpsertWrittenReview(ctx context.Context, in WrittenRev
 	return detail, nil
 }
 
-// ListWrittenReviews returns an application's reviews with their answers. A
-// non-empty onlyReviewer returns just that reviewer's, for blind review.
-func (w *WrittenReviewDB) ListWrittenReviews(ctx context.Context, applicationID, onlyReviewer string) ([]models.WrittenReviewDetail, error) {
-	q := w.db.WithContext(ctx).Where("application_id = ?", applicationID)
-	if onlyReviewer != "" {
-		q = q.Where("reviewer_nuid = ?", onlyReviewer)
-	}
-	var reviews []models.WrittenReview
-	if err := q.Order("created_at").Find(&reviews).Error; err != nil {
-		return nil, err
-	}
-
-	ids := make([]string, len(reviews))
-	reviewerNUIDs := make([]string, len(reviews))
-	for i, r := range reviews {
-		ids[i] = r.ID
-		reviewerNUIDs[i] = r.ReviewerNUID
-	}
-	answers, err := w.listReviewAnswers(ctx, ids)
-	if err != nil {
-		return nil, err
-	}
-	names, err := w.users.NamesByNUIDs(ctx, reviewerNUIDs)
-	if err != nil {
-		return nil, err
-	}
-
-	details := make([]models.WrittenReviewDetail, len(reviews))
-	for i, r := range reviews {
-		details[i].WrittenReview = r
-		details[i].Answers = answers[r.ID]
-		if details[i].Answers == nil {
-			details[i].Answers = []models.WrittenReviewAnswer{}
-		}
-		details[i].ReviewerName = names[r.ReviewerNUID]
-	}
-	return details, nil
-}
-
 // listReviewAnswers fetches the answers for the given reviews, grouped by review.
 func (w *WrittenReviewDB) listReviewAnswers(ctx context.Context, reviewIDs []string) (map[string][]models.WrittenReviewAnswer, error) {
 	grouped := map[string][]models.WrittenReviewAnswer{}
@@ -238,7 +201,7 @@ func (w *WrittenReviewDB) ListWrittenReviewsForApplications(ctx context.Context,
 		return nil, err
 	}
 	for _, r := range reviews {
-		detail := models.WrittenReviewDetail{WrittenReview: r, Answers: answers[r.ID], ReviewerName: names[r.ReviewerNUID]}
+		detail := models.WrittenReviewDetail{WrittenReview: r, StepRef: workflow.Ref(models.StepReviews), Answers: answers[r.ID], ReviewerName: names[r.ReviewerNUID]}
 		if detail.Answers == nil {
 			detail.Answers = []models.WrittenReviewAnswer{}
 		}
