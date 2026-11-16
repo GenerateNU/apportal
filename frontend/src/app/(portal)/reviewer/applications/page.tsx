@@ -51,8 +51,8 @@ export default async function ApplicationsPage() {
     await queryClient.prefetchInfiniteQuery({
       queryKey: queryKeys.applications.infiniteList(params),
       queryFn: ({ pageParam }) =>
-        fetchApplicationPage({ ...params, offset: pageParam }, requestOptions),
-      initialPageParam: 0,
+        fetchApplicationPage({ ...params, cursor: pageParam }, requestOptions),
+      initialPageParam: undefined as string | undefined,
     })
   }
 

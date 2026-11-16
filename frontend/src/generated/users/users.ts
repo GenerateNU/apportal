@@ -105,7 +105,7 @@ export const getListUsersQueryKey = (params?: ListUsersParams,) => {
     }
 
     
-export const getListUsersInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof listUsers>>, ListUsersParams['offset']>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(params?: ListUsersParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData, QueryKey, ListUsersParams['offset']>>, request?: SecondParameter<typeof customInstance>}
+export const getListUsersInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof listUsers>>, ListUsersParams['cursor']>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(params?: ListUsersParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData, QueryKey, ListUsersParams['cursor']>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -114,21 +114,21 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 
   
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listUsers>>, QueryKey, ListUsersParams['offset']> = ({ signal, pageParam }) => listUsers({...params, 'offset': pageParam || params?.['offset']}, requestOptions, signal);
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listUsers>>, QueryKey, ListUsersParams['cursor']> = ({ signal, pageParam }) => listUsers({...params, 'cursor': pageParam || params?.['cursor']}, requestOptions, signal);
 
       
 
       
 
-   return  { queryKey, queryFn, ...queryOptions} as UseInfiniteQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData, QueryKey, ListUsersParams['offset']> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, ...queryOptions} as UseInfiniteQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData, QueryKey, ListUsersParams['cursor']> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
 export type ListUsersInfiniteQueryResult = NonNullable<Awaited<ReturnType<typeof listUsers>>>
 export type ListUsersInfiniteQueryError = ErrorModel | ErrorModel | ErrorModel | ErrorModel
 
 
-export function useListUsersInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listUsers>>, ListUsersParams['offset']>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
- params: undefined |  ListUsersParams, options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData, QueryKey, ListUsersParams['offset']>> & Pick<
+export function useListUsersInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listUsers>>, ListUsersParams['cursor']>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
+ params: undefined |  ListUsersParams, options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData, QueryKey, ListUsersParams['cursor']>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listUsers>>,
           TError,
@@ -137,8 +137,8 @@ export function useListUsersInfinite<TData = InfiniteData<Awaited<ReturnType<typ
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListUsersInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listUsers>>, ListUsersParams['offset']>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
- params?: ListUsersParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData, QueryKey, ListUsersParams['offset']>> & Pick<
+export function useListUsersInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listUsers>>, ListUsersParams['cursor']>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
+ params?: ListUsersParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData, QueryKey, ListUsersParams['cursor']>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listUsers>>,
           TError,
@@ -147,16 +147,16 @@ export function useListUsersInfinite<TData = InfiniteData<Awaited<ReturnType<typ
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListUsersInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listUsers>>, ListUsersParams['offset']>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
- params?: ListUsersParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData, QueryKey, ListUsersParams['offset']>>, request?: SecondParameter<typeof customInstance>}
+export function useListUsersInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listUsers>>, ListUsersParams['cursor']>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
+ params?: ListUsersParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData, QueryKey, ListUsersParams['cursor']>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary List reviewers
  */
 
-export function useListUsersInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listUsers>>, ListUsersParams['offset']>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
- params?: ListUsersParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData, QueryKey, ListUsersParams['offset']>>, request?: SecondParameter<typeof customInstance>}
+export function useListUsersInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listUsers>>, ListUsersParams['cursor']>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
+ params?: ListUsersParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData, QueryKey, ListUsersParams['cursor']>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient 
  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 

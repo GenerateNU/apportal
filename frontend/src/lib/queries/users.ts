@@ -103,9 +103,8 @@ export function useMembersInfinite(limit: number, opts?: RequestOptions) {
     { limit },
     {
       query: {
-        initialPageParam: 0,
-        getNextPageParam: (lastPage, allPages) =>
-          lastPage?.has_more ? allPages.length * limit : undefined,
+        initialPageParam: undefined as string | undefined,
+        getNextPageParam: (lastPage) => lastPage?.next_cursor || undefined,
       },
       request: opts,
     }

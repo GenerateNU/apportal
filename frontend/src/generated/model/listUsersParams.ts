@@ -16,7 +16,7 @@ role?: string;
  */
 limit?: number;
 /**
- * Number of results to skip
+ * next_cursor from the previous page; omit for the first page
  */
-offset?: number;
+cursor?: string;
 };

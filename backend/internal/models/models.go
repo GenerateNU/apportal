@@ -200,7 +200,7 @@ type ApplicationSummary struct {
 type WrittenAnswer struct {
 	ID            string          `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
 	ApplicationID string          `json:"application_id" gorm:"type:uuid;not null;index:idx_written_answers_app;uniqueIndex:written_answers_application_id_question_id_key,priority:1"`
-	QuestionID    string          `json:"question_id" gorm:"type:uuid;not null;uniqueIndex:written_answers_application_id_question_id_key,priority:2"`
+	QuestionID    string          `json:"question_id" gorm:"type:uuid;not null;uniqueIndex:written_answers_application_id_question_id_key,priority:2;index:idx_written_answers_question"`
 	AnswerText    *string         `json:"answer_text,omitempty"`
 	AnswerOptions json.RawMessage `json:"answer_options,omitempty" gorm:"serializer:jsonb;type:jsonb"`
 	// AnswerFilePath/AnswerFileName let a `url`-type question be answered by

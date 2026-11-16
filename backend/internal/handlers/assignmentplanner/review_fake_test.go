@@ -110,6 +110,15 @@ type fakeRules struct {
 
 func (f fakeRules) PerApplicant(context.Context, string) (int, error) { return f.perApplicant, nil }
 
+func (f fakeRules) Locks(ctx context.Context, cycleID string) (map[string]bool, map[string]bool, error) {
+	released, err := f.Released(ctx, cycleID)
+	if err != nil {
+		return nil, nil, err
+	}
+	frozen, err := f.Frozen(ctx, cycleID)
+	return released, frozen, err
+}
+
 func (f fakeRules) Released(context.Context, string) (map[string]bool, error) {
 	return f.released, nil
 }

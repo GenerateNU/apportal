@@ -2,7 +2,6 @@ package preferencelist
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -239,27 +238,25 @@ func (p *PreferenceListDB) RemovePreferenceListMember(ctx context.Context, listI
 		&models.PreferenceListMember{})
 }
 
-// GetOrCreatePreferenceListDeadline fetches the (cycle, role) deadline,
-// creating an unset one (editable indefinitely) on first access.
-func (p *PreferenceListDB) GetOrCreatePreferenceListDeadline(ctx context.Context, cycleID string, role string) (models.PreferenceListDeadline, error) {
-	db := p.db.WithContext(ctx)
-	var deadline models.PreferenceListDeadline
-	err := db.Where("cycle_id = ? AND role_id = ?", cycleID, role).Take(&deadline).Error
-	if !errors.Is(err, gorm.ErrRecordNotFound) {
-		return deadline, err
+func (p *PreferenceListDB) GetPreferenceListDeadline(ctx context.Context, cycleID string, role string) (models.PreferenceListDeadline, error) {
+	var rows []models.PreferenceListDeadline
+	err := p.db.WithContext(ctx).Where("cycle_id = ? AND role_id = ?", cycleID, role).Limit(1).Find(&rows).Error
+	if err != nil || len(rows) == 0 {
+		return models.PreferenceListDeadline{CycleID: cycleID, RoleID: role}, err
 	}
+	return rows[0], nil
+}
 
-	deadline = models.PreferenceListDeadline{CycleID: cycleID, RoleID: role}
-	res := db.Select("cycle_id", "role_id").
-		Clauses(clause.OnConflict{DoNothing: true}, clause.Returning{}).Create(&deadline)
-	if res.Error != nil || res.RowsAffected > 0 {
-		return deadline, res.Error
+func (p *PreferenceListDB) ListPreferenceListDeadlines(ctx context.Context, cycleID string) (map[string]models.PreferenceListDeadline, error) {
+	var rows []models.PreferenceListDeadline
+	if err := p.db.WithContext(ctx).Where("cycle_id = ?", cycleID).Find(&rows).Error; err != nil {
+		return nil, err
 	}
-
-	// Lost a race with a concurrent create; read what the other writer inserted.
-	deadline = models.PreferenceListDeadline{}
-	err = db.Where("cycle_id = ? AND role_id = ?", cycleID, role).Take(&deadline).Error
-	return deadline, err
+	out := make(map[string]models.PreferenceListDeadline, len(rows))
+	for _, d := range rows {
+		out[d.RoleID] = d
+	}
+	return out, nil
 }
 
 // UpsertPreferenceListDeadline sets or clears (nil) the (cycle, role) deadline.

@@ -28,16 +28,13 @@ func (s *reviewReleaseService) list(ctx context.Context, in *utils.CycleScopedIn
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
-	kinds := []models.ReviewKind{models.ReviewKindWritten, models.ReviewKindRecording}
-	gates := make([]models.ReviewGate, 0, len(roles)*len(kinds))
-	for _, r := range roles {
-		for _, kind := range kinds {
-			gate, err := s.reviewReleaseDB.ReviewGate(ctx, in.ID, r.ID, kind)
-			if err != nil {
-				return nil, utils.StoreErr(err)
-			}
-			gates = append(gates, gate)
-		}
+	ids := make([]string, len(roles))
+	for i, r := range roles {
+		ids[i] = r.ID
+	}
+	gates, err := s.reviewReleaseDB.ReviewGates(ctx, in.ID, ids, []models.ReviewKind{models.ReviewKindWritten, models.ReviewKindRecording})
+	if err != nil {
+		return nil, utils.StoreErr(err)
 	}
 	return &ReviewGatesOutput{Body: gates}, nil
 }

@@ -4,11 +4,13 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"gorm.io/gorm"
 
 	appdb "github.com/GenerateNU/apportal/backend/internal/db"
 	"github.com/GenerateNU/apportal/backend/internal/models"
+	"github.com/GenerateNU/apportal/backend/internal/utils"
 )
 
 // These build the filter queries on a dry-run connection and assert on the
@@ -211,11 +213,21 @@ func TestListApplicationsQueryReturner(t *testing.T) {
 
 func TestListApplicationsQueryPaging(t *testing.T) {
 	limit := 50
-	query, args := listSQL(t, ApplicationFilter{CycleID: "c1", Limit: &limit, Offset: 100})
-	assertContains(t, query, `ORDER BY a.submitted_at DESC NULLS LAST LIMIT $3 OFFSET $4`)
-	if want := []any{"c1", models.StageDraft, 50, 100}; !reflect.DeepEqual(args, want) {
+	query, args := listSQL(t, ApplicationFilter{CycleID: "c1", Limit: &limit})
+	assertContains(t, query, `ORDER BY a.submitted_at DESC NULLS LAST,a.id DESC LIMIT $3`)
+	if want := []any{"c1", models.StageDraft, 51}; !reflect.DeepEqual(args, want) {
 		t.Fatalf("args = %#v, want %#v", args, want)
 	}
+
+	at := time.Date(2026, 11, 1, 12, 0, 0, 0, time.UTC)
+	query, args = listSQL(t, ApplicationFilter{CycleID: "c1", Limit: &limit, After: &utils.Cursor{At: &at, ID: "a9"}})
+	assertContains(t, query, `(a.submitted_at < $3 OR (a.submitted_at = $4 AND a.id < $5) OR a.submitted_at IS NULL)`)
+	if want := []any{"c1", models.StageDraft, at, at, "a9", 51}; !reflect.DeepEqual(args, want) {
+		t.Fatalf("args = %#v, want %#v", args, want)
+	}
+
+	query, _ = listSQL(t, ApplicationFilter{CycleID: "c1", Limit: &limit, After: &utils.Cursor{ID: "a9"}})
+	assertContains(t, query, `a.submitted_at IS NULL AND a.id < $3`)
 }
 
 func TestListApplicationsQueryUnpagedByDefault(t *testing.T) {
@@ -237,8 +249,7 @@ func TestCountAndStageCountsShareThePredicate(t *testing.T) {
 		AnswerFilters: []AnswerFilter{
 			{QuestionIDs: []string{"q1"}, Match: MatchContains, Values: []string{"boston"}},
 		},
-		Limit:  &limit,
-		Offset: 50,
+		Limit: &limit,
 	}
 
 	countQuery, countArgs := countSQL(t, f)

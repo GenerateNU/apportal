@@ -78,13 +78,13 @@ func (s *cycleService) templateSummary(ctx context.Context, in *CycleIDInput) (*
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
-	summaries := make([]models.CycleRoleSummary, 0, len(roles))
-	for _, r := range roles {
-		summary, err := s.cycleDB.CycleRoleSummary(ctx, in.ID, r.ID)
-		if err != nil {
-			return nil, utils.StoreErr(err)
-		}
-		summaries = append(summaries, summary)
+	ids := make([]string, len(roles))
+	for i, r := range roles {
+		ids[i] = r.ID
+	}
+	summaries, err := s.cycleDB.CycleRoleSummaries(ctx, in.ID, ids)
+	if err != nil {
+		return nil, utils.StoreErr(err)
 	}
 	return &CycleTemplateSummaryOutput{Body: summaries}, nil
 }

@@ -31,6 +31,11 @@ CREATE TYPE question_type AS ENUM ('short_answer', 'long_answer', 'multiple_choi
 CREATE TYPE user_role AS ENUM ('applicant', 'admin');
 `
 
+const postlude = `
+ALTER TABLE "interview_panel_members" ADD CONSTRAINT "fk_interview_panel_members_staff" FOREIGN KEY ("cycle_id", "user_nuid") REFERENCES "cycle_staff" ("cycle_id", "user_nuid") ON DELETE CASCADE;
+ALTER TABLE "staff_slots" ADD CONSTRAINT "fk_staff_slots_staff" FOREIGN KEY ("cycle_id", "user_nuid") REFERENCES "cycle_staff" ("cycle_id", "user_nuid") ON DELETE CASCADE;
+`
+
 func main() {
 	tables, err := gormschema.New("postgres", gormschema.WithConfig(&gorm.Config{NamingStrategy: db.NamingStrategy})).Load(
 		&models.User{}, &models.Branch{}, &models.Role{}, &models.Cycle{}, &models.CycleStaff{}, &models.ApplicationTemplate{},
@@ -55,7 +60,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if _, err := os.Stdout.WriteString(prelude + tables); err != nil {
+	if _, err := os.Stdout.WriteString(prelude + tables + postlude); err != nil {
 		fmt.Fprintln(os.Stderr, "failed to write schema:", err)
 		os.Exit(1)
 	}

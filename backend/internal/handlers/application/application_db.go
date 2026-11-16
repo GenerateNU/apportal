@@ -57,7 +57,7 @@ func (a *ApplicationDB) GetApplication(ctx context.Context, id string) (models.A
 // ListApplications returns every match, unpaged, for the queues and planners
 // that need the whole set.
 func (a *ApplicationDB) ListApplications(ctx context.Context, f ApplicationFilter) ([]models.ApplicationSummary, error) {
-	f.Limit, f.Offset = nil, 0
+	f.Limit, f.After = nil, nil
 	items := []models.ApplicationSummary{}
 	err := listApplicationsQuery(a.db.WithContext(ctx), f).Find(&items).Error
 	return items, err
@@ -71,6 +71,11 @@ func (a *ApplicationDB) ListApplicationsPage(ctx context.Context, f ApplicationF
 	page := ApplicationPage{Items: []models.ApplicationSummary{}}
 	if err := listApplicationsQuery(db, f).Find(&page.Items).Error; err != nil {
 		return page, err
+	}
+	if f.Limit != nil && len(page.Items) > *f.Limit {
+		page.Items = page.Items[:*f.Limit]
+		last := page.Items[len(page.Items)-1]
+		page.NextCursor = utils.Cursor{At: last.SubmittedAt, ID: last.ID}.Encode()
 	}
 	if !withCounts {
 		return page, nil
@@ -99,11 +104,16 @@ func listApplicationsQuery(db *gorm.DB, f ApplicationFilter) *gorm.DB {
 	q := applicationsFrom(db, f, applicationFilterAll).
 		Distinct("a.id", "a.cycle_id", "a.user_nuid", "a.role_id", "a.stage", "a.availability",
 			"a.resume_url", "a.submitted_at", "a.updated_at", "a.tag_ids", "u.full_name", "u.email", "u.returner").
-		Order("a.submitted_at DESC NULLS LAST")
-	if f.Limit != nil {
-		q = q.Limit(*f.Limit).Offset(f.Offset)
+		Order("a.submitted_at DESC NULLS LAST").Order("a.id DESC")
+	if f.Limit == nil {
+		return q
 	}
-	return q
+	if c := f.After; c != nil && c.At != nil {
+		q = q.Where("(a.submitted_at < ? OR (a.submitted_at = ? AND a.id < ?) OR a.submitted_at IS NULL)", *c.At, *c.At, c.ID)
+	} else if c != nil {
+		q = q.Where("a.submitted_at IS NULL AND a.id < ?", c.ID)
+	}
+	return q.Limit(*f.Limit + 1)
 }
 
 type applicationFilterScope int
@@ -232,19 +242,23 @@ func (a *ApplicationDB) DeleteDraftApplication(ctx context.Context, id, userNUID
 
 func (a *ApplicationDB) AdvanceApplicationToInterviewReview(ctx context.Context, applicationID string) error {
 	return a.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		var stage []models.ApplicationStage
-		if err := tx.Model(&models.Application{}).Where("id = ?", applicationID).Pluck("stage", &stage).Error; err != nil {
-			return err
-		}
-		if len(stage) == 0 || !slices.Contains(preInterviewReview, stage[0]) {
-			return nil
-		}
-		if err := pipeline.GuardMoves(ctx, tx, pipeline.Move{ApplicationID: applicationID, To: models.StageInterviewReview}); err != nil {
-			return err
-		}
-		return tx.Model(&models.Application{}).Where("id = ? AND stage IN ?", applicationID, preInterviewReview).
-			Update("stage", models.StageInterviewReview).Error
+		return AdvanceToInterviewReview(ctx, tx, applicationID)
 	})
+}
+
+func AdvanceToInterviewReview(ctx context.Context, tx *gorm.DB, applicationID string) error {
+	var stage []models.ApplicationStage
+	if err := tx.Model(&models.Application{}).Where("id = ?", applicationID).Pluck("stage", &stage).Error; err != nil {
+		return err
+	}
+	if len(stage) == 0 || !slices.Contains(preInterviewReview, stage[0]) {
+		return nil
+	}
+	if err := pipeline.GuardMoves(ctx, tx, pipeline.Move{ApplicationID: applicationID, To: models.StageInterviewReview}); err != nil {
+		return err
+	}
+	return tx.Model(&models.Application{}).Where("id = ? AND stage IN ?", applicationID, preInterviewReview).
+		Update("stage", models.StageInterviewReview).Error
 }
 
 var preInterviewReview = []models.ApplicationStage{models.StageInterview, models.StageInterviewScheduled, models.StageInterviewConducted}

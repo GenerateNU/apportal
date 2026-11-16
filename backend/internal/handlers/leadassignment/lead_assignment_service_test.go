@@ -100,6 +100,15 @@ func (r fakeRules) Frozen(context.Context, string) (map[string]bool, error) {
 	return map[string]bool{accesstest.RoleID: r.frozen}, nil
 }
 
+func (r fakeRules) Locks(ctx context.Context, cycleID string) (map[string]bool, map[string]bool, error) {
+	released, err := r.Released(ctx, cycleID)
+	if err != nil {
+		return nil, nil, err
+	}
+	frozen, err := r.Frozen(ctx, cycleID)
+	return released, frozen, err
+}
+
 func (r fakeRules) Released(context.Context, string) (map[string]bool, error) {
 	return map[string]bool{accesstest.RoleID: r.released}, nil
 }

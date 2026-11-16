@@ -18,6 +18,7 @@ type Rules interface {
 	PerApplicant(ctx context.Context, cycleID string) (int, error)
 	Released(ctx context.Context, cycleID string) (map[string]bool, error)
 	Frozen(ctx context.Context, cycleID string) (map[string]bool, error)
+	Locks(ctx context.Context, cycleID string) (released, frozen map[string]bool, err error)
 	Eligible(ctx context.Context, cycleID string) (map[string][]string, error)
 }
 
@@ -63,6 +64,21 @@ func (d *Default) Frozen(ctx context.Context, cycleID string) (map[string]bool, 
 	return d.byOpening(ctx, cycleID, func(f *pipeline.Facts, role string) bool {
 		return f.Frozen(role, models.StepReviews)
 	})
+}
+
+func (d *Default) Locks(ctx context.Context, cycleID string) (map[string]bool, map[string]bool, error) {
+	f, err := pipeline.Load(d.db.WithContext(ctx), cycleID)
+	if err != nil {
+		return nil, nil, err
+	}
+	actor, _ := middleware.ActorFrom(ctx)
+	admin := actor.HasRole(models.UserRoleAdmin)
+	released, frozen := map[string]bool{}, map[string]bool{}
+	for _, o := range f.Openings {
+		released[o.RoleID] = f.Released(o.RoleID, models.StepReviews)
+		frozen[o.RoleID] = !admin && f.Frozen(o.RoleID, models.StepReviews)
+	}
+	return released, frozen, nil
 }
 
 func (d *Default) byOpening(ctx context.Context, cycleID string, pick func(*pipeline.Facts, string) bool) (map[string]bool, error) {

@@ -129,7 +129,6 @@ func (s *applicationService) list(ctx context.Context, in *ListApplicationsInput
 		Returner:              returner,
 		TagIDs:                tagIDs,
 		Search:                in.Search,
-		Offset:                in.Offset,
 		VisibleCycles:         visible,
 		// Only a user listing their own applications by their own identity
 		// ever sees their own draft — the reviewer queue and lookups of
@@ -153,16 +152,22 @@ func (s *applicationService) list(ctx context.Context, in *ListApplicationsInput
 	if in.Limit > 0 {
 		filter.Limit = &in.Limit
 	}
+	after, err := utils.ParseCursor(in.Cursor)
+	if err != nil {
+		return nil, err
+	}
+	filter.After = after
 
 	// The totals cost a full scan each and are invariant for a given filter, so
 	// only the first page pays for them; later pages reuse what it returned.
-	page, err := s.applicationDB.ListApplicationsPage(ctx, filter, in.Offset == 0)
+	page, err := s.applicationDB.ListApplicationsPage(ctx, filter, after == nil)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
 	out := &ApplicationsOutput{}
 	out.Body.Applications = page.Items
 	out.Body.Total = page.Total
+	out.Body.NextCursor = page.NextCursor
 	out.Body.StageCounts = make(map[string]int, len(page.StageCounts))
 	for stage, n := range page.StageCounts {
 		out.Body.StageCounts[string(stage)] = n

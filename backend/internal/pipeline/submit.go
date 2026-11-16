@@ -86,6 +86,10 @@ func (g *Gate) Opening(ctx context.Context, cycleID, roleID string, s models.Ste
 	return CheckSubmission(g.db.WithContext(ctx), cycleID, roleID, s, k, admin(ctx), time.Now())
 }
 
+func (g *Gate) ApplicationIn(ctx context.Context, tx *gorm.DB, applicationID string, s models.Step, k models.StepKind) error {
+	return CheckApplicationSubmission(tx, applicationID, s, k, admin(ctx), time.Now())
+}
+
 func (g *Gate) Application(ctx context.Context, applicationID string, s models.Step, k models.StepKind) error {
 	return CheckApplicationSubmission(g.db.WithContext(ctx), applicationID, s, k, admin(ctx), time.Now())
 }

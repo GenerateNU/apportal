@@ -51,8 +51,62 @@ func assignedSubmitted(db *gorm.DB, cycleID string, role string, kind models.Rev
 			Joins("JOIN applications a ON a.id = wr.application_id").
 			Where("wr.submitted_at IS NOT NULL")
 	}
+	if role == "" {
+		return assigned.Where("a.cycle_id = ?", cycleID), submitted.Where("a.cycle_id = ?", cycleID)
+	}
 	scope := "a.cycle_id = ? AND a.role_id = ?"
 	return assigned.Where(scope, cycleID, role), submitted.Where(scope, cycleID, role)
+}
+
+func (r *ReviewReleaseDB) ReviewGates(ctx context.Context, cycleID string, roleIDs []string, kinds []models.ReviewKind) ([]models.ReviewGate, error) {
+	db := r.db.WithContext(ctx)
+	type count struct {
+		RoleID string
+		N      int
+	}
+	byRole := func(q *gorm.DB) (map[string]int, error) {
+		var rows []count
+		if err := q.Select("a.role_id, count(*) AS n").Group("a.role_id").Scan(&rows).Error; err != nil {
+			return nil, err
+		}
+		out := map[string]int{}
+		for _, r := range rows {
+			out[r.RoleID] = r.N
+		}
+		return out, nil
+	}
+	var releases []reviewRelease
+	if err := db.Where("cycle_id = ?", cycleID).Find(&releases).Error; err != nil {
+		return nil, err
+	}
+	gates := make([]models.ReviewGate, 0, len(roleIDs)*len(kinds))
+	counts := map[models.ReviewKind][2]map[string]int{}
+	for _, kind := range kinds {
+		assigned, submitted := assignedSubmitted(db, cycleID, "", kind)
+		a, err := byRole(assigned)
+		if err != nil {
+			return nil, err
+		}
+		sub, err := byRole(submitted)
+		if err != nil {
+			return nil, err
+		}
+		counts[kind] = [2]map[string]int{a, sub}
+	}
+	for _, role := range roleIDs {
+		for _, kind := range kinds {
+			gate := models.ReviewGate{CycleID: cycleID, RoleID: role, Kind: kind,
+				AssignedCount: counts[kind][0][role], SubmittedCount: counts[kind][1][role]}
+			for _, rel := range releases {
+				if rel.RoleID == role && rel.ReviewKind == kind {
+					gate.ReleasedBy, gate.ReleasedAt = rel.ReleasedBy, rel.ReleasedAt
+				}
+			}
+			gate.Released = gate.ReleasedAt != nil
+			gates = append(gates, gate)
+		}
+	}
+	return gates, nil
 }
 
 // ReviewGate reports one review kind's blind-review state for a cycle × role:

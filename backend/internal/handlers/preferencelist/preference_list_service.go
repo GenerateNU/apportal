@@ -68,7 +68,7 @@ func preferenceListDeadlinePassed(d models.PreferenceListDeadline) bool {
 // Entry-level mutations (add/remove/reorder/reasoning-edit) are scoped to
 // whichever role the target application has, not the whole group.
 func (s *preferenceListService) checkEntryNotLocked(ctx context.Context, cycleID, roleID string) error {
-	deadline, err := s.preferenceListDB.GetOrCreatePreferenceListDeadline(ctx, cycleID, roleID)
+	deadline, err := s.preferenceListDB.GetPreferenceListDeadline(ctx, cycleID, roleID)
 	if err != nil {
 		return utils.StoreErr(err)
 	}
@@ -91,12 +91,12 @@ func (s *preferenceListService) checkGroupNotLocked(ctx context.Context, cycleID
 	if len(roles) == 0 {
 		return nil
 	}
+	deadlines, err := s.preferenceListDB.ListPreferenceListDeadlines(ctx, cycleID)
+	if err != nil {
+		return utils.StoreErr(err)
+	}
 	for _, r := range roles {
-		deadline, err := s.preferenceListDB.GetOrCreatePreferenceListDeadline(ctx, cycleID, r.ID)
-		if err != nil {
-			return utils.StoreErr(err)
-		}
-		if !preferenceListDeadlinePassed(deadline) {
+		if !preferenceListDeadlinePassed(deadlines[r.ID]) {
 			return nil
 		}
 	}
@@ -393,7 +393,7 @@ func (s *preferenceListService) getDeadline(ctx context.Context, in *PreferenceL
 	if err := role.RequireCycleRole(ctx, s.roleDB, in.ID, in.RoleID); err != nil {
 		return nil, err
 	}
-	d, err := s.preferenceListDB.GetOrCreatePreferenceListDeadline(ctx, in.ID, in.RoleID)
+	d, err := s.preferenceListDB.GetPreferenceListDeadline(ctx, in.ID, in.RoleID)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}

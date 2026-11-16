@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/GenerateNU/apportal/backend/internal/models"
+	"github.com/GenerateNU/apportal/backend/internal/utils"
 
 	"gorm.io/gorm"
 )
@@ -24,6 +25,7 @@ type ApplicationsOutput struct {
 		// StageCounts is the same match broken down by stage, ignoring any
 		// stage filter, so each tab can show a live count.
 		StageCounts map[string]int `json:"stage_counts"`
+		NextCursor  string         `json:"next_cursor,omitempty"`
 	}
 }
 
@@ -73,7 +75,7 @@ type ListApplicationsInput struct {
 	TagIDs   string `query:"tag_ids" doc:"Comma-separated cycle tag ids; an application matches any of them"`
 	Search   string `query:"search" doc:"Case-insensitive substring match on the applicant's name, NUID, or email"`
 	Limit    int    `query:"limit" doc:"Max results per page; omit (or 0) to return every match" minimum:"0" maximum:"200"`
-	Offset   int    `query:"offset" doc:"Number of results to skip" minimum:"0"`
+	Cursor   string `query:"cursor" doc:"next_cursor from the previous page; omit for the first page"`
 }
 
 type UpdateApplicationInput struct {
@@ -134,8 +136,7 @@ type ApplicationFilter struct {
 	VisibleCycles *gorm.DB
 	// Limit caps the page; nil returns every match.
 	Limit *int
-	// Offset is ignored unless Limit is set.
-	Offset int
+	After *utils.Cursor
 }
 
 // ApplicationPage is one page plus, when requested, the totals that size the
@@ -147,4 +148,5 @@ type ApplicationPage struct {
 	// StageCounts ignores the Stage/Stages filters, so each tab shows what it
 	// would hold rather than zero.
 	StageCounts map[models.ApplicationStage]int
+	NextCursor  string
 }

@@ -192,12 +192,15 @@ func (s *leadAssignmentService) writable(ctx context.Context, o opening) error {
 }
 
 func (s *leadAssignmentService) removable(ctx context.Context, o opening) error {
-	released, err := s.rules.Released(ctx, o.CycleID)
+	released, frozen, err := s.rules.Locks(ctx, o.CycleID)
 	if err != nil {
 		return utils.StoreErr(err)
 	}
 	if released[o.RoleID] {
 		return errReleased()
 	}
-	return s.writable(ctx, o)
+	if frozen[o.RoleID] {
+		return reviewrules.ErrFrozen()
+	}
+	return nil
 }

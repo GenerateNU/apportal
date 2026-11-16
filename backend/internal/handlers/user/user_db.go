@@ -40,13 +40,16 @@ func (u *UserDB) CreateUser(ctx context.Context, in UserCreate) (models.User, er
 // ListUsers returns users, optionally filtered to those holding a role. A nil
 // limit returns every match (the lead dropdown needs them all); otherwise one
 // extra row is fetched to report whether more pages remain.
-func (u *UserDB) ListUsers(ctx context.Context, role *models.UserRole, limit *int, offset int) ([]models.User, bool, error) {
-	q := u.db.WithContext(ctx).Order("full_name")
+func (u *UserDB) ListUsers(ctx context.Context, role *models.UserRole, limit *int, after *utils.Cursor) ([]models.User, bool, error) {
+	q := u.db.WithContext(ctx).Order("full_name").Order("nuid")
 	if role != nil {
 		q = q.Where("? = ANY(roles)", string(*role))
 	}
 	if limit != nil {
-		q = q.Limit(*limit + 1).Offset(offset)
+		if after != nil {
+			q = q.Where("(full_name, nuid) > (?, ?)", after.Text, after.ID)
+		}
+		q = q.Limit(*limit + 1)
 	}
 	users := []models.User{}
 	if err := q.Find(&users).Error; err != nil {

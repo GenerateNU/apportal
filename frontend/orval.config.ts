@@ -35,7 +35,7 @@ export default defineConfig({
           'list-users': {
             query: {
               useInfinite: true,
-              useInfiniteQueryParam: 'offset',
+              useInfiniteQueryParam: 'cursor',
             },
           },
         },
