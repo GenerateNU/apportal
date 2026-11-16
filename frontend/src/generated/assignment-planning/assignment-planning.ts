@@ -25,14 +25,20 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AddReviewConflict200,
   AssignmentPlanPreview,
+  AutoAssignInputBody,
+  AutoAssignPlan,
   Capacity,
   CapacityInputBody,
   CommitPlanOutputBody,
   ErrorModel,
   GetAssignmentPoolParams,
+  GetReviewBoard200,
+  ListReviewConflicts200,
   PoolOutputBody,
-  PreviewPlanInputBody
+  PreviewPlanInputBody,
+  RemoveReviewConflict200
 } from '.././model';
 
 import { customInstance } from '../../lib/api/orval-mutator';
@@ -70,6 +76,72 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
 /**
+ * Chief only. Tops every waiting applicant up to the cycle's reviewers-each count, balancing load across every opening and skipping conflicts and openings whose next step has started. Keeps existing assignments. dry_run plans without saving.
+ * @summary Assign reviewers across openings
+ */
+export const autoAssignReviewers = (
+    id: string,
+    autoAssignInputBody: NonReadonly<AutoAssignInputBody>,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<AutoAssignPlan>(
+      {url: `/cycles/${id}/assignment-plan/auto`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: autoAssignInputBody, signal
+    },
+      options);
+    }
+  
+
+
+export const getAutoAssignReviewersMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof autoAssignReviewers>>, TError,{id: string;data: NonReadonly<AutoAssignInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof autoAssignReviewers>>, TError,{id: string;data: NonReadonly<AutoAssignInputBody>}, TContext> => {
+
+const mutationKey = ['autoAssignReviewers'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof autoAssignReviewers>>, {id: string;data: NonReadonly<AutoAssignInputBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  autoAssignReviewers(id,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AutoAssignReviewersMutationResult = NonNullable<Awaited<ReturnType<typeof autoAssignReviewers>>>
+    export type AutoAssignReviewersMutationBody = NonReadonly<AutoAssignInputBody>
+    export type AutoAssignReviewersMutationError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel
+
+    /**
+ * @summary Assign reviewers across openings
+ */
+export const useAutoAssignReviewers = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof autoAssignReviewers>>, TError,{id: string;data: NonReadonly<AutoAssignInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof autoAssignReviewers>>,
+        TError,
+        {id: string;data: NonReadonly<AutoAssignInputBody>},
+        TContext
+      > => {
+
+      const mutationOptions = getAutoAssignReviewersMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
  * Chief only. Read-only. Given teams and a coverage target, reports the minimum and suggested per-lead cap for the cycle's unreviewed pool. Because two leads on the same team never review the same application, a team can absorb at most one review per application — so the minimum cap can exceed a naive even split.
  * @summary Suggest a per-lead review cap for a team layout
  */
@@ -364,6 +436,318 @@ export const usePreviewAssignmentPlan = <TError = ErrorModel | ErrorModel | Erro
       > => {
 
       const mutationOptions = getPreviewAssignmentPlanMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * Chief only. Every submitted, lead-review and chief-review applicant on the cycle in one call.
+ * @summary Applicants in review, with their reviewers
+ */
+export const getReviewBoard = (
+    id: string,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<GetReviewBoard200>(
+      {url: `/cycles/${id}/review-board`, method: 'GET', signal
+    },
+      options);
+    }
+  
+
+
+
+export const getGetReviewBoardQueryKey = (id?: string,) => {
+    return [
+    `/cycles/${id}/review-board`
+    ] as const;
+    }
+
+    
+export const getGetReviewBoardQueryOptions = <TData = Awaited<ReturnType<typeof getReviewBoard>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReviewBoard>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetReviewBoardQueryKey(id);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getReviewBoard>>> = ({ signal }) => getReviewBoard(id, requestOptions, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getReviewBoard>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetReviewBoardQueryResult = NonNullable<Awaited<ReturnType<typeof getReviewBoard>>>
+export type GetReviewBoardQueryError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel
+
+
+export function useGetReviewBoard<TData = Awaited<ReturnType<typeof getReviewBoard>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
+ id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReviewBoard>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getReviewBoard>>,
+          TError,
+          Awaited<ReturnType<typeof getReviewBoard>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetReviewBoard<TData = Awaited<ReturnType<typeof getReviewBoard>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReviewBoard>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getReviewBoard>>,
+          TError,
+          Awaited<ReturnType<typeof getReviewBoard>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetReviewBoard<TData = Awaited<ReturnType<typeof getReviewBoard>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReviewBoard>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Applicants in review, with their reviewers
+ */
+
+export function useGetReviewBoard<TData = Awaited<ReturnType<typeof getReviewBoard>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReviewBoard>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetReviewBoardQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+/**
+ * Chief only. Applies to every opening on the cycle, for reviews and interviews.
+ * @summary Staff who must not review or interview an applicant
+ */
+export const listReviewConflicts = (
+    id: string,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<ListReviewConflicts200>(
+      {url: `/cycles/${id}/review-conflicts`, method: 'GET', signal
+    },
+      options);
+    }
+  
+
+
+
+export const getListReviewConflictsQueryKey = (id?: string,) => {
+    return [
+    `/cycles/${id}/review-conflicts`
+    ] as const;
+    }
+
+    
+export const getListReviewConflictsQueryOptions = <TData = Awaited<ReturnType<typeof listReviewConflicts>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listReviewConflicts>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListReviewConflictsQueryKey(id);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listReviewConflicts>>> = ({ signal }) => listReviewConflicts(id, requestOptions, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listReviewConflicts>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListReviewConflictsQueryResult = NonNullable<Awaited<ReturnType<typeof listReviewConflicts>>>
+export type ListReviewConflictsQueryError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel
+
+
+export function useListReviewConflicts<TData = Awaited<ReturnType<typeof listReviewConflicts>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
+ id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listReviewConflicts>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listReviewConflicts>>,
+          TError,
+          Awaited<ReturnType<typeof listReviewConflicts>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListReviewConflicts<TData = Awaited<ReturnType<typeof listReviewConflicts>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listReviewConflicts>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listReviewConflicts>>,
+          TError,
+          Awaited<ReturnType<typeof listReviewConflicts>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListReviewConflicts<TData = Awaited<ReturnType<typeof listReviewConflicts>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listReviewConflicts>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Staff who must not review or interview an applicant
+ */
+
+export function useListReviewConflicts<TData = Awaited<ReturnType<typeof listReviewConflicts>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listReviewConflicts>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListReviewConflictsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+/**
+ * Chief only. Idempotent. Returns the updated list.
+ * @summary Remove a conflict
+ */
+export const removeReviewConflict = (
+    id: string,
+    leadNuid: string,
+    applicantNuid: string,
+ options?: SecondParameter<typeof customInstance>,) => {
+      
+      
+      return customInstance<RemoveReviewConflict200>(
+      {url: `/cycles/${id}/review-conflicts/${leadNuid}/${applicantNuid}`, method: 'DELETE'
+    },
+      options);
+    }
+  
+
+
+export const getRemoveReviewConflictMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeReviewConflict>>, TError,{id: string;leadNuid: string;applicantNuid: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof removeReviewConflict>>, TError,{id: string;leadNuid: string;applicantNuid: string}, TContext> => {
+
+const mutationKey = ['removeReviewConflict'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof removeReviewConflict>>, {id: string;leadNuid: string;applicantNuid: string}> = (props) => {
+          const {id,leadNuid,applicantNuid} = props ?? {};
+
+          return  removeReviewConflict(id,leadNuid,applicantNuid,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RemoveReviewConflictMutationResult = NonNullable<Awaited<ReturnType<typeof removeReviewConflict>>>
+    
+    export type RemoveReviewConflictMutationError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel
+
+    /**
+ * @summary Remove a conflict
+ */
+export const useRemoveReviewConflict = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeReviewConflict>>, TError,{id: string;leadNuid: string;applicantNuid: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof removeReviewConflict>>,
+        TError,
+        {id: string;leadNuid: string;applicantNuid: string},
+        TContext
+      > => {
+
+      const mutationOptions = getRemoveReviewConflictMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * Chief only. Idempotent. The lead must be on the cycle's staff and the applicant must have applied. Returns the updated list.
+ * @summary Keep a staff member away from an applicant
+ */
+export const addReviewConflict = (
+    id: string,
+    leadNuid: string,
+    applicantNuid: string,
+ options?: SecondParameter<typeof customInstance>,) => {
+      
+      
+      return customInstance<AddReviewConflict200>(
+      {url: `/cycles/${id}/review-conflicts/${leadNuid}/${applicantNuid}`, method: 'PUT'
+    },
+      options);
+    }
+  
+
+
+export const getAddReviewConflictMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addReviewConflict>>, TError,{id: string;leadNuid: string;applicantNuid: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof addReviewConflict>>, TError,{id: string;leadNuid: string;applicantNuid: string}, TContext> => {
+
+const mutationKey = ['addReviewConflict'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof addReviewConflict>>, {id: string;leadNuid: string;applicantNuid: string}> = (props) => {
+          const {id,leadNuid,applicantNuid} = props ?? {};
+
+          return  addReviewConflict(id,leadNuid,applicantNuid,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AddReviewConflictMutationResult = NonNullable<Awaited<ReturnType<typeof addReviewConflict>>>
+    
+    export type AddReviewConflictMutationError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel
+
+    /**
+ * @summary Keep a staff member away from an applicant
+ */
+export const useAddReviewConflict = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addReviewConflict>>, TError,{id: string;leadNuid: string;applicantNuid: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof addReviewConflict>>,
+        TError,
+        {id: string;leadNuid: string;applicantNuid: string},
+        TContext
+      > => {
+
+      const mutationOptions = getAddReviewConflictMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }

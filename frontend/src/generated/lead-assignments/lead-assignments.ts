@@ -92,7 +92,7 @@ export const getListLeadAssignmentsQueryKey = (id?: string,) => {
     }
 
     
-export const getListLeadAssignmentsQueryOptions = <TData = Awaited<ReturnType<typeof listLeadAssignments>>, TError = ErrorModel | ErrorModel | ErrorModel>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listLeadAssignments>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export const getListLeadAssignmentsQueryOptions = <TData = Awaited<ReturnType<typeof listLeadAssignments>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listLeadAssignments>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -111,10 +111,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListLeadAssignmentsQueryResult = NonNullable<Awaited<ReturnType<typeof listLeadAssignments>>>
-export type ListLeadAssignmentsQueryError = ErrorModel | ErrorModel | ErrorModel
+export type ListLeadAssignmentsQueryError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel
 
 
-export function useListLeadAssignments<TData = Awaited<ReturnType<typeof listLeadAssignments>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+export function useListLeadAssignments<TData = Awaited<ReturnType<typeof listLeadAssignments>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
  id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listLeadAssignments>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listLeadAssignments>>,
@@ -124,7 +124,7 @@ export function useListLeadAssignments<TData = Awaited<ReturnType<typeof listLea
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListLeadAssignments<TData = Awaited<ReturnType<typeof listLeadAssignments>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+export function useListLeadAssignments<TData = Awaited<ReturnType<typeof listLeadAssignments>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
  id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listLeadAssignments>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listLeadAssignments>>,
@@ -134,7 +134,7 @@ export function useListLeadAssignments<TData = Awaited<ReturnType<typeof listLea
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListLeadAssignments<TData = Awaited<ReturnType<typeof listLeadAssignments>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+export function useListLeadAssignments<TData = Awaited<ReturnType<typeof listLeadAssignments>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
  id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listLeadAssignments>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
@@ -142,7 +142,7 @@ export function useListLeadAssignments<TData = Awaited<ReturnType<typeof listLea
  * @summary List an application's lead assignments
  */
 
-export function useListLeadAssignments<TData = Awaited<ReturnType<typeof listLeadAssignments>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+export function useListLeadAssignments<TData = Awaited<ReturnType<typeof listLeadAssignments>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
  id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listLeadAssignments>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -159,7 +159,7 @@ export function useListLeadAssignments<TData = Awaited<ReturnType<typeof listLea
 
 
 /**
- * Chief only. Chiefs assign 3 leads per application.
+ * Chief only. The lead must be able to review the opening, have no conflict with the applicant, and the applicant must be submitted or in review and below the cycle's reviewers-each count. Not allowed once the next step has started for the opening.
  * @summary Assign a lead to write-review an application
  */
 export const assignLead = (
@@ -179,7 +179,7 @@ export const assignLead = (
   
 
 
-export const getAssignLeadMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+export const getAssignLeadMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assignLead>>, TError,{id: string;data: NonReadonly<CreateLeadAssignmentInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
 ): UseMutationOptions<Awaited<ReturnType<typeof assignLead>>, TError,{id: string;data: NonReadonly<CreateLeadAssignmentInputBody>}, TContext> => {
 
@@ -206,12 +206,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type AssignLeadMutationResult = NonNullable<Awaited<ReturnType<typeof assignLead>>>
     export type AssignLeadMutationBody = NonReadonly<CreateLeadAssignmentInputBody>
-    export type AssignLeadMutationError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel
+    export type AssignLeadMutationError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel
 
     /**
  * @summary Assign a lead to write-review an application
  */
-export const useAssignLead = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+export const useAssignLead = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assignLead>>, TError,{id: string;data: NonReadonly<CreateLeadAssignmentInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof assignLead>>,
@@ -225,7 +225,7 @@ export const useAssignLead = <TError = ErrorModel | ErrorModel | ErrorModel | Er
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Chief only. Deletes all written-review lead assignments for one applicant role in a cycle at once. Cannot be undone.
+ * Chief only. Deletes all written-review lead assignments for one applicant role in a cycle at once, except ones whose review is submitted. Not allowed once reviews are released or the next step has started for the opening. Cannot be undone.
  * @summary Remove every lead assignment for a cycle's role
  */
 export const unassignAllLeads = (
@@ -243,7 +243,7 @@ export const unassignAllLeads = (
   
 
 
-export const getUnassignAllLeadsMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+export const getUnassignAllLeadsMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unassignAllLeads>>, TError,{id: string;params?: UnassignAllLeadsParams}, TContext>, request?: SecondParameter<typeof customInstance>}
 ): UseMutationOptions<Awaited<ReturnType<typeof unassignAllLeads>>, TError,{id: string;params?: UnassignAllLeadsParams}, TContext> => {
 
@@ -270,12 +270,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type UnassignAllLeadsMutationResult = NonNullable<Awaited<ReturnType<typeof unassignAllLeads>>>
     
-    export type UnassignAllLeadsMutationError = ErrorModel | ErrorModel | ErrorModel | ErrorModel
+    export type UnassignAllLeadsMutationError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel
 
     /**
  * @summary Remove every lead assignment for a cycle's role
  */
-export const useUnassignAllLeads = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+export const useUnassignAllLeads = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unassignAllLeads>>, TError,{id: string;params?: UnassignAllLeadsParams}, TContext>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof unassignAllLeads>>,
@@ -289,7 +289,7 @@ export const useUnassignAllLeads = <TError = ErrorModel | ErrorModel | ErrorMode
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Chief only.
+ * Chief only. Not allowed once reviews are released or the next step has started for the opening.
  * @summary Remove a lead assignment
  */
 export const unassignLead = (
@@ -305,7 +305,7 @@ export const unassignLead = (
   
 
 
-export const getUnassignLeadMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+export const getUnassignLeadMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unassignLead>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customInstance>}
 ): UseMutationOptions<Awaited<ReturnType<typeof unassignLead>>, TError,{id: string}, TContext> => {
 
@@ -332,12 +332,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type UnassignLeadMutationResult = NonNullable<Awaited<ReturnType<typeof unassignLead>>>
     
-    export type UnassignLeadMutationError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel
+    export type UnassignLeadMutationError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel
 
     /**
  * @summary Remove a lead assignment
  */
-export const useUnassignLead = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+export const useUnassignLead = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unassignLead>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof unassignLead>>,
