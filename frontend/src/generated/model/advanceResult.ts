@@ -5,14 +5,12 @@
  * Generate application portal — applications, reviews, and the hiring pipeline.
  * OpenAPI spec version: 0.1.0
  */
-import type { CreateCycleStageInputBodyStage } from './createCycleStageInputBodyStage';
+import type { AdvanceResultMovedApplicationIds } from './advanceResultMovedApplicationIds';
+import type { View } from './view';
 
-export interface CreateCycleStageInputBody {
+export interface AdvanceResult {
   /** A URL to the JSON Schema for this object. */
   readonly $schema?: string;
-  display_order: number;
-  is_active?: boolean;
-  label?: string;
-  required_assignments?: number;
-  stage: CreateCycleStageInputBodyStage;
+  moved_application_ids: AdvanceResultMovedApplicationIds;
+  pipeline: View;
 }

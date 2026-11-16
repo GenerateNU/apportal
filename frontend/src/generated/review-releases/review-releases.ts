@@ -227,7 +227,7 @@ export const useSetReviewRelease = <TError = ErrorModel | ErrorModel | ErrorMode
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Chief only. One entry per lead with a role='lead' account, listing their average score on each of the cycle/role's score-type review questions.
+ * Chief only. One entry per lead on the cycle's staff, listing their average score on each of the cycle/role's score-type review questions.
  * @summary Per-lead average score on each review question for a cycle
  */
 export const listReviewQuestionAverages = (
@@ -327,7 +327,7 @@ export function useListReviewQuestionAverages<TData = Awaited<ReturnType<typeof 
 
 
 /**
- * Chief only. One entry per lead with any assignment or role='lead' account, listing every application assigned to them and whether their written review is submitted.
+ * Chief only. One entry per lead with any assignment or lead on the cycle's staff, listing every application assigned to them and whether their written review is submitted.
  * @summary Per-reviewer written-review progress for a cycle
  */
 export const listReviewerProgress = (

@@ -5,6 +5,6 @@
  * Generate application portal — applications, reviews, and the hiring pipeline.
  * OpenAPI spec version: 0.1.0
  */
-import type { CycleStage } from './cycleStage';
+import type { StepView } from './stepView';
 
-export type ListCycleStages200 = CycleStage[] | null;
+export type MyPipelineSteps = StepView[] | null;

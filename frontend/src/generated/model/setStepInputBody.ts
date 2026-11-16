@@ -5,17 +5,9 @@
  * Generate application portal — applications, reviews, and the hiring pipeline.
  * OpenAPI spec version: 0.1.0
  */
-import type { CycleStageStage } from './cycleStageStage';
 
-export interface CycleStage {
+export interface SetStepInputBody {
   /** A URL to the JSON Schema for this object. */
   readonly $schema?: string;
-  created_at: string;
-  cycle_id: string;
-  display_order: number;
-  id: string;
-  is_active: boolean;
-  label?: string;
-  required_assignments: number;
-  stage: CycleStageStage;
+  enabled: boolean;
 }

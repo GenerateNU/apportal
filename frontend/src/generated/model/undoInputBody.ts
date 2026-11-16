@@ -6,11 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface UpdateCycleStageInputBody {
+export interface UndoInputBody {
   /** A URL to the JSON Schema for this object. */
   readonly $schema?: string;
-  display_order?: number;
-  is_active?: boolean;
-  label?: string;
-  required_assignments?: number;
+  role_id?: string;
 }
