@@ -231,6 +231,39 @@ func TestAutoAssignSavesUnderTheLock(t *testing.T) {
 	}
 }
 
+func TestAutoAssignNeedsReviewersEach(t *testing.T) {
+	store := standardStore()
+	rules := fakeRules{eligible: map[string][]string{roleA: {"l1", "l2"}}}
+	_, err := newReviewService(store, rules).autoAssign(chief(), autoIn(false))
+	testutil.WantStatus(t, err, http.StatusConflict)
+	if len(store.saved) != 0 {
+		t.Errorf("saved %v", store.saved)
+	}
+}
+
+func TestAutoAssignLeavesFrozenOpeningsAlone(t *testing.T) {
+	store := standardStore()
+	store.apps = append(store.apps, app("b1", "u2", roleB, models.StageSubmitted))
+	rules := fakeRules{perApplicant: 1, eligible: map[string][]string{roleA: {"l1"}, roleB: {"l2"}}, frozen: map[string]bool{roleA: true}}
+	s := newReviewService(store, rules)
+
+	_, err := s.autoAssign(chief(), autoIn(false, roleA))
+	testutil.WantStatus(t, err, http.StatusConflict)
+
+	out, err := s.autoAssign(chief(), autoIn(false))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(store.saved, []assign.Pair{{ApplicationID: "b1", LeadNUID: "l2"}}) {
+		t.Errorf("saved %v", store.saved)
+	}
+	for _, p := range out.Body.Positions {
+		if p.RoleID == roleA && (p.Added != 0 || len(p.Warnings) == 0) {
+			t.Errorf("frozen opening: %+v", p)
+		}
+	}
+}
+
 func TestAutoAssignSkipsConflicts(t *testing.T) {
 	store := standardStore()
 	store.conflicts = []reviewrules.Conflict{{LeadNUID: "l1", ApplicantNUID: "u1"}}
@@ -276,9 +309,6 @@ func TestCoverageFitsTheReviewers(t *testing.T) {
 	}
 	if got, w := clampCoverage(3, 2); got != 2 || len(w) != 1 {
 		t.Errorf("fewer reviewers than wanted: %d %v", got, w)
-	}
-	if got, _ := clampCoverage(0, 5); got != reviewrules.DefaultPerApplicant {
-		t.Errorf("unset falls back to the default: %d", got)
 	}
 	if _, w := clampCoverage(2, 0); len(w) != 1 {
 		t.Errorf("nobody to review should warn: %v", w)

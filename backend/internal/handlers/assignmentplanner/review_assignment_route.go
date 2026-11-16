@@ -7,7 +7,7 @@ import (
 )
 
 func registerReviewAssignment(api huma.API, s *reviewService) {
-	errs := []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound, http.StatusUnprocessableEntity}
+	errs := []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound, http.StatusConflict, http.StatusUnprocessableEntity}
 
 	huma.Register(api, huma.Operation{
 		OperationID: "get-review-board",
@@ -55,7 +55,8 @@ func registerReviewAssignment(api huma.API, s *reviewService) {
 		Path:        "/cycles/{id}/assignment-plan/auto",
 		Summary:     "Assign reviewers across openings",
 		Description: "Chief only. Tops every waiting applicant up to the cycle's reviewers-each count, balancing load " +
-			"across every opening and skipping conflicts. Keeps existing assignments. dry_run plans without saving.",
+			"across every opening and skipping conflicts and openings whose next step has started. " +
+			"Keeps existing assignments. dry_run plans without saving.",
 		Tags:   []string{"Assignment planning"},
 		Errors: errs,
 	}, s.autoAssign)

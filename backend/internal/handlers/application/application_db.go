@@ -3,11 +3,13 @@ package application
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	"gorm.io/gorm"
 
 	"github.com/GenerateNU/apportal/backend/internal/models"
+	"github.com/GenerateNU/apportal/backend/internal/pipeline"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 )
 
@@ -228,28 +230,24 @@ func (a *ApplicationDB) DeleteDraftApplication(ctx context.Context, id, userNUID
 	return nil
 }
 
-// AdvanceApplicationsToLeadReview moves submitted applications into
-// lead_review once a reviewer is assigned; anything past submitted is untouched.
-func (a *ApplicationDB) AdvanceApplicationsToLeadReview(ctx context.Context, applicationIDs []string) (int, error) {
-	if len(applicationIDs) == 0 {
-		return 0, nil
-	}
-	res := a.db.WithContext(ctx).Model(&models.Application{}).
-		Where("id IN ? AND stage = ?", applicationIDs, models.StageSubmitted).
-		Update("stage", models.StageLeadReview)
-	return int(res.RowsAffected), res.Error
+func (a *ApplicationDB) AdvanceApplicationToInterviewReview(ctx context.Context, applicationID string) error {
+	return a.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var stage []models.ApplicationStage
+		if err := tx.Model(&models.Application{}).Where("id = ?", applicationID).Pluck("stage", &stage).Error; err != nil {
+			return err
+		}
+		if len(stage) == 0 || !slices.Contains(preInterviewReview, stage[0]) {
+			return nil
+		}
+		if err := pipeline.GuardMoves(ctx, tx, pipeline.Move{ApplicationID: applicationID, To: models.StageInterviewReview}); err != nil {
+			return err
+		}
+		return tx.Model(&models.Application{}).Where("id = ? AND stage IN ?", applicationID, preInterviewReview).
+			Update("stage", models.StageInterviewReview).Error
+	})
 }
 
-// AdvanceApplicationToInterviewReview moves an application into
-// interview_review when its write-up lands, but never past where a chief
-// already moved it.
-func (a *ApplicationDB) AdvanceApplicationToInterviewReview(ctx context.Context, applicationID string) error {
-	return a.db.WithContext(ctx).Model(&models.Application{}).
-		Where("id = ? AND stage IN ?", applicationID, []models.ApplicationStage{
-			models.StageInterview, models.StageInterviewScheduled, models.StageInterviewConducted,
-		}).
-		Update("stage", models.StageInterviewReview).Error
-}
+var preInterviewReview = []models.ApplicationStage{models.StageInterview, models.StageInterviewScheduled, models.StageInterviewConducted}
 
 func (a *ApplicationDB) UpdateApplication(ctx context.Context, id string, in ApplicationUpdate) (models.Application, error) {
 	updates := map[string]any{}
@@ -261,5 +259,16 @@ func (a *ApplicationDB) UpdateApplication(ctx context.Context, id string, in App
 	if in.MarkSubmitted {
 		updates["submitted_at"] = gorm.Expr("NOW()")
 	}
-	return utils.UpdateReturning[models.Application](a.db.WithContext(ctx), updates, "id = ?", id)
+	var out models.Application
+	err := a.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if in.Stage != nil {
+			if err := pipeline.GuardMoves(ctx, tx, pipeline.Move{ApplicationID: id, To: *in.Stage}); err != nil {
+				return err
+			}
+		}
+		var err error
+		out, err = utils.UpdateReturning[models.Application](tx, updates, "id = ?", id)
+		return err
+	})
+	return out, err
 }

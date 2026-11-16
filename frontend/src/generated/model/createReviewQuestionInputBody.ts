@@ -17,6 +17,12 @@ export interface CreateReviewQuestionInputBody {
   options?: unknown;
   question_text: string;
   question_type?: CreateReviewQuestionInputBodyQuestionType;
+  /** Whether a score question counts toward the review ranking; defaults to true */
+  ranked?: boolean;
   /** Omit for a global question shown for all roles */
   role_id?: string;
+  /** Score questions only; defaults to 10 */
+  score_max?: number;
+  /** Score questions only; defaults to 1 */
+  score_min?: number;
 }

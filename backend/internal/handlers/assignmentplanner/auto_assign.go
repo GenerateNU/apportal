@@ -122,12 +122,24 @@ func (s *reviewService) planAuto(ctx context.Context, store reviewStore, cycleID
 			return AutoAssignPlan{}, nil, huma.Error422UnprocessableEntity("role_id " + id + " isn't an opening on this cycle")
 		}
 	}
+	frozen, err := s.rules.Frozen(ctx, cycleID)
+	if err != nil {
+		return AutoAssignPlan{}, nil, utils.StoreErr(err)
+	}
+	for _, id := range requested {
+		if frozen[id] {
+			return AutoAssignPlan{}, nil, reviewrules.ErrFrozen()
+		}
+	}
 	if len(requested) == 0 {
 		requested = roleIDs
 	}
 	perApplicant, err := s.rules.PerApplicant(ctx, cycleID)
 	if err != nil {
 		return AutoAssignPlan{}, nil, utils.StoreErr(err)
+	}
+	if perApplicant <= 0 {
+		return AutoAssignPlan{}, nil, reviewrules.ErrNoPerApplicant()
 	}
 	eligible, err := s.rules.Eligible(ctx, cycleID)
 	if err != nil {
@@ -151,6 +163,9 @@ func (s *reviewService) planAuto(ctx context.Context, store reviewStore, cycleID
 	}
 
 	openings := buildOpenings(roleIDs, eligible, perApplicant, pool, reviewers, blocked)
+	for i := range openings {
+		openings[i].frozen = frozen[openings[i].roleID]
+	}
 	plan, pairs, err := planOpenings(cycleID, openings, requested)
 	if err != nil {
 		return AutoAssignPlan{}, nil, err
@@ -167,6 +182,7 @@ type opening struct {
 	blocked   reviewrules.Blocked
 	coverage  int
 	warnings  []string
+	frozen    bool
 }
 
 func buildOpenings(roleIDs []string, eligible map[string][]string, perApplicant int, pool []models.ApplicationSummary,
@@ -248,6 +264,10 @@ func planOpenings(cycleID string, openings []opening, requested []string) (AutoA
 
 func planOpening(cycleID string, o opening, loads map[string]int) (AutoAssignResult, []assign.Pair, error) {
 	res := AutoAssignResult{RoleID: o.roleID, Applicants: len(o.appIDs), Reviewers: len(o.reviewers), Coverage: o.coverage, Warnings: o.warnings}
+	if o.frozen {
+		res.Warnings = append(res.Warnings, "Reviews are frozen for this opening because the next step has started.")
+		return res, nil, nil
+	}
 	if len(o.appIDs) == 0 || len(o.reviewers) == 0 {
 		return res, nil, nil
 	}
@@ -351,9 +371,6 @@ func soloTeams(nuids []string) []assign.Team {
 }
 
 func clampCoverage(wanted, reviewers int) (int, []string) {
-	if wanted <= 0 {
-		wanted = reviewrules.DefaultPerApplicant
-	}
 	if reviewers == 0 {
 		return wanted, []string{"No one can review this opening yet."}
 	}

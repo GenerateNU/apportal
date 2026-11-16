@@ -158,7 +158,7 @@ export function useListBranches<TData = Awaited<ReturnType<typeof listBranches>>
 
 
 /**
- * Chief only. Names are unique.
+ * Admin only. Names are unique.
  * @summary Create a branch
  */
 export const createBranch = (
@@ -314,7 +314,7 @@ export function useGetBranch<TData = Awaited<ReturnType<typeof getBranch>>, TErr
 
 
 /**
- * Chief only.
+ * Admin only.
  * @summary Rename a branch
  */
 export const updateBranch = (

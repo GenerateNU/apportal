@@ -104,6 +104,7 @@ func (f *fakeStore) Blocked(context.Context, string) (reviewrules.Blocked, error
 type fakeRules struct {
 	perApplicant int
 	released     map[string]bool
+	frozen       map[string]bool
 	eligible     map[string][]string
 }
 
@@ -111,6 +112,10 @@ func (f fakeRules) PerApplicant(context.Context, string) (int, error) { return f
 
 func (f fakeRules) Released(context.Context, string) (map[string]bool, error) {
 	return f.released, nil
+}
+
+func (f fakeRules) Frozen(context.Context, string) (map[string]bool, error) {
+	return f.frozen, nil
 }
 
 func (f fakeRules) Eligible(context.Context, string) (map[string][]string, error) {

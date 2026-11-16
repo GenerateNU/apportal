@@ -16,6 +16,7 @@ import (
 )
 
 type fakeStore struct {
+	stage      models.ApplicationStage
 	assigned   []string
 	conflicted map[string]bool
 	deleted    int
@@ -27,7 +28,11 @@ func (f *fakeStore) ApplicationOpening(_ context.Context, id string) (opening, e
 	if id != accesstest.ApplicationID {
 		return opening{}, utils.ErrNotFound
 	}
-	return opening{CycleID: accesstest.CycleID, RoleID: accesstest.RoleID}, nil
+	stage := f.stage
+	if stage == "" {
+		stage = models.StageSubmitted
+	}
+	return opening{CycleID: accesstest.CycleID, RoleID: accesstest.RoleID, Stage: stage}, nil
 }
 
 func (f *fakeStore) AssignmentOpening(_ context.Context, id string) (opening, error) {
@@ -80,9 +85,20 @@ func (f *fakeStore) Locked(_ context.Context, _ string, fn func(manualStore) err
 
 type fakeRules struct {
 	released bool
+	frozen   bool
+	unset    bool
 }
 
-func (fakeRules) PerApplicant(context.Context, string) (int, error) { return 2, nil }
+func (r fakeRules) PerApplicant(context.Context, string) (int, error) {
+	if r.unset {
+		return 0, nil
+	}
+	return 2, nil
+}
+
+func (r fakeRules) Frozen(context.Context, string) (map[string]bool, error) {
+	return map[string]bool{accesstest.RoleID: r.frozen}, nil
+}
 
 func (r fakeRules) Released(context.Context, string) (map[string]bool, error) {
 	return map[string]bool{accesstest.RoleID: r.released}, nil
@@ -234,4 +250,44 @@ func TestUnassignAllChecksTheOpening(t *testing.T) {
 func TestUnassignRejectsMalformedID(t *testing.T) {
 	_, err := service(&fakeStore{}, fakeRules{}).delete(chief(), &utils.IDInput{ID: "nope"})
 	testutil.WantStatus(t, err, http.StatusUnprocessableEntity)
+}
+
+func TestAssignOnlyWhileInReview(t *testing.T) {
+	for stage, want := range map[models.ApplicationStage]int{
+		models.StageSubmitted:   http.StatusOK,
+		models.StageLeadReview:  http.StatusOK,
+		models.StageChiefReview: http.StatusOK,
+		models.StageInterview:   http.StatusConflict,
+		models.StageRejected:    http.StatusConflict,
+	} {
+		t.Run(string(stage), func(t *testing.T) {
+			_, err := service(&fakeStore{stage: stage}, fakeRules{}).create(chief(), createIn(accesstest.ApplicationID, "l1"))
+			if got := statusOf(err); got != want {
+				t.Errorf("got %d (%v), want %d", got, err, want)
+			}
+		})
+	}
+}
+
+func TestAssignNeedsReviewersEach(t *testing.T) {
+	store := &fakeStore{}
+	_, err := service(store, fakeRules{unset: true}).create(chief(), createIn(accesstest.ApplicationID, "l1"))
+	testutil.WantStatus(t, err, http.StatusConflict)
+	if len(store.assigned) != 0 {
+		t.Errorf("assigned %v", store.assigned)
+	}
+}
+
+func TestFrozenReviewsKeepTheirReviewers(t *testing.T) {
+	store := &fakeStore{}
+	s := service(store, fakeRules{frozen: true})
+	_, err := s.create(chief(), createIn(accesstest.ApplicationID, "l1"))
+	testutil.WantStatus(t, err, http.StatusConflict)
+	_, err = s.delete(chief(), &utils.IDInput{ID: accesstest.AssignmentID})
+	testutil.WantStatus(t, err, http.StatusConflict)
+	_, err = s.deleteAll(chief(), &DeleteAllLeadAssignmentsInput{ID: accesstest.CycleID, RoleID: accesstest.RoleID})
+	testutil.WantStatus(t, err, http.StatusConflict)
+	if len(store.assigned) != 0 || store.deleted != 0 || store.cleared != 0 {
+		t.Errorf("assigned %v deleted %d cleared %d", store.assigned, store.deleted, store.cleared)
+	}
 }

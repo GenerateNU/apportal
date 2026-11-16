@@ -103,18 +103,22 @@ BEGIN
   SELECT c, l, 'lead' FROM unnest(ARRAY[cur, past]) c CROSS JOIN unnest(leads) l;
 
   -- Current cycle setup
-  INSERT INTO application_templates (cycle_id, role_id, title, description, instructions, opens_at, closes_at, status, review_status, review_closes_at) VALUES
+  INSERT INTO application_templates (cycle_id, role_id, title, description, instructions) VALUES
     (cur, swe, 'Software Engineer — Spring 2027', 'Build full-stack products for Boston nonprofits and startups.',
-     'Answer every question and finish the code challenge before the deadline.', now() - interval '30 days', now() + interval '14 days', 'open', 'open', now() + interval '21 days'),
+     'Answer every question and finish the code challenge before the deadline.'),
     (cur, sd, 'Software Designer — Spring 2027', 'Design end-to-end product experiences with our engineering teams.',
-     'Share a portfolio and answer every question.', now() - interval '30 days', now() + interval '14 days', 'open', 'open', now() + interval '21 days');
+     'Share a portfolio and answer every question.');
 
-  INSERT INTO cycle_stages (cycle_id, stage, display_order, required_assignments, label) VALUES
-    (cur, 'submitted', 1, 0, 'Submitted'),
-    (cur, 'lead_review', 2, 3, 'Lead Review'),
-    (cur, 'chief_review', 3, 0, 'Chief Review'),
-    (cur, 'interview', 4, 0, 'Interview'),
-    (cur, 'selection', 5, 0, 'Selection');
+  INSERT INTO cycle_steps (cycle_id, step, enabled)
+  SELECT c, s, true FROM unnest(ARRAY[cur, past, leads_cycle, design_cycle]) c
+  CROSS JOIN unnest(ARRAY['applications', 'reviews', 'interviews', 'decisions', 'feedback']) s;
+  INSERT INTO step_assignments (cycle_id, step, kind, per_applicant) VALUES (cur, 'reviews', 'reviewer', 3);
+  INSERT INTO opening_steps (cycle_id, role_id, step, released_at)
+  SELECT cur, r, s, now() - interval '30 days' FROM unnest(ARRAY[swe, sd]) r CROSS JOIN unnest(ARRAY['applications', 'reviews']) s;
+  INSERT INTO opening_deadlines (cycle_id, role_id, step, kind, due_at, hard)
+  SELECT cur, r, 'applications', 'applicant', now() + interval '14 days', true FROM unnest(ARRAY[swe, sd]) r
+  UNION ALL
+  SELECT cur, r, 'reviews', 'reviewer', now() + interval '21 days', false FROM unnest(ARRAY[swe, sd]) r;
 
   INSERT INTO questions (cycle_id, role_id, question_text, question_type, is_required, display_order, options, page_title) VALUES
     (cur, NULL, 'Why do you want to join Generate?', 'long_answer', true, 1, NULL, 'About you'),
@@ -128,13 +132,13 @@ BEGIN
     (cur, sd, 'Walk us through a design decision you had to defend.', 'long_answer', true, 5, NULL, 'Experience'),
     (cur, sd, 'Which tools do you use?', 'checkbox', false, 6, '["Figma", "Framer", "Illustrator", "Protopie"]', 'Experience');
 
-  INSERT INTO review_questions (cycle_id, role_id, question_text, question_type, is_required, display_order, description) VALUES
-    (cur, NULL, 'Motivation', 'score', true, 1, 'How clearly do they explain why Generate?'),
-    (cur, NULL, 'Communication', 'score', true, 2, 'Clarity and structure of their writing.'),
-    (cur, swe, 'Technical depth', 'score', true, 3, 'Depth of the project they describe.'),
-    (cur, sd, 'Design craft', 'score', true, 3, 'Quality of process and portfolio.'),
-    (cur, NULL, 'Overall', 'score', true, 4, 'Your overall score.'),
-    (cur, NULL, 'Notes', 'long_answer', false, 5, 'Anything the chiefs should know.');
+  INSERT INTO review_questions (cycle_id, role_id, question_text, question_type, is_required, display_order, description, score_min, score_max) VALUES
+    (cur, NULL, 'Motivation', 'score', true, 1, 'How clearly do they explain why Generate?', 1, 10),
+    (cur, NULL, 'Communication', 'score', true, 2, 'Clarity and structure of their writing.', 1, 10),
+    (cur, swe, 'Technical depth', 'score', true, 3, 'Depth of the project they describe.', 1, 10),
+    (cur, sd, 'Design craft', 'score', true, 3, 'Quality of process and portfolio.', 1, 10),
+    (cur, NULL, 'Overall', 'score', true, 4, 'Your overall score.', 1, 10),
+    (cur, NULL, 'Notes', 'long_answer', false, 5, 'Anything the chiefs should know.', NULL, NULL);
 
   INSERT INTO code_challenges (cycle_id, role_id, name, challenge_url, instructions, due_at) VALUES
     (cur, swe, 'Gate Scheduler', 'https://github.com/example/seed-gate-scheduler', 'Fork the repo and make the tests pass.', now() + interval '14 days'),
@@ -348,9 +352,15 @@ BEGIN
   SELECT id, 'rejection_generic', chief2 FROM s_app WHERE i = 17;
 
   -- Past cycle: a finished cycle with a handful of outcomes.
-  INSERT INTO application_templates (cycle_id, role_id, title, status, review_status, closes_at)
-  VALUES (past, past_swe, 'Software Engineer — Fall 2025', 'closed', 'closed', now() - interval '370 days'),
-         (past, past_sd, 'Software Designer — Fall 2025', 'closed', 'closed', now() - interval '370 days');
+  INSERT INTO application_templates (cycle_id, role_id, title)
+  VALUES (past, past_swe, 'Software Engineer — Fall 2025'),
+         (past, past_sd, 'Software Designer — Fall 2025');
+  INSERT INTO opening_steps (cycle_id, role_id, step, released_at)
+  SELECT past, r, s, now() - interval '400 days' FROM unnest(ARRAY[past_swe, past_sd]) r CROSS JOIN unnest(ARRAY['applications', 'reviews']) s;
+  INSERT INTO opening_deadlines (cycle_id, role_id, step, kind, due_at, hard)
+  SELECT past, r, 'applications', 'applicant', now() - interval '370 days', true FROM unnest(ARRAY[past_swe, past_sd]) r
+  UNION ALL
+  SELECT past, r, 'reviews', 'reviewer', now() - interval '365 days', false FROM unnest(ARRAY[past_swe, past_sd]) r;
   INSERT INTO questions (cycle_id, question_text, question_type, display_order)
   VALUES (past, 'Why do you want to join Generate?', 'long_answer', 1);
   INSERT INTO applications (cycle_id, user_nuid, role_id, stage, submitted_at)
@@ -365,9 +375,9 @@ BEGIN
   WHERE a.cycle_id = past;
 
   -- Lead cycle and the Design branch's first cycle, both still drafts.
-  INSERT INTO application_templates (cycle_id, role_id, title, status)
-  VALUES (leads_cycle, tech_lead, 'Tech Lead — Spring 2027', 'draft'),
-         (design_cycle, ux, 'Designer — Spring 2027', 'draft');
+  INSERT INTO application_templates (cycle_id, role_id, title)
+  VALUES (leads_cycle, tech_lead, 'Tech Lead — Spring 2027'),
+         (design_cycle, ux, 'Designer — Spring 2027');
   INSERT INTO questions (cycle_id, question_text, question_type, display_order)
   VALUES (leads_cycle, 'How would you run your team''s first week?', 'long_answer', 1),
          (design_cycle, 'Link to your portfolio', 'url', 1);

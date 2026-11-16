@@ -54,7 +54,8 @@ func (g Gate) CanCycle(ctx context.Context, action access.CycleAction, cycleID s
 	if err != nil {
 		return err
 	}
-	return access.NewCycleAccess(l).Can(action)
+	actor, _ := middleware.ActorFrom(ctx)
+	return access.CycleAccessAt(l, access.IsAdmin(actor)).Can(action)
 }
 
 func (g Gate) CanApplication(ctx context.Context, action access.ApplicationAction, id string) error {
@@ -63,7 +64,7 @@ func (g Gate) CanApplication(ctx context.Context, action access.ApplicationActio
 		return err
 	}
 	actor, _ := middleware.ActorFrom(ctx)
-	return access.NewApplicationAccess(l, g.Owners[id] != "" && g.Owners[id] == actor.NUID).Can(action)
+	return access.ApplicationAccessAt(l, g.Owners[id] != "" && g.Owners[id] == actor.NUID).Can(action)
 }
 
 func (g Gate) CanApplicationOf(ctx context.Context, action access.ApplicationAction, _ string, id string) error {

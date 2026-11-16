@@ -79,20 +79,3 @@ type CycleFilter struct {
 	// Listable limits to cycles the caller may list; nil means every cycle.
 	Listable *gorm.DB
 }
-
-type CycleStageCreate struct {
-	CycleID             string
-	Stage               models.ApplicationStage
-	DisplayOrder        int
-	IsActive            bool
-	RequiredAssignments int
-	Label               *string
-}
-
-// CycleStageUpdate carries partial-update fields; nil pointers are left unchanged.
-type CycleStageUpdate struct {
-	DisplayOrder        *int
-	IsActive            *bool
-	RequiredAssignments *int
-	Label               *string
-}

@@ -5,6 +5,8 @@ import (
 
 	"github.com/GenerateNU/apportal/backend/internal/handlers/application"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/interviewassignment"
+	"github.com/GenerateNU/apportal/backend/internal/models"
+	"github.com/GenerateNU/apportal/backend/internal/pipeline"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 	"github.com/danielgtaylor/huma/v2"
 
@@ -16,6 +18,7 @@ type interviewService struct {
 	applicationDB         *application.ApplicationDB
 	interviewDB           *InterviewDB
 	interviewAssignmentDB *interviewassignment.InterviewAssignmentDB
+	gate                  *pipeline.Gate
 }
 
 func (s *interviewService) listBulk(ctx context.Context, in *ListInterviewsBulkInput) (*InterviewsOutput, error) {
@@ -50,6 +53,11 @@ func (s *interviewService) upsert(ctx context.Context, in *UpsertInterviewInput)
 			return nil, err
 		}
 	}
+	if in.Body.Submit || in.Body.Writeup != nil || in.Body.Rating != nil {
+		if err := s.gate.Application(ctx, in.ID, models.StepInterviews, models.KindInterviewer); err != nil {
+			return nil, err
+		}
+	}
 	actor := utils.CurrentActor(ctx)
 	current, err := s.interviewDB.GetInterviewDetail(ctx, in.ID)
 	if err != nil {
@@ -75,7 +83,9 @@ func (s *interviewService) upsert(ctx context.Context, in *UpsertInterviewInput)
 	}
 
 	if in.Body.Submit {
-		_ = s.applicationDB.AdvanceApplicationToInterviewReview(ctx, in.ID)
+		if err := s.applicationDB.AdvanceApplicationToInterviewReview(ctx, in.ID); err != nil {
+			return nil, utils.StoreErr(err)
+		}
 	}
 
 	iv, err := s.interviewDB.GetInterviewDetail(ctx, in.ID)

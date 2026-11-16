@@ -12,6 +12,7 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/access"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/GenerateNU/apportal/backend/internal/models"
+	"github.com/GenerateNU/apportal/backend/internal/pipeline"
 	"github.com/GenerateNU/apportal/backend/internal/reviewrules"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 )
@@ -58,6 +59,12 @@ func (s *leadAssignmentService) create(ctx context.Context, in *CreateLeadAssign
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
+	if step, _ := pipeline.StepOfStage(o.Stage); step != models.StepApplications && step != models.StepReviews {
+		return nil, huma.Error409Conflict("reviewers can only be assigned while an application is submitted or in review")
+	}
+	if err := s.writable(ctx, o); err != nil {
+		return nil, err
+	}
 	eligible, err := s.rules.Eligible(ctx, o.CycleID)
 	if err != nil {
 		return nil, utils.StoreErr(err)
@@ -68,6 +75,9 @@ func (s *leadAssignmentService) create(ctx context.Context, in *CreateLeadAssign
 	perApplicant, err := s.rules.PerApplicant(ctx, o.CycleID)
 	if err != nil {
 		return nil, utils.StoreErr(err)
+	}
+	if perApplicant <= 0 {
+		return nil, reviewrules.ErrNoPerApplicant()
 	}
 
 	var out models.LeadAssignment
@@ -129,12 +139,8 @@ func (s *leadAssignmentService) delete(ctx context.Context, in *utils.IDInput) (
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
-	released, err := s.rules.Released(ctx, o.CycleID)
-	if err != nil {
-		return nil, utils.StoreErr(err)
-	}
-	if released[o.RoleID] {
-		return nil, errReleased()
+	if err := s.removable(ctx, o); err != nil {
+		return nil, err
 	}
 	if err := s.store.Delete(ctx, in.ID); err != nil {
 		return nil, utils.StoreErr(err)
@@ -162,12 +168,8 @@ func (s *leadAssignmentService) deleteAll(ctx context.Context, in *DeleteAllLead
 	if !ok {
 		return nil, huma.Error422UnprocessableEntity("role_id isn't an opening on this cycle")
 	}
-	released, err := s.rules.Released(ctx, in.ID)
-	if err != nil {
-		return nil, utils.StoreErr(err)
-	}
-	if released[in.RoleID] {
-		return nil, errReleased()
+	if err := s.removable(ctx, opening{CycleID: in.ID, RoleID: in.RoleID}); err != nil {
+		return nil, err
 	}
 	deleted, err := s.store.DeleteUnsubmitted(ctx, in.ID, in.RoleID)
 	if err != nil {
@@ -176,4 +178,26 @@ func (s *leadAssignmentService) deleteAll(ctx context.Context, in *DeleteAllLead
 	out := &DeleteAllLeadAssignmentsOutput{}
 	out.Body.Deleted = deleted
 	return out, nil
+}
+
+func (s *leadAssignmentService) writable(ctx context.Context, o opening) error {
+	frozen, err := s.rules.Frozen(ctx, o.CycleID)
+	if err != nil {
+		return utils.StoreErr(err)
+	}
+	if frozen[o.RoleID] {
+		return reviewrules.ErrFrozen()
+	}
+	return nil
+}
+
+func (s *leadAssignmentService) removable(ctx context.Context, o opening) error {
+	released, err := s.rules.Released(ctx, o.CycleID)
+	if err != nil {
+		return utils.StoreErr(err)
+	}
+	if released[o.RoleID] {
+		return errReleased()
+	}
+	return s.writable(ctx, o)
 }

@@ -3,6 +3,7 @@ package interviewassignment
 import (
 	"net/http"
 
+	"github.com/GenerateNU/apportal/backend/internal/pipeline"
 	"github.com/danielgtaylor/huma/v2"
 	"gorm.io/gorm"
 
@@ -13,7 +14,7 @@ import (
 )
 
 func Route(api huma.API, db *gorm.DB) {
-	s := &interviewAssignmentService{access: access.NewChecker(db), interviewAssignmentDB: NewInterviewAssignmentDB(db), reviewReleaseDB: reviewrelease.NewReviewReleaseDB(db), conflicts: reviewrules.NewConflicts(db)}
+	s := &interviewAssignmentService{access: access.NewChecker(db), interviewAssignmentDB: NewInterviewAssignmentDB(db), reviewReleaseDB: reviewrelease.NewReviewReleaseDB(db), conflicts: reviewrules.NewConflicts(db), gate: pipeline.NewGate(db)}
 
 	huma.Register(api, huma.Operation{
 		OperationID:   "add-interviewer",

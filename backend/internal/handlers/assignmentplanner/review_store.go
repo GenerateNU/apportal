@@ -85,21 +85,10 @@ func reviewersQuery(db *gorm.DB, cycleID string, stages []models.ApplicationStag
 
 func (r *ReviewDB) SaveAssignments(ctx context.Context, pairs []assign.Pair, assignedBy string) (int, error) {
 	rows := make([]leadassignment.LeadAssignmentPair, len(pairs))
-	touched := map[string]bool{}
-	ids := []string{}
 	for i, p := range pairs {
 		rows[i] = leadassignment.LeadAssignmentPair{ApplicationID: p.ApplicationID, LeadNUID: p.LeadNUID}
-		if !touched[p.ApplicationID] {
-			touched[p.ApplicationID] = true
-			ids = append(ids, p.ApplicationID)
-		}
 	}
-	created, err := leadassignment.NewLeadAssignmentDB(r.db).CreateLeadAssignments(ctx, rows, assignedBy)
-	if err != nil {
-		return 0, err
-	}
-	_, err = application.NewApplicationDB(r.db).AdvanceApplicationsToLeadReview(ctx, ids)
-	return created, err
+	return leadassignment.NewLeadAssignmentDB(r.db).CreateLeadAssignments(ctx, rows, assignedBy)
 }
 
 func (r *ReviewDB) Locked(ctx context.Context, cycleID string, fn func(reviewStore) error) error {

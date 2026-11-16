@@ -6,7 +6,6 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/GenerateNU/apportal/backend/internal/access"
-	"github.com/GenerateNU/apportal/backend/internal/handlers/application"
 	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/reviewrules"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
@@ -21,6 +20,7 @@ type applicationGate interface {
 type opening struct {
 	CycleID string
 	RoleID  string
+	Stage   models.ApplicationStage
 }
 
 type manualStore interface {
@@ -46,7 +46,7 @@ func newManualDB(db *gorm.DB) *manualDB {
 
 func (m *manualDB) ApplicationOpening(ctx context.Context, applicationID string) (opening, error) {
 	var o opening
-	err := m.db.WithContext(ctx).Model(&models.Application{}).Select("cycle_id, role_id").
+	err := m.db.WithContext(ctx).Model(&models.Application{}).Select("cycle_id, role_id, stage").
 		Where("id = ?", applicationID).Take(&o).Error
 	return o, utils.DBErr(err)
 }
@@ -80,12 +80,7 @@ func (m *manualDB) List(ctx context.Context, applicationID string) ([]models.Lea
 }
 
 func (m *manualDB) Create(ctx context.Context, applicationID, leadNUID, assignedBy string) (models.LeadAssignment, error) {
-	a, err := NewLeadAssignmentDB(m.db).CreateLeadAssignment(ctx, applicationID, leadNUID, assignedBy)
-	if err != nil {
-		return a, err
-	}
-	_, err = application.NewApplicationDB(m.db).AdvanceApplicationsToLeadReview(ctx, []string{applicationID})
-	return a, err
+	return NewLeadAssignmentDB(m.db).CreateLeadAssignment(ctx, applicationID, leadNUID, assignedBy)
 }
 
 func (m *manualDB) Delete(ctx context.Context, assignmentID string) error {

@@ -12,6 +12,7 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/handlers/leadassignment"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/GenerateNU/apportal/backend/internal/models"
+	"github.com/GenerateNU/apportal/backend/internal/pipeline"
 	"github.com/GenerateNU/apportal/backend/internal/reviewrules"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 	"github.com/danielgtaylor/huma/v2"
@@ -32,6 +33,7 @@ type assignmentPlannerService struct {
 	leadAssignmentDB *leadassignment.LeadAssignmentDB
 	staffDB          *cyclestaff.CycleStaffDB
 	conflicts        *reviewrules.Conflicts
+	gate             *pipeline.Gate
 }
 
 // reviewPoolStages are the stages an application can be in and still need lead
@@ -171,6 +173,9 @@ func (s *assignmentPlannerService) commit(ctx context.Context, in *PreviewPlanIn
 	if err != nil {
 		return nil, err
 	}
+	if err := s.gate.Opening(ctx, in.ID, in.Body.RoleID, models.StepReviews, ""); err != nil {
+		return nil, err
+	}
 
 	pairs := make([]leadassignment.LeadAssignmentPair, len(planned.plan.New))
 	for i, p := range planned.plan.New {
@@ -179,18 +184,6 @@ func (s *assignmentPlannerService) commit(ctx context.Context, in *PreviewPlanIn
 
 	created, err := s.leadAssignmentDB.CreateLeadAssignments(ctx, pairs, utils.CurrentActor(ctx).NUID)
 	if err != nil {
-		return nil, utils.StoreErr(err)
-	}
-
-	newlyAssigned := make(map[string]bool, len(planned.plan.New))
-	for _, p := range planned.plan.New {
-		newlyAssigned[p.ApplicationID] = true
-	}
-	appIDs := make([]string, 0, len(newlyAssigned))
-	for id := range newlyAssigned {
-		appIDs = append(appIDs, id)
-	}
-	if _, err := s.applicationDB.AdvanceApplicationsToLeadReview(ctx, appIDs); err != nil {
 		return nil, utils.StoreErr(err)
 	}
 
