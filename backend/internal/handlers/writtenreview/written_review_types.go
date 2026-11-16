@@ -46,3 +46,7 @@ type WrittenReviewUpsert struct {
 	Submit        bool // when true, stamps submitted_at = NOW()
 	Answers       []ReviewAnswerInput
 }
+
+type ListBulkInput struct {
+	ApplicationIDs string `query:"application_ids" doc:"Comma-separated application IDs, at most 200"`
+}

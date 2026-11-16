@@ -89,12 +89,25 @@ func (c *CycleDB) CycleRoleSummary(ctx context.Context, cycleID string, role str
 			Where("cycle_id = ? AND role_id = ? AND stage != ?", cycleID, role, models.StageDraft).
 			Count(&submissions).Error
 	}
-	return models.CycleRoleSummary{
+	var script []struct {
+		Questions int
+		Written   bool
+	}
+	if err == nil {
+		err = db.Raw(`SELECT jsonb_array_length(questions) AS questions,
+				(intro_speech <> '' OR jsonb_array_length(questions) > 0) AS written
+			FROM interview_script WHERE cycle_id = ? AND role_id = ?`, cycleID, role).Scan(&script).Error
+	}
+	out := models.CycleRoleSummary{
 		RoleID:          role,
 		QuestionCount:   int(questions),
 		ChallengeCount:  int(challenges),
 		SubmissionCount: int(submissions),
-	}, err
+	}
+	if len(script) > 0 {
+		out.ScriptQuestions, out.ScriptWritten = script[0].Questions, script[0].Written
+	}
+	return out, err
 }
 
 func (c *CycleDB) UpdateCycle(ctx context.Context, id string, in CycleUpdate) (models.Cycle, error) {

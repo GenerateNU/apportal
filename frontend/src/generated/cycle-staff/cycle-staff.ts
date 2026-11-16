@@ -28,6 +28,7 @@ import type {
   CycleStaff,
   ErrorModel,
   ListCycleStaff200,
+  ListMyCycles200,
   SetStaffInputBody
 } from '.././model';
 
@@ -286,4 +287,94 @@ export const useSetCycleStaff = <TError = ErrorModel | ErrorModel | ErrorModel |
 
       return useMutation(mutationOptions, queryClient);
     }
+    /**
+ * @summary List the cycles the current user is staff on, with their role
+ */
+export const listMyCycles = (
     
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<ListMyCycles200>(
+      {url: `/users/me/cycles`, method: 'GET', signal
+    },
+      options);
+    }
+  
+
+
+
+export const getListMyCyclesQueryKey = () => {
+    return [
+    `/users/me/cycles`
+    ] as const;
+    }
+
+    
+export const getListMyCyclesQueryOptions = <TData = Awaited<ReturnType<typeof listMyCycles>>, TError = ErrorModel | ErrorModel>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyCycles>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListMyCyclesQueryKey();
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMyCycles>>> = ({ signal }) => listMyCycles(requestOptions, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMyCycles>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListMyCyclesQueryResult = NonNullable<Awaited<ReturnType<typeof listMyCycles>>>
+export type ListMyCyclesQueryError = ErrorModel | ErrorModel
+
+
+export function useListMyCycles<TData = Awaited<ReturnType<typeof listMyCycles>>, TError = ErrorModel | ErrorModel>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyCycles>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listMyCycles>>,
+          TError,
+          Awaited<ReturnType<typeof listMyCycles>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListMyCycles<TData = Awaited<ReturnType<typeof listMyCycles>>, TError = ErrorModel | ErrorModel>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyCycles>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listMyCycles>>,
+          TError,
+          Awaited<ReturnType<typeof listMyCycles>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListMyCycles<TData = Awaited<ReturnType<typeof listMyCycles>>, TError = ErrorModel | ErrorModel>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyCycles>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List the cycles the current user is staff on, with their role
+ */
+
+export function useListMyCycles<TData = Awaited<ReturnType<typeof listMyCycles>>, TError = ErrorModel | ErrorModel>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyCycles>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListMyCyclesQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+

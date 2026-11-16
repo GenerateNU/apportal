@@ -10,5 +10,8 @@ export interface CycleRoleSummary {
   challenge_count: number;
   question_count: number;
   role_id: string;
+  script_questions: number;
+  /** The interview script has an opening or a question */
+  script_written: boolean;
   submission_count: number;
 }

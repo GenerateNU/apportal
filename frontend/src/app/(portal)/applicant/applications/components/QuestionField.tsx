@@ -7,6 +7,7 @@ import { MarkdownContent } from '@/components/MarkdownContent'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { ScoreScale } from '@/components/ui/score-scale'
 import { Label } from '@/components/ui/label'
 import {
   Select,
@@ -167,6 +168,8 @@ export type FieldQuestion = {
   is_required: boolean
   options: string[] | null
   description?: string | null
+  score_min?: number
+  score_max?: number
 }
 
 const TEXTAREA_CLASS =
@@ -291,25 +294,17 @@ export function QuestionField({
         )}
 
         {question.question_type === 'score' && (
-          <div className="flex flex-col gap-1">
-            <Input
-              type="number"
-              min={1}
-              max={10}
-              step={1}
-              className="h-11 w-24 text-base md:text-base"
-              value={value.text ?? ''}
-              onChange={(e) => onChange({ text: e.target.value })}
-              aria-invalid={!!error}
-              placeholder="1-10"
-              disabled={disabled}
-            />
-            {value.text && !Number.isInteger(Number(value.text)) && (
-              <p className="text-destructive text-xs">
-                Rating must be a whole number.
-              </p>
-            )}
-          </div>
+          <ScoreScale
+            min={question.score_min}
+            max={question.score_max}
+            label={question.question_text}
+            value={value.text ? Number(value.text) : undefined}
+            onChange={(next) =>
+              onChange(next === undefined ? {} : { text: String(next) })
+            }
+            disabled={disabled}
+            invalid={!!error}
+          />
         )}
 
         {question.question_type === 'dropdown' && (

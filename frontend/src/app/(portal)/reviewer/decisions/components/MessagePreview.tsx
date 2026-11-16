@@ -1,0 +1,92 @@
+'use client'
+
+import { Check, Copy, Mail } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { SectionLabel } from '@/components/ui/section-label'
+import type { RenderedDecision } from './render'
+import { useCopy } from './useCopy'
+
+// The finished message, exactly as it will be pasted into an email. Rendered
+// from the same function the copy buttons read, so preview and clipboard can't
+// disagree.
+export function MessagePreview({
+  rendered,
+  email,
+  copyKeyPrefix,
+  overridden,
+}: {
+  rendered: RenderedDecision
+  email: string
+  copyKeyPrefix: string
+  overridden?: boolean
+}) {
+  const { copy, copiedKey } = useCopy()
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <SectionLabel as="h3">
+          Message{overridden && ' (edited by hand)'}
+        </SectionLabel>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <CopyButton
+            onClick={() =>
+              copy(email, `${copyKeyPrefix}-email`, 'email address')
+            }
+            copied={copiedKey === `${copyKeyPrefix}-email`}
+            icon={<Mail size={13} />}
+            label="Email"
+          />
+          <CopyButton
+            onClick={() =>
+              copy(rendered.subject, `${copyKeyPrefix}-subject`, 'subject')
+            }
+            copied={copiedKey === `${copyKeyPrefix}-subject`}
+            label="Subject"
+          />
+          <CopyButton
+            onClick={() =>
+              copy(rendered.body, `${copyKeyPrefix}-body`, 'message')
+            }
+            copied={copiedKey === `${copyKeyPrefix}-body`}
+            label="Message"
+          />
+        </div>
+      </div>
+
+      <Card variant="flat" padding="none">
+        <p className="text-text-muted border-b border-gray-200 px-3 py-2 text-xs">
+          {rendered.subject}
+        </p>
+        <pre className="text-text-default px-3 py-3 font-sans text-sm break-words whitespace-pre-wrap lg:max-h-[28rem] lg:overflow-y-auto">
+          {rendered.body}
+        </pre>
+      </Card>
+    </div>
+  )
+}
+
+function CopyButton({
+  onClick,
+  copied,
+  label,
+  icon,
+}: {
+  onClick: () => void
+  copied: boolean
+  label: string
+  icon?: React.ReactNode
+}) {
+  return (
+    <Button
+      size="xs"
+      variant="outline"
+      onClick={onClick}
+      className="pointer-coarse:h-8 pointer-coarse:px-2.5"
+    >
+      {copied ? <Check size={13} /> : (icon ?? <Copy size={13} />)}
+      {copied ? 'Copied' : label}
+    </Button>
+  )
+}

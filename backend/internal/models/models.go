@@ -135,6 +135,8 @@ type CycleRoleSummary struct {
 	QuestionCount   int    `json:"question_count"`
 	ChallengeCount  int    `json:"challenge_count"`
 	SubmissionCount int    `json:"submission_count"`
+	ScriptQuestions int    `json:"script_questions"`
+	ScriptWritten   bool   `json:"script_written" doc:"The interview script has an opening or a question"`
 }
 
 type Applicant struct {

@@ -27,6 +27,8 @@ import type {
 import type {
   ErrorModel,
   ListWrittenReviews200,
+  ListWrittenReviewsBulk200,
+  ListWrittenReviewsBulkParams,
   UpsertWrittenReviewInputBody,
   WrittenReviewDetail
 } from '.././model';
@@ -212,6 +214,99 @@ export function useListWrittenReviews<TData = Awaited<ReturnType<typeof listWrit
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getListWrittenReviewsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+/**
+ * Same visibility as the single-application route; applications the caller can't review are left out.
+ * @summary List written reviews for several applications
+ */
+export const listWrittenReviewsBulk = (
+    params?: ListWrittenReviewsBulkParams,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<ListWrittenReviewsBulk200>(
+      {url: `/written-reviews`, method: 'GET',
+        params, signal
+    },
+      options);
+    }
+  
+
+
+
+export const getListWrittenReviewsBulkQueryKey = (params?: ListWrittenReviewsBulkParams,) => {
+    return [
+    `/written-reviews`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getListWrittenReviewsBulkQueryOptions = <TData = Awaited<ReturnType<typeof listWrittenReviewsBulk>>, TError = ErrorModel | ErrorModel | ErrorModel>(params?: ListWrittenReviewsBulkParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listWrittenReviewsBulk>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListWrittenReviewsBulkQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listWrittenReviewsBulk>>> = ({ signal }) => listWrittenReviewsBulk(params, requestOptions, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listWrittenReviewsBulk>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListWrittenReviewsBulkQueryResult = NonNullable<Awaited<ReturnType<typeof listWrittenReviewsBulk>>>
+export type ListWrittenReviewsBulkQueryError = ErrorModel | ErrorModel | ErrorModel
+
+
+export function useListWrittenReviewsBulk<TData = Awaited<ReturnType<typeof listWrittenReviewsBulk>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+ params: undefined |  ListWrittenReviewsBulkParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listWrittenReviewsBulk>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listWrittenReviewsBulk>>,
+          TError,
+          Awaited<ReturnType<typeof listWrittenReviewsBulk>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListWrittenReviewsBulk<TData = Awaited<ReturnType<typeof listWrittenReviewsBulk>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+ params?: ListWrittenReviewsBulkParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listWrittenReviewsBulk>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listWrittenReviewsBulk>>,
+          TError,
+          Awaited<ReturnType<typeof listWrittenReviewsBulk>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListWrittenReviewsBulk<TData = Awaited<ReturnType<typeof listWrittenReviewsBulk>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+ params?: ListWrittenReviewsBulkParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listWrittenReviewsBulk>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List written reviews for several applications
+ */
+
+export function useListWrittenReviewsBulk<TData = Awaited<ReturnType<typeof listWrittenReviewsBulk>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+ params?: ListWrittenReviewsBulkParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listWrittenReviewsBulk>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListWrittenReviewsBulkQueryOptions(params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

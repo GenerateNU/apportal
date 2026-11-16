@@ -35,4 +35,14 @@ func Route(api huma.API, db *gorm.DB) {
 		Tags:        []string{"Written reviews"},
 		Errors:      []int{http.StatusUnauthorized},
 	}, s.list)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "list-written-reviews-bulk",
+		Method:      http.MethodGet,
+		Path:        "/written-reviews",
+		Summary:     "List written reviews for several applications",
+		Description: "Same visibility as the single-application route; applications the caller can't review are left out.",
+		Tags:        []string{"Written reviews"},
+		Errors:      []int{http.StatusUnauthorized, http.StatusUnprocessableEntity},
+	}, s.listBulk)
 }

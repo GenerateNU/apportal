@@ -1,0 +1,97 @@
+import { notFound } from 'next/navigation'
+import {
+  dehydrate,
+  HydrationBoundary,
+  QueryClient,
+} from '@tanstack/react-query'
+import { listAnswers } from '@/generated/answers/answers'
+import { getApplicant } from '@/generated/applicants/applicants'
+import { getApplication } from '@/generated/applications/applications'
+import { listCycleChallenges } from '@/generated/code-challenges/code-challenges'
+import { listCodeSubmissions } from '@/generated/code-submissions/code-submissions'
+import { listCycleQuestions } from '@/generated/questions/questions'
+import { listCycleTags } from '@/generated/tags/tags'
+import { listWrittenReviews } from '@/generated/written-reviews/written-reviews'
+import type { Application } from '@/lib/api/types'
+import { getServerRequestOptions } from '@/lib/api/server-request-options'
+import { queryKeys } from '@/lib/queries/keys'
+import { ReviewClient } from './components/ReviewClient'
+
+// Auth-gated, live data fetched per request from the backend — never prerender
+// this at build time (the backend isn't running then).
+export const dynamic = 'force-dynamic'
+
+export default async function ReviewPage({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}) {
+  const { id } = await params
+  const queryClient = new QueryClient()
+  const requestOptions = await getServerRequestOptions()
+
+  let application: Application
+  try {
+    application = (await queryClient.fetchQuery({
+      queryKey: queryKeys.applications.detail(id),
+      queryFn: () => getApplication(id, requestOptions),
+    })) as Application
+  } catch {
+    notFound()
+  }
+
+  const role = application.role_id
+
+  await Promise.all([
+    queryClient.prefetchQuery({
+      queryKey: queryKeys.answers.list(id),
+      queryFn: () => listAnswers(id, requestOptions),
+    }),
+    queryClient.prefetchQuery({
+      queryKey: queryKeys.questions.list(application.cycle_id, role),
+      queryFn: () =>
+        listCycleQuestions(
+          application.cycle_id,
+          { role_id: role },
+          requestOptions
+        ),
+    }),
+    queryClient.prefetchQuery({
+      queryKey: queryKeys.tags.cycle(application.cycle_id),
+      queryFn: async () =>
+        (await listCycleTags(application.cycle_id, requestOptions)) ?? [],
+    }),
+    queryClient.prefetchQuery({
+      queryKey: queryKeys.writtenReviews.list(id),
+      queryFn: () => listWrittenReviews(id, requestOptions),
+    }),
+    queryClient.prefetchQuery({
+      queryKey: queryKeys.applicants.detail(application.user_nuid),
+      queryFn: () => getApplicant(application.user_nuid, requestOptions),
+    }),
+    queryClient.prefetchQuery({
+      queryKey: queryKeys.challenges.list(application.cycle_id, role),
+      queryFn: () =>
+        listCycleChallenges(
+          application.cycle_id,
+          { role_id: role },
+          requestOptions
+        ),
+    }),
+    queryClient.prefetchQuery({
+      queryKey: queryKeys.submissions.detail(id),
+      queryFn: () => listCodeSubmissions(id, requestOptions),
+    }),
+  ])
+
+  return (
+    <HydrationBoundary state={dehydrate(queryClient)}>
+      <ReviewClient
+        applicationId={id}
+        cycleId={application.cycle_id}
+        role={role}
+        applicantNuid={application.user_nuid}
+      />
+    </HydrationBoundary>
+  )
+}

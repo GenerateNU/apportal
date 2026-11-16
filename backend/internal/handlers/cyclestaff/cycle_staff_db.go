@@ -24,6 +24,17 @@ func (s *CycleStaffDB) ListStaff(ctx context.Context, cycleID string, role model
 	return rows, staffQuery(s.db.WithContext(ctx), cycleID, role).Find(&rows).Error
 }
 
+func (s *CycleStaffDB) ListUserCycles(ctx context.Context, nuid string) ([]models.CycleStaff, error) {
+	rows := []models.CycleStaff{}
+	err := s.db.WithContext(ctx).Table("cycle_staff cs").
+		Select("cs.cycle_id, cs.user_nuid, cs.role, cs.created_at").
+		Joins("JOIN cycles c ON c.id = cs.cycle_id").
+		Where("cs.user_nuid = ?", nuid).
+		Order("c.created_at DESC").
+		Scan(&rows).Error
+	return rows, err
+}
+
 // SetStaff adds the user to the cycle's staff or changes their role.
 func (s *CycleStaffDB) SetStaff(ctx context.Context, cycleID, nuid string, role models.CycleStaffRole) (models.CycleStaff, error) {
 	row := models.CycleStaff{CycleID: cycleID, UserNUID: nuid, Role: role}
