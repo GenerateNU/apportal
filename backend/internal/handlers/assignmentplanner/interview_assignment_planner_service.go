@@ -13,6 +13,7 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/GenerateNU/apportal/backend/internal/interviewassign"
 	"github.com/GenerateNU/apportal/backend/internal/models"
+	"github.com/GenerateNU/apportal/backend/internal/reviewrules"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 	"github.com/danielgtaylor/huma/v2"
 
@@ -40,6 +41,7 @@ type interviewAssignmentPlannerService struct {
 	interviewGroupDB      *interviewgroup.InterviewGroupDB
 	leadAssignmentDB      *leadassignment.LeadAssignmentDB
 	staffDB               *cyclestaff.CycleStaffDB
+	conflicts             *reviewrules.Conflicts
 }
 
 func toInterviewassignLeads(in []PlanLeadDay) []interviewassign.Lead {
@@ -61,6 +63,14 @@ func toConflictMap(in []PlanConflict) map[string]map[string]bool {
 		out[c.ApplicationID][c.LeadNUID] = true
 	}
 	return out
+}
+
+func (s *interviewAssignmentPlannerService) conflictMap(ctx context.Context, cycleID string, in []PlanConflict) (map[string]map[string]bool, error) {
+	stored, err := s.conflicts.Blocked(ctx, cycleID)
+	if err != nil {
+		return nil, utils.StoreErr(err)
+	}
+	return stored.Merge(toConflictMap(in)), nil
 }
 
 func (s *interviewAssignmentPlannerService) interviewerPool(ctx context.Context, in *InterviewPoolInput) (*InterviewPoolOutput, error) {
@@ -180,11 +190,16 @@ func (s *interviewAssignmentPlannerService) buildInterviewerPlan(ctx context.Con
 		seedTag = "interviewer-groups"
 	}
 
+	conflicts, err := s.conflictMap(ctx, in.ID, in.Body.Conflicts)
+	if err != nil {
+		return interviewerRun{}, err
+	}
+
 	planIn := toUnitInput(interviewassign.InterviewerInput{
 		Applicants:   applicants,
 		Existing:     existing,
 		WroteReview:  wroteReview,
-		Conflicts:    toConflictMap(in.Body.Conflicts),
+		Conflicts:    conflicts,
 		Cap:          in.Body.Cap,
 		CapOverrides: in.Body.CapOverrides,
 		Seed:         interviewassign.SeedFrom(in.ID, in.Body.RoleID, seedTag),
@@ -569,11 +584,16 @@ func (s *interviewAssignmentPlannerService) buildReviewerPlan(ctx context.Contex
 		}
 	}
 
+	conflicts, err := s.conflictMap(ctx, in.ID, in.Body.Conflicts)
+	if err != nil {
+		return reviewerRun{}, err
+	}
+
 	plan, err := interviewassign.PlanReviewers(interviewassign.ReviewerInput{
 		Applicants:   applicants,
 		Leads:        toInterviewassignLeads(in.Body.Leads),
 		Interviewer:  interviewer,
-		Conflicts:    toConflictMap(in.Body.Conflicts),
+		Conflicts:    conflicts,
 		Existing:     prior,
 		Cap:          in.Body.Cap,
 		CapOverrides: in.Body.CapOverrides,

@@ -1,6 +1,7 @@
 package pipeline
 
 import (
+	"errors"
 	"net/http"
 	"testing"
 	"time"
@@ -28,7 +29,8 @@ func statusOf(err error) int {
 	if err == nil {
 		return 0
 	}
-	if se, ok := err.(huma.StatusError); ok {
+	var se huma.StatusError
+	if errors.As(err, &se) {
 		return se.GetStatus()
 	}
 	return -1

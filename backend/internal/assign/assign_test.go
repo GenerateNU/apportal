@@ -441,3 +441,24 @@ func TestEmptyApplicationPoolPlansNothing(t *testing.T) {
 		t.Errorf("planned %d assignment(s) for an empty pool", len(plan.New))
 	}
 }
+
+func TestBlockedLeadsNeverReviewThatApplication(t *testing.T) {
+	plan, err := Compute(Input{
+		ApplicationIDs: []string{"a1", "a2", "a3"},
+		Teams:          []Team{{Name: "x", LeadNUIDs: []string{"x"}}, {Name: "y", LeadNUIDs: []string{"y"}}},
+		Cap:            3,
+		Coverage:       1,
+		Blocked:        map[string]map[string]bool{"a1": {"x": true}, "a2": {"x": true}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, p := range plan.New {
+		if p.LeadNUID == "x" && (p.ApplicationID == "a1" || p.ApplicationID == "a2") {
+			t.Errorf("x reviews %s despite a conflict", p.ApplicationID)
+		}
+	}
+	if len(plan.New) != 3 || len(plan.UnderCovered) != 0 {
+		t.Errorf("everyone should still get a reviewer: %+v", plan)
+	}
+}
