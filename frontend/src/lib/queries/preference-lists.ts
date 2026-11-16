@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import {
   useMutation,
   useQueries,
@@ -43,6 +44,8 @@ import type {
 import { useCurrentUser } from './users'
 import { queryKeys } from './keys'
 
+const PREFERENCE_LIST_POLL_MS = 8000
+
 export async function fetchPreferenceLists(
   cycleId: string,
   opts?: RequestOptions
@@ -63,10 +66,6 @@ export function usePreferenceLists(cycleId: string, opts?: RequestOptions) {
   })
 }
 
-// Polls while a detail page is open so collaborators editing the same list
-// at once see each other's changes within a few seconds — this stack has no
-// websockets/realtime channel today, so short-interval refetch is the
-// pragmatic stand-in.
 export function usePreferenceList(
   id: string,
   { poll = false }: { poll?: boolean } = {},
@@ -76,7 +75,7 @@ export function usePreferenceList(
     queryKey: queryKeys.preferenceLists.detail(id),
     queryFn: () => getPreferenceList(id, opts) as Promise<PreferenceListDetail>,
     enabled: !!id,
-    refetchInterval: poll ? 8000 : false,
+    refetchInterval: poll ? PREFERENCE_LIST_POLL_MS : false,
   })
 }
 
@@ -85,7 +84,8 @@ export function usePreferenceList(
 // keeps its own usePreferenceList above).
 export function usePreferenceListDetails(
   cycleId: string,
-  opts?: RequestOptions
+  opts?: RequestOptions,
+  { poll = false }: { poll?: boolean } = {}
 ) {
   return useQuery({
     queryKey: queryKeys.preferenceLists.allDetails(cycleId),
@@ -93,6 +93,26 @@ export function usePreferenceListDetails(
       ((await listPreferenceListDetails({ cycle_id: cycleId }, opts)) ??
         []) as PreferenceListDetail[],
     enabled: !!cycleId,
+    refetchInterval: poll ? PREFERENCE_LIST_POLL_MS : false,
+  })
+}
+
+function invalidateSharedEntries(
+  queryClient: ReturnType<typeof useQueryClient>,
+  listId: string
+) {
+  const cycleId = queryClient.getQueryData<PreferenceListDetail>(
+    queryKeys.preferenceLists.detail(listId)
+  )?.cycle_id
+  queryClient.invalidateQueries({
+    queryKey: queryKeys.preferenceLists.detail(listId),
+  })
+  if (!cycleId) return
+  queryClient.invalidateQueries({
+    queryKey: queryKeys.preferenceLists.allDetails(cycleId),
+  })
+  queryClient.invalidateQueries({
+    queryKey: queryKeys.preferenceLists.list(cycleId),
   })
 }
 
@@ -208,9 +228,7 @@ export function useUpsertPreferenceListEntry() {
         vars.opts
       ) as Promise<PreferenceListEntry>,
     onSuccess: (_data, vars) => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.preferenceLists.detail(vars.listId),
-      })
+      invalidateSharedEntries(queryClient, vars.listId)
     },
   })
 }
@@ -224,9 +242,7 @@ export function useDeletePreferenceListEntry() {
       opts?: RequestOptions
     }) => deletePreferenceListEntry(vars.listId, vars.applicationId, vars.opts),
     onSuccess: (_data, vars) => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.preferenceLists.detail(vars.listId),
-      })
+      invalidateSharedEntries(queryClient, vars.listId)
     },
   })
 }
@@ -302,12 +318,8 @@ export function useReorderPreferenceListEntries() {
         )
       }
     },
-    // Settled rather than success: the rollback above restores a snapshot
-    // that the 8s poll may already have moved past.
     onSettled: (_data, _error, vars) => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.preferenceLists.detail(vars.listId),
-      })
+      invalidateSharedEntries(queryClient, vars.listId)
     },
   })
 }
@@ -448,12 +460,13 @@ export function usePreferenceListDeadlines(
       enabled: !!cycleId,
     })),
   })
-  return Object.fromEntries(
-    roleIds.map((roleId, i) => [
-      roleId,
-      results[i]?.data?.closes_at ?? undefined,
-    ])
-  )
+  const key = results.map((r) => r.data?.closes_at ?? '').join('|')
+  return useMemo(() => {
+    const closesAt = key.split('|')
+    return Object.fromEntries(
+      roleIds.map((roleId, i) => [roleId, closesAt[i] || undefined])
+    )
+  }, [roleIds, key])
 }
 
 export function useSetPreferenceListDeadline() {

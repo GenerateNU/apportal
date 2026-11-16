@@ -1,4 +1,10 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+  type QueryObserverResult,
+} from '@tanstack/react-query'
 import {
   deleteDraft,
   getDraftBoard,
@@ -15,10 +21,20 @@ import type { RequestOptions } from '@/lib/api/orval-mutator'
 import type { DraftBoard, DraftPickDetail, DraftStatus } from '@/lib/api/types'
 import { queryKeys } from './keys'
 
-// The board is driven by one operator in a room full of people watching it, so
-// it polls on the same 8s cadence the preference lists use — everyone sees a
-// pick land without reloading.
 const DRAFT_POLL_MS = 8000
+
+function draftBoardQuery(
+  cycleId: string,
+  roleId: string,
+  opts?: RequestOptions
+) {
+  return {
+    queryKey: queryKeys.drafts.board(cycleId, roleId),
+    queryFn: () =>
+      getDraftBoard(cycleId, { role_id: roleId }, opts) as Promise<DraftBoard>,
+    retry: false,
+  }
+}
 
 export function useDraftBoard(
   cycleId: string,
@@ -27,15 +43,27 @@ export function useDraftBoard(
   opts?: RequestOptions
 ) {
   return useQuery({
-    queryKey: queryKeys.drafts.board(cycleId, roleId),
-    queryFn: () =>
-      getDraftBoard(cycleId, { role_id: roleId }, opts) as Promise<DraftBoard>,
+    ...draftBoardQuery(cycleId, roleId, opts),
     enabled: !!cycleId && !!roleId,
     refetchInterval: poll ? DRAFT_POLL_MS : false,
-    // A board that hasn't been opened yet 404s, which is a normal state here
-    // (the setup screen offers to open it), not something to retry into.
-    retry: false,
   })
+}
+
+export function useDraftBoards<T = QueryObserverResult<DraftBoard>[]>(
+  cycleId: string,
+  roleIds: string[],
+  combine?: (results: QueryObserverResult<DraftBoard>[]) => T,
+  { poll = false }: { poll?: boolean } = {}
+): T {
+  return useQueries({
+    queries: roleIds.map((roleId) => ({
+      ...draftBoardQuery(cycleId, roleId),
+      enabled: !!cycleId,
+      refetchInterval: poll ? DRAFT_POLL_MS : false,
+    })),
+    combine: combine as
+      ((results: QueryObserverResult<unknown>[]) => T) | undefined,
+  }) as T
 }
 
 // Application id -> the name of the team that took them, across every board in

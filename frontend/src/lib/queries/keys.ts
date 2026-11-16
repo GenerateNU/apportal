@@ -153,6 +153,9 @@ export const queryKeys = {
     lists: () => [...queryKeys.writtenReviews.all, 'list'] as const,
     list: (applicationId: string) =>
       [...queryKeys.writtenReviews.lists(), applicationId] as const,
+    bulks: () => [...queryKeys.writtenReviews.all, 'bulk'] as const,
+    bulk: (applicationIds: string[]) =>
+      [...queryKeys.writtenReviews.bulks(), applicationIds] as const,
   },
 
   chiefReviews: {
@@ -324,5 +327,24 @@ export const queryKeys = {
     all: ['preference-list-deadline'] as const,
     detail: (cycleId: string, roleId: string) =>
       [...queryKeys.preferenceListDeadline.all, cycleId, roleId] as const,
+  },
+  cycleStaff: {
+    all: ['cycleStaff'] as const,
+    mine: () => [...queryKeys.cycleStaff.all, 'mine'] as const,
+    list: (cycleId: string) =>
+      [...queryKeys.cycleStaff.all, 'list', cycleId] as const,
+  },
+  pipeline: {
+    all: ['pipeline'] as const,
+    detail: (cycleId: string) => [...queryKeys.pipeline.all, cycleId] as const,
+  },
+  myWork: {
+    all: ['my-work'] as const,
+    detail: (cycleId: string) => [...queryKeys.myWork.all, cycleId] as const,
+  },
+  interviewBoard: {
+    all: ['interview-board'] as const,
+    detail: (cycleId: string) =>
+      [...queryKeys.interviewBoard.all, cycleId] as const,
   },
 } as const

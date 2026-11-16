@@ -56,3 +56,14 @@ func (s *cycleStaffService) remove(ctx context.Context, in *StaffMemberInput) (*
 	}
 	return nil, nil
 }
+
+func (s *cycleStaffService) mine(ctx context.Context, _ *struct{}) (*MyCyclesOutput, error) {
+	if err := access.RequireActor(ctx); err != nil {
+		return nil, err
+	}
+	rows, err := s.staffDB.ListUserCycles(ctx, utils.CurrentActor(ctx).NUID)
+	if err != nil {
+		return nil, utils.StoreErr(err)
+	}
+	return &MyCyclesOutput{Body: rows}, nil
+}

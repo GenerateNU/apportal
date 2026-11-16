@@ -78,6 +78,48 @@ func (s *writtenReviewService) list(ctx context.Context, in *utils.ApplicationSc
 	return &WrittenReviewsOutput{Body: items}, nil
 }
 
+func (s *writtenReviewService) listBulk(ctx context.Context, in *ListBulkInput) (*WrittenReviewsOutput, error) {
+	ids := utils.SplitIDs(in.ApplicationIDs)
+	if len(ids) > utils.MaxBulkApplications {
+		return nil, huma.Error422UnprocessableEntity("too many application_ids")
+	}
+	for _, id := range ids {
+		if err := utils.RequireUUIDs("application id", id); err != nil {
+			return nil, err
+		}
+	}
+	ids, err := s.access.VisibleApplicationIDs(ctx, ids, access.Review)
+	if err != nil {
+		return nil, err
+	}
+	visible, err := s.reviewReleaseDB.PeerReviewsVisible(ctx, s.access, models.ReviewKindWritten, ids)
+	if err != nil {
+		return nil, err
+	}
+	var open, blind []string
+	for _, id := range ids {
+		if visible[id] {
+			open = append(open, id)
+		} else {
+			blind = append(blind, id)
+		}
+	}
+	all, err := s.writtenReviewDB.ListWrittenReviewsForApplications(ctx, open, "")
+	if err != nil {
+		return nil, utils.StoreErr(err)
+	}
+	own, err := s.writtenReviewDB.ListWrittenReviewsForApplications(ctx, blind, utils.CurrentActor(ctx).NUID)
+	if err != nil {
+		return nil, utils.StoreErr(err)
+	}
+	items := []models.WrittenReviewDetail{}
+	for _, id := range ids {
+		items = append(items, all[id]...)
+		items = append(items, own[id]...)
+	}
+	return &WrittenReviewsOutput{Body: items}, nil
+}
+
 func validateAnswers(answers []ReviewAnswerInput, questions map[string]models.ReviewQuestion) error {
 	for _, a := range answers {
 		q, ok := questions[a.ReviewQuestionID]

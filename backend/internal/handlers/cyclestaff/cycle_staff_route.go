@@ -13,6 +13,15 @@ func Route(api huma.API, db *gorm.DB) {
 	s := &cycleStaffService{staffDB: NewCycleStaffDB(db), access: access.NewChecker(db)}
 
 	huma.Register(api, huma.Operation{
+		OperationID: "list-my-cycles",
+		Method:      http.MethodGet,
+		Path:        "/users/me/cycles",
+		Summary:     "List the cycles the current user is staff on, with their role",
+		Tags:        []string{"Cycle staff"},
+		Errors:      []int{http.StatusUnauthorized},
+	}, s.mine)
+
+	huma.Register(api, huma.Operation{
 		OperationID: "list-cycle-staff",
 		Method:      http.MethodGet,
 		Path:        "/cycles/{id}/staff",

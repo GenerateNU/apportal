@@ -1,20 +1,26 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { HelpContact } from '@/components/HelpContact'
+
+import { Suspense, useEffect, useState } from 'react'
 import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   Users,
   FileText,
-  ChevronsLeft,
-  ChevronsRight,
-  GitBranch,
+  Calendar,
+  PanelLeftClose,
+  PanelLeftOpen,
   LogOut,
+  LayoutList,
 } from 'lucide-react'
+import { LeadPhaseNav } from './LeadPhaseNav'
+import { SectionCaret } from './SectionHeader'
 import NavItem, { isNavItemActive } from './NavItem'
 import { Avatar } from '@/components/ui/avatar'
 import { Tooltip } from '@/components/Tooltip'
 import { useAuth } from '@/lib/auth/auth-context'
+import { useMyCycles } from '@/lib/queries/cycle-staff'
 import type { Role } from '@/types/roles'
 
 interface SidebarProps {
@@ -35,6 +41,10 @@ type NavItemConfig = {
   label: string
   icon: typeof FileText
   chiefOnly?: boolean
+  // Leads only see their own cycle's home and the applications list.
+  forLeads?: boolean
+  leadOnly?: boolean
+  also?: string[]
 }
 
 type NavSection = {
@@ -45,26 +55,50 @@ type NavSection = {
   items: NavItemConfig[]
 }
 
-const applicationsSection: NavSection = {
-  id: 'apply',
-  items: [
+const sectionsByRole: Record<Role, NavSection[]> = {
+  applicant: [
     {
-      href: '/applicant/applications',
-      label: 'Applications',
-      icon: FileText,
+      id: 'apply',
+      items: [
+        {
+          href: '/applicant/applications',
+          label: 'My applications',
+          icon: FileText,
+        },
+      ],
     },
   ],
-}
-
-const sectionsByRole: Record<Role, NavSection[]> = {
-  applicant: [applicationsSection],
-  reviewer: [applicationsSection],
+  reviewer: [
+    {
+      id: 'my-work',
+      items: [
+        {
+          href: '/reviewer/my-work',
+          label: 'My work',
+          icon: LayoutList,
+          forLeads: true,
+          also: [
+            '/reviewer/my-reviews',
+            '/reviewer/my-interviews',
+            '/reviewer/preference-lists',
+            '/reviewer/decisions',
+          ],
+        },
+        {
+          href: '/reviewer/applications',
+          label: 'Applicants',
+          icon: Users,
+          forLeads: true,
+        },
+      ],
+    },
+  ],
   admin: [
     {
       id: 'admin',
       label: 'Admin',
       items: [
-        { href: '/admin/branches', label: 'Branches', icon: GitBranch },
+        { href: '/admin/cycles', label: 'Branches & cycles', icon: Calendar },
         {
           href: '/admin/applications',
           label: 'Application Forms',
@@ -122,22 +156,6 @@ function useCollapsedSections() {
   return { collapsedIds, toggleSection, expandSection }
 }
 
-// A solid caret rather than lucide's stroked chevron, which reads too light
-// next to the label.
-function SectionCaret({ collapsed }: { collapsed: boolean }) {
-  return (
-    <svg
-      viewBox="0 0 10 10"
-      width={10}
-      height={10}
-      aria-hidden
-      className={`shrink-0 fill-current transition-transform ${collapsed ? '-rotate-90' : ''}`}
-    >
-      <path d="M1 3.25h8L5 7.75z" />
-    </svg>
-  )
-}
-
 function NavSectionGroup({
   section,
   railCollapsed,
@@ -172,12 +190,13 @@ function NavSectionGroup({
         id={contentId}
         className={`flex-col gap-0.5 ${showItems ? 'flex' : 'hidden'}`}
       >
-        {section.items.map(({ href, label, icon }) => (
+        {section.items.map(({ href, label, icon, also }) => (
           <NavItem
             key={href}
             href={href}
             label={label}
             icon={icon}
+            also={also}
             collapsed={railCollapsed}
           />
         ))}
@@ -207,15 +226,15 @@ function SidebarUser({
       type="button"
       onClick={handleSignOut}
       aria-label="Sign out"
-      className="text-ink/60 hover:text-ink flex-shrink-0 p-2 transition-colors hover:bg-gray-100"
+      className={`text-ink/60 hover:text-ink flex flex-shrink-0 items-center justify-center transition-colors hover:bg-gray-100 ${collapsed ? 'size-10' : 'p-2'}`}
     >
-      <LogOut size={16} />
+      <LogOut size={collapsed ? 18 : 16} />
     </button>
   )
 
   if (collapsed) {
     return (
-      <div className="flex flex-col items-center gap-2 px-2 pt-2 pb-5">
+      <div className="flex flex-col items-center gap-1 border-t border-gray-200 px-2 pt-3 pb-5">
         <Tooltip label={fullName}>
           <Avatar name={fullName} size="sm" />
         </Tooltip>
@@ -249,16 +268,41 @@ export default function Sidebar({
   const pathname = usePathname()
   const { collapsedIds, toggleSection, expandSection } = useCollapsedSections()
 
-  const sections = roleOrder
-    .filter((role) => roles.includes(role))
+  const { data: myCycles, isFetched: myCyclesFetched } = useMyCycles()
+  const offCycle = !isChief && myCyclesFetched && (myCycles ?? []).length === 0
+  const chiefMode = !!isChief && roles.includes('reviewer')
+  const leadMode =
+    !isChief &&
+    roles.includes('reviewer') &&
+    myCyclesFetched &&
+    (myCycles ?? []).length > 0
+  const cycleNavMode = chiefMode ? 'chief' : leadMode ? 'lead' : null
+  const staffSections = roleOrder
+    .filter(
+      (role) =>
+        role !== 'applicant' &&
+        roles.includes(role) &&
+        !(cycleNavMode && role === 'reviewer')
+    )
     .flatMap((role) => sectionsByRole[role])
-    // Applicants who are also reviewers would otherwise get it twice.
-    .filter((section, i, all) => all.indexOf(section) === i)
     .map((section) => ({
       ...section,
-      items: section.items.filter((item) => !item.chiefOnly || isChief),
+      items: section.items.filter((item) =>
+        isChief ? !item.leadOnly : !offCycle && (item.forLeads || item.leadOnly)
+      ),
     }))
     .filter((section) => section.items.length > 0)
+  const applyItems = sectionsByRole.applicant.flatMap((s) => s.items)
+  const sections =
+    staffSections.length === 0
+      ? cycleNavMode
+        ? [{ id: 'apply-chief', label: 'Applying', items: applyItems }]
+        : sectionsByRole.applicant
+      : staffSections.map((section, i) =>
+          i === 0
+            ? { ...section, items: [...section.items, ...applyItems] }
+            : section
+        )
 
   // Navigating into a collapsed section expands it, so the active item is
   // never hidden. Easy to hit from the icon-only rail, which shows every item
@@ -280,36 +324,54 @@ export default function Sidebar({
       {/* Logo, with the rail toggle sharing the row. The collapsed rail is too
           narrow to fit both, so there the toggle stacks underneath. */}
       <div
-        className={`flex flex-shrink-0 items-center ${collapsed ? 'flex-col gap-2 px-2 py-4' : 'gap-2.5 px-5 pt-6 pb-4'}`}
+        className={`flex flex-shrink-0 items-center ${collapsed ? 'justify-center px-2 pt-6 pb-4' : 'gap-2.5 px-5 pt-6 pb-4'}`}
       >
-        <Image
-          src="/GenerateNU Logo.png"
-          alt="GenerateNU"
-          width={28}
-          height={28}
-          className="object-contain"
-        />
+        {collapsed && onToggleCollapsed ? (
+          <Tooltip label="Expand sidebar · ⌘K / Ctrl+K">
+            <button
+              type="button"
+              onClick={onToggleCollapsed}
+              aria-label="Expand sidebar"
+              aria-keyshortcuts="Meta+K Control+K"
+              className="group relative flex size-10 items-center justify-center transition-colors hover:bg-gray-100"
+            >
+              <Image
+                src="/GenerateNU Logo.png"
+                alt=""
+                width={28}
+                height={28}
+                className="object-contain transition-opacity group-hover:opacity-0 group-focus-visible:opacity-0"
+              />
+              <PanelLeftOpen
+                size={18}
+                className="text-ink absolute opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
+              />
+            </button>
+          </Tooltip>
+        ) : (
+          <Image
+            src="/GenerateNU Logo.png"
+            alt="GenerateNU"
+            width={28}
+            height={28}
+            className="object-contain"
+          />
+        )}
         {!collapsed && (
           <span className="font-display text-ink flex-1 text-lg font-bold tracking-tight uppercase">
             Generate
           </span>
         )}
-        {onToggleCollapsed && (
-          <Tooltip
-            label={`${collapsed ? 'Expand' : 'Collapse'} sidebar · ⌘K / Ctrl+K`}
-          >
+        {onToggleCollapsed && !collapsed && (
+          <Tooltip label="Collapse sidebar · ⌘K / Ctrl+K">
             <button
               type="button"
               onClick={onToggleCollapsed}
-              aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              aria-label="Collapse sidebar"
               aria-keyshortcuts="Meta+K Control+K"
               className="text-ink/60 hover:text-ink p-1.5 transition-colors hover:bg-gray-100"
             >
-              {collapsed ? (
-                <ChevronsRight size={16} />
-              ) : (
-                <ChevronsLeft size={16} />
-              )}
+              <PanelLeftClose size={18} />
             </button>
           </Tooltip>
         )}
@@ -319,6 +381,11 @@ export default function Sidebar({
       <nav
         className={`flex flex-1 flex-col gap-6 overflow-y-auto overscroll-none pt-4 pb-6 ${collapsed ? 'px-2' : 'px-4'}`}
       >
+        {cycleNavMode && (
+          <Suspense>
+            {cycleNavMode === 'lead' && <LeadPhaseNav collapsed={collapsed} />}
+          </Suspense>
+        )}
         {sections.map((section) => (
           <NavSectionGroup
             key={section.id}
@@ -330,6 +397,9 @@ export default function Sidebar({
         ))}
       </nav>
 
+      {!collapsed && (
+        <HelpContact className="px-5 pb-4 text-left leading-relaxed" />
+      )}
       {/* User */}
       {fullName && <SidebarUser fullName={fullName} collapsed={collapsed} />}
     </aside>
