@@ -47,27 +47,36 @@ const people = (xs?: InterviewBoardRow['interviewers'] | null): Person[] =>
     done: x.done,
   }))
 
-export function useInterviewBoard(cycleId: string) {
+// history also keeps everyone interviewed who has since moved on, for progress pages.
+export function useInterviewBoard(
+  cycleId: string,
+  { history = false }: { history?: boolean } = {}
+) {
   return useQuery({
-    queryKey: queryKeys.interviewBoard.detail(cycleId),
+    queryKey: history
+      ? [...queryKeys.interviewBoard.detail(cycleId), 'history']
+      : queryKeys.interviewBoard.detail(cycleId),
     queryFn: async () =>
-      (((await getInterviewBoard(cycleId)) ?? []) as InterviewBoardRow[]).map(
-        (r): InterviewEntry => ({
-          applicationId: r.application_id,
-          applicantNuid: r.applicant_nuid,
-          name: r.full_name,
-          email: r.email,
-          roleId: r.role_id,
-          stage: r.stage,
-          returner: false,
-          scheduledAt: r.scheduled_at,
-          started: r.started,
-          done: r.done,
-          interviewers: people(r.interviewers),
-          reviewers: people(r.recording_reviewers),
-          available: r.slot_ids ?? [],
-        })
-      ),
+      (
+        ((await getInterviewBoard(
+          cycleId,
+          history ? { history } : undefined
+        )) ?? []) as InterviewBoardRow[]
+      ).map((r): InterviewEntry => ({
+        applicationId: r.application_id,
+        applicantNuid: r.applicant_nuid,
+        name: r.full_name,
+        email: r.email,
+        roleId: r.role_id,
+        stage: r.stage,
+        returner: false,
+        scheduledAt: r.scheduled_at,
+        started: r.started,
+        done: r.done,
+        interviewers: people(r.interviewers),
+        reviewers: people(r.recording_reviewers),
+        available: r.slot_ids ?? [],
+      })),
     enabled: !!cycleId,
   })
 }

@@ -8785,6 +8785,13 @@ paths:
           schema:
             description: Only this opening
             type: string
+        - description: Also list everyone with an interview on record, whatever their stage now
+          explode: false
+          in: query
+          name: history
+          schema:
+            description: Also list everyone with an interview on record, whatever their stage now
+            type: boolean
       responses:
         "200":
           content:

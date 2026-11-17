@@ -13,4 +13,8 @@ export type GetInterviewBoardParams = {
  * Only this opening
  */
 role_id?: string;
+/**
+ * Also list everyone with an interview on record, whatever their stage now
+ */
+history?: boolean;
 };

@@ -10,6 +10,7 @@ import { Card } from '@/components/ui/card'
 import { PageHeader } from '@/components/ui/page-header'
 import { SectionLabel } from '@/components/ui/section-label'
 import { ReturnerBadge } from '@/components/ReturnerBadge'
+import { CandidateTags } from '@/components/CandidateTags'
 import type { ApplicationStage } from '@/lib/api/types'
 import { useAnswers } from '@/lib/queries/answers'
 import { useApplicant } from '@/lib/queries/applicants'
@@ -20,7 +21,7 @@ import { useQuestions } from '@/lib/queries/questions'
 import { useRecordingReviews } from '@/lib/queries/recording-reviews'
 import { useReviewQuestions } from '@/lib/queries/review-questions'
 import { useChiefs, useCurrentUser, useLeads } from '@/lib/queries/users'
-import { useApplications } from '@/lib/queries/applications'
+import { useApplications, useApplication } from '@/lib/queries/applications'
 import { useWrittenReviews } from '@/lib/queries/written-reviews'
 import { formatDate } from '@/lib/utils'
 import { RATING_COLORS, RATING_LABEL } from '@/lib/interview-ratings'
@@ -90,6 +91,7 @@ export function ApplicantOverview({
 }) {
   const { roleLabel, roleChipClass } = useRoleLookup()
   const { data: applicant } = useApplicant(applicantNuid)
+  const { data: application } = useApplication(applicationId)
   const { data: answers = [] } = useAnswers(applicationId)
   const { data: questions = [] } = useQuestions(cycleId, role)
   const { data: leads = [] } = useLeads()
@@ -159,6 +161,11 @@ export function ApplicantOverview({
                 </Badge>
               )}
               {applicant?.returner && <ReturnerBadge showLabel />}
+              <CandidateTags
+                applicationId={applicationId}
+                cycleId={cycleId}
+                tagIds={application?.tag_ids}
+              />
             </div>
           </div>
         </div>

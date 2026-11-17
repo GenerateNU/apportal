@@ -105,7 +105,9 @@ function Tally({
 export function InterviewingClient() {
   const scope = useCycleScope()
   const cycleId = scope.cycleId
-  const { data: board, isLoading } = useInterviewBoard(cycleId)
+  const { data: board, isLoading } = useInterviewBoard(cycleId, {
+    history: true,
+  })
   const { data: me } = useCurrentUser()
   const params = useSearchParams()
   const router = useRouter()

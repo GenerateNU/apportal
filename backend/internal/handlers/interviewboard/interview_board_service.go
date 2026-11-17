@@ -41,7 +41,7 @@ func (s *interviewBoardService) board(ctx context.Context, in *BoardInput) (*Boa
 		return nil, err
 	}
 	db := s.db.WithContext(ctx)
-	rows, err := boardApplicants(db, in.ID, in.RoleID)
+	rows, err := boardApplicants(db, in.ID, in.RoleID, in.History)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}

@@ -51,7 +51,7 @@ func TestReviewRoutesPermissions(t *testing.T) {
 		call func(*reviewService, context.Context, string) error
 	}{
 		{"review board", func(s *reviewService, ctx context.Context, id string) error {
-			_, err := s.reviewBoard(ctx, &CycleIDInput{ID: id})
+			_, err := s.reviewBoard(ctx, &ReviewBoardInput{ID: id})
 			return err
 		}},
 		{"auto assign", func(s *reviewService, ctx context.Context, id string) error {
@@ -94,7 +94,7 @@ func TestReviewBoardGroupsReviewersByApplicant(t *testing.T) {
 		{ID: "r2", ApplicationID: "a2", LeadNUID: "l2", Started: true},
 		{ID: "r3", ApplicationID: "a3", LeadNUID: "l1"},
 	}
-	out, err := newReviewService(store, fakeRules{}).reviewBoard(chief(), &CycleIDInput{ID: accesstest.CycleID})
+	out, err := newReviewService(store, fakeRules{}).reviewBoard(chief(), &ReviewBoardInput{ID: accesstest.CycleID})
 	if err != nil {
 		t.Fatal(err)
 	}

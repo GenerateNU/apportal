@@ -217,8 +217,13 @@ func (f *CycleState) State(role string, s models.Step, now time.Time) State {
 	return deriveState(f.Released(role, s), main, now)
 }
 
+// Started is a step under way for an opening. Outcomes (a rejection mid-cycle) don't start a step reached by outcome.
 func (f *CycleState) Started(role string, s models.Step) bool {
-	return f.Released(role, s) || f.MovedInto[key{role, s}]
+	if f.Released(role, s) {
+		return true
+	}
+	t, _ := TypeOf(s)
+	return !t.ByOutcome && f.MovedInto[key{role, s}]
 }
 
 func (f *CycleState) StartedAnywhere(s models.Step) bool {
@@ -277,7 +282,9 @@ func (f *CycleState) StepStatus(s models.Step) Status {
 	if !f.SetUp() {
 		return StatusLocked
 	}
-	if cur, ok := f.Current(); (ok && cur == s) || f.StartedAnywhere(s) {
+	// An outcome (a rejection, say) can land at any point, so it doesn't open a step reached by outcome.
+	t, _ := TypeOf(s)
+	if cur, ok := f.Current(); (ok && cur == s) || (!t.ByOutcome && f.StartedAnywhere(s)) {
 		return StatusOpen
 	}
 	return StatusLocked

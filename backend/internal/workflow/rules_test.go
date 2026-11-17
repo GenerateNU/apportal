@@ -466,6 +466,33 @@ func TestInterviewsReleaseOnceEveryReviewIsIn(t *testing.T) {
 	}
 }
 
+func TestFeedbackWaitsForDecisionsDespiteRejections(t *testing.T) {
+	f := newTestFacts()
+	f.CompletedAt[models.StepApplications] = &past
+	f.CompletedAt[models.StepReviews] = &past
+	f.AddMove(swe, models.StageRejected)
+	if got := f.StepStatus(models.StepFeedback); got != StatusLocked {
+		t.Fatalf("feedback with a rejection mid-cycle: got %s, want locked", got)
+	}
+	f.CompletedAt[models.StepInterviews] = &past
+	f.CompletedAt[models.StepDecisions] = &past
+	if got := f.StepStatus(models.StepFeedback); got != StatusOpen {
+		t.Fatalf("feedback once decisions are done: got %s, want open", got)
+	}
+}
+
+func TestRejectionsDontFreezeDecisions(t *testing.T) {
+	f := newTestFacts()
+	f.AddMove(swe, models.StageRejected)
+	if f.Frozen(swe, models.StepDecisions) {
+		t.Fatal("a rejection shouldn't freeze decisions")
+	}
+	f.AddMove(swe, models.StageSelection)
+	if !f.Frozen(swe, models.StepInterviews) {
+		t.Fatal("moving into decisions still freezes interviews")
+	}
+}
+
 func TestCompleteBlock(t *testing.T) {
 	f := newTestFacts()
 	f.SetRelease(swe, models.StepApplications, past)
