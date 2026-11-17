@@ -83,7 +83,13 @@ func reviewersQuery(db *gorm.DB, cycleID string, stages []models.ApplicationStag
 		Joins("JOIN applications a ON a.id = la.application_id").
 		Joins("LEFT JOIN users u ON u.nuid = la.lead_nuid").
 		Joins("LEFT JOIN written_reviews wr ON wr.application_id = la.application_id AND wr.reviewer_nuid = la.lead_nuid").
-		Where("a.cycle_id = ? AND a.stage IN ?", cycleID, stages).
+		Where("a.cycle_id = ?", cycleID).
+		Scopes(func(q *gorm.DB) *gorm.DB {
+			if len(stages) == 0 {
+				return q
+			}
+			return q.Where("a.stage IN ?", stages)
+		}).
 		Order("la.assigned_at").Order("la.id")
 }
 

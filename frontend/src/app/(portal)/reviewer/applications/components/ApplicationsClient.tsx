@@ -3,36 +3,31 @@
 import { useIsChief } from '@/lib/queries/cycle-staff'
 import { redirect } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import { PAGE_TOP, PAGE_X } from '@/components/ui/page-shell'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { List, Columns } from 'lucide-react'
 import type { ApplicationStage, WrittenAnswer } from '@/lib/api/types'
 import { usePersistedFilters } from '@/hooks/usePersistedFilters'
-import { SegmentedTabs } from '@/components/ui/segmented-tabs'
 import { useAnswersByApplicationIdBatches } from '@/lib/queries/answers'
 import {
+  useApplicationSummary,
   useInfiniteApplications,
-  useUpdateApplication,
 } from '@/lib/queries/applications'
 import { useCycleScope } from '@/hooks/useCycleScope'
 import { useMyCycles } from '@/lib/queries/cycle-staff'
 import { useCurrentUser } from '@/lib/queries/users'
 import { ORDERED_STAGES, PAGE_SIZE } from './constants'
-import { BulkActionBar } from './BulkActionBar'
 import { availabilityOptionsFor, shortDays } from './meetingAvailability'
 import type { ApplicantApplication } from './types'
 import type { AnswerFilter, FilterChangeHandler } from './FilterButton'
 import { TableView } from './TableView'
+import { ApplicationSummary } from './ApplicationSummary'
+import { useWorkflow } from '@/lib/queries/workflow'
 import { useApplicationFilters } from './useApplicationFilters'
-import { KanbanView } from './KanbanView'
 import { ApplicationDetail } from './ApplicationDetail'
 import { PageHeader } from '@/components/ui/page-header'
 import { SearchInput } from '@/components/ui/search-input'
 import { useCycleRoles } from '@/lib/queries/roles'
-
-type View = 'table' | 'kanban'
 
 // How long typing settles before the search hits the server. Long enough that
 // a typed word is one request, short enough to still feel live.
@@ -47,17 +42,24 @@ const SEARCH_DEBOUNCE_MS = 250
 const FILTERS_STORAGE_KEY = 'applications-filters-v3'
 
 type StoredFilters = {
-  view: View
   stage: ApplicationStage | 'all'
   search: string
   filters: AnswerFilter[]
 }
 
-export function ApplicationsClient() {
+export function ApplicationsClient({
+  back,
+  roleFilter,
+  fullPageHref,
+}: {
+  back?: React.ReactNode
+  fullPageHref?: (applicationId: string) => string
+  // A position's label to open filtered to, e.g. from a cycle's page.
+  roleFilter?: string
+} = {}) {
   const { data: currentUser } = useCurrentUser()
   const isChief = useIsChief()
 
-  const [view, setView] = useState<View>('table')
   const [activeStage, setActiveStage] = useState<ApplicationStage | 'all'>(
     'all'
   )
@@ -65,12 +67,19 @@ export function ApplicationsClient() {
   const [selectedApplicationId, setSelectedApplicationId] = useState<
     string | null
   >(null)
-  const [filters, setFilters] = useState<AnswerFilter[]>([])
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const [bulkStage, setBulkStage] = useState<ApplicationStage | ''>('')
-  const [applyingBulk, setApplyingBulk] = useState(false)
-  const [bulkFailed, setBulkFailed] = useState(0)
-  const updateApplication = useUpdateApplication()
+  const [filters, setFilters] = useState<AnswerFilter[]>(
+    roleFilter
+      ? [
+          {
+            question_id: '__role__',
+            question_text: 'Role',
+            question_type: 'dropdown',
+            values: [roleFilter],
+            special: 'role',
+          },
+        ]
+      : []
+  )
 
   // The search box stays instant while the request it drives waits for a
   // pause in typing.
@@ -92,14 +101,18 @@ export function ApplicationsClient() {
   // The cycle is the sidebar's (or ?cycle= on the link that opened this).
   const scope = useCycleScope('lead')
   const activeCycle = scope.cycleId
+  const { data: workflow } = useWorkflow(activeCycle)
+  // While applications are the current step everyone is just "submitted", so a summary says more than stages.
+  const inApplications = workflow?.current_step === 'applications'
+  const { data: summary = [] } = useApplicationSummary(
+    activeCycle,
+    inApplications && (isChief || isAdmin)
+  )
 
   // Every stored value can outlive what it points at — a cycle can be removed,
   // a role retired — so each is checked against the current options and
   // otherwise left at its default.
   const restoreFilters = useCallback((stored: Partial<StoredFilters>) => {
-    if (stored.view === 'table' || stored.view === 'kanban') {
-      setView(stored.view)
-    }
     const stage =
       stored.stage && ORDERED_STAGES.includes(stored.stage as ApplicationStage)
         ? (stored.stage as ApplicationStage)
@@ -126,9 +139,8 @@ export function ApplicationsClient() {
   // The debounced search rather than the live one, so typing doesn't write
   // once per keystroke.
   usePersistedFilters<StoredFilters>(
-    FILTERS_STORAGE_KEY,
+    roleFilter ? `${FILTERS_STORAGE_KEY}:${roleFilter}` : FILTERS_STORAGE_KEY,
     {
-      view,
       stage: activeStage,
       search: debouncedSearch,
       filters,
@@ -166,21 +178,10 @@ export function ApplicationsClient() {
       cycle_id: activeCycle,
       ...filterParams,
       ...(debouncedSearch && { search: debouncedSearch }),
-      // Kanban lays every stage out side by side, so it can neither filter by
-      // one stage nor take a page — it asks for the whole set instead.
-      ...(view === 'table' && {
-        ...(activeStage !== 'all' && { stage: activeStage }),
-        limit: PAGE_SIZE,
-      }),
+      ...(activeStage !== 'all' && { stage: activeStage }),
+      limit: PAGE_SIZE,
     }
-  }, [
-    activeCycle,
-    activeStage,
-    debouncedSearch,
-    filterParams,
-    view,
-    defaultRoles,
-  ])
+  }, [activeCycle, activeStage, debouncedSearch, filterParams, defaultRoles])
 
   const {
     applications,
@@ -243,20 +244,8 @@ export function ApplicationsClient() {
     return map
   }, [applications, answersByApplicationId, availabilityQuestionIdByRole])
 
-  // No client-side narrowing left: search, availability, and stage are all in
-  // the query above, so these rows are the page as the database returned it.
-  // Kanban is the exception — it groups by stage itself, so it asks for the
-  // unpaged set separately below.
+  // Search, availability and stage are all in the query, so these rows are the page as the database returned it.
   const filtered = rows
-
-  function toggleSelect(id: string) {
-    setSelectedIds((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }
 
   // The stage tabs and the stage filter chip say the same thing two ways, so
   // only one is ever live — picking either clears the other.
@@ -282,37 +271,6 @@ export function ApplicationsClient() {
     )
   }
 
-  function toggleSelectAll() {
-    setSelectedIds((prev) => {
-      const allSelected =
-        filtered.length > 0 && filtered.every((a) => prev.has(a.id))
-      return allSelected ? new Set() : new Set(filtered.map((a) => a.id))
-    })
-  }
-
-  // Dropping the selection also drops the bar's transient state, so a failure
-  // notice from a previous batch can't linger into the next one.
-  function clearSelection() {
-    setSelectedIds(new Set())
-    setBulkStage('')
-    setBulkFailed(0)
-  }
-
-  async function applyBulkStage() {
-    if (!bulkStage || selectedIds.size === 0) return
-    setApplyingBulk(true)
-    setBulkFailed(0)
-    const results = await Promise.allSettled(
-      [...selectedIds].map((id) =>
-        updateApplication.mutateAsync({ id, body: { stage: bulkStage } })
-      )
-    )
-    const failures = results.filter((r) => r.status === 'rejected').length
-    setBulkFailed(failures)
-    if (failures === 0) setSelectedIds(new Set())
-    setApplyingBulk(false)
-  }
-
   // min-h-0 is what makes the table's own pane the scroll container: without
   // it this flex item can't shrink below its content, so it grows to the
   // table's full height and the ancestor in (portal)/layout.tsx scrolls
@@ -326,22 +284,7 @@ export function ApplicationsClient() {
       )}
     >
       <PageHeader
-        back={
-          <Breadcrumbs
-            items={[
-              ...(scope.cycle
-                ? [
-                    {
-                      label: [scope.branch?.name, scope.cycle.name]
-                        .filter(Boolean)
-                        .join(' · '),
-                    },
-                  ]
-                : []),
-              { label: 'Applicants' },
-            ]}
-          />
-        }
+        back={back}
         title="Applicants"
         subtitle="Browse everyone who applied, filter by stage, role or answers, and open anyone to see their application and reviews."
         actions={
@@ -352,87 +295,41 @@ export function ApplicationsClient() {
               placeholder="Search name or NUID..."
               className="sm:w-60"
             />
-
-            <SegmentedTabs<View>
-              className="h-9"
-              tabs={[
-                {
-                  id: 'table',
-                  label: (
-                    <>
-                      <List className="h-4 w-4" />
-                      <span className="sr-only">Table view</span>
-                    </>
-                  ),
-                },
-                {
-                  id: 'kanban',
-                  label: (
-                    <>
-                      <Columns className="h-4 w-4" />
-                      <span className="sr-only">Kanban view</span>
-                    </>
-                  ),
-                },
-              ]}
-              value={view}
-              onChange={setView}
-            />
           </div>
         }
       />
 
+      {inApplications && summary.length > 0 && (
+        <ApplicationSummary positions={summary} />
+      )}
+
       <div className="flex min-h-0 flex-1 flex-col">
-        {view === 'table' ? (
-          <TableView
-            applicants={filtered}
-            stageCounts={stageCounts}
-            activeStage={activeStage}
-            onStageChange={handleStageChange}
-            columns={columns}
-            questionsByCycleRole={questionsByCycleRole}
-            answersByApplicationId={answersByApplicationId}
-            answersLoadingByApplicationId={answersLoadingByApplicationId}
-            availabilityByApplicationId={availabilityByApplicationId}
-            selectable={isChief}
-            selectedIds={selectedIds}
-            onToggleSelect={toggleSelect}
-            onToggleSelectAll={toggleSelectAll}
-            selectedApplicationId={selectedApplicationId}
-            onSelectApplication={setSelectedApplicationId}
-            filters={filters}
-            onFilterChange={handleFilterChange}
-            hasAvailability={hasAvailability}
-            roleOptions={roleOptions}
-            tagNames={tagNames}
-            bulkBar={
-              isChief && selectedIds.size > 0 ? (
-                <BulkActionBar
-                  selectedCount={selectedIds.size}
-                  stage={bulkStage}
-                  onStageChange={setBulkStage}
-                  onApply={applyBulkStage}
-                  onClear={clearSelection}
-                  applying={applyingBulk}
-                  failedCount={bulkFailed}
-                />
-              ) : undefined
-            }
-            // Only dim for a fresh query, not for the append — the rows
-            // already on screen stay put while the next chunk loads.
-            loading={fetchingApplications && !isFetchingNextPage}
-            hasMore={hasNextPage}
-            loadingMore={isFetchingNextPage}
-            onLoadMore={fetchNextPage}
-          />
-        ) : (
-          <KanbanView
-            applicants={filtered}
-            availabilityByApplicationId={availabilityByApplicationId}
-            editable={isChief}
-            onOpen={setSelectedApplicationId}
-          />
-        )}
+        <TableView
+          showStages={!inApplications}
+          fullPageHref={fullPageHref}
+          applicants={filtered}
+          stageCounts={stageCounts}
+          activeStage={activeStage}
+          onStageChange={handleStageChange}
+          columns={columns}
+          questionsByCycleRole={questionsByCycleRole}
+          answersByApplicationId={answersByApplicationId}
+          answersLoadingByApplicationId={answersLoadingByApplicationId}
+          availabilityByApplicationId={availabilityByApplicationId}
+          selectedApplicationId={selectedApplicationId}
+          onSelectApplication={setSelectedApplicationId}
+          filters={filters}
+          onFilterChange={handleFilterChange}
+          hasAvailability={hasAvailability}
+          roleOptions={roleOptions}
+          tagNames={tagNames}
+          // Only dim for a fresh query, not for the append — the rows
+          // already on screen stay put while the next chunk loads.
+          loading={fetchingApplications && !isFetchingNextPage}
+          hasMore={hasNextPage}
+          loadingMore={isFetchingNextPage}
+          onLoadMore={fetchNextPage}
+        />
       </div>
 
       {selectedApplicationId &&
@@ -442,6 +339,7 @@ export function ApplicationsClient() {
             <ApplicationDetail
               applicant={selectedApp}
               onClose={() => setSelectedApplicationId(null)}
+              fullPageHref={fullPageHref?.(selectedApp.id)}
             />
           ) : null
         })()}

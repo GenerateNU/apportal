@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import type { CycleStaffMember } from '@/generated/model'
 import type { Cycle } from '@/lib/api/types'
 import { queryKeys } from '@/lib/queries/keys'
-import { CycleStaffButton, CycleStaffPanel } from './CycleStaff'
+import { AddStaffButton, CycleStaffPanel } from './CycleStaff'
 
 function cycle(applicationType: Cycle['application_type']): Cycle {
   return {
@@ -40,16 +40,11 @@ function render(
 }
 
 describe('CycleStaffPanel', () => {
-  it('lists the staff with a way to add more', () => {
+  it('lists the staff grouped by role', () => {
     const html = render('member', [ada])
+    expect(html).toContain('Chiefs · 1')
     expect(html).toContain('Ada Chief')
-    expect(html).toContain('aria-label="Person to add"')
     expect(html).toContain('aria-label="Remove Ada Chief"')
-  })
-
-  it('only adds chiefs to a lead cycle', () => {
-    const html = render('lead')
-    expect(html).toContain('as Chief')
   })
 
   it('flags leads left on a lead cycle as having no access', () => {
@@ -60,28 +55,34 @@ describe('CycleStaffPanel', () => {
       role: 'lead',
     }
     const html = render('lead', [ada, lee])
-    expect(html).toContain('On this cycle · 2')
-    expect(html).toContain('No access — leads can’t see lead cycles')
+    expect(html).toContain('Chiefs · 1')
+    expect(html).toContain('Leads · 1')
+    expect(html).toContain('No access: leads can’t see lead cycles')
     expect(html).toContain('aria-label="Remove Lee Lead"')
     expect(html.match(/No access/g)).toHaveLength(1)
   })
 
-  it('has no add form on a chief cycle', () => {
-    const html = render('chief')
-    expect(html).not.toContain('Person to add')
+  it('says so when no one is on the cycle', () => {
+    expect(render('member')).toContain('No one is on this cycle yet.')
   })
 })
 
-describe('CycleStaffButton', () => {
-  it('shows the staff count and keeps the panel closed until clicked', () => {
-    const client = new QueryClient()
-    client.setQueryData(queryKeys.cycleStaff.list('c1'), [ada])
-    const html = renderToStaticMarkup(
-      <QueryClientProvider client={client}>
-        <CycleStaffButton cycle={cycle('member')} />
+describe('AddStaffButton', () => {
+  function button(applicationType: Cycle['application_type']) {
+    return renderToStaticMarkup(
+      <QueryClientProvider client={new QueryClient()}>
+        <AddStaffButton cycle={cycle(applicationType)} />
       </QueryClientProvider>
     )
-    expect(html).toContain('Leads &amp; chiefs · 1')
+  }
+
+  it('offers adding people, closed until clicked', () => {
+    const html = button('member')
+    expect(html).toContain('Add people')
     expect(html).not.toContain('Person to add')
+  })
+
+  it('has nothing to add on a chief cycle', () => {
+    expect(button('chief')).toBe('')
   })
 })

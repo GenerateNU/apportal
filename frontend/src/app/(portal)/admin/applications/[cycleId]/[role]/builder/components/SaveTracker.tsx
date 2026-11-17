@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useReducer } from 'react'
 import { useToast } from '@/components/ui/toast'
-import { apiErrorDetail } from '@/lib/api/client'
+import { apiErrorDetail, OverrideDeclined } from '@/lib/api/client'
 import { SaveIndicator } from '@/components/ui/save-indicator'
 import {
   INITIAL_SAVE_STATE,
@@ -44,6 +44,10 @@ export function SaveTrackerProvider({
           opts?.onSuccess?.(data)
         },
         onError: (error) => {
+          if (error instanceof OverrideDeclined) {
+            dispatch({ type: 'success' })
+            return
+          }
           dispatch({ type: 'failure' })
           toast(`Couldn’t save: ${apiErrorDetail(error)}`, {
             variant: 'error',

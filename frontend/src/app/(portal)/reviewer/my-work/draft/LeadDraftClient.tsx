@@ -44,12 +44,21 @@ export function LeadDraftClient() {
 
   const { roleIds, roleLabel } = useCycleRoles(cycleId)
   const { data: drafted = {} } = useDraftedApplications(cycleId)
-  const { data: groups = [] } = usePreferenceListDetails(cycleId)
+  const { data: groups = [], isLoading: groupsLoading } =
+    usePreferenceListDetails(cycleId)
   const myGroup = groups.find((g) =>
     (g.members ?? []).some((m) => m.lead_nuid === user?.nuid)
   )
-  const boards: RoleBoard[] = useDraftBoards(cycleId, roleIds, (results) =>
-    results.map((q, i) => ({ roleId: roleIds[i], board: q.data }))
+  const { boards, boardsPending } = useDraftBoards(
+    cycleId,
+    roleIds,
+    (results) => ({
+      boards: results.map((q, i): RoleBoard => ({
+        roleId: roleIds[i],
+        board: q.data,
+      })),
+      boardsPending: results.some((q) => q.isPending),
+    })
   )
 
   if (cyclesLoading) {
@@ -77,6 +86,8 @@ export function LeadDraftClient() {
           title="No cycle yet"
           description="You aren't on staff for a cycle, so there's no draft to follow."
         />
+      ) : boardsPending || groupsLoading ? (
+        <LoadingText />
       ) : live.length === 0 ? (
         <EmptyState
           title="Draft not open"
@@ -428,7 +439,7 @@ function PoolSidebar({
   const [query, setQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState('')
   const [openApp, setOpenApp] = useState<ApplicationSummary | null>(null)
-  const { data: pool = [] } = useApplications(
+  const { data: pool = [], isLoading: poolLoading } = useApplications(
     { cycle_id: cycleId, stages: 'selection' },
     undefined,
     { enabled: !!cycleId }
@@ -479,7 +490,9 @@ function PoolSidebar({
           ))}
         </div>
       )}
-      {shown.length === 0 ? (
+      {poolLoading ? (
+        <LoadingText />
+      ) : shown.length === 0 ? (
         <p className="text-text-faint py-6 text-center text-sm">
           {q ? 'Nobody matches that search.' : 'Everyone has been drafted.'}
         </p>

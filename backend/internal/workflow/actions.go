@@ -185,7 +185,46 @@ func taskStatus(released bool, done, total int) Status {
 	return StatusOpen
 }
 
-func (f *CycleState) Tasks(counts []TaskCount) []Task {
+// taskOpen is whether a lead's task for this kind has started, and why not.
+func (f *CycleState) taskOpen(kind TaskKind, role string) (bool, string) {
+	s := taskSteps[kind]
+	switch kind {
+	case TaskPreferenceList:
+		return f.reached(s), "Opens once interviews are done."
+	case TaskDraft:
+		return true, ""
+	case TaskFeedback:
+		return f.releasedFor(role, s), "Opens once a chief opens Feedback."
+	}
+	return f.releasedFor(role, s), fmt.Sprintf("%s hasn't been released yet", Label(s))
+}
+
+func (f *CycleState) releasedFor(role string, s models.Step) bool {
+	if role != "" {
+		return f.Released(role, s)
+	}
+	for _, o := range f.Openings {
+		if f.Released(o.RoleID, s) {
+			return true
+		}
+	}
+	return false
+}
+
+// reached is every enabled step before s being done.
+func (f *CycleState) reached(s models.Step) bool {
+	for _, st := range f.EnabledSteps() {
+		if st == s {
+			return true
+		}
+		if !f.Done(st) {
+			return false
+		}
+	}
+	return false
+}
+
+func (f *CycleState) Tasks(counts []TaskCount, now time.Time) []Task {
 	out := []Task{}
 	for _, c := range counts {
 		s := taskSteps[c.Kind]
@@ -193,23 +232,20 @@ func (f *CycleState) Tasks(counts []TaskCount) []Task {
 			continue
 		}
 		t := Task{Step: s, Kind: c.Kind, Done: c.Done, Total: c.Total}
-		var released bool
-		if c.RoleID == "" {
-			for _, o := range f.Openings {
-				released = released || f.Released(o.RoleID, s)
-			}
-		} else {
+		if c.RoleID != "" {
 			role, name := c.RoleID, f.RoleName(c.RoleID)
 			t.RoleID, t.RoleName = &role, &name
-			released = f.Released(role, s)
 			if d, ok := f.Deadline(role, s, taskDeadlineKinds[c.Kind]); ok {
 				due, hard := d.DueAt, d.Hard
 				t.DueAt, t.Hard = &due, &hard
 			}
 		}
-		t.Status = taskStatus(released, c.Done, c.Total)
-		if !released {
-			reason := fmt.Sprintf("%s hasn't been released yet", Label(s))
+		open, reason := f.taskOpen(c.Kind, c.RoleID)
+		t.Status = taskStatus(open, c.Done, c.Total)
+		if c.Kind == TaskPreferenceList && open && f.preferenceListsClosed(now) {
+			t.Status = StatusDone
+		}
+		if !open {
 			t.LockedReason = &reason
 		}
 		out = append(out, t)

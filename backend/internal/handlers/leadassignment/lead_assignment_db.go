@@ -78,14 +78,14 @@ func deleteUnsubmittedQuery(db *gorm.DB, cycleID, role string) *gorm.DB {
 
 // ListReviewerProgressForCycle pairs every assignment for one role in a cycle
 // with its review's submission time; the left join keeps unreviewed pairs.
-func (l *LeadAssignmentDB) ListReviewerProgressForCycle(ctx context.Context, cycleID string, role string) ([]ReviewerProgressRow, error) {
+func (l *LeadAssignmentDB) ListReviewerProgressForCycle(ctx context.Context, cycleID string, roles []string) ([]ReviewerProgressRow, error) {
 	rows := []ReviewerProgressRow{}
 	err := l.db.WithContext(ctx).Table("lead_assignments la").
-		Select("la.lead_nuid, la.application_id, a.user_nuid AS applicant_nuid, u.full_name, u.email, la.assigned_at, wr.submitted_at").
+		Select("la.lead_nuid, a.role_id, la.application_id, a.user_nuid AS applicant_nuid, u.full_name, u.email, la.assigned_at, wr.submitted_at").
 		Joins("JOIN applications a ON a.id = la.application_id").
 		Joins("JOIN users u ON u.nuid = a.user_nuid").
 		Joins("LEFT JOIN written_reviews wr ON wr.application_id = la.application_id AND wr.reviewer_nuid = la.lead_nuid").
-		Where("a.cycle_id = ? AND a.role_id = ?", cycleID, role).
+		Where("a.cycle_id = ? AND a.role_id IN ?", cycleID, roles).
 		Order("la.lead_nuid").Order("la.assigned_at").
 		Scan(&rows).Error
 	return rows, err

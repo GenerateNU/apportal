@@ -314,3 +314,16 @@ func ownWrittenReviews(reviews []models.WrittenReviewDetail, nuid string) ([]mod
 	}
 	return kept, len(kept) < len(reviews)
 }
+
+func (s *decisionService) markSent(ctx context.Context, in *MarkSentInput) (*MarkSentOutput, error) {
+	if err := s.access.CanCycle(ctx, access.ManageCycle, in.ID); err != nil {
+		return nil, err
+	}
+	n, err := s.decisionDB.MarkGenericSent(ctx, in.ID, in.Body.ApplicationIDs, utils.CurrentActor(ctx).NUID)
+	if err != nil {
+		return nil, utils.StoreErr(err)
+	}
+	out := &MarkSentOutput{}
+	out.Body.Sent = n
+	return out, nil
+}

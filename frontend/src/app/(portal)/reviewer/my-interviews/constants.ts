@@ -23,13 +23,13 @@ export const REVIEWING_STATE: Record<
     rank: 0,
     badge: 'draft',
     label: 'In progress',
-    tooltip: "You've saved a draft — submit it when you're ready",
+    tooltip: "You've saved a draft. Submit it when you're ready",
   },
   ready: {
     rank: 1,
     badge: 'draft',
     label: 'Ready to review',
-    tooltip: 'The interviewer has submitted — you can leave your review',
+    tooltip: 'The interviewer has submitted, so you can leave your review',
   },
   waiting: {
     rank: 2,

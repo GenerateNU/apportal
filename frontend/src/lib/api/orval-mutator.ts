@@ -1,6 +1,6 @@
 import Axios from 'axios'
 import { createClient } from '@/lib/supabase/client'
-import { APIError } from './client'
+import { APIError, OverrideDeclined } from './client'
 import { askToOverride, overrideRequest } from './override'
 
 export const AXIOS_INSTANCE = Axios.create({
@@ -82,7 +82,8 @@ export const customInstance = async <T>(
     if (axiosError.isAxiosError && axiosError.response) {
       const body = axiosError.response.data
       const override = overrideRequest(axiosError.response.status, body)
-      if (override && (await askToOverride(override))) {
+      if (override) {
+        if (!(await askToOverride(override))) throw new OverrideDeclined()
         const params = { ...(merged.params as object), confirm_override: true }
         return customInstance<T>({ ...config, params }, options)
       }

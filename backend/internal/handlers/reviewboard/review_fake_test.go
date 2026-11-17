@@ -31,7 +31,7 @@ func (f *fakeStore) Staff(context.Context, string) ([]models.CycleStaffMember, e
 func (f *fakeStore) Applications(_ context.Context, _ string, stages []models.ApplicationStage) ([]models.ApplicationSummary, error) {
 	out := []models.ApplicationSummary{}
 	for _, a := range f.apps {
-		if slices.Contains(stages, a.Stage) {
+		if len(stages) == 0 || slices.Contains(stages, a.Stage) {
 			out = append(out, a)
 		}
 	}
@@ -42,7 +42,7 @@ func (f *fakeStore) Reviewers(_ context.Context, _ string, stages []models.Appli
 	out := []assignedReviewer{}
 	for _, r := range f.reviewers {
 		for _, a := range f.apps {
-			if a.ID == r.ApplicationID && slices.Contains(stages, a.Stage) {
+			if a.ID == r.ApplicationID && (len(stages) == 0 || slices.Contains(stages, a.Stage)) {
 				out = append(out, r)
 			}
 		}

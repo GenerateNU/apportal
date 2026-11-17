@@ -20,11 +20,11 @@ export const STAFF_ROLE_LABEL: Record<CycleStaffRole, string> = {
 export function staffHelpText(applicationType: string): string {
   switch (applicationType) {
     case 'member':
-      return 'Chiefs run this cycle; leads review its applications.'
+      return 'The people recruiting for this cycle. Chiefs set it up and make the decisions; leads review and interview applicants.'
     case 'lead':
-      return 'Chiefs run lead cycles and review lead applications. Leads can’t see them.'
+      return 'The chiefs recruiting new leads. Leads can’t see this cycle, since they may be applying.'
     case 'chief':
-      return 'Chief cycles have no staff — only admins review chief applications.'
+      return 'Chief cycles have no staff. Only admins review chief applications.'
     default:
       return ''
   }

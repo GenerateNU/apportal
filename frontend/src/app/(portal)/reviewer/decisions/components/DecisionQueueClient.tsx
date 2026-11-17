@@ -66,7 +66,7 @@ export function DecisionQueueClient() {
   return (
     <PageContainer>
       <PageHeader
-        title="Decision feedback"
+        title="Feedback"
         subtitle="Applicants you interviewed who are being rejected. Your two paragraphs go into the letter a chief sends them."
         actions={
           <Select value={cycleId} onValueChange={setCycleId}>
@@ -107,7 +107,7 @@ export function DecisionQueueClient() {
         <LoadingText className="px-1" />
       ) : sections.length === 0 ? (
         <p className="text-text-faint px-1 text-sm">
-          Nothing here yet — applicants you interviewed show up once a chief
+          Nothing here yet. Applicants you interviewed show up once a chief
           decides not to move them forward.
         </p>
       ) : (
@@ -138,7 +138,7 @@ function QueueRow({ row }: { row: DecisionRow }) {
       state={state}
       stateLabel={FEEDBACK_STATE_LABEL[state]}
       stateTooltip={
-        row.sent_at ? 'Sent — this decision has gone out' : undefined
+        row.sent_at ? 'Sent. This decision has gone out' : undefined
       }
     />
   )

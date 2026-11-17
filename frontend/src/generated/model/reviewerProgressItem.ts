@@ -14,5 +14,6 @@ export interface ReviewerProgressItem {
   assigned_at: string;
   email: string;
   full_name: string;
+  role_id: string;
   submitted_at?: string;
 }

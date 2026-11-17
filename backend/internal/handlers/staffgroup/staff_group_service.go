@@ -67,6 +67,9 @@ func (s *staffGroupService) create(ctx context.Context, in *CreateGroupInput) (*
 	if len(nuids) > maxMembers {
 		return nil, huma.Error422UnprocessableEntity("too many members")
 	}
+	if err := s.workflow.RequirePositions(ctx, in.ID); err != nil {
+		return nil, err
+	}
 	if err := RequireStaff(ctx, s.db, in.ID, nuids); err != nil {
 		return nil, err
 	}
@@ -128,6 +131,9 @@ func (s *staffGroupService) remove(ctx context.Context, in *GroupPathInput) (*st
 
 func (s *staffGroupService) addMember(ctx context.Context, in *MemberPathInput) (*GroupOutput, error) {
 	if err := s.manage(ctx, in.ID, "group_id", in.GroupID); err != nil {
+		return nil, err
+	}
+	if err := s.workflow.RequirePositions(ctx, in.ID); err != nil {
 		return nil, err
 	}
 	if ok, err := s.groups.InCycle(ctx, in.ID, []string{in.GroupID}); err != nil || !ok {

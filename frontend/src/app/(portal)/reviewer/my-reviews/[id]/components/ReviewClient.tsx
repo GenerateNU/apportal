@@ -46,7 +46,8 @@ export function ReviewClient({
   const { data: applicant } = useApplicant(applicantNuid)
   const { data: answers = [] } = useAnswers(applicationId)
   const { data: questions = [] } = useQuestions(cycleId, role)
-  const { data: reviewQuestions = [] } = useReviewQuestions(cycleId, role)
+  const { data: reviewQuestions = [], isLoading: reviewQuestionsLoading } =
+    useReviewQuestions(cycleId, role)
   const { data: template } = useApplicationTemplate(cycleId, role)
   const { data: reviews = [], isLoading: reviewsLoading } =
     useWrittenReviews(applicationId)
@@ -226,7 +227,7 @@ export function ReviewClient({
           <>
             {/* Review */}
             <div className="lg:flex lg:min-h-0 lg:flex-col">
-              {reviewsLoading ? (
+              {reviewsLoading || reviewQuestionsLoading ? (
                 <div
                   className={cn(
                     'flex flex-col gap-4 py-6 pl-6 sm:pl-8',

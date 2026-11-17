@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 
+	"github.com/danielgtaylor/huma/v2"
+
 	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
-	"github.com/danielgtaylor/huma/v2"
 
 	"github.com/GenerateNU/apportal/backend/internal/access"
 	"github.com/GenerateNU/apportal/backend/internal/workflow"
@@ -28,6 +29,15 @@ func (s *draftService) requireDraftEditable(ctx context.Context, draftID string)
 	draft, err := s.draftDB.GetDraftByID(ctx, draftID)
 	if err != nil {
 		return utils.StoreErr(err)
+	}
+	if draft.Status == models.DraftComplete {
+		left, err := s.draftDB.CountUndecided(ctx, draft.CycleID, draft.RoleID)
+		if err != nil {
+			return utils.StoreErr(err)
+		}
+		if left == 0 {
+			return huma.Error409Conflict("This draft is finalized.")
+		}
 	}
 	return s.workflow.RequireOpeningWorkEditable(ctx, draft.CycleID, draft.RoleID, workflow.WorkDraft)
 }
@@ -155,7 +165,7 @@ func (s *draftService) setTeams(ctx context.Context, in *SetDraftTeamsInput) (*D
 			return nil, utils.StoreErr(err)
 		}
 		if !sameTeams(existing, in.Body.PreferenceListIDs) {
-			return nil, huma.Error409Conflict("teams can't be added or removed once picking has started — only reordered")
+			return nil, huma.Error409Conflict("teams can't be added or removed once picking has started; they can only be reordered")
 		}
 	}
 	if err := s.draftDB.SetDraftTeams(ctx, in.ID, in.Body.PreferenceListIDs); err != nil {
@@ -311,4 +321,25 @@ func (s *draftService) drafted(ctx context.Context, in *utils.CycleScopedInput) 
 		return nil, utils.StoreErr(err)
 	}
 	return &DraftedApplicationsOutput{Body: taken}, nil
+}
+
+// finish turns down everyone the draft didn't pick for its position, which closes Decisions once nobody's left.
+func (s *draftService) finish(ctx context.Context, in *DraftIDInput) (*FinishDraftOutput, error) {
+	if err := s.access.CanCycleOf(ctx, access.ManageCycle, "drafts", in.ID); err != nil {
+		return nil, err
+	}
+	draft, err := s.draftDB.GetDraftByID(ctx, in.ID)
+	if err != nil {
+		return nil, utils.StoreErr(err)
+	}
+	if draft.Status != models.DraftComplete {
+		return nil, huma.Error409Conflict("finish the draft before closing out decisions")
+	}
+	rejected, _, err := s.workflow.Decide(ctx, draft.CycleID, draft.RoleID, nil)
+	if err != nil {
+		return nil, workflow.HTTPErr(err)
+	}
+	out := &FinishDraftOutput{}
+	out.Body.Rejected = len(rejected)
+	return out, nil
 }

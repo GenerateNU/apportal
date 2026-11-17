@@ -2,6 +2,7 @@ package reviewboard
 
 import (
 	"context"
+	"slices"
 	"time"
 
 	"github.com/GenerateNU/apportal/backend/internal/models"
@@ -34,19 +35,39 @@ type ReviewBoardOutput struct {
 
 var boardStages = []models.ApplicationStage{models.StageSubmitted, models.StageLeadReview, models.StageChiefReview}
 
-func (s *reviewService) reviewBoard(ctx context.Context, in *CycleIDInput) (*ReviewBoardOutput, error) {
+type ReviewBoardInput struct {
+	ID string `path:"id" doc:"Cycle ID"`
+	// History keeps everyone who was reviewed, after they move on or are turned down.
+	History bool `query:"history" doc:"Also list everyone with reviewers assigned, whatever their stage now"`
+}
+
+func (s *reviewService) reviewBoard(ctx context.Context, in *ReviewBoardInput) (*ReviewBoardOutput, error) {
 	if err := s.manage(ctx, in.ID); err != nil {
 		return nil, err
 	}
-	apps, err := s.store.Applications(ctx, in.ID, boardStages)
+	stages := boardStages
+	if in.History {
+		stages = nil
+	}
+	apps, err := s.store.Applications(ctx, in.ID, stages)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
-	reviewers, err := s.store.Reviewers(ctx, in.ID, boardStages)
+	reviewers, err := s.store.Reviewers(ctx, in.ID, stages)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
-	return &ReviewBoardOutput{Body: buildBoard(apps, reviewers)}, nil
+	board := buildBoard(apps, reviewers)
+	if in.History {
+		kept := board[:0]
+		for _, r := range board {
+			if len(r.Reviewers) > 0 || slices.Contains(boardStages, r.Stage) {
+				kept = append(kept, r)
+			}
+		}
+		board = kept
+	}
+	return &ReviewBoardOutput{Body: board}, nil
 }
 
 func buildBoard(apps []models.ApplicationSummary, reviewers []assignedReviewer) []BoardRow {

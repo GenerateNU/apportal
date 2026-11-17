@@ -31,10 +31,6 @@ var validMeetingDays = map[string]bool{
 	"thursday":  true,
 }
 
-// maxPreferenceListMembers caps how many leads can collaborate on one group
-// — a small, fixed team size, not a DB constraint, so it's easy to change.
-const maxPreferenceListMembers = 4
-
 // requireAccess lets managers of the list's cycle in, and reviewers only when
 // they're on the list. Non-members get 404 so the list's existence doesn't leak.
 func (s *preferenceListService) requireAccess(ctx context.Context, listID string) error {
@@ -84,7 +80,8 @@ func (s *preferenceListService) create(ctx context.Context, in *CreatePreference
 	if in.Body.CycleID == "" || strings.TrimSpace(in.Body.Name) == "" {
 		return nil, huma.Error422UnprocessableEntity("cycle_id and name are required")
 	}
-	if err := s.access.CanCycle(ctx, access.ReviewCycle, in.Body.CycleID); err != nil {
+	cycle, err := s.reviewableCycle(ctx, in.Body.CycleID)
+	if err != nil {
 		return nil, err
 	}
 	if err := s.checkGroupNotLocked(ctx, in.Body.CycleID); err != nil {
@@ -94,6 +91,7 @@ func (s *preferenceListService) create(ctx context.Context, in *CreatePreference
 		CycleID:   in.Body.CycleID,
 		Name:      strings.TrimSpace(in.Body.Name),
 		CreatedBy: utils.CurrentActor(ctx).NUID,
+		Join:      !cycle.Allows(access.ManageCycle),
 	})
 	if err != nil {
 		return nil, utils.StoreErr(err)
@@ -195,13 +193,6 @@ func (s *preferenceListService) addMember(ctx context.Context, in *AddPreference
 	}
 	if err := s.checkGroupNotLocked(ctx, list.CycleID); err != nil {
 		return nil, err
-	}
-	memberCount, err := s.preferenceListDB.CountPreferenceListMembers(ctx, in.ID)
-	if err != nil {
-		return nil, utils.StoreErr(err)
-	}
-	if memberCount >= maxPreferenceListMembers {
-		return nil, huma.Error422UnprocessableEntity("this group already has the maximum of 4 members")
 	}
 	target, err := s.userDB.GetUser(ctx, in.Body.LeadNUID)
 	if err != nil {

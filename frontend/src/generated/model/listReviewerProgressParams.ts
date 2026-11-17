@@ -13,4 +13,8 @@ export type ListReviewerProgressParams = {
  * Applicant role
  */
 role_id?: string;
+/**
+ * Comma-separated roles, instead of role_id
+ */
+role_ids?: string;
 };

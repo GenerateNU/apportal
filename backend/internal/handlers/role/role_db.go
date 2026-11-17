@@ -76,10 +76,28 @@ func (r *RoleDB) GetRole(ctx context.Context, id string) (models.Role, error) {
 	return role, utils.DBErr(err)
 }
 
+// UpdateRole renames the role's form with it while the form still has its default title.
 func (r *RoleDB) UpdateRole(ctx context.Context, id string, in RoleUpdate) (models.Role, error) {
 	updates := map[string]any{}
 	utils.SetIf(updates, "name", in.Name)
-	return utils.UpdateReturning[models.Role](r.db.WithContext(ctx), updates, "id = ?", id)
+	var role models.Role
+	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var before models.Role
+		if err := tx.Where("id = ?", id).Take(&before).Error; err != nil {
+			return utils.DBErr(err)
+		}
+		var err error
+		if role, err = utils.UpdateReturning[models.Role](tx, updates, "id = ?", id); err != nil {
+			return err
+		}
+		if role.Name == before.Name {
+			return nil
+		}
+		return tx.Model(&models.ApplicationTemplate{}).
+			Where("role_id = ? AND title = ?", id, before.Name+" Application").
+			Updates(map[string]any{"title": role.Name + " Application", "updated_at": gorm.Expr("now()")}).Error
+	})
+	return role, err
 }
 
 // DeleteRole returns ErrConflict while anything still references the role.

@@ -24,6 +24,9 @@ const swe = "role-swe"
 func newTestFacts() *CycleState {
 	f := NewCycleState("c1")
 	f.Openings = []Opening{{RoleID: swe, Name: "Software Engineer"}}
+	f.HasTeam = true
+	f.Assigned[key{swe, models.StepReviews}] = 1
+	f.Assigned[key{swe, models.StepInterviews}] = 1
 	return f
 }
 
@@ -228,7 +231,10 @@ func TestReleaseBlock(t *testing.T) {
 			f.SetRelease(swe, models.StepInterviews, past)
 			f.SetDeadline(swe, models.StepInterviews, Deadline{Kind: models.KindInterviewer, DueAt: past})
 		}, 0},
-		{"feedback needs decisions released", models.StepFeedback, nil, http.StatusConflict},
+		{"feedback waits on people still in decisions", models.StepFeedback, func(f *CycleState) {
+			f.Counts[key{swe, models.StepDecisions}] = 3
+		}, http.StatusConflict},
+		{"feedback once nobody is left in decisions", models.StepFeedback, nil, 0},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -401,6 +407,95 @@ func TestStepStatusAndCurrent(t *testing.T) {
 	}
 }
 
+func TestStepsLockedWithoutPositions(t *testing.T) {
+	f := newTestFacts()
+	f.Openings = nil
+	for _, s := range f.EnabledSteps() {
+		if got := f.StepStatus(s); got != StatusLocked {
+			t.Errorf("%s: got %s, want locked", s, got)
+		}
+	}
+}
+
+func TestStepsWaitOnSetup(t *testing.T) {
+	for name, unset := range map[string]func(*CycleState){
+		"no positions": func(f *CycleState) { f.Openings = nil },
+		"no team":      func(f *CycleState) { f.HasTeam = false },
+	} {
+		f := newTestFacts()
+		unset(f)
+		for _, s := range f.EnabledSteps() {
+			if got := f.StepStatus(s); got != StatusLocked {
+				t.Errorf("%s, %s: got %s, want locked", name, s, got)
+			}
+		}
+		f.SetDeadline(swe, models.StepApplications, Deadline{Kind: models.KindApplicant, DueAt: now.Add(time.Hour)})
+		if got := statusOf(f.ReleaseBlock(swe, models.StepApplications, now)); got != http.StatusConflict {
+			t.Errorf("%s: release got %d, want 409", name, got)
+		}
+	}
+}
+
+func TestReleaseNeedsPeopleAssigned(t *testing.T) {
+	f := newTestFacts()
+	f.Assigned = map[key]int{}
+	f.SetRelease(swe, models.StepApplications, past)
+	f.SetDeadline(swe, models.StepApplications, Deadline{Kind: models.KindApplicant, DueAt: past})
+	f.SetDeadline(swe, models.StepReviews, Deadline{Kind: models.KindReviewer, DueAt: now.Add(time.Hour)})
+	if got := statusOf(f.ReleaseBlock(swe, models.StepReviews, now)); got != http.StatusConflict {
+		t.Fatalf("no reviewers: got %d, want 409", got)
+	}
+	f.Assigned[key{swe, models.StepReviews}] = 3
+	if got := statusOf(f.ReleaseBlock(swe, models.StepReviews, now)); got != 0 {
+		t.Fatalf("with reviewers: got %d, want 0", got)
+	}
+}
+
+func TestInterviewsReleaseOnceEveryReviewIsIn(t *testing.T) {
+	f := newTestFacts()
+	f.SetRelease(swe, models.StepApplications, past)
+	f.SetDeadline(swe, models.StepApplications, Deadline{Kind: models.KindApplicant, DueAt: past})
+	f.SetRelease(swe, models.StepReviews, past)
+	f.SetDeadline(swe, models.StepReviews, Deadline{Kind: models.KindReviewer, DueAt: now.Add(time.Hour)})
+	f.SetDeadline(swe, models.StepInterviews, Deadline{Kind: models.KindInterviewer, DueAt: now.Add(48 * time.Hour)})
+	f.Assigned[key{swe, models.StepReviews}] = 2
+	f.Submitted[key{swe, models.StepReviews}] = 1
+	if got := statusOf(f.ReleaseBlock(swe, models.StepInterviews, now)); got != http.StatusConflict {
+		t.Fatalf("a review still out: got %d, want 409", got)
+	}
+	f.Submitted[key{swe, models.StepReviews}] = 2
+	if got := statusOf(f.ReleaseBlock(swe, models.StepInterviews, now)); got != 0 {
+		t.Fatalf("every review in: got %d, want 0", got)
+	}
+}
+
+func TestFeedbackWaitsForDecisionsDespiteRejections(t *testing.T) {
+	f := newTestFacts()
+	f.CompletedAt[models.StepApplications] = &past
+	f.CompletedAt[models.StepReviews] = &past
+	f.AddMove(swe, models.StageRejected)
+	if got := f.StepStatus(models.StepFeedback); got != StatusLocked {
+		t.Fatalf("feedback with a rejection mid-cycle: got %s, want locked", got)
+	}
+	f.CompletedAt[models.StepInterviews] = &past
+	f.CompletedAt[models.StepDecisions] = &past
+	if got := f.StepStatus(models.StepFeedback); got != StatusOpen {
+		t.Fatalf("feedback once decisions are done: got %s, want open", got)
+	}
+}
+
+func TestRejectionsDontFreezeDecisions(t *testing.T) {
+	f := newTestFacts()
+	f.AddMove(swe, models.StageRejected)
+	if f.Frozen(swe, models.StepDecisions) {
+		t.Fatal("a rejection shouldn't freeze decisions")
+	}
+	f.AddMove(swe, models.StageSelection)
+	if !f.Frozen(swe, models.StepInterviews) {
+		t.Fatal("moving into decisions still freezes interviews")
+	}
+}
+
 func TestCompleteBlock(t *testing.T) {
 	f := newTestFacts()
 	f.SetRelease(swe, models.StepApplications, past)
@@ -496,7 +591,7 @@ func TestTasks(t *testing.T) {
 		{Kind: TaskReview, RoleID: swe, Total: 3, Done: 3},
 		{Kind: TaskRecordingReview, RoleID: swe, Total: 0},
 		{Kind: TaskPreferenceList, Total: 1},
-	})
+	}, now)
 	if len(tasks) != 2 {
 		t.Fatalf("got %+v", tasks)
 	}

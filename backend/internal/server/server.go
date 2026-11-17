@@ -15,6 +15,7 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/handlers/answer"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/applicant"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/application"
+	"github.com/GenerateNU/apportal/backend/internal/handlers/applicationsummary"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/applicationtemplate"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/branch"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/challenge"
@@ -117,6 +118,7 @@ func CreateRoutes(api huma.API, db *gorm.DB, storageClient *storage.Client, chal
 	cycleworkflow.Route(api, db)
 	cyclestaff.Route(api, db)
 	applicationtemplate.Route(api, db)
+	applicationsummary.Route(api, db)
 	question.Route(api, db)
 	challenge.Route(api, db)
 	user.Route(api, db)

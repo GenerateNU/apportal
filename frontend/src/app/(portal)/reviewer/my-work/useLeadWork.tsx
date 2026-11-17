@@ -90,16 +90,16 @@ export function useLeadWork() {
     useApplications({ assigned_to: me, cycle_id: cycleId }, undefined, {
       enabled: ready,
     })
-  const { data: interviewApps = [] } = useApplications(
-    { interviewer_nuid: me, cycle_id: cycleId },
-    undefined,
-    { enabled: ready }
-  )
-  const { data: recordingApps = [] } = useApplications(
-    { recording_reviewer_nuid: me, cycle_id: cycleId },
-    undefined,
-    { enabled: ready }
-  )
+  const { data: interviewApps = [], isPending: interviewAppsPending } =
+    useApplications({ interviewer_nuid: me, cycle_id: cycleId }, undefined, {
+      enabled: ready,
+    })
+  const { data: recordingApps = [], isPending: recordingAppsPending } =
+    useApplications(
+      { recording_reviewer_nuid: me, cycle_id: cycleId },
+      undefined,
+      { enabled: ready }
+    )
 
   const reviewIds = useMemo(() => reviewApps.map((a) => a.id), [reviewApps])
   const interviewIds = useMemo(
@@ -115,10 +115,12 @@ export function useLeadWork() {
   const { data: recordingReviewers = {} } =
     useInterviewReviewersBulk(recordingIds)
 
-  const { data: lists = [] } = usePreferenceLists(cycleId)
+  const { data: lists = [], isPending: listsPending } =
+    usePreferenceLists(cycleId)
   const { data: listDetails = [] } = usePreferenceListDetails(cycleId)
   const { roleIds } = useCycleRoles(cycleId)
-  const { data: decisions = [] } = useDecisions(cycleId)
+  const { data: decisions = [], isPending: decisionsPending } =
+    useDecisions(cycleId)
   const boards = useQueries({
     queries: roleIds.map((roleId) => ({
       queryKey: queryKeys.drafts.board(cycleId, roleId),
@@ -388,6 +390,14 @@ export function useLeadWork() {
     (!!cycleId && workPending) ||
     (!!cycle &&
       (!me || reviewAppsPending || writtenReviews.some((q) => q.isPending)))
+  const tasksLoading: Record<Phase['id'], boolean> = {
+    reviews: false,
+    interviews: interviewAppsPending,
+    interviewReviews: recordingAppsPending,
+    preference: listsPending,
+    draft: false,
+    feedback: decisionsPending,
+  }
   return {
     cycle,
     branch,
@@ -397,5 +407,6 @@ export function useLeadWork() {
     roleIds,
     roleLabel,
     loading: loadingWork,
+    tasksLoading,
   }
 }

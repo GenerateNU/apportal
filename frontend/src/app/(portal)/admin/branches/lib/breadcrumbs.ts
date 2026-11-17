@@ -22,6 +22,7 @@ export function branchCrumbs(opts: {
   cycle?: Cycle
   showCycle?: boolean
   formLabel?: string
+  page?: string
 }): Crumb[] {
   const crumbs: Crumb[] = [{ label: 'Branches', href: '/admin/branches' }]
   if (opts.branchId) {
@@ -35,12 +36,13 @@ export function branchCrumbs(opts: {
     crumbs.push({
       label: opts.cycle?.name ?? 'Cycle',
       href:
-        opts.formLabel && opts.branchId && cycleId
+        (opts.formLabel || opts.page) && opts.branchId && cycleId
           ? cycleHref(opts.branchId, cycleId)
           : undefined,
     })
   }
   if (opts.formLabel) crumbs.push({ label: opts.formLabel })
+  if (opts.page) crumbs.push({ label: opts.page })
   return crumbs
 }
 

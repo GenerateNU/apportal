@@ -72,7 +72,7 @@ export function InterviewRow({
     } catch {
       // Clipboard access needs a secure context and can be blocked outright,
       // and a copy that silently does nothing is worse than saying so.
-      toast('Could not copy — select the address instead', { variant: 'error' })
+      toast('Could not copy. Select the address instead', { variant: 'error' })
     }
   }
 

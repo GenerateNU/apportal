@@ -3,7 +3,9 @@
 import { useState } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripVertical, Plus, Trash2, X } from 'lucide-react'
+import { GripVertical, Info, Plus, Trash2, X } from 'lucide-react'
+import { Tooltip } from '@/components/Tooltip'
+import { cn } from '@/lib/utils'
 import type { QuestionType } from '@/lib/api/types'
 import { Card } from '@/components/ui/card'
 import { QUESTION_TYPE_META } from './constants'
@@ -23,6 +25,9 @@ export type QuestionCardQuestion = {
   role_id: string | null
   page_title?: string
   description?: string | null
+  score_min?: number
+  score_max?: number
+  ranked?: boolean
 }
 
 export type QuestionCardUpdateBody = {
@@ -33,6 +38,9 @@ export type QuestionCardUpdateBody = {
   clear_page_title?: boolean
   description?: string
   clear_description?: boolean
+  score_min?: number
+  score_max?: number
+  ranked?: boolean
 }
 
 export function QuestionCard({
@@ -263,6 +271,17 @@ export function QuestionCard({
             </div>
           )}
 
+          {question.question_type === 'score' &&
+            question.score_min != null &&
+            question.score_max != null && (
+              <ScoreScaleEditor
+                min={question.score_min}
+                max={question.score_max}
+                ranked={question.ranked ?? true}
+                onUpdate={onUpdate}
+              />
+            )}
+
           {meta.hasOptions && (
             <div className="flex flex-col gap-2">
               {options.map((option, index) => (
@@ -323,8 +342,8 @@ export function QuestionCard({
         <div className="flex flex-wrap items-center gap-4">
           {confirmingDelete && hasPageBreak && (
             <span className="max-w-xs text-xs text-red-600">
-              This question starts a page (&quot;{question.page_title}&quot;) —
-              deleting it will merge this page into the previous one.
+              This question starts a page (&quot;{question.page_title}&quot;).
+              Deleting it will merge this page into the previous one.
             </span>
           )}
           <label className="flex items-center gap-2">
@@ -352,5 +371,66 @@ export function QuestionCard({
         </div>
       </div>
     </Card>
+  )
+}
+
+const SCALES = [
+  { min: 1, max: 5 },
+  { min: 1, max: 10 },
+]
+
+function ScoreScaleEditor({
+  min,
+  max,
+  ranked,
+  onUpdate,
+}: {
+  min: number
+  max: number
+  ranked: boolean
+  onUpdate: (body: QuestionCardUpdateBody) => void
+}) {
+  const custom = !SCALES.some((sc) => sc.min === min && sc.max === max)
+  const chip = (active: boolean) =>
+    cn(
+      'px-2.5 py-1 text-sm transition-colors not-last:border-r not-last:border-gray-300',
+      active ? 'bg-ink text-white' : 'text-ink hover:bg-gray-100'
+    )
+  return (
+    <div className="text-text-subtle flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
+      <span className="flex items-center gap-2">
+        Scale
+        <span className="inline-flex border border-gray-300 bg-white">
+          {SCALES.map((sc) => (
+            <button
+              key={sc.max}
+              type="button"
+              aria-pressed={sc.min === min && sc.max === max}
+              onClick={() => onUpdate({ score_min: sc.min, score_max: sc.max })}
+              className={chip(sc.min === min && sc.max === max)}
+            >
+              {sc.min}–{sc.max}
+            </button>
+          ))}
+          {custom && (
+            <span className={chip(true)}>
+              {min}–{max}
+            </span>
+          )}
+        </span>
+      </span>
+      <label className="flex items-center gap-1.5">
+        <input
+          type="checkbox"
+          checked={ranked}
+          onChange={(e) => onUpdate({ ranked: e.target.checked })}
+          className="accent-ink h-3.5 w-3.5"
+        />
+        Use for ranking
+        <Tooltip label="Applicants are ranked by the average of these scores when you choose who advances.">
+          <Info size={13} className="text-text-faint" />
+        </Tooltip>
+      </label>
+    </div>
   )
 }

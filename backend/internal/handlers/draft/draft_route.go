@@ -88,6 +88,16 @@ func Route(api huma.API, db *gorm.DB) {
 	}, s.removePick)
 
 	huma.Register(api, huma.Operation{
+		OperationID: "finish-draft",
+		Method:      http.MethodPost,
+		Path:        "/drafts/{id}/finish",
+		Summary:     "Turn down everyone the draft didn't pick",
+		Description: "Chief only, once the draft is complete. Drafted applicants are already accepted; everyone left in Decisions for the position is rejected, and Decisions closes once nobody's left.",
+		Tags:        []string{"Draft"},
+		Errors:      []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound, http.StatusConflict},
+	}, s.finish)
+
+	huma.Register(api, huma.Operation{
 		OperationID: "reset-draft",
 		Method:      http.MethodPost,
 		Path:        "/drafts/{id}/reset",

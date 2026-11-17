@@ -91,7 +91,7 @@ func TestAssignableStaffAndReviewerTeams(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if out.Body[0].Locked == "" {
-		t.Error("interviewers with no count set should be locked")
+	if out.Body[0].Locked != "" {
+		t.Errorf("interviewers use the default count until one is set: %q", out.Body[0].Locked)
 	}
 }

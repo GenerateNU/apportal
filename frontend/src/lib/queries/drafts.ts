@@ -13,6 +13,7 @@ import {
   openDraft,
   removeDraftPick,
   replaceDraftPick,
+  finishDraft,
   resetDraft,
   setDraftTeams,
   updateDraft,
@@ -344,6 +345,17 @@ export function useRemoveDraftPick() {
 // Clears every pick and returns the board to setup, putting each applicant
 // back in the stage they were in before their pick. The order survives — a
 // rehearsal can be wiped without rebuilding it.
+export function useFinishDraft() {
+  return useDraftMutation(
+    (vars: {
+      cycleId: string
+      roleId: string
+      draftId: string
+      opts?: RequestOptions
+    }) => finishDraft(vars.draftId, vars.opts)
+  )
+}
+
 export function useResetDraft() {
   return useDraftMutation(
     (vars: {

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, Users } from 'lucide-react'
+import { Search, UserPlus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -11,74 +11,42 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { EmptyState } from '@/components/ui/empty-state'
-import { SearchableSelect } from '@/components/ui/searchable-select'
+import { LoadingText } from '@/components/ui/loading-text'
+import { PersonCell } from '@/components/ui/person-cell'
 import { SectionLabel } from '@/components/ui/section-label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { SegmentedTabs } from '@/components/ui/segmented-tabs'
 import type { CycleStaffRole } from '@/generated/model'
 import type { Cycle } from '@/lib/api/types'
 import { useCycleStaff, useSetCycleStaff } from '@/lib/queries/cycle-staff'
 import { useUsers } from '@/lib/queries/users'
-import {
-  STAFF_ROLE_LABEL,
-  staffHelpText,
-  staffRolesFor,
-} from '../lib/cycle-staff'
+import { STAFF_ROLE_LABEL, staffRolesFor } from '../lib/cycle-staff'
 import { StaffRow } from './StaffRow'
 
-export function CycleStaffButton({ cycle }: { cycle: Cycle }) {
-  const [open, setOpen] = useState(false)
-  const { data: staff = [] } = useCycleStaff(cycle.id)
-
-  return (
-    <>
-      <Button variant="outline" onClick={() => setOpen(true)}>
-        <Users className="h-4 w-4" />
-        {`Leads & chiefs · ${staff.length}`}
-      </Button>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Leads &amp; chiefs</DialogTitle>
-            <DialogDescription>
-              {staffHelpText(cycle.application_type)}
-            </DialogDescription>
-          </DialogHeader>
-          <CycleStaffPanel cycle={cycle} />
-        </DialogContent>
-      </Dialog>
-    </>
-  )
-}
+const ROLE_ORDER: CycleStaffRole[] = ['chief', 'lead']
+const MAX_RESULTS = 20
 
 export function CycleStaffPanel({ cycle }: { cycle: Cycle }) {
   const roles = staffRolesFor(cycle.application_type)
-  const { data: staff = [] } = useCycleStaff(cycle.id)
+  const { data: staff = [], isLoading } = useCycleStaff(cycle.id)
+  const groups = ROLE_ORDER.map((role) => ({
+    role,
+    members: staff.filter((m) => m.role === role),
+  })).filter((g) => g.members.length > 0)
 
+  if (isLoading) return <LoadingText />
+  if (staff.length === 0) {
+    return <EmptyState size="sm" title="No one is on this cycle yet." />
+  }
   return (
-    <div className="flex flex-col gap-5">
-      {roles.length > 0 && (
-        <div className="flex flex-col gap-2">
-          <SectionLabel as="h3">Add someone</SectionLabel>
-          <AddStaffForm cycleId={cycle.id} roles={roles} />
-        </div>
-      )}
-
-      <div className="flex flex-col gap-2">
-        <SectionLabel as="h3">{`On this cycle · ${staff.length}`}</SectionLabel>
-        {staff.length === 0 ? (
-          <EmptyState size="sm" title="No one is on this cycle yet." />
-        ) : (
+    <div className="flex flex-col gap-6">
+      {groups.map(({ role, members }) => (
+        <section key={role} className="flex flex-col gap-2">
+          <SectionLabel as="h3">{`${STAFF_ROLE_LABEL[role]}s · ${members.length}`}</SectionLabel>
           <ul
-            aria-label="Leads and chiefs"
-            className="border-ink divide-y divide-gray-200 border-2 bg-white"
+            aria-label={`${STAFF_ROLE_LABEL[role]}s`}
+            className="divide-y divide-gray-100 border border-gray-200 bg-white"
           >
-            {staff.map((member) => (
+            {members.map((member) => (
               <StaffRow
                 key={member.user_nuid}
                 cycleId={cycle.id}
@@ -88,81 +56,134 @@ export function CycleStaffPanel({ cycle }: { cycle: Cycle }) {
               />
             ))}
           </ul>
-        )}
-      </div>
+        </section>
+      ))}
     </div>
   )
 }
 
-function AddStaffForm({
+export function AddStaffButton({ cycle }: { cycle: Cycle }) {
+  const roles = staffRolesFor(cycle.application_type)
+  const [open, setOpen] = useState(false)
+  if (roles.length === 0) return null
+  return (
+    <>
+      <Button onClick={() => setOpen(true)}>
+        <UserPlus className="h-4 w-4" />
+        Add people
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Add people</DialogTitle>
+            <DialogDescription>
+              Search by name or email, then add them to this cycle.
+            </DialogDescription>
+          </DialogHeader>
+          {open && <AddStaff cycleId={cycle.id} roles={roles} />}
+        </DialogContent>
+      </Dialog>
+    </>
+  )
+}
+
+function AddStaff({
   cycleId,
   roles,
 }: {
   cycleId: string
   roles: CycleStaffRole[]
 }) {
-  const { data: users = [] } = useUsers()
+  const { data: users = [], isLoading: usersLoading } = useUsers()
   const { data: staff = [] } = useCycleStaff(cycleId)
   const setStaff = useSetCycleStaff()
-  const [nuid, setNuid] = useState('')
   const [role, setRole] = useState<CycleStaffRole>(roles[roles.length - 1])
+  const [query, setQuery] = useState('')
 
   const onStaff = new Set(staff.map((s) => s.user_nuid))
-  const options = users
-    .filter((u) => !onStaff.has(u.nuid))
-    .map((u) => ({ value: u.nuid, label: `${u.full_name} · ${u.email}` }))
-
-  function handleSubmit(event: React.FormEvent) {
-    event.preventDefault()
-    if (!nuid) return
-    setStaff.mutate({ cycleId, nuid, role }, { onSuccess: () => setNuid('') })
-  }
+  const q = query.trim().toLowerCase()
+  const matches = q
+    ? users
+        .filter(
+          (u) =>
+            !onStaff.has(u.nuid) &&
+            (u.full_name.toLowerCase().includes(q) ||
+              u.email.toLowerCase().includes(q))
+        )
+        .slice(0, MAX_RESULTS)
+    : []
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2"
-    >
-      <SearchableSelect
-        options={options}
-        value={nuid}
-        onValueChange={setNuid}
-        placeholder="Choose a person"
-        searchPlaceholder="Search by name or email"
-        emptyText="No one matches."
-        ariaLabel="Person to add"
-        className="col-span-2 w-full min-w-0"
-      />
-      {roles.length > 1 ? (
-        <Select
-          value={role}
-          onValueChange={(val) => setRole(val as CycleStaffRole)}
-        >
-          <SelectTrigger className="w-full" aria-label="Role">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {roles.map((r) => (
-              <SelectItem key={r} value={r}>
-                {STAFF_ROLE_LABEL[r]}
-              </SelectItem>
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative min-w-48 flex-1">
+          <Search
+            size={14}
+            className="text-text-faint pointer-events-none absolute top-1/2 left-3 -translate-y-1/2"
+          />
+          <input
+            autoFocus
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search by name or email"
+            aria-label="Person to add"
+            className="focus-visible:border-ink h-10 w-full border border-gray-300 bg-white pr-3 pl-9 text-sm outline-none"
+          />
+        </div>
+        {roles.length > 1 ? (
+          <SegmentedTabs<CycleStaffRole>
+            className="h-10"
+            tabs={roles.map((r) => ({
+              id: r,
+              label: `As ${STAFF_ROLE_LABEL[r]}`,
+            }))}
+            value={role}
+            onChange={setRole}
+          />
+        ) : (
+          <span className="text-text-muted text-sm">{`Added as ${STAFF_ROLE_LABEL[role]}`}</span>
+        )}
+      </div>
+
+      <div className="max-h-80 overflow-y-auto">
+        {!q ? (
+          <p className="text-text-faint py-6 text-center text-sm">
+            Start typing to find someone.
+          </p>
+        ) : usersLoading ? (
+          <LoadingText className="py-6" />
+        ) : matches.length === 0 ? (
+          <p className="text-text-faint py-6 text-center text-sm">
+            No one matches.
+          </p>
+        ) : (
+          <ul className="divide-y divide-gray-100">
+            {matches.map((u) => (
+              <li
+                key={u.nuid}
+                className="flex items-center justify-between gap-3 py-2.5"
+              >
+                <PersonCell name={u.full_name} secondary={u.email} />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={setStaff.isPending}
+                  onClick={() =>
+                    setStaff.mutate({ cycleId, nuid: u.nuid, role })
+                  }
+                >
+                  Add
+                </Button>
+              </li>
             ))}
-          </SelectContent>
-        </Select>
-      ) : (
-        <span className="text-ink flex h-9 items-center border border-gray-200 bg-gray-50 px-3 text-sm font-semibold">
-          {`as ${STAFF_ROLE_LABEL[role]}`}
-        </span>
-      )}
-      <Button type="submit" disabled={!nuid || setStaff.isPending}>
-        <Plus className="h-4 w-4" />
-        {setStaff.isPending ? 'Adding…' : 'Add'}
-      </Button>
+          </ul>
+        )}
+      </div>
       {setStaff.error && (
-        <p className="text-destructive col-span-2 text-sm">
+        <p className="text-destructive text-sm">
           Couldn’t add them to this cycle.
         </p>
       )}
-    </form>
+    </div>
   )
 }

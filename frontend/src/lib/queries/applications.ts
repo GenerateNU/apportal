@@ -6,8 +6,8 @@ import {
 } from '@tanstack/react-query'
 import {
   createApplication,
-  deleteApplication,
   getApplication,
+  getApplicationSummary,
   listApplications,
   updateApplication,
 } from '@/generated/applications/applications'
@@ -132,6 +132,14 @@ export function useInfiniteApplications(
   }
 }
 
+export function useApplicationSummary(cycleId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: queryKeys.applications.summary(cycleId),
+    queryFn: async () => (await getApplicationSummary(cycleId)).positions ?? [],
+    enabled: enabled && !!cycleId,
+  })
+}
+
 // Two params don't cross the wire as they're typed here. answer_filters is
 // the one list-of-objects param on this endpoint, and neither axios's bracket
 // encoding nor a repeated key binds to a struct slice server-side, so it goes
@@ -187,24 +195,6 @@ export function useUpdateApplication() {
     }) => updateApplication(vars.id, vars.body, vars.opts),
     onSuccess: (data, vars) => {
       queryClient.setQueryData(queryKeys.applications.detail(vars.id), data)
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.applications.lists(),
-      })
-    },
-  })
-}
-
-// Discards an applicant's own in-progress draft (owner + draft-only,
-// enforced server-side) so they can start over against a fresh form.
-export function useDeleteApplication() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (vars: { id: string; opts?: RequestOptions }) =>
-      deleteApplication(vars.id, vars.opts),
-    onSuccess: (_data, vars) => {
-      queryClient.removeQueries({
-        queryKey: queryKeys.applications.detail(vars.id),
-      })
       queryClient.invalidateQueries({
         queryKey: queryKeys.applications.lists(),
       })

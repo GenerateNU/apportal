@@ -4,7 +4,7 @@ import type { DecisionRow, DecisionTemplate } from '@/lib/api/types'
 // applicant's paragraphs separately and never renders — this is the only place
 // the two are combined, so what the preview shows is exactly what gets copied.
 export type DecisionVar =
-  'applicant_name' | 'role' | 'cycle' | 'feedback' | 'compliments'
+  'applicant_name' | 'branch' | 'role' | 'cycle' | 'feedback' | 'compliments'
 
 // Shown in place of a paragraph the interviewer hasn't written yet, so a
 // half-finished message reads as obviously unfinished rather than as a
@@ -43,10 +43,12 @@ export function renderDecision(
   row: DecisionRow,
   template: DecisionTemplate | undefined,
   cycleName: string,
-  roleName: string
+  roleName: string,
+  branchName = ''
 ): RenderedDecision {
   const vars: Partial<Record<DecisionVar, string>> = {
     applicant_name: firstName(row.full_name),
+    branch: branchName,
     role: roleName,
     cycle: cycleName,
     feedback: row.feedback,

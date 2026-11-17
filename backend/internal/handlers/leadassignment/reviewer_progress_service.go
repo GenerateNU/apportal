@@ -3,6 +3,8 @@ package leadassignment
 import (
 	"context"
 
+	"github.com/danielgtaylor/huma/v2"
+
 	"github.com/GenerateNU/apportal/backend/internal/handlers/cyclestaff"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/GenerateNU/apportal/backend/internal/models"
@@ -21,15 +23,26 @@ type reviewerProgressService struct {
 	staffDB          *cyclestaff.CycleStaffDB
 }
 
+const maxProgressRoles = 50
+
 func (s *reviewerProgressService) list(ctx context.Context, in *ReviewerProgressInput) (*ReviewerProgressOutput, error) {
-	if err := role.ParseRoleID(in.RoleID); err != nil {
-		return nil, err
+	roles := utils.SplitIDs(in.RoleIDs)
+	if len(roles) == 0 {
+		roles = []string{in.RoleID}
+	}
+	if len(roles) > maxProgressRoles {
+		return nil, huma.Error422UnprocessableEntity("too many role_ids")
+	}
+	for _, r := range roles {
+		if err := role.ParseRoleID(r); err != nil {
+			return nil, err
+		}
 	}
 	if err := s.access.CanCycle(ctx, access.ManageCycle, in.ID); err != nil {
 		return nil, err
 	}
 
-	rows, err := s.leadAssignmentDB.ListReviewerProgressForCycle(ctx, in.ID, in.RoleID)
+	rows, err := s.leadAssignmentDB.ListReviewerProgressForCycle(ctx, in.ID, roles)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
@@ -61,6 +74,7 @@ func (s *reviewerProgressService) list(ctx context.Context, in *ReviewerProgress
 		}
 		p.Items = append(p.Items, models.ReviewerProgressItem{
 			ApplicationID: r.ApplicationID,
+			RoleID:        r.RoleID,
 			ApplicantNUID: r.ApplicantNUID,
 			FullName:      r.FullName,
 			Email:         r.Email,

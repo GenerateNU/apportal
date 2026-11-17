@@ -111,6 +111,7 @@ type ReviewerProgress struct {
 // ReviewerProgressItem is one application within a ReviewerProgress queue.
 type ReviewerProgressItem struct {
 	ApplicationID string     `json:"application_id"`
+	RoleID        string     `json:"role_id"`
 	ApplicantNUID string     `json:"applicant_nuid"`
 	FullName      string     `json:"full_name"`
 	Email         string     `json:"email"`

@@ -21,7 +21,7 @@ describe('staffRolesFor', () => {
 
 describe('staffHelpText', () => {
   it('explains who reviews each type', () => {
-    expect(staffHelpText('lead')).toContain('Chiefs run lead cycles')
-    expect(staffHelpText('chief')).toContain('only admins')
+    expect(staffHelpText('lead')).toContain('recruiting new leads')
+    expect(staffHelpText('chief')).toContain('Only admins')
   })
 })

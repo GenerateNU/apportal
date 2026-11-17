@@ -11,6 +11,7 @@ import { MessagePreview } from './MessagePreview'
 import { renderDecision } from './render'
 import { useFeedbackDraft } from './useFeedbackDraft'
 import { useRoleLookup } from '@/lib/queries/roles'
+import { useBranchName } from './useBranchName'
 
 // The chief's board only. A chief reads the finished message, not the review
 // history behind it — the lead's feedback is already in the letter, so the
@@ -34,6 +35,7 @@ export function DecisionEditor({
   onSent,
 }: DecisionEditorProps) {
   const { roleLabel } = useRoleLookup()
+  const branchName = useBranchName(cycleId)
   const needsFeedback = row.kind === 'rejection_post_interview'
   // Chiefs may always write, so a lead who never filled theirs in doesn't
   // block the send.
@@ -43,7 +45,8 @@ export function DecisionEditor({
     { ...row, feedback: draft.feedback, compliments: draft.compliments },
     template,
     cycleName,
-    roleLabel(row.role_id)
+    roleLabel(row.role_id),
+    branchName
   )
 
   return (
@@ -63,7 +66,7 @@ export function DecisionEditor({
           ) : (
             <p className="text-text-muted text-sm">
               This applicant did not interview, so their letter has no feedback
-              paragraph — it’s ready to send as written.
+              paragraph, so it’s ready to send as written.
             </p>
           )}
 
@@ -173,13 +176,13 @@ function ChiefControls({
             )
           }
         >
-          {sent ? 'Undo — not sent' : 'Mark sent & reject'}
+          {sent ? 'Undo, not sent' : 'Mark sent & reject'}
         </Button>
       </div>
       <p className="text-text-faint text-xs">
         {sent
           ? `Sent, and ${row.full_name} is marked rejected. Undoing puts them back where they were.`
-          : `Records the email as sent and moves ${row.full_name} to the rejected stage${isDecided(row.stage) ? '' : ' — they’re still in the pipeline right now'}.`}
+          : `Records the email as sent and moves ${row.full_name} to the rejected stage${isDecided(row.stage) ? '' : '. They’re still in the workflow right now'}.`}
       </p>
     </div>
   )

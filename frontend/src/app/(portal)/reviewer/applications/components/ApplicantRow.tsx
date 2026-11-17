@@ -4,7 +4,7 @@ import { cn, formatDate } from '@/lib/utils'
 import { TABLE_CELL } from '@/components/ui/table-styles'
 import { ReturnerBadge } from '@/components/ReturnerBadge'
 import { AnswerCell } from './AnswerCell'
-import { StageSelect } from './StageSelect'
+import { StageBadge } from './StageBadge'
 import { RATING_COLORS, RATING_LABEL } from '@/lib/interview-ratings'
 import { Badge } from '@/components/ui/badge'
 
@@ -18,11 +18,9 @@ export function ApplicantRow({
   answersLoading,
   availabilityDays,
   interview,
-  selectable,
-  selected,
-  onToggleSelect,
   isSelected,
   onSelect,
+  fullPageHref,
 }: {
   applicant: ApplicantApplication
   columns: Question[]
@@ -33,11 +31,9 @@ export function ApplicantRow({
   answersLoading: boolean
   availabilityDays: string[]
   interview: Interview | null
-  selectable: boolean
-  selected: boolean
-  onToggleSelect: () => void
   isSelected: boolean
   onSelect: () => void
+  fullPageHref: string
 }) {
   // Cmd/ctrl-click and middle-click bypass the side peek and open the
   // standalone /reviewer/applications/[id] page in a new tab instead — a
@@ -45,7 +41,7 @@ export function ApplicantRow({
   // relying on the browser's native new-tab behavior.
   function handleClick(e: React.MouseEvent) {
     if (e.metaKey || e.ctrlKey) {
-      window.open(`/reviewer/applications/${applicant.id}`, '_blank')
+      window.open(fullPageHref, '_blank')
     } else {
       onSelect()
     }
@@ -53,7 +49,7 @@ export function ApplicantRow({
 
   function handleAuxClick(e: React.MouseEvent) {
     if (e.button === 1) {
-      window.open(`/reviewer/applications/${applicant.id}`, '_blank')
+      window.open(fullPageHref, '_blank')
     }
   }
 
@@ -69,20 +65,6 @@ export function ApplicantRow({
         isSelected ? 'bg-gray-100' : 'bg-white hover:bg-gray-50'
       )}
     >
-      {selectable && (
-        <td
-          className={cn(CELL, 'border-r border-gray-100')}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <input
-            type="checkbox"
-            className="accent-primary"
-            checked={selected}
-            onChange={onToggleSelect}
-            aria-label={`Select ${applicant.fullName}`}
-          />
-        </td>
-      )}
       <td
         className={cn(
           CELL,
@@ -139,11 +121,7 @@ export function ApplicantRow({
         )
       })}
       <td className={cn(CELL, 'border-r border-gray-100 whitespace-nowrap')}>
-        <StageSelect
-          applicationId={applicant.id}
-          stage={applicant.stage}
-          editable={selectable}
-        />
+        <StageBadge stage={applicant.stage} />
       </td>
       <td className={cn(CELL, 'text-text-muted text-sm whitespace-nowrap')}>
         {formatDate(applicant.submittedAt)}

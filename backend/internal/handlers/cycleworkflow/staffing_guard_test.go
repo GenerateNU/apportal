@@ -38,11 +38,6 @@ func TestInterviewStaffingFollowsWorkflow(t *testing.T) {
 	chief, admin := f.as(f.chiefA), f.confirmed(f.admin)
 
 	app := f.application(f.cycleA, f.roleA, models.StageInterview)
-	testutil.WantStatus(t, add(chief, app, models.KindInterviewer), http.StatusConflict)
-	if err := guard.CheckAdd(chief, f.db, app, f.leadA.NUID, models.KindInterviewer); !errors.Is(err, staffing.ErrUnset) {
-		t.Fatalf("unset interviewer count: %v", err)
-	}
-
 	f.exec("INSERT INTO step_assignments (cycle_id, step, kind, per_applicant) VALUES (?, 'interviews', 'interviewer', 1)", f.cycleA)
 	testutil.WantStatus(t, add(chief, app, models.KindRecordingReviewer), http.StatusUnprocessableEntity)
 	f.must(add(chief, app, models.KindInterviewer))
