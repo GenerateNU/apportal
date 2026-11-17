@@ -1,21 +1,16 @@
 'use client'
 
 import { ChevronRight } from 'lucide-react'
-import { Avatar } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
-import { Card } from '@/components/ui/card'
 import type { DecisionRow, DecisionTemplate } from '@/lib/api/types'
-import { KIND_LABEL, STATUS_BADGE, STATUS_LABEL, isDecided } from './constants'
+import { STATUS_BADGE, STATUS_LABEL, isDecided } from './constants'
 import { DecisionEditor } from './DecisionEditor'
-import { useRoleLookup } from '@/lib/queries/roles'
 
 interface DecisionListRowProps {
   row: DecisionRow
   template?: DecisionTemplate
   cycleName: string
   cycleId: string
-  // Open state is owned by the list, which keeps one row open at a time —
-  // sending these is sequential work, so it hands over the next one after each.
   open: boolean
   onToggle: () => void
   onSent?: () => void
@@ -30,59 +25,35 @@ export function DecisionListRow({
   onToggle,
   onSent,
 }: DecisionListRowProps) {
-  const { roleLabel, roleChipClass } = useRoleLookup()
   return (
-    <Card variant="flat" padding="none" className="overflow-hidden">
+    <div className="overflow-hidden">
       <button
         type="button"
         onClick={onToggle}
         aria-expanded={open}
-        className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-gray-50"
+        className="flex w-full items-center gap-3 px-5 py-3 text-left transition-colors hover:bg-gray-50"
       >
         <ChevronRight
           size={16}
           className={`text-text-faint shrink-0 transition-transform ${open ? 'rotate-90' : ''}`}
         />
-        <Avatar name={row.full_name} size="sm" />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <p className="text-text-default truncate text-sm font-medium">
+            <p className="text-ink truncate text-sm font-medium">
               {row.full_name}
             </p>
             {!isDecided(row.stage) && (
               <Badge size="sm" className="bg-amber-50 text-amber-700">
-                Still in pipeline
+                Not decided
               </Badge>
             )}
           </div>
           <p className="text-text-faint truncate text-xs">{row.email}</p>
-          {/* Narrow screens drop the kind and interviewer columns; keep them here. */}
-          <p className="text-text-muted truncate text-xs lg:hidden">
-            <span className="md:hidden">{KIND_LABEL[row.kind]}</span>
-            {row.kind === 'rejection_post_interview' && (
-              <>
-                <span className="md:hidden"> · </span>
-                {row.interviewers.map((iv) => iv.name).join(', ') ||
-                  'No interviewer'}
-              </>
-            )}
-          </p>
         </div>
-
-        <Badge
-          className={`hidden shrink-0 sm:inline-flex ${roleChipClass(row.role_id)}`}
-        >
-          {roleLabel(row.role_id)}
-        </Badge>
-        <span className="text-text-muted hidden w-28 shrink-0 text-xs md:block">
-          {KIND_LABEL[row.kind]}
-        </span>
-        {/* Who owes the paragraph — the column a chief scans to chase people. */}
-        <span className="text-text-muted hidden w-36 shrink-0 truncate text-xs lg:block">
+        <span className="text-text-muted hidden w-56 shrink-0 truncate text-xs sm:block">
           {row.kind === 'rejection_post_interview'
-            ? row.interviewers.map((iv) => iv.name).join(', ') ||
-              'No interviewer'
-            : '—'}
+            ? `Interviewed by ${row.interviewers.map((iv) => iv.name).join(', ') || 'no one'}`
+            : 'No interview'}
         </span>
         <Badge className={STATUS_BADGE[row.status]}>
           {STATUS_LABEL[row.status]}
@@ -98,6 +69,6 @@ export function DecisionListRow({
           onSent={onSent}
         />
       )}
-    </Card>
+    </div>
   )
 }

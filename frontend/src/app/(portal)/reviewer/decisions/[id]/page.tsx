@@ -51,7 +51,7 @@ export default async function DecisionDraftPage({
     queryClient.prefetchQuery({
       queryKey: queryKeys.decisions.list(cycleId),
       queryFn: async () =>
-        ((await listDecisions(cycleId, undefined, requestOptions)) ??
+        ((await listDecisions(cycleId, undefined, requestOptions))?.rows ??
           []) as DecisionRow[],
     }),
     queryClient.prefetchQuery({

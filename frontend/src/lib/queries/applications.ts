@@ -6,11 +6,10 @@ import {
 } from '@tanstack/react-query'
 import {
   createApplication,
-  deleteApplication,
   getApplication,
+  getApplicationSummary,
   listApplications,
   updateApplication,
-  updateApplicationStages,
 } from '@/generated/applications/applications'
 import type { RequestOptions } from '@/lib/api/orval-mutator'
 import type {
@@ -88,6 +87,9 @@ export function useApplications(
   })
 }
 
+// useInfiniteApplications walks the same paged endpoint one cursor at a time,
+// accumulating rows for a scroll-to-load table. `params` carries the page size
+// but never the cursor, so every filter change starts a fresh scroll from the top.
 export function useInfiniteApplications(
   params?: ApplicationListParams,
   opts?: RequestOptions,
@@ -117,6 +119,14 @@ export function useInfiniteApplications(
     total: pages[0]?.total ?? 0,
     stageCounts: pages[0]?.stage_counts ?? {},
   }
+}
+
+export function useApplicationSummary(cycleId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: queryKeys.applications.summary(cycleId),
+    queryFn: async () => (await getApplicationSummary(cycleId)).positions ?? [],
+    enabled: enabled && !!cycleId,
+  })
 }
 
 // Two params don't cross the wire as they're typed here. answer_filters is
@@ -174,40 +184,6 @@ export function useUpdateApplication() {
     }) => updateApplication(vars.id, vars.body, vars.opts),
     onSuccess: (data, vars) => {
       queryClient.setQueryData(queryKeys.applications.detail(vars.id), data)
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.applications.lists(),
-      })
-    },
-  })
-}
-
-export function useUpdateApplicationStages() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (vars: Parameters<typeof updateApplicationStages>[0]) =>
-      updateApplicationStages(vars),
-    onSuccess: (data) => {
-      for (const app of data ?? []) {
-        queryClient.setQueryData(queryKeys.applications.detail(app.id), app)
-      }
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.applications.lists(),
-      })
-    },
-  })
-}
-
-// Discards an applicant's own in-progress draft (owner + draft-only,
-// enforced server-side) so they can start over against a fresh form.
-export function useDeleteApplication() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (vars: { id: string; opts?: RequestOptions }) =>
-      deleteApplication(vars.id, vars.opts),
-    onSuccess: (_data, vars) => {
-      queryClient.removeQueries({
-        queryKey: queryKeys.applications.detail(vars.id),
-      })
       queryClient.invalidateQueries({
         queryKey: queryKeys.applications.lists(),
       })

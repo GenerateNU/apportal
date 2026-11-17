@@ -37,7 +37,7 @@ func (f *fixture) dryRun(a middleware.Actor) context.Context {
 
 func (f *fixture) overrides(op workflow.Op) []models.WorkflowOverride {
 	var rows []models.WorkflowOverride
-	f.must(f.db.Where("cycle_id = ? AND op = ?", f.cycleA, op).Find(&rows).Error)
+	f.must(f.db.Where("cycle_id = ? AND op = ?", f.cycleA, op).Order("created_at").Order("id").Find(&rows).Error)
 	return rows
 }
 
@@ -77,6 +77,7 @@ func TestScenarioDryRunPreviewsWithoutChanging(t *testing.T) {
 func TestScenarioOverridesNeedConfirmAndAreAudited(t *testing.T) {
 	f := newFixture(t)
 	f.intoReviews()
+	before := len(f.overrides(workflow.OpSetDeadline))
 	in := &SetDeadlineInput{ID: f.cycleA, RoleID: f.roleA, Step: models.StepApplications, Kind: models.KindApplicant}
 	in.Body.DueAt = f.now.Add(2 * time.Hour)
 
@@ -87,13 +88,18 @@ func TestScenarioOverridesNeedConfirmAndAreAudited(t *testing.T) {
 	confirmedDry := middleware.WithIntent(f.as(f.chiefA), middleware.Intent{Confirm: true, DryRun: true})
 	_, err = f.s.setDeadline(confirmedDry, in)
 	f.must(err)
-	if n := len(f.overrides(workflow.OpSetDeadline)); n != 0 {
+	if n := len(f.overrides(workflow.OpSetDeadline)) - before; n != 0 {
 		t.Fatalf("a dry run recorded %d overrides", n)
 	}
 
 	_, err = f.s.setDeadline(f.confirmed(f.chiefA), in)
 	f.must(err)
-	rows := f.overrides(workflow.OpSetDeadline)
+	var rows []models.WorkflowOverride
+	for _, r := range f.overrides(workflow.OpSetDeadline) {
+		if r.Level == string(workflow.LevelOverride) {
+			rows = append(rows, r)
+		}
+	}
 	if len(rows) != 1 || rows[0].ActorNUID != f.chiefA.NUID || rows[0].Level != string(workflow.LevelOverride) || len(rows[0].Plan) == 0 {
 		t.Fatalf("audit rows: %+v", rows)
 	}
@@ -276,8 +282,8 @@ func TestScenarioPreferenceListDeadline(t *testing.T) {
 	f.must(svc.RequireAnyOpeningWorkEditable(f.as(f.leadA), f.cycleA, workflow.WorkPreferenceList))
 
 	_, err = f.s.clearDeadline(f.as(f.chiefA), &DeadlineKindInput{ID: f.cycleA, RoleID: f.roleA, Step: models.StepDecisions, Kind: models.KindPreferenceList})
-	f.must(err)
-	f.must(edit(f.as(f.leadA)))
+	testutil.WantStatus(t, err, http.StatusConflict)
+	testutil.WantStatus(t, edit(f.as(f.leadA)), http.StatusForbidden)
 }
 
 func TestScenarioWorkForAStepThatIsOff(t *testing.T) {
@@ -344,4 +350,88 @@ func TestScenarioOverviewCounts(t *testing.T) {
 	if review == nil || review.Total != 2 || review.Done != 1 {
 		t.Fatalf("review task: %+v", review)
 	}
+}
+
+func TestScenarioClosingEarlyNeedsConfirm(t *testing.T) {
+	f := newFixture(t)
+	f.openApplications()
+	closeNow := func(ctx context.Context) error {
+		_, err := f.s.workflow.SetDeadline(ctx, workflow.DeadlineInput{CycleID: f.cycleA, RoleID: f.roleA, Step: models.StepApplications, Kind: models.KindApplicant, DueAt: f.now})
+		return err
+	}
+	needsConfirm(t, closeNow(f.as(f.chiefA)))
+	if f.stateOf(f.roleA) != workflow.StateOpen {
+		t.Fatal("an unconfirmed close must leave applications open")
+	}
+	f.must(closeNow(f.confirmed(f.chiefA)))
+	if f.stateOf(f.roleA) != workflow.StateClosed {
+		t.Fatal("a confirmed close shuts applications")
+	}
+	if len(f.overrides(workflow.OpSetDeadline)) == 0 {
+		t.Fatal("closing early should be recorded")
+	}
+	_, err := f.s.workflow.SetDeadline(f.as(f.chiefA), workflow.DeadlineInput{CycleID: f.cycleA, RoleID: f.roleA, Step: models.StepApplications, Kind: models.KindApplicant, DueAt: f.now.Add(48 * time.Hour)})
+	if err == nil {
+		return
+	}
+	needsConfirm(t, err)
+}
+
+func (f *fixture) stateOf(role string) workflow.State {
+	st, err := f.s.workflow.State(context.Background(), f.cycleA)
+	f.must(err)
+	return st.State(role, models.StepApplications, time.Now())
+}
+
+func TestScenarioShortlistRejectsTheRest(t *testing.T) {
+	f := newFixture(t)
+	f.intoReviews()
+	f.deadline(f.roleA, models.StepReviews, models.KindReviewer, f.now.Add(time.Hour))
+	f.assignReviewer(f.apps[0])
+	f.release(f.roleA, models.StepReviews)
+	f.exec("INSERT INTO written_reviews (application_id, reviewer_nuid, submitted_at) VALUES (?, ?, now())", f.apps[0], f.leadA.NUID)
+	admin := f.confirmed(f.admin)
+	_, _, err := f.s.workflow.Advance(admin, workflow.AdvanceInput{
+		CycleID: f.cycleA, Step: models.StepReviews, RoleID: f.roleA,
+		ApplicationIDs: []string{f.apps[0]}, RejectRest: true,
+	})
+	f.must(err)
+	f.wantStage(f.apps[0], models.StageInterview)
+	f.wantStage(f.apps[1], models.StageRejected)
+	var done int64
+	f.must(f.db.Model(&models.CycleStep{}).Where("cycle_id = ? AND step = ? AND completed_at IS NOT NULL", f.cycleA, models.StepReviews).Count(&done).Error)
+	if done != 1 {
+		t.Fatal("reviews should complete once nobody is left in it")
+	}
+
+	_, err = f.s.undo(admin, &UndoInput{ID: f.cycleA, Step: models.StepReviews})
+	f.must(err)
+	f.wantStage(f.apps[0], models.StageLeadReview)
+	f.wantStage(f.apps[1], models.StageLeadReview)
+}
+
+func TestScenarioDecideRejectsTheUndrafted(t *testing.T) {
+	f := newFixture(t)
+	picked := f.application(f.cycleA, f.roleA, models.StageAccepted)
+	left := f.application(f.cycleA, f.roleA, models.StageSelection)
+	f.exec("UPDATE applications SET stage = 'rejected' WHERE id IN ?", f.apps)
+	_, _, err := f.s.workflow.Decide(f.confirmed(f.admin), f.cycleA, f.roleA, nil)
+	f.must(err)
+	f.wantStage(picked, models.StageAccepted)
+	f.wantStage(left, models.StageRejected)
+	var done int64
+	f.must(f.db.Model(&models.CycleStep{}).Where("cycle_id = ? AND step = ? AND completed_at IS NOT NULL", f.cycleA, models.StepDecisions).Count(&done).Error)
+	if done != 1 {
+		t.Fatal("decisions should close once nobody is left in it")
+	}
+}
+
+func TestScenarioRejectionsDoNotFreezePreferenceLists(t *testing.T) {
+	f := newFixture(t)
+	f.application(f.cycleA, f.roleA, models.StageSelection)
+	f.exec("UPDATE applications SET stage = 'rejected' WHERE id IN ?", f.apps[:len(f.apps)-1])
+	_, _, err := f.s.workflow.Decide(f.confirmed(f.admin), f.cycleA, f.roleA, nil)
+	f.must(err)
+	f.exec("UPDATE cycle_steps SET completed_at = NULL WHERE cycle_id = ? AND step = ?", f.cycleA, models.StepDecisions)
+	f.must(f.s.workflow.RequireOpeningWorkEditable(f.as(f.admin), f.cycleA, f.roleA, workflow.WorkPreferenceList))
 }

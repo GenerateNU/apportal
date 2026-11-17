@@ -1,7 +1,7 @@
 import type { DraftStatus } from '@/lib/api/types'
 
 export const DRAFT_STATUS_LABEL: Record<DraftStatus, string> = {
-  setup: 'Setting up',
+  setup: 'Not started',
   active: 'In progress',
   complete: 'Complete',
 }

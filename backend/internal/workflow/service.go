@@ -55,7 +55,7 @@ func (s *Service) SetDeadline(ctx context.Context, in DeadlineInput) (Preview, e
 	if err != nil {
 		return Preview{}, err
 	}
-	in.Caller = c
+	in.Caller, in.Now = c, s.now()
 	return setDeadline(db, in)
 }
 
@@ -64,7 +64,7 @@ func (s *Service) ClearDeadline(ctx context.Context, cycleID, roleID string, ste
 	if err != nil {
 		return Preview{}, err
 	}
-	return clearDeadline(db, cycleID, roleID, step, k, c)
+	return clearDeadline(db, cycleID, roleID, step, k, c, s.now())
 }
 
 func (s *Service) Release(ctx context.Context, cycleID, roleID string, step models.Step) (Preview, error) {
@@ -118,4 +118,12 @@ func (s *Service) CloseCycle(ctx context.Context, cycleID string) (models.Cycle,
 		return models.Cycle{}, Preview{}, err
 	}
 	return closeCycle(db, cycleID, c)
+}
+
+func (s *Service) Decide(ctx context.Context, cycleID, roleID string, accepted []string) ([]string, Preview, error) {
+	db, c, err := s.as(ctx, cycleID)
+	if err != nil {
+		return nil, Preview{}, err
+	}
+	return decide(db, cycleID, roleID, accepted, c, s.now())
 }

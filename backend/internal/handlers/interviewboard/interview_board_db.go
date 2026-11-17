@@ -9,13 +9,18 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/workflow"
 )
 
-func boardApplicants(db *gorm.DB, cycleID, roleID string) ([]InterviewBoardRow, error) {
+func boardApplicants(db *gorm.DB, cycleID, roleID string, history bool) ([]InterviewBoardRow, error) {
 	rows := []InterviewBoardRow{}
 	q := db.Table("applications a").
 		Select("a.id AS application_id, a.user_nuid AS applicant_nuid, COALESCE(u.full_name, a.user_nuid) AS full_name, COALESCE(u.email, '') AS email, a.role_id, a.stage").
 		Joins("LEFT JOIN users u ON u.nuid = a.user_nuid").
-		Where("a.cycle_id = ? AND a.stage IN ?", cycleID, interviewStages).
+		Where("a.cycle_id = ?", cycleID).
 		Order("full_name").Order("a.id")
+	if history {
+		q = q.Where("a.stage IN ? OR EXISTS (SELECT 1 FROM interviews i WHERE i.application_id = a.id)", interviewStages)
+	} else {
+		q = q.Where("a.stage IN ?", interviewStages)
+	}
 	if roleID != "" {
 		q = q.Where("a.role_id = ?", roleID)
 	}

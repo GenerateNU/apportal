@@ -138,6 +138,7 @@ func TestShortlistAdvanceAdminOverride(t *testing.T) {
 	app := f.application(f.cycleA, f.roleA, models.StageChiefReview)
 	f.closeApplications()
 	f.deadline(f.roleA, models.StepReviews, models.KindReviewer, f.now.Add(time.Hour))
+	f.assignReviewer(f.apps[0])
 	f.release(f.roleA, models.StepReviews)
 	f.deadline(f.roleA, models.StepReviews, models.KindReviewer, f.now.Add(-time.Minute))
 	f.freeze(f.roleA, models.StepDecisions)

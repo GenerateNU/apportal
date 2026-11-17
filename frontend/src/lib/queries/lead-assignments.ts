@@ -3,7 +3,6 @@ import {
   assignLead,
   listLeadAssignments,
   unassignAllLeads,
-  unassignLead,
 } from '@/generated/lead-assignments/lead-assignments'
 import type { LeadAssignment } from '@/generated/model'
 import type { RequestOptions } from '@/lib/api/orval-mutator'
@@ -31,22 +30,6 @@ export function useAssignLead() {
       opts?: RequestOptions
     }) =>
       assignLead(vars.applicationId, { lead_nuid: vars.leadNuid }, vars.opts),
-    onSuccess: (_data, vars) => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.leadAssignments.list(vars.applicationId),
-      })
-    },
-  })
-}
-
-export function useUnassignLead() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (vars: {
-      id: string
-      applicationId: string
-      opts?: RequestOptions
-    }) => unassignLead(vars.id, vars.opts),
     onSuccess: (_data, vars) => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.leadAssignments.list(vars.applicationId),

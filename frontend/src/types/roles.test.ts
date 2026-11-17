@@ -29,7 +29,7 @@ describe('defaultDashboard', () => {
   })
 
   it('lands admins and applicants on their own views', () => {
-    expect(defaultDashboard(['admin'])).toBe('/admin/applications')
+    expect(defaultDashboard(['admin'])).toBe('/admin/branches')
     expect(defaultDashboard(['applicant'])).toBe('/applicant/applications')
   })
 })

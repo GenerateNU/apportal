@@ -17,6 +17,7 @@ import type { DecisionRow, DecisionTemplate } from '@/lib/api/types'
 import { useStaffCycles } from '@/lib/queries/cycle-staff'
 import { useDecisions, useDecisionTemplates } from '@/lib/queries/decisions'
 import { useCycleRoles, useRoleLookup } from '@/lib/queries/roles'
+import { useBranchName } from '../../components/useBranchName'
 import { useCurrentUser } from '@/lib/queries/users'
 import { cn, formatDate } from '@/lib/utils'
 import {
@@ -136,11 +137,13 @@ function DraftBody({
 }) {
   const { roleLabel, roleChipClass } = useRoleLookup()
   const draft = useFeedbackDraft(row, cycleId, canWrite)
+  const branchName = useBranchName(cycleId)
   const rendered = renderDecision(
     { ...row, feedback: draft.feedback, compliments: draft.compliments },
     template,
     cycleName,
-    roleLabel(row.role_id)
+    roleLabel(row.role_id),
+    branchName
   )
 
   const filled = [draft.feedback.trim(), draft.compliments.trim()].filter(

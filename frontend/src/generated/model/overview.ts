@@ -9,6 +9,7 @@ A write the workflow flags as an override or destructive answers 409 with an err
  */
 import type { OverviewCurrentStep } from './overviewCurrentStep';
 import type { OverviewNextActions } from './overviewNextActions';
+import type { OverviewPhases } from './overviewPhases';
 import type { OverviewRole } from './overviewRole';
 import type { OverviewSteps } from './overviewSteps';
 import type { OverviewTasks } from './overviewTasks';
@@ -17,6 +18,7 @@ export interface Overview {
   current_step?: OverviewCurrentStep;
   cycle_id: string;
   next_actions: OverviewNextActions;
+  phases: OverviewPhases;
   role: OverviewRole;
   steps: OverviewSteps;
   tasks: OverviewTasks;

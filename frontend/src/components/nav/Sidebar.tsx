@@ -8,13 +8,13 @@ import { usePathname, useRouter } from 'next/navigation'
 import {
   Users,
   FileText,
-  Calendar,
   PanelLeftClose,
   PanelLeftOpen,
   GitBranch,
   LogOut,
   LayoutList,
 } from 'lucide-react'
+import { ChiefCycleNav } from './ChiefCycleNav'
 import { LeadPhaseNav } from './LeadPhaseNav'
 import { withApplyItems } from './nav-sections'
 import { SectionCaret } from './SectionHeader'
@@ -101,11 +101,6 @@ const sectionsByRole: Record<Role, NavSection[]> = {
       label: 'Admin',
       items: [
         { href: '/admin/branches', label: 'Branches', icon: GitBranch },
-        {
-          href: '/admin/applications',
-          label: 'Application Forms',
-          icon: FileText,
-        },
         { href: '/admin/members', label: 'Members', icon: Users },
       ],
     },
@@ -272,12 +267,8 @@ export default function Sidebar({
 
   const { data: myCycles, isFetched: myCyclesFetched } = useMyCycles()
   const offCycle = !isChief && myCyclesFetched && (myCycles ?? []).length === 0
-  const chiefMode = !!isChief && roles.includes('reviewer')
-  const leadMode =
-    !isChief &&
-    roles.includes('reviewer') &&
-    myCyclesFetched &&
-    (myCycles ?? []).length > 0
+  const chiefMode = !!isChief
+  const leadMode = !isChief && myCyclesFetched && (myCycles ?? []).length > 0
   const cycleNavMode = chiefMode ? 'chief' : leadMode ? 'lead' : null
   const staffSections = roleOrder
     .filter(
@@ -383,7 +374,11 @@ export default function Sidebar({
       >
         {cycleNavMode && (
           <Suspense>
-            <LeadPhaseNav collapsed={collapsed} />
+            {cycleNavMode === 'chief' ? (
+              <ChiefCycleNav collapsed={collapsed} />
+            ) : (
+              <LeadPhaseNav collapsed={collapsed} />
+            )}
           </Suspense>
         )}
         {sections.map((section) => (
@@ -397,7 +392,7 @@ export default function Sidebar({
         ))}
       </nav>
 
-      {!collapsed && (
+      {!collapsed && staffSections.length === 0 && !cycleNavMode && (
         <HelpContact className="px-5 pb-4 text-left leading-relaxed" />
       )}
       {/* User */}

@@ -1,15 +1,12 @@
 'use client'
 
 import { usePathname } from 'next/navigation'
-import { PageContainer } from '@/components/PageContainer'
-import { Breadcrumbs } from '@/components/ui/breadcrumbs'
+import { PageLoading } from '@/components/PageLoading'
 import { useBranches } from '@/lib/queries/branches'
 import { useCycles } from '@/lib/queries/cycles'
 import { useRoles } from '@/lib/queries/roles'
 import { branchCrumbs, branchPathIds } from './lib/breadcrumbs'
 
-// Keeps the crumbs where the page will draw them, so they don't jump while
-// the next page loads.
 export default function BranchesLoading() {
   const { branchId, cycleId, roleId } = branchPathIds(usePathname())
   const { data: branches = [] } = useBranches()
@@ -27,14 +24,5 @@ export default function BranchesLoading() {
       : undefined,
   })
 
-  return (
-    <PageContainer>
-      <Breadcrumbs items={crumbs} />
-      <div
-        role="status"
-        aria-label="Loading"
-        className="border-text-faint border-t-primary mx-auto mt-16 size-8 animate-spin rounded-full border-4"
-      />
-    </PageContainer>
-  )
+  return <PageLoading crumbs={crumbs} />
 }

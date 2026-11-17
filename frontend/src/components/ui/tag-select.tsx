@@ -221,7 +221,7 @@ export function TagSelect({
                 </div>
                 <p className="text-text-faint px-3 pt-2 text-xs">
                   {full
-                    ? `Up to ${max} tags — remove one to add another.`
+                    ? `Up to ${max} tags. Remove one to add another.`
                     : 'Select an option or create one'}
                 </p>
                 <div className="max-h-64 overflow-y-auto p-1">
@@ -267,7 +267,7 @@ export function TagSelect({
                   )}
                   {filtered.length === 0 && !trimmed && (
                     <p className="text-text-faint px-2 py-1.5 text-sm">
-                      No tags yet — type a name to create one.
+                      No tags yet. Type a name to create one.
                     </p>
                   )}
                 </div>
@@ -305,7 +305,7 @@ function EditPanel({
     try {
       await fn()
     } catch {
-      setError('That did not work — the name may already be taken.')
+      setError('That did not work. The name may already be taken.')
     }
   }
 
@@ -358,7 +358,7 @@ function EditPanel({
         className="mt-3 w-full rounded-md px-2 py-1.5 text-left text-sm text-red-600 hover:bg-red-50"
       >
         {confirmDelete
-          ? 'Confirm — removes it from every application'
+          ? 'Confirm: removes it from every application'
           : 'Delete tag'}
       </button>
       {error && <p className="px-1 pt-1 text-xs text-red-600">{error}</p>}

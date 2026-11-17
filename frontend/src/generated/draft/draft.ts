@@ -31,6 +31,7 @@ import type {
   DraftBoard,
   DraftPick,
   ErrorModel,
+  FinishDraftOutputBody,
   GetDraftBoardParams,
   ListDraftedApplications200,
   MakeDraftPickInputBody,
@@ -456,6 +457,69 @@ export const useUpdateDraft = <TError = ErrorModel | ErrorModel | ErrorModel | E
       > => {
 
       const mutationOptions = getUpdateDraftMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * Chief only, once the draft is complete. Drafted applicants are already accepted; everyone left in Decisions for the position is rejected, and Decisions closes once nobody's left.
+ * @summary Turn down everyone the draft didn't pick
+ */
+export const finishDraft = (
+    id: string,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<FinishDraftOutputBody>(
+      {url: `/drafts/${id}/finish`, method: 'POST', signal
+    },
+      options);
+    }
+  
+
+
+export const getFinishDraftMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof finishDraft>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof finishDraft>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['finishDraft'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof finishDraft>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  finishDraft(id,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type FinishDraftMutationResult = NonNullable<Awaited<ReturnType<typeof finishDraft>>>
+    
+    export type FinishDraftMutationError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel
+
+    /**
+ * @summary Turn down everyone the draft didn't pick
+ */
+export const useFinishDraft = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof finishDraft>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof finishDraft>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+
+      const mutationOptions = getFinishDraftMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }

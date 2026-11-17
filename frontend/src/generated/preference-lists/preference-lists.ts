@@ -180,7 +180,7 @@ export function useListPreferenceLists<TData = Awaited<ReturnType<typeof listPre
 
 
 /**
- * Reviewer only. The creator is added as the group's first member. Rejected once every role's preference-list deadline for the cycle has passed.
+ * Reviewer only. A lead who creates a group joins it; a chief or admin doesn't. Rejected once every role's preference-list deadline for the cycle has passed.
  * @summary Create a preference list group for a cycle
  */
 export const createPreferenceList = (
@@ -945,7 +945,7 @@ export const useSetPreferenceListMeetingDay = <TError = ErrorModel | ErrorModel 
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Any current member (or a chief/admin) may add another lead, chief, or admin. Rejected once the group has 4 members.
+ * Any current member (or a chief/admin) may add another lead, chief, or admin.
  * @summary Add a lead as a collaborator on a preference list
  */
 export const addPreferenceListMember = (

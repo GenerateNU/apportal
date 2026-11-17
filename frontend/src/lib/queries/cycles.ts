@@ -1,8 +1,6 @@
-import type { QueryClient } from '@tanstack/react-query'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   createCycle,
-  cycleTemplateSummaries,
   cycleTemplateSummary,
   getCycle,
   listCycles,
@@ -54,37 +52,6 @@ export function useCycleTemplateSummary(
     queryFn: async () =>
       ((await cycleTemplateSummary(cycleId, opts)) ?? []) as CycleRoleSummary[],
     enabled: !!cycleId,
-  })
-}
-
-export async function fetchCycleTemplateSummaries(
-  cycleIds: string[],
-  queryClient: QueryClient,
-  opts?: RequestOptions
-) {
-  const rows = ((await cycleTemplateSummaries(
-    { cycle_ids: cycleIds.join(',') },
-    opts
-  )) ?? []) as CycleRoleSummary[]
-  const byCycle: Record<string, CycleRoleSummary[]> = {}
-  for (const id of cycleIds) byCycle[id] = []
-  for (const row of rows) byCycle[row.cycle_id]?.push(row)
-  for (const [id, list] of Object.entries(byCycle)) {
-    queryClient.setQueryData(queryKeys.cycles.templateSummary(id), list)
-  }
-  return byCycle
-}
-
-// Every cycle's role summaries in one request, for boards spanning cycles.
-export function useCycleTemplateSummaries(
-  cycleIds: string[],
-  opts?: RequestOptions
-) {
-  const queryClient = useQueryClient()
-  return useQuery({
-    queryKey: queryKeys.cycles.templateSummaries(cycleIds),
-    queryFn: () => fetchCycleTemplateSummaries(cycleIds, queryClient, opts),
-    enabled: cycleIds.length > 0,
   })
 }
 

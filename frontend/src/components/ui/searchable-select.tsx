@@ -32,7 +32,6 @@ export function SearchableSelect({
   className,
   ariaLabel,
   variant = 'box',
-  onSearch,
 }: {
   options: SearchableSelectOption[]
   value?: string
@@ -43,19 +42,11 @@ export function SearchableSelect({
   className?: string
   ariaLabel?: string
   variant?: 'box' | 'link'
-  // Searching server-side: the caller refetches options for each query, so they aren't filtered here.
-  onSearch?: (query: string) => void
 }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
 
-  const search = (q: string) => {
-    setQuery(q)
-    onSearch?.(q)
-  }
-
-  const filtered =
-    !onSearch && query.trim()
+  const filtered = query.trim()
     ? options.filter((o) =>
         o.label.toLowerCase().includes(query.trim().toLowerCase())
       )
@@ -68,7 +59,7 @@ export function SearchableSelect({
       open={open}
       onOpenChange={(next) => {
         setOpen(next)
-        if (!next) search('')
+        if (!next) setQuery('')
       }}
     >
       <PopoverTrigger asChild>
@@ -104,7 +95,7 @@ export function SearchableSelect({
           <Input
             autoFocus
             value={query}
-            onChange={(e) => search(e.target.value)}
+            onChange={(e) => setQuery(e.target.value)}
             placeholder={searchPlaceholder}
             className="h-8"
           />
@@ -120,7 +111,7 @@ export function SearchableSelect({
                 onClick={() => {
                   onValueChange(o.value)
                   setOpen(false)
-                  search('')
+                  setQuery('')
                 }}
                 className="hover:bg-muted flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm"
               >

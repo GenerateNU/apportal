@@ -117,3 +117,16 @@ type DecisionDraftUpdate struct {
 	// PreviousStage is filled in by UpsertDecisionDraft, not by callers.
 	PreviousStage *models.ApplicationStage
 }
+
+type MarkSentInput struct {
+	ID   string `path:"id" doc:"Cycle ID"`
+	Body struct {
+		ApplicationIDs []string `json:"application_ids" minItems:"1" maxItems:"200" doc:"No-interview applicants whose letter went out"`
+	}
+}
+
+type MarkSentOutput struct {
+	Body struct {
+		Sent int `json:"sent" doc:"How many letters were newly marked sent"`
+	}
+}

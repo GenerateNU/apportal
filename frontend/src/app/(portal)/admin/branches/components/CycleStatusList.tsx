@@ -1,5 +1,7 @@
 import { SectionLabel } from '@/components/ui/section-label'
+import { Subheading } from '@/components/ui/subheading'
 import type { Cycle, Role } from '@/lib/api/types'
+import { cn } from '@/lib/utils'
 import { CYCLE_STATUS } from '../../cycles/lib/cycle-meta'
 import type { BranchCycleStatus } from '../lib/branch-cycles'
 import { CycleCard } from './CycleCard'
@@ -15,21 +17,44 @@ export function CycleStatusList({
 }) {
   const { label } = CYCLE_STATUS[status]
   const headingId = `cycles-${status}`
+  // Open and draft are the cycles someone is working on; closed ones are history.
+  const open = status !== 'closed'
+  const title = `${label} cycles · ${cycles.length}`
 
   return (
     <section
       aria-labelledby={headingId}
-      className="flex flex-col gap-4 border border-dashed border-gray-300 p-4 sm:p-5"
+      className={cn(
+        'flex flex-col',
+        open ? 'gap-4' : 'gap-3 border-t border-gray-200 pt-5'
+      )}
     >
-      <SectionLabel>
-        <span id={headingId}>{`${label} cycles · ${cycles.length}`}</span>
-      </SectionLabel>
+      {open ? (
+        <Subheading
+          id={headingId}
+          title={title}
+          hint={
+            status === 'open'
+              ? 'Cycles taking applications or running reviews right now.'
+              : 'Cycles still being set up.'
+          }
+        />
+      ) : (
+        <SectionLabel>
+          <span id={headingId}>{title}</span>
+        </SectionLabel>
+      )}
       {cycles.length === 0 ? (
-        <p className="text-text-muted py-4 text-center text-sm">
+        <p className="text-text-muted text-sm">
           {`No ${label.toLowerCase()} cycles in this branch.`}
         </p>
       ) : (
-        <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <ul
+          className={cn(
+            'grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3',
+            !open && 'opacity-80'
+          )}
+        >
           {cycles.map((cycle) => (
             <li key={cycle.id}>
               <CycleCard

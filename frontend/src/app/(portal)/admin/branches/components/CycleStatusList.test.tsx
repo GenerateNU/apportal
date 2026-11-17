@@ -33,11 +33,20 @@ describe('CycleStatusList', () => {
     expect(html).toContain('Fall 2026')
   })
 
-  it('wraps the group in a dashed border', () => {
-    const html = render(
+  it('gives open and draft cycles the prominent heading and closed a quiet label', () => {
+    const open = render(
       <CycleStatusList status="open" cycles={[fall]} roles={[]} />
     )
-    expect(html).toContain('border-dashed')
+    const draft = render(
+      <CycleStatusList status="draft" cycles={[fall]} roles={[]} />
+    )
+    const closed = render(
+      <CycleStatusList status="closed" cycles={[fall]} roles={[]} />
+    )
+    expect(open).toContain('Cycles taking applications')
+    expect(draft).toContain('Cycles still being set up')
+    expect(closed).not.toContain('Cycles still being set up')
+    expect(closed).toContain('border-t')
   })
 
   it('shows an empty state when there are no cycles', () => {

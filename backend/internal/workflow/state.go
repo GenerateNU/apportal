@@ -66,6 +66,18 @@ type CycleState struct {
 	// PeersReleased marks openings whose reviewers may see each other's reviews for a step.
 	PeersReleased map[key]bool
 	Missing       map[key][]missingSetup
+	HasTeam       bool
+	// Reviews is how far written reviews have got, loaded for the overview's page locks.
+	Reviews ReviewProgress
+	// Assigned counts reviewer and interviewer assignments per opening, for the release rule.
+	Assigned map[key]int
+	// Submitted counts finished written reviews per opening.
+	Submitted map[key]int
+}
+
+type ReviewProgress struct {
+	Assigned  int
+	Submitted int
 }
 
 func NewCycleState(cycleID string) *CycleState {
@@ -78,6 +90,8 @@ func NewCycleState(cycleID string) *CycleState {
 		Releases:    map[key]time.Time{},
 		Deadlines:   map[key]map[models.StepKind]Deadline{},
 		MovedInto:   map[key]bool{},
+		Assigned:    map[key]int{},
+		Submitted:   map[key]int{},
 		Counts:      map[key]int{},
 
 		PeersReleased: map[key]bool{},
@@ -203,8 +217,13 @@ func (f *CycleState) State(role string, s models.Step, now time.Time) State {
 	return deriveState(f.Released(role, s), main, now)
 }
 
+// Started is a step under way for an opening. Outcomes (a rejection mid-cycle) don't start a step reached by outcome.
 func (f *CycleState) Started(role string, s models.Step) bool {
-	return f.Released(role, s) || f.MovedInto[key{role, s}]
+	if f.Released(role, s) {
+		return true
+	}
+	t, _ := TypeOf(s)
+	return !t.ByOutcome && f.MovedInto[key{role, s}]
 }
 
 func (f *CycleState) StartedAnywhere(s models.Step) bool {
@@ -226,11 +245,23 @@ func (f *CycleState) Frozen(role string, s models.Step) bool {
 	return ok && f.Started(role, next)
 }
 
+// Ready is a step being over for an opening: past its deadline, or with nothing left to do.
 func (f *CycleState) Ready(role string, s models.Step, now time.Time) bool {
+	if s == models.StepDecisions {
+		return f.Done(s) || f.Count(role, s) == 0
+	}
 	if _, ok := MainKind(s); !ok {
 		return f.Released(role, s)
 	}
-	return f.State(role, s, now) == StateClosed
+	if f.State(role, s, now) == StateClosed {
+		return true
+	}
+	return s == models.StepReviews && f.Released(role, s) && f.allReviewsIn(role)
+}
+
+func (f *CycleState) allReviewsIn(role string) bool {
+	k := key{role, models.StepReviews}
+	return f.Assigned[k] > 0 && f.Submitted[k] >= f.Assigned[k]
 }
 
 func (f *CycleState) Done(s models.Step) bool { return f.CompletedAt[s] != nil }
@@ -244,11 +275,19 @@ func (f *CycleState) Current() (models.Step, bool) {
 	return "", false
 }
 
+// SetUp is whether the cycle has a position and a recruitment team, which every step waits on.
+func (f *CycleState) SetUp() bool { return len(f.Openings) > 0 && f.HasTeam }
+
 func (f *CycleState) StepStatus(s models.Step) Status {
 	if f.Done(s) {
 		return StatusDone
 	}
-	if cur, ok := f.Current(); (ok && cur == s) || f.StartedAnywhere(s) {
+	if !f.SetUp() {
+		return StatusLocked
+	}
+	// An outcome (a rejection, say) can land at any point, so it doesn't open a step reached by outcome.
+	t, _ := TypeOf(s)
+	if cur, ok := f.Current(); (ok && cur == s) || (!t.ByOutcome && f.StartedAnywhere(s)) {
 		return StatusOpen
 	}
 	return StatusLocked
@@ -301,10 +340,45 @@ func Load(db *gorm.DB, cycleID string) (*CycleState, error) {
 	for _, a := range assignments {
 		f.SetAssignment(a.Step, a.Kind, a.PerApplicant)
 	}
+	for _, t := range stepTypes {
+		for k, n := range t.DefaultCounts {
+			if _, set := f.Assignments[t.Step][k]; !set {
+				f.SetAssignment(t.Step, k, n)
+			}
+		}
+	}
 
 	if err := db.Model(&models.Role{}).Select("id AS role_id, name").Where("cycle_id = ?", cycleID).
 		Order("name").Order("id").Scan(&f.Openings).Error; err != nil {
 		return nil, err
+	}
+
+	var staff int64
+	if err := db.Table("(?) AS p", StaffPool(db, cycleID)).Limit(1).Count(&staff).Error; err != nil {
+		return nil, err
+	}
+	f.HasTeam = staff > 0
+
+	var assigned []struct {
+		RoleID string
+		Step   models.Step
+		N      int
+		Done   int
+	}
+	if err := db.Raw(`SELECT a.role_id, ? AS step, count(*) AS n, count(w.submitted_at) AS done FROM lead_assignments la
+			JOIN applications a ON a.id = la.application_id
+			LEFT JOIN written_reviews w ON w.application_id = la.application_id AND w.reviewer_nuid = la.lead_nuid
+			WHERE a.cycle_id = ? GROUP BY a.role_id
+		UNION ALL
+		SELECT a.role_id, ? AS step, count(*) AS n, 0 AS done FROM interviewers x
+			JOIN interviews i ON i.id = x.interview_id JOIN applications a ON a.id = i.application_id
+			WHERE a.cycle_id = ? GROUP BY a.role_id`,
+		models.StepReviews, cycleID, models.StepInterviews, cycleID).Scan(&assigned).Error; err != nil {
+		return nil, err
+	}
+	for _, r := range assigned {
+		f.Assigned[key{r.RoleID, r.Step}] = r.N
+		f.Submitted[key{r.RoleID, r.Step}] = r.Done
 	}
 
 	var releases []models.OpeningStep

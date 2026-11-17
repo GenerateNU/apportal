@@ -71,6 +71,9 @@ func (s *meetingSlotService) create(ctx context.Context, in *CreateSlotInput) (*
 	if err := s.edit(ctx, in.ID); err != nil {
 		return nil, err
 	}
+	if err := s.workflow.RequirePositions(ctx, in.ID); err != nil {
+		return nil, err
+	}
 	existing, err := s.slots.List(ctx, in.ID)
 	if err != nil {
 		return nil, utils.StoreErr(err)
@@ -171,6 +174,9 @@ func (s *meetingSlotService) clearStaffSlot(ctx context.Context, in *StaffSlotPa
 
 func (s *meetingSlotService) setMatchBySlot(ctx context.Context, in *MatchBySlotInput) (*MatchBySlotOutput, error) {
 	if err := s.edit(ctx, in.ID); err != nil {
+		return nil, err
+	}
+	if err := s.workflow.RequirePositions(ctx, in.ID); err != nil {
 		return nil, err
 	}
 	if err := s.slots.SetMatchBySlot(ctx, in.ID, in.Body.Enabled); err != nil {

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"slices"
 
+	"github.com/GenerateNU/apportal/backend/internal/workflow"
+
 	"github.com/danielgtaylor/huma/v2"
 
 	"github.com/GenerateNU/apportal/backend/internal/access"
@@ -14,8 +16,9 @@ import (
 )
 
 type cycleStaffService struct {
-	staffDB *CycleStaffDB
-	access  *access.Checker
+	staffDB  *CycleStaffDB
+	access   *access.Checker
+	workflow *workflow.Service
 }
 
 // Admins see any cycle's staff; a chief sees their own cycle's, to assign work.
@@ -42,6 +45,9 @@ func (s *cycleStaffService) set(ctx context.Context, in *SetStaffInput) (*StaffM
 	}
 	if !in.Body.Role.Valid() {
 		return nil, huma.Error422UnprocessableEntity("role must be lead or chief")
+	}
+	if err := s.workflow.RequirePositions(ctx, in.ID); err != nil {
+		return nil, err
 	}
 	cycleType, err := s.staffDB.CycleType(ctx, in.ID)
 	if err != nil {

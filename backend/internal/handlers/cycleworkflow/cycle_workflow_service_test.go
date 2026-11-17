@@ -105,6 +105,11 @@ func (f *fixture) deadline(role string, step models.Step, kind models.StepKind, 
 	f.applied(f.s.workflow.SetDeadline(f.confirmed(f.admin), workflow.DeadlineInput{CycleID: f.cycleA, RoleID: role, Step: step, Kind: kind, DueAt: due, DefaultHard: true}))
 }
 
+func (f *fixture) assignReviewer(app string) {
+	f.t.Helper()
+	f.exec("INSERT INTO lead_assignments (application_id, lead_nuid, assigned_by) VALUES (?, ?, ?) ON CONFLICT DO NOTHING", app, f.leadA.NUID, f.chiefA.NUID)
+}
+
 func (f *fixture) release(role string, step models.Step) {
 	f.t.Helper()
 	f.applied(f.s.workflow.Release(f.confirmed(f.admin), f.cycleA, role, step))
@@ -323,6 +328,8 @@ func TestReleaseRules(t *testing.T) {
 	f.deadline(f.roleA, models.StepReviews, models.KindReviewer, f.now.Add(2*time.Hour))
 	testutil.WantStatus(t, release(models.StepReviews), 409)
 	f.deadline(f.roleA, models.StepApplications, models.KindApplicant, f.now.Add(-time.Minute))
+	testutil.WantStatus(t, release(models.StepReviews), 409)
+	f.assignReviewer(f.apps[0])
 	f.must(release(models.StepReviews))
 
 	in := &SetDeadlineInput{ID: f.cycleA, RoleID: f.roleA, Step: models.StepApplications, Kind: models.KindApplicant}
@@ -425,6 +432,7 @@ func TestUndoBlockedByRelease(t *testing.T) {
 	_, err := f.advance(chief, models.StepApplications, nil, f.apps...)
 	f.must(err)
 	f.deadline(f.roleA, models.StepReviews, models.KindReviewer, f.now.Add(time.Hour))
+	f.assignReviewer(f.apps[0])
 	f.release(f.roleA, models.StepReviews)
 	_, err = f.s.undo(chief, &UndoInput{ID: f.cycleA, Step: models.StepApplications})
 	testutil.WantStatus(t, err, 409)
@@ -441,6 +449,7 @@ func TestAdvanceOnWorkComplete(t *testing.T) {
 	_, err = f.advance(chief, models.StepApplications, nil, f.apps[0])
 	f.must(err)
 	f.deadline(f.roleA, models.StepReviews, models.KindReviewer, f.now.Add(time.Hour))
+	f.assignReviewer(f.apps[0])
 	f.release(f.roleA, models.StepReviews)
 
 	_, err = f.advance(chief, models.StepReviews, nil, f.apps[0])
@@ -520,6 +529,7 @@ func TestMyWorkflowView(t *testing.T) {
 	}
 
 	f.deadline(f.roleA, models.StepReviews, models.KindReviewer, f.now.Add(time.Hour))
+	f.assignReviewer(f.apps[0])
 	f.release(f.roleA, models.StepReviews)
 	lead, err = f.s.getWorkflow(f.as(f.leadA), &CycleInput{ID: f.cycleA})
 	f.must(err)

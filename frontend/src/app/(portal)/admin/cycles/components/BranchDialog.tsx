@@ -76,7 +76,7 @@ export function BranchDialog({
             />
             {error && (
               <p className="text-destructive text-sm">
-                Couldn’t save — a branch with this name may already exist.
+                Couldn’t save. A branch with this name may already exist.
               </p>
             )}
           </div>

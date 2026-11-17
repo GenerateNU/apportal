@@ -39,6 +39,11 @@ func checkSubmission(ctx context.Context, db *gorm.DB, cycleID, roleID string, s
 		return utils.StoreErr(err)
 	}
 	f.applySteps(steps)
+	var name string
+	if err := db.Raw(`SELECT name FROM roles WHERE id = ?`, roleID).Scan(&name).Error; err != nil {
+		return utils.StoreErr(err)
+	}
+	f.Openings = []Opening{{RoleID: roleID, Name: name}}
 	if err := f.RequireStepRun(s); err != nil {
 		return err
 	}
@@ -51,12 +56,18 @@ func checkSubmission(ctx context.Context, db *gorm.DB, cycleID, roleID string, s
 	}
 	if next, ok := f.Next(s); ok {
 		var started int64
-		err := db.Raw(`SELECT count(*) FROM (
+		var err error
+		if t, _ := TypeOf(next); t.ByOutcome {
+			err = db.Raw(`SELECT count(*) FROM opening_steps WHERE cycle_id = ? AND role_id = ? AND step = ? AND released_at IS NOT NULL`,
+				cycleID, roleID, next).Scan(&started).Error
+		} else {
+			err = db.Raw(`SELECT count(*) FROM (
 			SELECT 1 FROM opening_steps WHERE cycle_id = ? AND role_id = ? AND step = ? AND released_at IS NOT NULL
 			UNION ALL
 			SELECT 1 FROM application_moves m JOIN applications a ON a.id = m.application_id
 			WHERE a.cycle_id = ? AND a.role_id = ? AND m.undone_at IS NULL AND m.to_stage IN ?
 		) t`, cycleID, roleID, next, cycleID, roleID, Stages(next)).Scan(&started).Error
+		}
 		if err != nil {
 			return utils.StoreErr(err)
 		}

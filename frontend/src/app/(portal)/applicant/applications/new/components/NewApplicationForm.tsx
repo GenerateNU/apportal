@@ -50,6 +50,7 @@ import {
 } from '../../lib/validation'
 import type { AnswerValue } from '../../components/QuestionField'
 import { PageHeader } from '@/components/ui/page-header'
+import { PageSkeletonBody } from '@/components/ui/skeleton'
 import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import {
   ApplicantPage,
@@ -79,10 +80,11 @@ function apiErrorDetail(err: unknown): string {
 
 function Loading() {
   return (
-    <div className="text-text-muted flex items-center gap-2 px-4 py-10 text-sm sm:px-8">
-      <Loader2 className="animate-spin" size={16} />
-      Loading…
-    </div>
+    <ApplicantPage>
+      <div className="flex flex-col gap-8">
+        <PageSkeletonBody />
+      </div>
+    </ApplicantPage>
   )
 }
 

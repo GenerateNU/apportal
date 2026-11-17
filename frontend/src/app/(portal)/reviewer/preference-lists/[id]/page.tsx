@@ -11,7 +11,7 @@ import { getServerIsChief } from '@/lib/auth/server-user'
 import { queryKeys } from '@/lib/queries/keys'
 import { prefetchUsersByRole } from '@/lib/queries/server-prefetch'
 import { LeadPreferenceListClient } from './components/LeadPreferenceListClient'
-import { PreferenceListDetailClient } from './components/PreferenceListDetailClient'
+import { ChiefTeamClient } from './components/ChiefTeamClient'
 
 // Auth-gated, live data fetched per request from the backend — never prerender
 // this at build time (the backend isn't running then).
@@ -53,7 +53,7 @@ export default async function PreferenceListDetailPage({
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
       {reviewer.isChief ? (
-        <PreferenceListDetailClient id={id} isChief />
+        <ChiefTeamClient id={id} />
       ) : (
         <LeadPreferenceListClient id={id} />
       )}

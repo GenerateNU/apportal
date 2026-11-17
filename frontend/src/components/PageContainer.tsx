@@ -1,15 +1,12 @@
-interface PageContainerProps {
-  children: React.ReactNode
-  className?: string
-}
+import { PAGE_SHELL } from '@/components/ui/page-shell'
+import { cn } from '@/lib/utils'
 
 export function PageContainer({
   children,
-  className = '',
-}: PageContainerProps) {
-  return (
-    <div className={`flex flex-col gap-6 p-4 sm:p-8 ${className}`}>
-      {children}
-    </div>
-  )
+  className,
+}: {
+  children: React.ReactNode
+  className?: string
+}) {
+  return <div className={cn(PAGE_SHELL, className)}>{children}</div>
 }

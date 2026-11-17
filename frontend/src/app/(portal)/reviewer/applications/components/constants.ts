@@ -69,34 +69,3 @@ export const stageLabel: Record<ApplicationStage, string> = {
   rejected: 'Rejected',
   withdrawn: 'Withdrawn',
 }
-
-export const stageDot: Record<ApplicationStage, string> = {
-  draft: 'bg-gray-300',
-  submitted: 'bg-blue-500',
-  lead_review: 'bg-purple-500',
-  chief_review: 'bg-indigo-500',
-  interview: 'bg-pink-500',
-  interview_scheduled: 'bg-yellow-400',
-  interview_conducted: 'bg-orange-400',
-  interview_review: 'bg-amber-400',
-  selection: 'bg-cyan-500',
-  accepted: 'bg-green-500',
-  rejected: 'bg-red-400',
-  withdrawn: 'bg-gray-300',
-}
-
-// Same hues as stageDot, for the text label sat next to the dot.
-export const stageTextColor: Record<ApplicationStage, string> = {
-  draft: 'text-gray-500',
-  submitted: 'text-blue-700',
-  lead_review: 'text-purple-700',
-  chief_review: 'text-indigo-700',
-  interview: 'text-pink-700',
-  interview_scheduled: 'text-yellow-700',
-  interview_conducted: 'text-orange-700',
-  interview_review: 'text-amber-700',
-  selection: 'text-cyan-700',
-  accepted: 'text-green-700',
-  rejected: 'text-red-700',
-  withdrawn: 'text-gray-500',
-}

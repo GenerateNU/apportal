@@ -35,6 +35,8 @@ type InterviewBoardRow struct {
 type BoardInput struct {
 	ID     string `path:"id" doc:"Cycle ID"`
 	RoleID string `query:"role_id" doc:"Only this opening"`
+	// History keeps applicants who were interviewed and have since moved on or been turned down.
+	History bool `query:"history" doc:"Also list everyone with an interview on record, whatever their stage now"`
 }
 
 type BoardOutput struct {

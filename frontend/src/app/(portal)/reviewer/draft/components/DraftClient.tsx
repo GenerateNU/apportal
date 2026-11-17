@@ -2,11 +2,40 @@
 
 import { useIsChief } from '@/lib/queries/cycle-staff'
 import { useState } from 'react'
-import { Eye, ListOrdered, Loader2 } from 'lucide-react'
+import {
+  CheckCircle2,
+  Circle,
+  Eye,
+  ListOrdered,
+  ListRestart,
+  Loader2,
+  MoreHorizontal,
+  Plus,
+  RotateCcw,
+  Trash2,
+} from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { ArrowRight } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { useQueryClient } from '@tanstack/react-query'
+import { queryKeys } from '@/lib/queries/keys'
+import {
+  released,
+  useWorkflow,
+  useWorkflowMutations,
+} from '@/lib/queries/workflow'
 import { Input } from '@/components/ui/input'
 import {
   Dialog,
@@ -39,6 +68,7 @@ import {
   useOpenDraft,
   useRemoveDraftPick,
   useReplaceDraftPick,
+  useFinishDraft,
   useResetDraft,
   useSetDraftTeams,
   useUpdateDraft,
@@ -78,7 +108,7 @@ export function DraftClient() {
   })
   // Only the operator picks, and the pool exists solely to pick from — so a
   // roomful of leads watching a polling board doesn't each fetch it.
-  const { data: pool = [] } = useApplications(
+  const { data: pool = [], isLoading: poolLoading } = useApplications(
     cycleId ? { cycle_id: cycleId, role_id: role } : undefined,
     undefined,
     { enabled: !!cycleId && !!role && isChief }
@@ -100,6 +130,9 @@ export function DraftClient() {
   const removePick = useRemoveDraftPick()
   const replacePick = useReplaceDraftPick()
   const resetDraft = useResetDraft()
+  const finishDraft = useFinishDraft()
+  const router = useRouter()
+  const [finishing, setFinishing] = useState(false)
   // Which filled slot is being reassigned; null while that dialog is closed.
   const [changingSlot, setChangingSlot] = useState<number | null>(null)
   const [changeQuery, setChangeQuery] = useState('')
@@ -117,6 +150,27 @@ export function DraftClient() {
   const [pickError, setPickError] = useState('')
 
   const draftScope = { cycleId, roleId: role, draftId: board?.id ?? '' }
+  const undrafted = pool.filter((a) => a.stage === 'selection').length
+  const finalized =
+    !!board && board.status === 'complete' && !poolLoading && undrafted === 0
+  const queryClient = useQueryClient()
+  const { data: workflow } = useWorkflow(cycleId)
+  const workflowMutations = useWorkflowMutations(cycleId)
+  const decisionsDone = !!(workflow?.steps ?? []).find(
+    (s) => s.step === 'decisions'
+  )?.completed_at
+  const feedbackOpen = roleIds.some((r) => released(workflow, 'feedback', r))
+
+  async function openFeedback() {
+    for (const roleId of roleIds) {
+      await workflowMutations.release.mutateAsync({
+        roleId,
+        step: 'feedback',
+        released: true,
+      })
+    }
+    router.push('/reviewer/decisions')
+  }
   const effectiveOrder =
     order ?? board?.teams.map((t) => t.preference_list_id) ?? []
   const effectiveRounds = rounds ?? board?.rounds ?? 1
@@ -128,14 +182,6 @@ export function DraftClient() {
     const [moved] = next.splice(from, 1)
     next.splice(to, 0, moved)
     setOrder(next)
-  }
-
-  function toggleInOrder(id: string) {
-    setOrder(
-      effectiveOrder.includes(id)
-        ? effectiveOrder.filter((x) => x !== id)
-        : [...effectiveOrder, id]
-    )
   }
 
   const changingSlotPick = board?.picks.find(
@@ -180,58 +226,130 @@ export function DraftClient() {
       {
         onError: () =>
           setPickError(
-            'That pick didn’t go through — someone may have filled the slot first. The board refreshes every few seconds.'
+            'That pick didn’t go through. Someone may have filled the slot first. The board refreshes every few seconds.'
           ),
       }
     )
   }
 
+  const decisionOpenings =
+    (workflow?.steps ?? []).find((st) => st.step === 'decisions')?.openings ??
+    []
+  const left = decisionOpenings.filter((o) => o.applicant_count > 0).length
+
   const header = (
-    <PageHeader
-      title="Draft"
-      subtitle="Teams claim applicants in snake order — the first round runs down the order, the next back up it, so the last team picks twice at the turn."
-      actions={
-        <>
-          {board && (
-            <Badge className={DRAFT_STATUS_BADGE[board.status]}>
-              {DRAFT_STATUS_LABEL[board.status]}
-            </Badge>
+    <>
+      <PageHeader
+        title={
+          <span className="inline-flex items-center gap-3">
+            Draft
+            {board && board.status !== 'setup' && (
+              <Badge
+                className={cn(
+                  'font-sans tracking-normal normal-case',
+                  DRAFT_STATUS_BADGE[board.status]
+                )}
+              >
+                {DRAFT_STATUS_LABEL[board.status]}
+              </Badge>
+            )}
+          </span>
+        }
+        subtitle="Teams claim applicants in snake order: the first round runs down the order, the next back up it, so the last team picks twice at the turn."
+        actions={
+          <>
+            {/* Every control on this page is already chief-gated; this just says
+              so up front rather than leaving a lead hunting for the buttons. */}
+            {!isChief && (
+              <Badge className="text-text-muted">
+                <Eye size={12} />
+                View only
+              </Badge>
+            )}
+            <Select value={role} onValueChange={setRole}>
+              <SelectTrigger className="w-48" aria-label="Draft board role">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {roleIds.map((r) => (
+                  <SelectItem key={r} value={r}>
+                    {roleLabel(r)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </>
+        }
+      />
+      {decisionOpenings.length > 0 && (
+        <Card
+          padding="none"
+          className="flex flex-wrap items-center justify-between gap-4 px-5 py-4"
+        >
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+            {decisionOpenings.map((o) => {
+              const done = o.applicant_count === 0
+              return (
+                <button
+                  key={o.role_id}
+                  type="button"
+                  onClick={() => setRole(o.role_id)}
+                  className="flex items-center gap-2 text-sm"
+                >
+                  {done ? (
+                    <CheckCircle2 size={15} className="text-green-600" />
+                  ) : (
+                    <Circle size={15} className="text-gray-300" />
+                  )}
+                  <span
+                    className={cn(
+                      'text-ink font-medium',
+                      o.role_id === role && 'underline underline-offset-4'
+                    )}
+                  >
+                    {o.role_name}
+                  </span>
+                  <span className="text-text-muted">
+                    {done ? 'Finalized' : `${o.applicant_count} left to draft`}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+          {feedbackOpen ? (
+            <Button asChild variant="outline">
+              <Link href="/reviewer/decisions">
+                Go to Feedback
+                <ArrowRight data-icon="inline-end" size={14} />
+              </Link>
+            </Button>
+          ) : (
+            isChief && (
+              <div className="flex items-center gap-3">
+                {!decisionsDone && (
+                  <span className="text-text-subtle text-xs">
+                    Finalize{' '}
+                    {left === 1
+                      ? 'the last position'
+                      : `${left} more positions`}{' '}
+                    first
+                  </span>
+                )}
+                <Button
+                  onClick={openFeedback}
+                  disabled={
+                    !decisionsDone || workflowMutations.release.isPending
+                  }
+                >
+                  Open Feedback
+                  <ArrowRight data-icon="inline-end" size={14} />
+                </Button>
+              </div>
+            )
           )}
-          {/* Every control on this page is already chief-gated; this just says
-            so up front rather than leaving a lead hunting for the buttons. */}
-          {!isChief && (
-            <Badge className="text-text-muted">
-              <Eye size={12} />
-              View only
-            </Badge>
-          )}
-          <Select value={role} onValueChange={setRole}>
-            <SelectTrigger className="w-48" aria-label="Draft board role">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {roleIds.map((r) => (
-                <SelectItem key={r} value={r}>
-                  {roleLabel(r)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={cycleId} onValueChange={setCycleId}>
-            <SelectTrigger className="w-40" aria-label="Cycle">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {cycles.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </>
-      }
-    />
+        </Card>
+      )}
+    </>
   )
 
   if (!cycleId || isLoading) {
@@ -253,8 +371,8 @@ export function DraftClient() {
           {isChief ? (
             <>
               <p className="text-text-muted text-sm">
-                No board yet for this cycle and role. Opening one lets you set
-                the order before anyone picks.
+                Every team is added when you open the board. Set the order, then
+                start.
               </p>
               <div>
                 <Button
@@ -288,7 +406,6 @@ export function DraftClient() {
             groups={groups}
             order={effectiveOrder}
             rounds={effectiveRounds}
-            onToggle={toggleInOrder}
             onMove={(index, direction) =>
               reorderSeats(index, index + direction)
             }
@@ -301,9 +418,19 @@ export function DraftClient() {
               })
             }
             onStart={() =>
-              updateDraft.mutate(
-                { ...draftScope, status: 'active', rounds: effectiveRounds },
-                { onSuccess: () => setOrder(null) }
+              setTeams.mutate(
+                { ...draftScope, preferenceListIds: effectiveOrder },
+                {
+                  onSuccess: () =>
+                    updateDraft.mutate(
+                      {
+                        ...draftScope,
+                        status: 'active',
+                        rounds: effectiveRounds,
+                      },
+                      { onSuccess: () => setOrder(null) }
+                    ),
+                }
               )
             }
             saving={setTeams.isPending}
@@ -342,7 +469,7 @@ export function DraftClient() {
 
       <DraftBoardGrid
         board={board}
-        canEdit={isChief}
+        canEdit={isChief && !finalized}
         onChangePick={setChangingSlot}
         removingPick={removingPick}
         onRemovePick={(pickNumber) => {
@@ -356,57 +483,85 @@ export function DraftClient() {
 
       {isChief && (
         <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="outline"
-            onClick={() =>
-              updateDraft.mutate({
-                ...draftScope,
-                rounds: board.rounds + 1,
-              })
-            }
-            disabled={updateDraft.isPending}
-          >
-            Add a round
-          </Button>
-          {board.status === 'active' && (
-            <Button
-              variant="outline"
-              onClick={() => {
-                setReorderError('')
-                setReordering(true)
-              }}
-            >
-              <ListOrdered data-icon="inline-start" size={14} />
-              Reorder pick order
-            </Button>
+          {board.status === 'complete' && finalized ? (
+            <span className="text-text-muted inline-flex items-center gap-1.5 text-sm">
+              <CheckCircle2 size={14} className="text-green-600" />
+              {roleLabel(role)} is finalized.
+            </span>
+          ) : board.status === 'complete' ? (
+            <Button onClick={() => setFinishing(true)}>Finalize</Button>
+          ) : (
+            <>
+              <Button
+                onClick={() =>
+                  updateDraft.mutate({ ...draftScope, status: 'complete' })
+                }
+                disabled={updateDraft.isPending}
+              >
+                Finish draft
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() =>
+                  updateDraft.mutate({
+                    ...draftScope,
+                    rounds: board.rounds + 1,
+                  })
+                }
+                disabled={updateDraft.isPending}
+              >
+                <Plus data-icon="inline-start" size={14} />
+                Add a round
+              </Button>
+            </>
           )}
-          <Button
-            variant="outline"
-            onClick={() =>
-              updateDraft.mutate({
-                ...draftScope,
-                status: board.status === 'complete' ? 'active' : 'complete',
-              })
-            }
-            disabled={updateDraft.isPending}
-          >
-            {board.status === 'complete' ? 'Reopen draft' : 'Mark complete'}
-          </Button>
-          <span className="mx-1 h-5 w-px bg-gray-200" aria-hidden />
-          <Button
-            variant="outline"
-            className="text-destructive hover:text-destructive"
-            onClick={() => setConfirming('reset')}
-          >
-            Reset picks
-          </Button>
-          <Button
-            variant="outline"
-            className="text-destructive hover:text-destructive"
-            onClick={() => setConfirming('delete')}
-          >
-            Delete board
-          </Button>
+          {!finalized && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" aria-label="More actions">
+                  <MoreHorizontal size={14} />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                {board.status === 'active' && (
+                  <DropdownMenuItem
+                    onSelect={() => {
+                      setReorderError('')
+                      setReordering(true)
+                    }}
+                  >
+                    <ListOrdered size={14} />
+                    Reorder pick order
+                  </DropdownMenuItem>
+                )}
+                {board.status === 'complete' && (
+                  <DropdownMenuItem
+                    onSelect={() =>
+                      updateDraft.mutate({ ...draftScope, status: 'active' })
+                    }
+                  >
+                    <RotateCcw size={14} />
+                    Reopen draft
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  variant="destructive"
+                  onSelect={() => setConfirming('reset')}
+                >
+                  <ListRestart size={14} />
+                  Reset picks
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  variant="destructive"
+                  onSelect={() => setConfirming('delete')}
+                >
+                  <Trash2 size={14} />
+                  Delete board
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       )}
 
@@ -426,7 +581,7 @@ export function DraftClient() {
                 setReorderError(
                   err instanceof APIError
                     ? err.message
-                    : "Couldn't save the new order — try again."
+                    : "Couldn't save the new order. Try again."
                 ),
             }
           )
@@ -448,7 +603,7 @@ export function DraftClient() {
           </DialogHeader>
           {replacePick.isError && (
             <p className="text-destructive text-sm">
-              Couldn&apos;t change that pick — they may already be picked in
+              Couldn&apos;t change that pick. They may already be picked in
               another slot.
             </p>
           )}
@@ -519,6 +674,29 @@ export function DraftClient() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={finishing}
+        onOpenChange={setFinishing}
+        title={`Finalize ${roleLabel(role)}?`}
+        description={
+          undrafted > 0
+            ? `Drafted applicants will be marked as accepted. ${undrafted} not drafted will be rejected.`
+            : 'Drafted applicants will be marked as accepted.'
+        }
+        confirmLabel="Finalize"
+        pending={finishDraft.isPending}
+        onConfirm={() =>
+          finishDraft.mutate(draftScope, {
+            onSuccess: () => {
+              setFinishing(false)
+              queryClient.invalidateQueries({
+                queryKey: queryKeys.workflow.all,
+              })
+            },
+          })
+        }
+      />
 
       <ConfirmDialog
         open={confirming !== null}

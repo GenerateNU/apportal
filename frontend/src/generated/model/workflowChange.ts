@@ -9,6 +9,7 @@ A write the workflow flags as an override or destructive answers 409 with an err
  */
 import type { WorkflowChangeCurrentStep } from './workflowChangeCurrentStep';
 import type { WorkflowChangeNextActions } from './workflowChangeNextActions';
+import type { WorkflowChangePhases } from './workflowChangePhases';
 import type { Preview } from './preview';
 import type { WorkflowChangeRole } from './workflowChangeRole';
 import type { WorkflowChangeSteps } from './workflowChangeSteps';
@@ -20,6 +21,7 @@ export interface WorkflowChange {
   current_step?: WorkflowChangeCurrentStep;
   cycle_id: string;
   next_actions: WorkflowChangeNextActions;
+  phases: WorkflowChangePhases;
   /** What the change did, or with dry_run=true, what it would do */
   preview?: Preview;
   role: WorkflowChangeRole;

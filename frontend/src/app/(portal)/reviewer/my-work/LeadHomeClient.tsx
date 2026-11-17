@@ -62,6 +62,7 @@ export function LeadHomeClient() {
     roleIds,
     roleLabel,
     loading: loadingWork,
+    tasksLoading,
   } = useLeadWork()
   const requestedPhase = useSearchParams().get('phase')
   const { data: mine } = useWorkflow(cycle?.id ?? '')
@@ -76,6 +77,8 @@ export function LeadHomeClient() {
   if (loadingWork) return <LeadHomeSkeleton />
 
   if (!cycle) redirect('/applicant/applications')
+
+  if (selected?.open && tasksLoading[selected.id]) return <LeadHomeSkeleton />
 
   if (selected?.open && selected.id === 'draft') return <LeadDraftClient />
   const myListId = selected?.id === 'preference' ? selected.tasks[0]?.id : ''

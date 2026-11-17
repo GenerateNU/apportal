@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { PageContainer } from '@/components/PageContainer'
 import { ProgressBar } from '@/components/ProgressBar'
 import { TABLE_FRAME } from '@/components/ui/table-styles'
+import { LoadingText } from '@/components/ui/loading-text'
 import { PageHeader } from '@/components/ui/page-header'
 import { SearchInput } from '@/components/ui/search-input'
 import { SectionLabel } from '@/components/ui/section-label'
@@ -89,19 +90,20 @@ export function MyInterviewsClient() {
 
   const interviewerNuid = viewingOther ? viewingNuid : currentUser?.nuid
 
-  const { data: applications = [] } = useApplications(
-    {
-      ...(interviewerNuid && { interviewer_nuid: interviewerNuid }),
-      ...(cycleId !== 'all' && { cycle_id: cycleId }),
-      ...(activeRole !== 'all' && { role_id: activeRole }),
-      ...(debouncedSearch && { search: debouncedSearch }),
-    },
-    undefined,
-    // Hold the request until we know who "me" is. The backend skips empty
-    // filter values, so firing early reads as "every application" and flashes
-    // the whole pipeline before narrowing.
-    { enabled: !!interviewerNuid }
-  )
+  const { data: applications = [], isLoading: applicationsLoading } =
+    useApplications(
+      {
+        ...(interviewerNuid && { interviewer_nuid: interviewerNuid }),
+        ...(cycleId !== 'all' && { cycle_id: cycleId }),
+        ...(activeRole !== 'all' && { role_id: activeRole }),
+        ...(debouncedSearch && { search: debouncedSearch }),
+      },
+      undefined,
+      // Hold the request until we know who "me" is. The backend skips empty
+      // filter values, so firing early reads as "every application" and flashes
+      // the whole pipeline before narrowing.
+      { enabled: !!interviewerNuid }
+    )
 
   // The same person's "assigned to review the recording" queue — a second
   // work stream on the same page, alongside the one above.
@@ -322,13 +324,15 @@ export function MyInterviewsClient() {
         <h2 className="text-text-default text-sm font-semibold">
           Interviewing
         </h2>
-        {sections.length === 0 ? (
+        {applicationsLoading ? (
+          <LoadingText className="px-1" />
+        ) : sections.length === 0 ? (
           <p className="text-text-faint px-1 text-sm">
             {debouncedSearch
               ? 'No interviewees match that search.'
               : viewingOther
                 ? `Nothing assigned to ${viewingName} to interview yet.`
-                : 'Nothing assigned to you yet — a chief assigns the applicants you interview.'}
+                : 'Nothing assigned to you yet. A chief assigns the applicants you interview.'}
           </p>
         ) : (
           sections.map(({ role, rows: roleRows }) => (

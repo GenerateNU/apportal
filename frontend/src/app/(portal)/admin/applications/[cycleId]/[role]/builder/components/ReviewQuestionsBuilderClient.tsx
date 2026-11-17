@@ -104,6 +104,7 @@ export function ReviewQuestionsBuilderClient({
           <SaveStatusLabel />
         </div>
         <div className="mx-auto flex max-w-2xl flex-col gap-4">
+          {order.length > 0 && <RankingSummary questions={order} />}
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
@@ -129,6 +130,9 @@ export function ReviewQuestionsBuilderClient({
                           options: body.options,
                           description: body.description,
                           clear_description: body.clear_description,
+                          score_min: body.score_min,
+                          score_max: body.score_max,
+                          ranked: body.ranked,
                         },
                       })
                     }
@@ -138,15 +142,45 @@ export function ReviewQuestionsBuilderClient({
                   />
                 ))}
                 {order.length === 0 && (
-                  <p className="text-text-subtle mt-10 text-center text-sm">
-                    Add a block to start building this rubric.
-                  </p>
+                  <ReviewBlockPalette
+                    cycleId={cycleId}
+                    role={role}
+                    nextOrder={0}
+                    variant="start"
+                    title="Start your review form"
+                    hint="Add what reviewers answer for each applicant. A score question can count toward the ranking."
+                  />
                 )}
               </div>
             </SortableContext>
           </DndContext>
         </div>
       </div>
+    </div>
+  )
+}
+function RankingSummary({ questions }: { questions: ReviewQuestion[] }) {
+  const ranked = questions.filter(
+    (q) => q.question_type === 'score' && q.ranked
+  )
+  if (ranked.length === 0) {
+    return (
+      <div className="border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+        Nothing is used for ranking yet. Add a score question and turn on{' '}
+        <span className="font-medium">Use for ranking</span>.
+      </div>
+    )
+  }
+  const scales = new Set(ranked.map((q) => `${q.score_min}–${q.score_max}`))
+  return (
+    <div className="border border-gray-200 bg-white px-4 py-3 text-sm">
+      <span className="text-text-muted">Applicants are ranked by </span>
+      <span className="text-ink font-medium">
+        {ranked.map((q) => q.question_text || 'Untitled').join(' + ')}
+      </span>
+      {scales.size === 1 && (
+        <span className="text-text-muted"> ({[...scales][0]})</span>
+      )}
     </div>
   )
 }

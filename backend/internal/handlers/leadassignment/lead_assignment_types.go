@@ -42,6 +42,7 @@ type LeadAssignmentPair struct {
 // time, before grouping by lead.
 type ReviewerProgressRow struct {
 	LeadNUID      string
+	RoleID        string
 	ApplicationID string
 	ApplicantNUID string
 	FullName      string

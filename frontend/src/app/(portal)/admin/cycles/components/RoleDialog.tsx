@@ -115,7 +115,7 @@ export function RoleDialog({
             />
             {saveError && (
               <p className="text-destructive text-sm">
-                Couldn’t save — this cycle may already have a role with this
+                Couldn’t save. This cycle may already have a role with this
                 name.
               </p>
             )}

@@ -8,6 +8,7 @@ A write the workflow flags as an override or destructive answers 409 with an err
  * OpenAPI spec version: 0.1.0
  */
 import type { ListDecisionsKind } from './listDecisionsKind';
+import type { ListDecisionsStatus } from './listDecisionsStatus';
 
 export type ListDecisionsParams = {
 /**
@@ -26,4 +27,19 @@ interviewer_nuid?: string;
  * Case-insensitive substring match on the applicant's name, NUID, or email
  */
 search?: string;
+/**
+ * Only rows in this status
+ */
+status?: ListDecisionsStatus;
+/**
+ * Max rows per page; omit (or 0) for every match
+ * @minimum 0
+ * @maximum 200
+ */
+limit?: number;
+/**
+ * Rows to skip, for the next page
+ * @minimum 0
+ */
+offset?: number;
 };

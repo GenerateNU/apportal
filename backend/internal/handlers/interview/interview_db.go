@@ -136,43 +136,18 @@ const defaultRecordingReminder = `Hit record (choose cloud recording) before mov
 
 const defaultClosingNote = `Thank you so much for the thorough answers! That's all I have, so now I'd like to open the floor for you to rapid fire any questions you may have for me.`
 
-const defaultChallengeIntro = `Ask the applicant to pull up their code and share their screen. Pick and choose from the questions below rather than asking every one — keep an eye on time.`
-
 var defaultQuestions = json.RawMessage(`[
 	{"prompt": "Tell us about yourself.", "followUps": ["What drew you to this role in particular?", "How did that background shape what you're looking for here?"]},
 	{"prompt": "Why do you want to join Generate?", "followUps": ["What about our specific projects or mission stood out to you?", "Is there anything about the program structure you're still unsure about?"]},
-	{"prompt": "Describe a good or bad experience you had working on a team. Why was that experience positive/negative?", "followUps": ["What would you have done differently, looking back?", "How did you address the situation in the moment?", "What did that experience teach you about your own working style?"]},
-	{"prompt": "Tell me about a project you worked on in as much technical detail as possible. How did you solve the problems from that project?", "followUps": ["What was specifically your contribution versus the rest of the team's?", "What tradeoffs did you weigh when choosing your approach?", "How did you test or validate that it actually worked?", "What would you do differently if you started it again today?"]},
-	{"prompt": "Tell us about a time when you challenged yourself. What was the outcome? This can be from a technical or non-technical experience.", "followUps": ["What made it feel like a real stretch at the time?", "What did you do in the moment you got stuck?", "How has that changed how you approach hard problems now?"]},
-	{"prompt": "What do you think is the most important quality of an effective engineer?", "followUps": ["Can you give an example of a time you (or someone else) showed that quality?", "What tends to go wrong on a team when that quality is missing?"]},
-	{"prompt": "Is there anything else you'd like to share with us?"}
+	{"prompt": "Describe a good or bad experience you had working on a team. Why was that experience positive/negative?", "followUps": ["What would you have done differently, looking back?", "How did you address the situation in the moment?", "What did that experience teach you about your own working style?"]}
 ]`)
-
-var defaultChallengeTracks = json.RawMessage(`{
-	"backend": {"label": "Backend", "followUps": [
-		"Which challenge did you choose, and why this one in particular?",
-		"Walk me through your solution, as you do that, explain why you made the choices you made? How did you approach the challenge?",
-		"If there was anything new you had to learn, how did you approach teaching yourself?",
-		"What was the most challenging aspect of the challenge — how did you overcome it?",
-		"Now that you look at it again, are there ways you could improve your solution?",
-		"How did you leverage the provided materials to make the development process easier?"
-	]},
-	"frontend": {"label": "Frontend", "followUps": [
-		"Which challenge did you choose, and why this one in particular?",
-		"Walk me through your solution, as you do that, explain why you made the choices you made? How did you approach the challenge?",
-		"If there was anything new you had to learn, how did you approach teaching yourself?",
-		"What was the most challenging aspect of the challenge — how did you overcome it?",
-		"Now that you look at it again, are there ways you could improve your solution?",
-		"How did you leverage the provided materials to make the development process easier?"
-	]}
-}`)
 
 var defaultPostInterviewChecklist = json.RawMessage(`[
 	"Stop the recording.",
 	"In the Interview section above, summarize your thoughts in Comments.",
 	"Set a Rating for this applicant.",
 	"Add the recording link (and notes link, if you took any) before submitting.",
-	"Submit the interview — this unlocks the recording reviewer's review."
+	"Submit the interview. This unlocks the recording reviewer's review."
 ]`)
 
 // GetOrCreateInterviewScript fetches the (cycle, role) script, creating it
@@ -192,8 +167,7 @@ func (i *InterviewDB) GetOrCreateInterviewScript(ctx context.Context, cycleID st
 		RecordingReminder:      defaultRecordingReminder,
 		Questions:              defaultQuestions,
 		ClosingNote:            defaultClosingNote,
-		ChallengeIntro:         defaultChallengeIntro,
-		ChallengeTracks:        defaultChallengeTracks,
+		ChallengeTracks:        json.RawMessage(`{}`),
 		PostInterviewChecklist: defaultPostInterviewChecklist,
 	}
 	res := db.Select("cycle_id", "role_id", "intro_speech", "recording_reminder", "questions",

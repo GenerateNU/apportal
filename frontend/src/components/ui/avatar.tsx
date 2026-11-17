@@ -2,16 +2,16 @@ import { cn } from '@/lib/utils'
 
 // A fixed set of profile colors; a given name always hashes to the same one.
 const PROFILE_COLORS = [
-  'bg-rose-500',
-  'bg-orange-500',
-  'bg-amber-500',
-  'bg-emerald-500',
-  'bg-teal-500',
-  'bg-sky-500',
-  'bg-indigo-500',
-  'bg-violet-500',
-  'bg-pink-500',
-  'bg-cyan-600',
+  'bg-rose-50 text-rose-600',
+  'bg-orange-50 text-orange-600',
+  'bg-amber-50 text-amber-600',
+  'bg-emerald-50 text-emerald-600',
+  'bg-teal-50 text-teal-600',
+  'bg-sky-50 text-sky-600',
+  'bg-indigo-50 text-indigo-600',
+  'bg-violet-50 text-violet-600',
+  'bg-pink-50 text-pink-600',
+  'bg-cyan-50 text-cyan-600',
 ] as const
 
 function hashToBucket(value: string, bucketCount: number) {
@@ -54,7 +54,7 @@ export function Avatar({ name, size = 'md', className }: AvatarProps) {
   return (
     <div
       className={cn(
-        'flex shrink-0 items-center justify-center rounded-full font-semibold text-white',
+        'flex shrink-0 items-center justify-center rounded-full font-semibold',
         sizeClasses[size],
         colorClass,
         className

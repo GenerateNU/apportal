@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 import type { LucideIcon } from 'lucide-react'
 import { Tooltip } from '@/components/Tooltip'
 
@@ -26,7 +26,10 @@ export default function NavItem({
   also = [],
 }: NavItemProps) {
   const pathname = usePathname()
-  const isActive = [href, ...also].some((h) => isNavItemActive(pathname, h))
+  // ?from= means a cycle step opened this page, so the step is highlighted instead.
+  const viaStep = useSearchParams().has('from')
+  const isActive =
+    !viaStep && [href, ...also].some((h) => isNavItemActive(pathname, h))
 
   const link = (
     <Link

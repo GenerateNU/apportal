@@ -30,6 +30,8 @@ export const queryKeys = {
 
   applications: {
     all: ['applications'] as const,
+    summary: (cycleId: string) =>
+      [...queryKeys.applications.all, 'summary', cycleId] as const,
     lists: () => [...queryKeys.applications.all, 'list'] as const,
     list: (params?: {
       cycle_id?: string
@@ -98,8 +100,6 @@ export const queryKeys = {
     detail: (id: string) => [...queryKeys.cycles.details(), id] as const,
     templateSummary: (id: string) =>
       [...queryKeys.cycles.all, 'template-summary', id] as const,
-    templateSummaries: (ids: string[]) =>
-      [...queryKeys.cycles.all, 'template-summaries', ids] as const,
   },
 
   applicationTemplates: {
@@ -171,13 +171,6 @@ export const queryKeys = {
     // id list so a batch stays cached as more are loaded alongside it.
     bulk: (applicationIds: string[]) =>
       [...queryKeys.chiefReviews.all, 'bulk', applicationIds] as const,
-  },
-
-  chiefReviewComments: {
-    all: ['chief-review-comments'] as const,
-    lists: () => [...queryKeys.chiefReviewComments.all, 'list'] as const,
-    list: (applicationId: string) =>
-      [...queryKeys.chiefReviewComments.lists(), applicationId] as const,
   },
 
   leadAssignments: {
@@ -262,17 +255,6 @@ export const queryKeys = {
       ] as const,
   },
 
-  reviewQuestionAverages: {
-    all: ['review-question-averages'] as const,
-    lists: () => [...queryKeys.reviewQuestionAverages.all, 'list'] as const,
-    list: (cycleId: string, roleId?: string) =>
-      [
-        ...queryKeys.reviewQuestionAverages.lists(),
-        cycleId,
-        roleId ?? 'all',
-      ] as const,
-  },
-
   preferenceLists: {
     all: ['preference-lists'] as const,
     lists: () => [...queryKeys.preferenceLists.all, 'list'] as const,
@@ -331,10 +313,43 @@ export const queryKeys = {
   workflow: {
     all: ['workflow'] as const,
     detail: (cycleId: string) => [...queryKeys.workflow.all, cycleId] as const,
+    steps: (cycleId: string) =>
+      [...queryKeys.workflow.all, 'steps', cycleId] as const,
   },
   interviewBoard: {
     all: ['interview-board'] as const,
     detail: (cycleId: string) =>
       [...queryKeys.interviewBoard.all, cycleId] as const,
+  },
+  reviewConflicts: {
+    all: ['review-conflicts'] as const,
+    list: (cycleId: string) =>
+      [...queryKeys.reviewConflicts.all, cycleId] as const,
+  },
+  reviewBoard: {
+    all: ['review-board'] as const,
+    detail: (cycleId: string) =>
+      [...queryKeys.reviewBoard.all, cycleId] as const,
+  },
+  staffing: {
+    all: ['staffing'] as const,
+    detail: (cycleId: string) => [...queryKeys.staffing.all, cycleId] as const,
+  },
+  reviewRanking: {
+    all: ['review-ranking'] as const,
+    detail: (cycleId: string, roleId: string) =>
+      [...queryKeys.reviewRanking.all, cycleId, roleId] as const,
+  },
+  meetingSlots: {
+    all: ['meeting-slots'] as const,
+    list: (cycleId: string) =>
+      [...queryKeys.meetingSlots.all, cycleId] as const,
+    staff: (cycleId: string) =>
+      [...queryKeys.meetingSlots.all, 'staff', cycleId] as const,
+  },
+  interviewPanels: {
+    all: ['interview-panels'] as const,
+    list: (cycleId: string) =>
+      [...queryKeys.interviewPanels.all, cycleId] as const,
   },
 } as const

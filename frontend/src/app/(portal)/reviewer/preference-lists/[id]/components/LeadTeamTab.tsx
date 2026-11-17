@@ -33,6 +33,7 @@ import { ReturnerBadge } from '@/components/ReturnerBadge'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
+import { LoadingText } from '@/components/ui/loading-text'
 import { PanelHeading } from '@/components/ui/panel-heading'
 import {
   Select,
@@ -104,6 +105,7 @@ export function LeadTeamTab({
   role,
   roleIds,
   pool,
+  poolLoading,
   groups,
   ratings,
   closesAtByRole,
@@ -116,6 +118,7 @@ export function LeadTeamTab({
   role: string
   roleIds: string[]
   pool: ApplicationSummary[]
+  poolLoading?: boolean
   groups: PreferenceListDetail[]
   ratings: Record<string, InterviewRating | undefined>
   closesAtByRole: Record<string, string | undefined>
@@ -306,7 +309,9 @@ export function LeadTeamTab({
 
       <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
         <section className="flex min-w-0 flex-col gap-3">
-          <PanelHeading aside={`${poolRemaining} in selection`}>
+          <PanelHeading
+            aside={poolLoading ? undefined : `${poolRemaining} in selection`}
+          >
             Pool
           </PanelHeading>
           <SearchInput
@@ -315,7 +320,9 @@ export function LeadTeamTab({
             placeholder="Search applicants"
             className="sm:w-full"
           />
-          {available.length === 0 ? (
+          {poolLoading ? (
+            <LoadingText />
+          ) : available.length === 0 ? (
             <EmptyState
               size="sm"
               title={
@@ -325,7 +332,7 @@ export function LeadTeamTab({
               }
             />
           ) : (
-            <ul className="border border-gray-200 lg:max-h-[calc(100dvh-16rem)] lg:overflow-y-auto">
+            <ul className="border border-gray-200">
               {available.map((a) => {
                 const others = alsoOn.get(a.id)?.length ?? 0
                 return (
@@ -420,7 +427,7 @@ export function LeadTeamTab({
                 title={`${viewing.name} hasn't ranked anyone for ${roleLabel(role)} yet.`}
               />
             ) : (
-              <ol className="border border-gray-200 lg:max-h-[calc(100dvh-16rem)] lg:overflow-y-auto">
+              <ol className="border border-gray-200">
                 {viewingEntries.map((e, i) => (
                   <li
                     key={e.id}
@@ -477,7 +484,7 @@ export function LeadTeamTab({
                 items={entries.map((e) => e.application_id)}
                 strategy={verticalListSortingStrategy}
               >
-                <ol className="border border-gray-200 lg:max-h-[calc(100dvh-16rem)] lg:overflow-y-auto">
+                <ol className="border border-gray-200">
                   {entries.map((entry, i) => (
                     <RankRow
                       key={entry.id}

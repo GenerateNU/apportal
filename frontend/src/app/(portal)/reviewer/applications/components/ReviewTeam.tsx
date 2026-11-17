@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { LoadingText } from '@/components/ui/loading-text'
 import {
   Dialog,
   DialogContent,
@@ -50,7 +51,8 @@ export function ReviewTeam({
 }) {
   const router = useRouter()
   const toast = useToast()
-  const { data: assignments = [] } = useLeadAssignments(applicationId)
+  const { data: assignments = [], isLoading } =
+    useLeadAssignments(applicationId)
   const assignLead = useAssignLead()
   const [confirming, setConfirming] = useState(false)
 
@@ -100,7 +102,9 @@ export function ReviewTeam({
           {myReview ? 'Open my review' : 'Write a review'}
         </Button>
       </div>
-      {people.length === 0 ? (
+      {isLoading ? (
+        <LoadingText />
+      ) : people.length === 0 ? (
         <p className="text-text-faint text-sm">No one is assigned yet.</p>
       ) : (
         <ul className="flex flex-wrap gap-2">

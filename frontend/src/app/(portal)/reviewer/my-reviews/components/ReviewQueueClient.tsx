@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { LoadingText } from '@/components/ui/loading-text'
 import { PageHeader } from '@/components/ui/page-header'
 import { SearchInput } from '@/components/ui/search-input'
 import { SectionLabel } from '@/components/ui/section-label'
@@ -68,19 +69,20 @@ export function ReviewQueueClient() {
 
   const assignedTo = scope === 'mine' ? currentUser?.nuid : undefined
 
-  const { data: applications = [] } = useApplications(
-    {
-      ...(assignedTo && { assigned_to: assignedTo }),
-      ...(cycleId !== 'all' && { cycle_id: cycleId }),
-      ...(activeRole !== 'all' && { role_id: activeRole }),
-      ...(debouncedSearch && { search: debouncedSearch }),
-    },
-    undefined,
-    // Hold the request until we know who "me" is. The backend skips empty
-    // filter values, so firing early with no assigned_to reads as "every
-    // application" and flashes the whole queue before narrowing.
-    { enabled: scope === 'all' || !!assignedTo }
-  )
+  const { data: applications = [], isLoading: applicationsLoading } =
+    useApplications(
+      {
+        ...(assignedTo && { assigned_to: assignedTo }),
+        ...(cycleId !== 'all' && { cycle_id: cycleId }),
+        ...(activeRole !== 'all' && { role_id: activeRole }),
+        ...(debouncedSearch && { search: debouncedSearch }),
+      },
+      undefined,
+      // Hold the request until we know who "me" is. The backend skips empty
+      // filter values, so firing early with no assigned_to reads as "every
+      // application" and flashes the whole queue before narrowing.
+      { enabled: scope === 'all' || !!assignedTo }
+    )
 
   // How far *my* review of each application has got. A row with no
   // submitted_at is a saved draft.
@@ -219,13 +221,15 @@ export function ReviewQueueClient() {
         </div>
       )}
 
-      {sections.length === 0 ? (
+      {applicationsLoading ? (
+        <LoadingText className="px-1" />
+      ) : sections.length === 0 ? (
         <p className="text-text-faint px-1 text-sm">
           {debouncedSearch
             ? 'No applications match that search.'
             : scope === 'mine'
-              ? 'Nothing assigned to you yet — a chief assigns applications for you to review.'
-              : 'Nothing to review yet — submitted applications will show up here.'}
+              ? 'Nothing assigned to you yet. A chief assigns applications for you to review.'
+              : 'Nothing to review yet. Submitted applications will show up here.'}
         </p>
       ) : (
         sections.map(({ role, applications: roleApplications }) => (

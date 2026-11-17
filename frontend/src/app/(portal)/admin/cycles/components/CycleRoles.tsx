@@ -12,23 +12,29 @@ export function CycleRoles({
   cycleId,
   roles,
   canAdd = true,
+  label = 'Roles',
+  addLabel = 'Add role',
 }: {
   cycleId: string
   roles: Role[]
   canAdd?: boolean
+  label?: string | null
+  addLabel?: string
 }) {
   // A role being edited, 'new' while creating, null while closed.
   const [editing, setEditing] = useState<Role | 'new' | null>(null)
 
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      <span className="text-text-faint mr-1 text-xs font-semibold tracking-wide uppercase">
-        Roles
-      </span>
+      {label && (
+        <span className="text-text-faint mr-1 text-xs font-semibold tracking-wide uppercase">
+          {label}
+        </span>
+      )}
       {roles.length === 0 && (
         <span className="text-text-muted text-sm">
           {canAdd
-            ? 'None yet — add one so this cycle can take applications.'
+            ? 'None yet. Add one so this cycle can take applications.'
             : 'None yet.'}
         </span>
       )}
@@ -55,7 +61,7 @@ export function CycleRoles({
           onClick={() => setEditing('new')}
         >
           <Plus className="h-3 w-3" />
-          Add role
+          {addLabel}
         </Button>
       )}
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { Breadcrumbs } from '@/components/ui/breadcrumbs'
+import { type Crumb, Breadcrumbs } from '@/components/ui/breadcrumbs'
 import { PAGE_TOP, PAGE_X } from '@/components/ui/page-shell'
 import type { ApplicationStage } from '@/lib/api/types'
 import { useApplicant } from '@/lib/queries/applicants'
@@ -13,7 +13,9 @@ export function ApplicationDetailClient({
   role,
   applicantNuid,
   stage,
+  crumbs = [{ label: 'Applicants', href: '/reviewer/applications' }],
 }: {
+  crumbs?: Crumb[]
   applicationId: string
   cycleId: string
   role: string
@@ -30,10 +32,7 @@ export function ApplicationDetailClient({
       )}
     >
       <Breadcrumbs
-        items={[
-          { label: 'Applicants', href: '/reviewer/applications' },
-          { label: applicant?.full_name ?? 'Applicant' },
-        ]}
+        items={[...crumbs, { label: applicant?.full_name ?? 'Applicant' }]}
       />
       <ApplicantOverview
         applicationId={applicationId}

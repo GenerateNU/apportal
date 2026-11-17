@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { PanelHeading } from '@/components/ui/panel-heading'
 import { SectionLabel } from '@/components/ui/section-label'
+import { Skeleton } from '@/components/ui/skeleton'
 import { cn, formatDate } from '@/lib/utils'
 
 const CHALLENGE_METRIC_LABEL: { key: keyof ChallengeMetrics; label: string }[] =
@@ -82,8 +83,10 @@ export function ChallengeCard({
   bare?: boolean
 }) {
   const { data: challenges = [] } = useChallenges(cycleId, role)
-  const { data: score } = useChallengeScore(applicantNuid)
-  const { data: submission } = useSubmission(applicationId)
+  const { data: score, isLoading: scoreLoading } =
+    useChallengeScore(applicantNuid)
+  const { data: submission, isLoading: submissionLoading } =
+    useSubmission(applicationId)
   const { data: applicant } = useApplicant(applicantNuid)
 
   if (challenges.length === 0) return null
@@ -129,7 +132,9 @@ export function ChallengeCard({
       </div>
 
       <Row label="Submission">
-        {submission ? (
+        {submissionLoading ? (
+          <Skeleton className="h-4 w-40" />
+        ) : submission ? (
           <a
             href={submission.submission_url}
             target="_blank"
@@ -170,9 +175,13 @@ export function ChallengeCard({
         <ScoreBlock score={score} />
       ) : (
         <Row label="Score">
-          <span className="text-text-faint text-sm">
-            No finished attempt yet
-          </span>
+          {scoreLoading ? (
+            <Skeleton className="h-4 w-32" />
+          ) : (
+            <span className="text-text-faint text-sm">
+              No finished attempt yet
+            </span>
+          )}
         </Row>
       )}
     </div>

@@ -53,6 +53,7 @@ type Overview struct {
 	Role        string       `json:"role" enum:"admin,chief,lead"`
 	CurrentStep *models.Step `json:"current_step,omitempty"`
 	Steps       []StepView   `json:"steps"`
+	Phases      []PhaseView  `json:"phases"`
 	NextActions []NextAction `json:"next_actions"`
 	Tasks       []Task       `json:"tasks"`
 }
@@ -77,6 +78,14 @@ func loadOverview(db *gorm.DB, cycleID string, c Caller, now time.Time) (Overvie
 	if err != nil {
 		return Overview{}, err
 	}
+	if err := db.Table("lead_assignments la").
+		Select("count(*) AS assigned, count(w.submitted_at) AS submitted").
+		Joins("JOIN applications a ON a.id = la.application_id").
+		Joins("LEFT JOIN written_reviews w ON w.application_id = la.application_id AND w.reviewer_nuid = la.lead_nuid").
+		Where("a.cycle_id = ?", cycleID).Scan(&f.Reviews).Error; err != nil {
+		return Overview{}, err
+	}
+
 	return f.Overview(c, now, late, counts), nil
 }
 
@@ -102,7 +111,7 @@ func (f *CycleState) StepConfigs() []StepConfig {
 type LateCounts map[key]map[models.StepKind]int
 
 func (f *CycleState) Overview(c Caller, now time.Time, late LateCounts, counts []TaskCount) Overview {
-	v := Overview{CycleID: f.CycleID, Role: c.Tier.role(), Steps: []StepView{}, NextActions: []NextAction{}, Tasks: f.Tasks(counts)}
+	v := Overview{CycleID: f.CycleID, Role: c.Tier.role(), Steps: []StepView{}, Phases: f.Phases(now), NextActions: []NextAction{}, Tasks: f.Tasks(counts, now)}
 	if c.CanOverride() {
 		v.NextActions = f.NextActions(now)
 	}

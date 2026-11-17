@@ -103,6 +103,7 @@ type DeadlineInput struct {
 	Hard        *bool
 	DefaultHard bool
 	Caller      Caller
+	Now         time.Time
 }
 
 func setDeadline(db *gorm.DB, in DeadlineInput) (Preview, error) {
@@ -115,7 +116,7 @@ func setDeadline(db *gorm.DB, in DeadlineInput) (Preview, error) {
 	})
 }
 
-func clearDeadline(db *gorm.DB, cycleID, roleID string, s models.Step, k models.StepKind, caller Caller) (Preview, error) {
+func clearDeadline(db *gorm.DB, cycleID, roleID string, s models.Step, k models.StepKind, caller Caller, now time.Time) (Preview, error) {
 	if !s.Valid() || !k.Valid() {
 		return Preview{}, invalid("invalid step or kind")
 	}
@@ -125,6 +126,9 @@ func clearDeadline(db *gorm.DB, cycleID, roleID string, s models.Step, k models.
 			if _, ok := f.Deadline(roleID, s, k); !ok {
 				p.Unchanged = true
 				return p, nil
+			}
+			if err := f.listsClosedBlock(roleID, s, k, now); err != nil {
+				return p, err
 			}
 			p.Require(caller.operation(OpSetDeadline, s, roleID))
 			p.Say(fmt.Sprintf("Remove the %s deadline for %s (%s)", k, Label(s), f.RoleName(roleID)))
@@ -144,9 +148,44 @@ func previewDeadline(f *CycleState, in DeadlineInput) (Preview, error) {
 	if err := f.DeadlineBlock(in.RoleID, in.Step, in.Kind, in.DueAt); err != nil {
 		return p, err
 	}
-	p.Require(in.Caller.operation(OpSetDeadline, in.Step, in.RoleID))
+	if err := f.listsClosedBlock(in.RoleID, in.Step, in.Kind, in.Now); err != nil {
+		return p, err
+	}
+	op := in.Caller.operation(OpSetDeadline, in.Step, in.RoleID)
+	if f.closesEarly(in) {
+		op.Level = LevelDestructive
+		op.Reason = fmt.Sprintf("This closes %s for %s now, before its deadline", Label(in.Step), f.RoleName(in.RoleID))
+		if n := f.Count(in.RoleID, in.Step); n > 0 {
+			op.Reason += fmt.Sprintf(". %d %s in it", n, plural(n, "applicant is", "applicants are"))
+		}
+	}
+	p.Require(op)
 	p.Say(fmt.Sprintf("Set the %s deadline for %s (%s)", in.Kind, Label(in.Step), f.RoleName(in.RoleID)))
 	return p, nil
+}
+
+// closesEarly is moving an open step's main deadline to now or earlier, which shuts it straight away.
+func (f *CycleState) closesEarly(in DeadlineInput) bool {
+	k, ok := MainKind(in.Step)
+	return ok && k == in.Kind && f.State(in.RoleID, in.Step, in.Now) == StateOpen && !in.DueAt.After(in.Now)
+}
+
+// A passed preference-list deadline is what opens the draft, so it can't move.
+func (f *CycleState) listsClosedBlock(role string, s models.Step, k models.StepKind, now time.Time) error {
+	if s != models.StepDecisions || k != models.KindPreferenceList {
+		return nil
+	}
+	if d, ok := f.Deadline(role, s, k); ok && !d.DueAt.After(now) {
+		return conflict("Preference lists for %s are closed", f.RoleName(role))
+	}
+	return nil
+}
+
+func plural(n int, one, many string) string {
+	if n == 1 {
+		return one
+	}
+	return many
 }
 
 func applyDeadline(tx *gorm.DB, f *CycleState, in DeadlineInput) error {

@@ -1,7 +1,5 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-
 export function SectionCaret({ collapsed }: { collapsed: boolean }) {
   return (
     <svg
@@ -14,25 +12,6 @@ export function SectionCaret({ collapsed }: { collapsed: boolean }) {
       <path d="M1 3.25h8L5 7.75z" />
     </svg>
   )
-}
-
-export function useCollapsed(key: string) {
-  const [collapsed, setCollapsed] = useState(false)
-  useEffect(() => {
-    try {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setCollapsed(localStorage.getItem(key) === '1')
-    } catch {}
-  }, [key])
-  function toggle() {
-    setCollapsed((prev) => {
-      try {
-        localStorage.setItem(key, prev ? '0' : '1')
-      } catch {}
-      return !prev
-    })
-  }
-  return [collapsed, toggle] as const
 }
 
 export function SectionHeader({

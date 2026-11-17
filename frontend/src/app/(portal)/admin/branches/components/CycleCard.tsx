@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import type { Cycle, Role } from '@/lib/api/types'
 import { CycleDialog } from '../../cycles/components/CycleDialog'
 import { CycleRoles } from '../../cycles/components/CycleRoles'
@@ -15,9 +16,17 @@ export function CycleCard({ cycle, roles }: { cycle: Cycle; roles: Role[] }) {
   // Bumped on each open so the form starts from the cycle's current values.
   const [editKey, setEditKey] = useState(0)
   const status = CYCLE_STATUS[cycle.status]
+  const closed = cycle.status === 'closed' || cycle.status === 'archived'
 
   return (
-    <article className="border-ink focus-within:outline-ink relative flex h-full flex-col border-2 bg-white transition-colors focus-within:outline-2 focus-within:outline-offset-2 hover:bg-gray-50">
+    <article
+      className={cn(
+        'relative flex h-full flex-col border-2 bg-white',
+        closed
+          ? 'text-text-muted border-gray-300'
+          : 'border-ink focus-within:outline-ink transition-colors focus-within:outline-2 focus-within:outline-offset-2 hover:bg-gray-50'
+      )}
+    >
       <div className="flex flex-1 flex-col gap-4 p-5">
         <div className="flex items-start justify-between gap-2">
           <span
@@ -26,35 +35,49 @@ export function CycleCard({ cycle, roles }: { cycle: Cycle; roles: Role[] }) {
             <span className={`h-1.5 w-1.5 ${status.dot}`} aria-hidden />
             {status.label}
           </span>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={`Edit ${cycle.name}`}
-            onClick={() => {
-              setEditKey((k) => k + 1)
-              setEditing(true)
-            }}
-            className="relative z-10 -mt-1 -mr-1 shrink-0 rounded-none"
-          >
-            <Pencil size={16} aria-hidden />
-          </Button>
+          {!closed && (
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={`Edit ${cycle.name}`}
+              onClick={() => {
+                setEditKey((k) => k + 1)
+                setEditing(true)
+              }}
+              className="relative z-10 -mt-1 -mr-1 shrink-0 rounded-none"
+            >
+              <Pencil size={16} aria-hidden />
+            </Button>
+          )}
         </div>
-        <h3 className="font-display text-ink text-2xl leading-tight font-bold tracking-tight break-words uppercase">
-          {/* Covers the tile so a click anywhere opens the cycle; the
-              controls below sit above it. */}
-          <Link
-            href={`/admin/branches/${cycle.branch_id}/cycles/${cycle.id}`}
-            className="after:absolute after:inset-0 focus-visible:outline-none"
-          >
-            {cycle.name}
-          </Link>
+        <h3
+          className={cn(
+            'font-display text-2xl leading-tight font-bold tracking-tight break-words uppercase',
+            closed ? 'text-text-muted' : 'text-ink'
+          )}
+        >
+          {closed ? (
+            cycle.name
+          ) : (
+            <Link
+              href={`/admin/branches/${cycle.branch_id}/cycles/${cycle.id}`}
+              className="after:absolute after:inset-0 focus-visible:outline-none"
+            >
+              {cycle.name}
+            </Link>
+          )}
         </h3>
-        <div className="relative z-10">
+        <div className={cn('relative z-10', closed && 'pointer-events-none')}>
           <CycleRoles cycleId={cycle.id} roles={roles} canAdd={false} />
         </div>
       </div>
 
-      <div className="border-ink text-ink font-display flex h-12 items-center border-t-2 bg-white px-5 text-base font-bold tracking-wider uppercase">
+      <div
+        className={cn(
+          'font-display flex h-12 items-center border-t-2 bg-white px-5 text-base font-bold tracking-wider uppercase',
+          closed ? 'text-text-muted border-gray-300' : 'border-ink text-ink'
+        )}
+      >
         {applicationTypeLabel(cycle.application_type)}
       </div>
 

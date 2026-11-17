@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { ReturnerBadge } from '@/components/ReturnerBadge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { LoadingText } from '@/components/ui/loading-text'
 import { SearchableSelect } from '@/components/ui/searchable-select'
 import { SectionLabel } from '@/components/ui/section-label'
 import type {
@@ -54,7 +55,7 @@ export function OnTheClockPanel({
           {board.status === 'complete'
             ? 'This draft is complete.'
             : board.picks.length >= board.rounds * board.teams.length
-              ? 'Every slot is filled — add a round to keep going.'
+              ? 'Every slot is filled. Add a round to keep going.'
               : 'Nothing is on the clock.'}
         </p>
       </Card>
@@ -106,7 +107,7 @@ export function OnTheClockPanel({
         {error && <p className="text-destructive text-sm">{error}</p>}
         <SectionLabel as="h3">{team.name}&apos;s list</SectionLabel>
         {teamListLoading ? (
-          <p className="text-text-muted text-sm">Loading their list…</p>
+          <LoadingText />
         ) : !teamList ? (
           // Not the same thing as an empty list, and saying so would be a
           // guess about a ranking this viewer isn't allowed to read.
@@ -118,7 +119,7 @@ export function OnTheClockPanel({
             This group hasn&apos;t ranked anyone for this role.
           </p>
         ) : (
-          <ol className="flex max-h-96 flex-col gap-2 overflow-y-auto">
+          <ol className="flex flex-col gap-2">
             {entries.map((entry) => {
               const takenBy = takenByApplicationId[entry.application_id]
               return (

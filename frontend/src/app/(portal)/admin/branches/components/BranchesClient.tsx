@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Plus } from 'lucide-react'
 import { PageContainer } from '@/components/PageContainer'
-import { Breadcrumbs } from '@/components/ui/breadcrumbs'
+import { STACK } from '@/components/ui/page-shell'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
 import { PageHeader } from '@/components/ui/page-header'
@@ -12,7 +12,6 @@ import { useCycles } from '@/lib/queries/cycles'
 import { useRoles } from '@/lib/queries/roles'
 import { BranchDialog } from '../../cycles/components/BranchDialog'
 import { groupCyclesByBranch } from '../../cycles/lib/group-cycles'
-import { branchCrumbs } from '../lib/breadcrumbs'
 import { BranchCard } from './BranchCard'
 
 export function BranchesClient() {
@@ -26,9 +25,8 @@ export function BranchesClient() {
   return (
     <PageContainer>
       <PageHeader
-        back={<Breadcrumbs items={branchCrumbs({})} />}
         title="Branches"
-        subtitle="Pick a branch to see its open, draft and closed cycles."
+        subtitle="Each branch runs its own recruitment. Open one to create a recruiting cycle, customize application forms, choose who reviews applications, and manage incoming applicants."
         actions={
           <Button onClick={() => setShowCreate(true)}>
             <Plus className="h-4 w-4" />
@@ -43,7 +41,7 @@ export function BranchesClient() {
           description="Create a branch to start adding cycles."
         />
       ) : (
-        <div className="flex flex-col gap-10">
+        <div className={STACK}>
           {groups.map(({ branch, cycles }, i) => (
             <BranchCard
               key={branch.id}

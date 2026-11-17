@@ -94,7 +94,7 @@ export function LeadPhaseNav({ collapsed }: { collapsed?: boolean }) {
 
   return (
     <div className="flex flex-col">
-      <CycleSwitcher />
+      <CycleSwitcher mode="lead" />
       <div className="mt-2 flex flex-col">
         <ol className="flex flex-col">
           <li>
