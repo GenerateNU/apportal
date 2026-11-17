@@ -49,6 +49,13 @@ import { useReviewConflicts, useStaffing } from '@/lib/queries/reviewer-pools'
 import { cn } from '@/lib/utils'
 import { ConflictsButton } from '../../reviews/components/ReviewsClient'
 
+const IN_INTERVIEWS = new Set<string>([
+  'interview',
+  'interview_scheduled',
+  'interview_conducted',
+  'interview_review',
+])
+
 export function useInterviewSetup(cycleId: string) {
   const { data: steps = [] } = useCycleSteps(cycleId)
   const recEach = perApplicant(steps, 'interviews', 'recording_reviewer')
@@ -116,7 +123,9 @@ function Board({
   roleId: string
   setRoleId: (id: string) => void
 }) {
-  const { data: board = [], isLoading } = useInterviewBoard(cycleId)
+  const { data: board = [], isLoading } = useInterviewBoard(cycleId, {
+    history: true,
+  })
   const { data: staffing } = useStaffing(cycleId)
   const { data: conflicts = [] } = useReviewConflicts(cycleId)
   const { data: staff = [] } = useCycleStaff(cycleId)
@@ -175,13 +184,19 @@ function Board({
     names.set(p.nuid, p.full_name)
   const nameOf = (nuid: string) => names.get(nuid) ?? nuid
 
+  // Moved on or turned down: kept for the record, no longer assignable.
+  const current = (r: InterviewEntry) => IN_INTERVIEWS.has(r.stage)
   const ivNeed = (r: InterviewEntry) =>
-    Math.max(
-      0,
-      ivEach - r.interviewers.length - (newIv.get(r.applicationId)?.length ?? 0)
-    )
+    !current(r)
+      ? 0
+      : Math.max(
+          0,
+          ivEach -
+            r.interviewers.length -
+            (newIv.get(r.applicationId)?.length ?? 0)
+        )
   const recNeed = (r: InterviewEntry) =>
-    withRecording
+    withRecording && current(r)
       ? Math.max(
           0,
           recEach -
@@ -212,7 +227,8 @@ function Board({
       : []),
   ]
   const removable = rows.some(
-    (r) => !r.done && r.interviewers.length + r.reviewers.length > 0
+    (r) =>
+      current(r) && !r.done && r.interviewers.length + r.reviewers.length > 0
   )
 
   const load = new Map<
@@ -510,7 +526,7 @@ function Board({
                       people={r.interviewers}
                       proposed={newIv.get(r.applicationId) ?? []}
                       need={ivNeed(r)}
-                      locked={r.done || released}
+                      locked={r.done || released || !current(r)}
                       canAdd={editable}
                       nameOf={nameOf}
                       options={eligible(r.roleId).filter(
@@ -571,7 +587,7 @@ function Board({
                         people={r.reviewers}
                         proposed={newRec.get(r.applicationId) ?? []}
                         need={recNeed(r)}
-                        locked={released}
+                        locked={released || !current(r)}
                         canAdd={editable}
                         nameOf={nameOf}
                         options={eligible(r.roleId).filter(

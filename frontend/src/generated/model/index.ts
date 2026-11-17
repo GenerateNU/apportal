@@ -152,6 +152,7 @@ export * from './getInterviewBoard200';
 export * from './getInterviewBoardParams';
 export * from './getInterviewScriptParams';
 export * from './getReviewBoard200';
+export * from './getReviewBoardParams';
 export * from './getReviewRankingParams';
 export * from './groupMember';
 export * from './interviewBoardPerson';

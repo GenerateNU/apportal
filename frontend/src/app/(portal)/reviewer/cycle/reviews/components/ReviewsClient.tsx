@@ -49,6 +49,8 @@ import {
 } from '@/lib/queries/reviewer-pools'
 import { useReviewerProgressByRoles } from '@/lib/queries/reviewer-progress'
 import { cn } from '@/lib/utils'
+import type { ApplicationStage } from '@/lib/api/types'
+import { stageLabel } from '../../../applications/components/constants'
 import { ConflictsEditor } from '../../components/PositionTeams'
 
 export type PositionState = {
@@ -195,6 +197,8 @@ export function ConflictsButton({ cycleId }: { cycleId: string }) {
   )
 }
 
+const IN_REVIEW = new Set<string>(['submitted', 'lead_review', 'chief_review'])
+
 const released = (p: PositionState) =>
   p.reviewStatus === 'open' || p.reviewStatus === 'closed'
 
@@ -211,7 +215,9 @@ function AssignBoard({
   roleId: string
   setRoleId: (id: string) => void
 }) {
-  const { data: board = [] } = useReviewBoard(cycleId)
+  const { data: board = [] } = useReviewBoard(cycleId, { history: true })
+  // Moved on or turned down: kept for the record, no longer assignable.
+  const current = (r: BoardEntry) => IN_REVIEW.has(r.stage)
   const { data: staff = [] } = useCycleStaff(cycleId)
   const { data: staffing } = useStaffing(cycleId)
   const { data: conflicts = [] } = useReviewConflicts(cycleId)
@@ -240,12 +246,14 @@ function AssignBoard({
   }
   const added = plan?.new?.length ?? 0
   const missing = (r: BoardEntry) =>
-    Math.max(
-      0,
-      coverage -
-        r.reviewers.length -
-        (proposed.get(r.applicationId)?.length ?? 0)
-    )
+    !current(r)
+      ? 0
+      : Math.max(
+          0,
+          coverage -
+            r.reviewers.length -
+            (proposed.get(r.applicationId)?.length ?? 0)
+        )
   const shortIn = (id: string) =>
     board.filter((r) => r.roleId === id && missing(r) > 0).length
   const notes = (plan?.positions ?? []).flatMap((r) => {
@@ -296,10 +304,12 @@ function AssignBoard({
   const clearable = positions.filter(
     (p) =>
       !released(p) &&
-      board.some((r) => r.roleId === p.roleId && unsubmitted(r) > 0)
+      board.some(
+        (r) => r.roleId === p.roleId && current(r) && unsubmitted(r) > 0
+      )
   )
   const clearCount = board
-    .filter((r) => clearing?.some((p) => p.roleId === r.roleId))
+    .filter((r) => current(r) && clearing?.some((p) => p.roleId === r.roleId))
     .reduce((n, r) => n + unsubmitted(r), 0)
 
   async function run(p: Promise<unknown>) {
@@ -510,7 +520,7 @@ function AssignBoard({
                             />
                           )}
                           {x.name.split(' ')[0]}
-                          {!released(position) && (
+                          {!released(position) && current(r) && (
                             <button
                               type="button"
                               aria-label={`Remove ${x.name}`}
@@ -557,7 +567,11 @@ function AssignBoard({
                       )}
                     </span>
                     <span className="w-16 shrink-0 text-right text-xs tabular-nums">
-                      {released(position) ? (
+                      {!current(r) ? (
+                        <span className="text-text-muted">
+                          {stageLabel[r.stage as ApplicationStage] ?? r.stage}
+                        </span>
+                      ) : released(position) ? (
                         <span className="text-text-muted">
                           {done}/{r.reviewers.length} in
                         </span>

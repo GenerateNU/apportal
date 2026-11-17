@@ -33,6 +33,7 @@ import type {
   AutoAssignReviewersParams,
   ErrorModel,
   GetReviewBoard200,
+  GetReviewBoardParams,
   ListReviewConflicts200,
   RemoveReviewConflict200
 } from '.././model';
@@ -145,12 +146,14 @@ export const useAutoAssignReviewers = <TError = ErrorModel | ErrorModel | ErrorM
  */
 export const getReviewBoard = (
     id: string,
+    params?: GetReviewBoardParams,
  options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
 ) => {
       
       
       return customInstance<GetReviewBoard200>(
-      {url: `/cycles/${id}/review-board`, method: 'GET', signal
+      {url: `/cycles/${id}/review-board`, method: 'GET',
+        params, signal
     },
       options);
     }
@@ -158,23 +161,25 @@ export const getReviewBoard = (
 
 
 
-export const getGetReviewBoardQueryKey = (id?: string,) => {
+export const getGetReviewBoardQueryKey = (id?: string,
+    params?: GetReviewBoardParams,) => {
     return [
-    `/cycles/${id}/review-board`
+    `/cycles/${id}/review-board`, ...(params ? [params]: [])
     ] as const;
     }
 
     
-export const getGetReviewBoardQueryOptions = <TData = Awaited<ReturnType<typeof getReviewBoard>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReviewBoard>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export const getGetReviewBoardQueryOptions = <TData = Awaited<ReturnType<typeof getReviewBoard>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel>(id: string,
+    params?: GetReviewBoardParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReviewBoard>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetReviewBoardQueryKey(id);
+  const queryKey =  queryOptions?.queryKey ?? getGetReviewBoardQueryKey(id,params);
 
   
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getReviewBoard>>> = ({ signal }) => getReviewBoard(id, requestOptions, signal);
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getReviewBoard>>> = ({ signal }) => getReviewBoard(id,params, requestOptions, signal);
 
       
 
@@ -188,7 +193,8 @@ export type GetReviewBoardQueryError = ErrorModel | ErrorModel | ErrorModel | Er
 
 
 export function useGetReviewBoard<TData = Awaited<ReturnType<typeof getReviewBoard>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
- id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReviewBoard>>, TError, TData>> & Pick<
+ id: string,
+    params: undefined |  GetReviewBoardParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReviewBoard>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getReviewBoard>>,
           TError,
@@ -198,7 +204,8 @@ export function useGetReviewBoard<TData = Awaited<ReturnType<typeof getReviewBoa
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useGetReviewBoard<TData = Awaited<ReturnType<typeof getReviewBoard>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
- id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReviewBoard>>, TError, TData>> & Pick<
+ id: string,
+    params?: GetReviewBoardParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReviewBoard>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getReviewBoard>>,
           TError,
@@ -208,7 +215,8 @@ export function useGetReviewBoard<TData = Awaited<ReturnType<typeof getReviewBoa
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useGetReviewBoard<TData = Awaited<ReturnType<typeof getReviewBoard>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
- id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReviewBoard>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ id: string,
+    params?: GetReviewBoardParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReviewBoard>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
@@ -216,11 +224,12 @@ export function useGetReviewBoard<TData = Awaited<ReturnType<typeof getReviewBoa
  */
 
 export function useGetReviewBoard<TData = Awaited<ReturnType<typeof getReviewBoard>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
- id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReviewBoard>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ id: string,
+    params?: GetReviewBoardParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReviewBoard>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getGetReviewBoardQueryOptions(id,options)
+  const queryOptions = getGetReviewBoardQueryOptions(id,params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

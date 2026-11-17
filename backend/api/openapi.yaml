@@ -10584,6 +10584,13 @@ paths:
           schema:
             description: Cycle ID
             type: string
+        - description: Also list everyone with reviewers assigned, whatever their stage now
+          explode: false
+          in: query
+          name: history
+          schema:
+            description: Also list everyone with reviewers assigned, whatever their stage now
+            type: boolean
       responses:
         "200":
           content:

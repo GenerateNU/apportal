@@ -108,6 +108,13 @@ func TestReviewBoardGroupsReviewersByApplicant(t *testing.T) {
 	if len(r) != 2 || !r[0].Submitted || r[1].Submitted || !r[1].Started || r[0].AssignmentID != "r1" {
 		t.Errorf("reviewers: %+v", r)
 	}
+	all, err := newReviewService(store, fakeRules{}).reviewBoard(chief(), &ReviewBoardInput{ID: accesstest.CycleID, History: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(all.Body) != 3 {
+		t.Fatalf("history keeps a3, reviewed and since moved on: %+v", all.Body)
+	}
 }
 
 func autoIn(roles ...string) *AutoAssignInput {

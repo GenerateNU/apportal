@@ -28,7 +28,7 @@ type View = 'everyone' | 'mine'
 
 export function ReviewingClient() {
   const { scope, cycleId, positions } = usePositions()
-  const { data: board, isLoading } = useReviewBoard(cycleId)
+  const { data: board, isLoading } = useReviewBoard(cycleId, { history: true })
   const { data: me } = useCurrentUser()
   const params = useSearchParams()
   const router = useRouter()

@@ -219,29 +219,36 @@ export type BoardEntry = {
   }[]
 }
 
-export function useReviewBoard(cycleId: string) {
+// history also keeps everyone reviewed who has since moved on, for progress pages.
+export function useReviewBoard(
+  cycleId: string,
+  { history = false }: { history?: boolean } = {}
+) {
   return useQuery({
-    queryKey: queryKeys.reviewBoard.detail(cycleId),
+    queryKey: history
+      ? [...queryKeys.reviewBoard.detail(cycleId), 'history']
+      : queryKeys.reviewBoard.detail(cycleId),
     queryFn: async () =>
-      (((await getReviewBoard(cycleId)) ?? []) as BoardRow[]).map(
-        (r): BoardEntry => ({
-          applicationId: r.application_id,
-          applicantNuid: r.applicant_nuid,
-          name: r.full_name,
-          email: r.email,
-          roleId: r.role_id,
-          stage: r.stage,
-          submittedAt: r.submitted_at,
-          returner: r.returner,
-          reviewers: (r.reviewers ?? []).map((x) => ({
-            assignmentId: x.assignment_id,
-            leadNuid: x.lead_nuid,
-            name: x.full_name,
-            submitted: x.submitted,
-            started: x.started,
-          })),
-        })
-      ),
+      (
+        ((await getReviewBoard(cycleId, history ? { history } : undefined)) ??
+          []) as BoardRow[]
+      ).map((r): BoardEntry => ({
+        applicationId: r.application_id,
+        applicantNuid: r.applicant_nuid,
+        name: r.full_name,
+        email: r.email,
+        roleId: r.role_id,
+        stage: r.stage,
+        submittedAt: r.submitted_at,
+        returner: r.returner,
+        reviewers: (r.reviewers ?? []).map((x) => ({
+          assignmentId: x.assignment_id,
+          leadNuid: x.lead_nuid,
+          name: x.full_name,
+          submitted: x.submitted,
+          started: x.started,
+        })),
+      })),
     enabled: !!cycleId,
   })
 }
