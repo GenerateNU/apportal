@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import Link from 'next/link'
 import { Pencil } from 'lucide-react'
 import { PageContainer } from '@/components/PageContainer'
 import { Button } from '@/components/ui/button'
@@ -23,7 +24,6 @@ import { useDecisionTemplates, useDecisions } from '@/lib/queries/decisions'
 import { useStaffCycles } from '@/lib/queries/cycle-staff'
 import { DecisionListRow } from './DecisionListRow'
 import { NoInterviewCard } from './NoInterviewCard'
-import { TemplateDialog } from './TemplateDialog'
 import { useCycleRolePicker } from '@/hooks/useRoleSelection'
 
 type Tab = 'interviewed' | 'no_interview'
@@ -51,7 +51,6 @@ export function DecisionsClient() {
 
   const { role, setRole, roleIds, roleLabel } = useCycleRolePicker(cycleId)
   const [search, setSearch] = useState('')
-  const [editingTemplates, setEditingTemplates] = useState(false)
   const [openId, setOpenId] = useState<string | null>(null)
 
   const { data: rows = [], isLoading } = useDecisions(cycleId, {
@@ -93,13 +92,13 @@ export function DecisionsClient() {
         subtitle="Rejection letters, ready to copy and send."
         actions={
           <>
-            <Button
-              variant="outline"
-              onClick={() => setEditingTemplates(true)}
-              disabled={templates.length === 0}
-            >
-              <Pencil size={14} />
-              Letter templates
+            <Button variant="outline" asChild>
+              <Link
+                href={`/reviewer/decisions/templates${role ? `?role=${role}` : ''}`}
+              >
+                <Pencil size={14} />
+                Letter templates
+              </Link>
             </Button>
           </>
         }
@@ -228,16 +227,6 @@ export function DecisionsClient() {
             />
           )}
         </>
-      )}
-
-      {cycleId && (
-        <TemplateDialog
-          open={editingTemplates}
-          onOpenChange={setEditingTemplates}
-          cycleId={cycleId}
-          role={role}
-          templates={templates}
-        />
       )}
     </PageContainer>
   )
