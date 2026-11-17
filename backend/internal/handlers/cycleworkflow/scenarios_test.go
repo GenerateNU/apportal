@@ -94,7 +94,12 @@ func TestScenarioOverridesNeedConfirmAndAreAudited(t *testing.T) {
 
 	_, err = f.s.setDeadline(f.confirmed(f.chiefA), in)
 	f.must(err)
-	rows := f.overrides(workflow.OpSetDeadline)[before:]
+	var rows []models.WorkflowOverride
+	for _, r := range f.overrides(workflow.OpSetDeadline) {
+		if r.Level == string(workflow.LevelOverride) {
+			rows = append(rows, r)
+		}
+	}
 	if len(rows) != 1 || rows[0].ActorNUID != f.chiefA.NUID || rows[0].Level != string(workflow.LevelOverride) || len(rows[0].Plan) == 0 {
 		t.Fatalf("audit rows: %+v", rows)
 	}

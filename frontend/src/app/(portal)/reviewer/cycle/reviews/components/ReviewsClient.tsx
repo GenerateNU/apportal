@@ -447,36 +447,23 @@ function AssignBoard({
             </span>
           </div>
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 px-5 py-2">
-            <nav className="flex gap-1">
-              {(
-                [
-                  [false, 'All', rows.length],
-                  [true, 'Short', shortIn(position.roleId)],
-                ] as const
-              ).map(([value, label, n]) => (
-                <button
-                  key={label}
-                  type="button"
-                  onClick={() => setOnlyShort(value)}
-                  className={cn(
-                    'px-3 py-1 text-sm transition-colors',
-                    onlyShort === value
-                      ? 'bg-ink text-white'
-                      : 'text-text-muted hover:text-ink hover:bg-gray-50'
-                  )}
-                >
-                  {label}
-                  <span
-                    className={cn(
-                      'ml-1.5 tabular-nums',
-                      onlyShort !== value && value && n > 0 && 'text-amber-600'
-                    )}
-                  >
-                    {n}
-                  </span>
-                </button>
-              ))}
-            </nav>
+            <div className="text-text-muted flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+              <span>
+                {rows.length} applicant{rows.length === 1 ? '' : 's'}
+              </span>
+              {shortIn(position.roleId) > 0 &&
+                shortIn(position.roleId) < rows.length && (
+                  <label className="flex items-center gap-1.5 text-xs">
+                    <input
+                      type="checkbox"
+                      checked={onlyShort}
+                      onChange={(e) => setOnlyShort(e.target.checked)}
+                      className="accent-ink h-3.5 w-3.5"
+                    />
+                    Only short
+                  </label>
+                )}
+            </div>
             <ReleaseControls cycleId={cycleId} position={position} />
           </div>
           {shown.length === 0 ? (

@@ -197,6 +197,8 @@ function Board({
 
   const rows = board.filter((r) => r.roleId === roleId)
   const shown = onlyShort ? rows.filter(short) : rows
+  const ivShort = rows.filter((r) => !r.done && ivNeed(r) > 0).length
+  const recShort = rows.filter((r) => !r.done && recNeed(r) > 0).length
   const added =
     (plan?.interviewers?.length ?? 0) + (plan?.recording_reviewers?.length ?? 0)
   const stillShort = new Set([
@@ -330,8 +332,8 @@ function Board({
 
       <div className="grid items-start gap-4 lg:grid-cols-[1fr_17rem]">
         <Card padding="none">
-          <div className="flex flex-wrap items-center gap-x-6 border-b border-gray-200 px-5">
-            {roleIds.length > 1 && (
+          {roleIds.length > 1 && (
+            <div className="flex flex-wrap items-center gap-x-6 border-b border-gray-200 px-5">
               <nav className="flex gap-6 overflow-x-auto">
                 {roleIds.map((id) => {
                   const n = shortIn(id)
@@ -361,8 +363,14 @@ function Board({
                   )
                 })}
               </nav>
-            )}
-            <span className="ml-auto flex shrink-0 items-center gap-2 py-2">
+            </div>
+          )}
+
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 px-5 py-2">
+            <div className="text-text-muted flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+              <span>
+                {rows.length} applicant{rows.length === 1 ? '' : 's'}
+              </span>
               {editable && panelMode && (
                 <Tooltip label="Each applicant gets one whole interview panel. Delete the panels to assign people one by one.">
                   <span className="text-text-subtle text-xs">
@@ -370,6 +378,19 @@ function Board({
                   </span>
                 </Tooltip>
               )}
+              {shortIn(roleId) > 0 && shortIn(roleId) < rows.length && (
+                <label className="flex items-center gap-1.5 text-xs">
+                  <input
+                    type="checkbox"
+                    checked={onlyShort}
+                    onChange={(e) => setOnlyShort(e.target.checked)}
+                    className="accent-ink h-3.5 w-3.5"
+                  />
+                  Only short
+                </label>
+              )}
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
               {editable && removable && (
                 <Button
                   variant="ghost"
@@ -395,49 +416,16 @@ function Board({
                     <Sparkles /> Preview auto-assign
                   </Button>
                 ))}
-            </span>
-          </div>
-
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 px-5 py-2">
-            <nav className="flex gap-1">
-              {(
-                [
-                  [false, 'All', rows.length],
-                  [true, 'Short', shortIn(roleId)],
-                ] as const
-              ).map(([value, label, n]) => (
-                <button
-                  key={label}
-                  type="button"
-                  onClick={() => setOnlyShort(value)}
-                  className={cn(
-                    'px-3 py-1 text-sm transition-colors',
-                    onlyShort === value
-                      ? 'bg-ink text-white'
-                      : 'text-text-muted hover:text-ink hover:bg-gray-50'
-                  )}
-                >
-                  {label}
-                  <span
-                    className={cn(
-                      'ml-1.5 tabular-nums',
-                      onlyShort !== value && value && n > 0 && 'text-amber-600'
-                    )}
-                  >
-                    {n}
-                  </span>
-                </button>
-              ))}
-            </nav>
-            <ReleaseInterviews
-              cycleId={cycleId}
-              roleId={roleId}
-              name={roleLabel(roleId)}
-              released={released}
-              hasDue={!!interviewDue}
-              assigned={rows.some((r) => r.interviewers.length > 0)}
-              withRecording={withRecording}
-            />
+              <ReleaseInterviews
+                cycleId={cycleId}
+                roleId={roleId}
+                name={roleLabel(roleId)}
+                released={released}
+                hasDue={!!interviewDue}
+                assigned={rows.some((r) => r.interviewers.length > 0)}
+                withRecording={withRecording}
+              />
+            </div>
           </div>
 
           {rows.length > 0 && (
@@ -450,23 +438,29 @@ function Board({
               )}
             >
               <span>Applicant</span>
-              <span className="flex flex-wrap items-baseline gap-x-2">
-                Interviewers · {ivEach} each
-                <DueLink
-                  cycleId={cycleId}
-                  roleId={roleId}
-                  field="interview_closes_at"
-                />
-              </span>
-              {withRecording ? (
-                <span className="flex flex-wrap items-baseline gap-x-2">
-                  Recording reviewers · {recEach} each
+              <ColumnHead
+                label="Interviewers"
+                missing={ivShort}
+                due={
                   <DueLink
                     cycleId={cycleId}
                     roleId={roleId}
-                    field="interview_review_closes_at"
+                    field="interview_closes_at"
                   />
-                </span>
+                }
+              />
+              {withRecording ? (
+                <ColumnHead
+                  label="Recording reviewers"
+                  missing={recShort}
+                  due={
+                    <DueLink
+                      cycleId={cycleId}
+                      roleId={roleId}
+                      field="interview_review_closes_at"
+                    />
+                  }
+                />
               ) : (
                 <span />
               )}
@@ -508,24 +502,6 @@ function Board({
                         />
                       )}
                       <span className="truncate">{r.name}</span>
-                      {matching && (
-                        <span className="flex shrink-0 gap-0.5">
-                          {r.available.length === 0 ? (
-                            <span className="text-text-faint text-[10px]">
-                              no days
-                            </span>
-                          ) : (
-                            r.available.map((d) => (
-                              <span
-                                key={d}
-                                className="text-text-muted bg-gray-100 px-1 text-[10px] font-normal"
-                              >
-                                {slotLabel(d)}
-                              </span>
-                            ))
-                          )}
-                        </span>
-                      )}
                       {matching && !r.done && noSharedDay(r) && (
                         <span className="shrink-0 text-[10px] font-normal text-amber-600">
                           No shared day
@@ -1182,4 +1158,22 @@ function ReleaseInterviews({
 
 function labelFor(slots: { id: string; label: string }[]) {
   return (id: string) => slots.find((s) => s.id === id)?.label ?? id
+}
+
+function ColumnHead({
+  label,
+  missing,
+  due,
+}: {
+  label: string
+  missing: number
+  due: React.ReactNode
+}) {
+  return (
+    <span className="flex flex-wrap items-baseline gap-x-2">
+      {label}
+      {missing > 0 && <span className="text-amber-600">{missing} missing</span>}
+      {due}
+    </span>
+  )
 }

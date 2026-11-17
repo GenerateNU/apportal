@@ -2,8 +2,7 @@
 
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { ArrowRight, Check, Info, RotateCcw, TriangleAlert } from 'lucide-react'
-import { Tooltip } from '@/components/Tooltip'
+import { ArrowRight, Check, RotateCcw, TriangleAlert } from 'lucide-react'
 import { PAGE_SHELL } from '@/components/ui/page-shell'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -64,7 +63,7 @@ export function CutoffClient() {
     <div className={PAGE_SHELL}>
       <PageHeader
         title="Shortlist"
-        subtitle="Pick who moves on to the next round. Start with the top scores, then add or remove anyone by hand."
+        subtitle="Applicants selected to advance to the next round, ranked by score."
         actions={
           roleIds.length > 1 && (
             <Select value={scope.roleId} onValueChange={scope.setRoleId}>
@@ -164,11 +163,6 @@ function Ranking({ cycleId, roleId }: { cycleId: string; roleId: string }) {
   const handPicked = inReview.filter((e) => e.override !== undefined).length
   const movedOn = entries.length - inReview.length
   const ranked = entries.filter((e) => e.rank != null).length
-  const dupes = new Set(
-    applications
-      .map((a) => a.full_name)
-      .filter((n, i, all) => all.indexOf(n) !== i)
-  )
   const aboveCount = entries.filter((e) => e.above_cutoff).length
   const lastAbove = entries.reduce(
     (last, e, i) => (e.above_cutoff ? i : last),
@@ -344,7 +338,7 @@ function Ranking({ cycleId, roleId }: { cycleId: string; roleId: string }) {
 
         <div className="max-h-[60vh] overflow-auto">
           <table className="w-full text-sm">
-            <thead className="text-text-subtle sticky top-0 z-10 border-b border-gray-200 bg-gray-50 text-left text-xs uppercase">
+            <thead className="font-display text-ink/60 sticky top-0 z-10 border-b border-gray-200 bg-gray-50 text-left text-[11px] tracking-wider uppercase [&_th]:font-normal">
               <tr>
                 <th className="w-10 px-3 py-2">
                   <Checkbox
@@ -364,15 +358,8 @@ function Ranking({ cycleId, roleId }: { cycleId: string; roleId: string }) {
                 </th>
                 <th className="w-10 px-2 py-2">#</th>
                 <th className="px-3 py-2">Applicant</th>
-                <th className="px-3 py-2 text-right">
-                  <span className="inline-flex items-center gap-1">
-                    Score (z)
-                    <Tooltip label="Normalized: each review becomes a z-score against that reviewer's own average, then they're averaged, so harsh or generous reviewers can't tip the ranking. 0 is average, +1 is one standard deviation above.">
-                      <Info size={12} />
-                    </Tooltip>
-                  </span>
-                </th>
-                <th className="px-3 py-2 text-right">Raw average</th>
+                <th className="px-3 py-2 text-right">Average</th>
+                <th className="px-3 py-2 text-right">Z-score</th>
                 <th className="w-40 px-3 py-2" />
               </tr>
             </thead>
@@ -428,20 +415,15 @@ function Ranking({ cycleId, roleId }: { cycleId: string; roleId: string }) {
                             </span>
                           )}
                         </span>
-                        {app && dupes.has(app.full_name) && (
-                          <span className="text-text-subtle block text-xs font-normal">
-                            {app.email}
-                          </span>
-                        )}
+                      </td>
+                      <td className="text-text-muted px-3 py-2 text-right tabular-nums">
+                        {e.scaled_average != null
+                          ? `${Math.round(e.scaled_average * 100)}%`
+                          : '—'}
                       </td>
                       <td className="px-3 py-2 text-right font-semibold tabular-nums">
                         {e.normalized_score != null
                           ? e.normalized_score.toFixed(2)
-                          : '—'}
-                      </td>
-                      <td className="px-3 py-2 text-right tabular-nums">
-                        {e.scaled_average != null
-                          ? `${Math.round(e.scaled_average * 100)}%`
                           : '—'}
                       </td>
                       <td
@@ -504,20 +486,12 @@ function Ranking({ cycleId, roleId }: { cycleId: string; roleId: string }) {
                 <Check size={14} className="text-emerald-600" />
                 {movedOn} moved on
               </span>
-            ) : (
-              <span className="text-text-muted">
-                Check the applicants to advance.
-              </span>
-            )}
-            <Link
-              href="/reviewer/review-calibration"
-              className="text-text-subtle hover:text-ink ml-4 text-xs hover:underline"
-            >
-              How each reviewer scores
-            </Link>
+            ) : null}
+            <span className="text-text-muted ml-3 text-xs">
+              Z-scores adjust for reviewer bias.
+            </span>
           </span>
           <Button
-            variant="brutal-ink"
             disabled={
               toAdvance.length === 0 || dirty || saving || advance.isPending
             }

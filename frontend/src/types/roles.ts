@@ -18,7 +18,7 @@ export function getRoles(user: Pick<User, 'roles'>, isStaff = false): Role[] {
 // with multiple roles land on the most privileged staff surface first.
 export function defaultDashboard(roles: Role[]): string {
   if (roles.includes('reviewer')) return '/applicant/applications'
-  if (roles.includes('admin')) return '/admin/applications'
+  if (roles.includes('admin')) return '/admin/branches'
   if (roles.includes('applicant')) return '/applicant/applications'
   return '/login'
 }

@@ -78,6 +78,21 @@ func loadOverview(db *gorm.DB, cycleID string, c Caller, now time.Time) (Overvie
 	if err != nil {
 		return Overview{}, err
 	}
+	if err := db.Table("lead_assignments la").
+		Select("count(*) AS assigned, count(w.submitted_at) AS submitted").
+		Joins("JOIN applications a ON a.id = la.application_id").
+		Joins("LEFT JOIN written_reviews w ON w.application_id = la.application_id AND w.reviewer_nuid = la.lead_nuid").
+		Where("a.cycle_id = ?", cycleID).Scan(&f.Reviews).Error; err != nil {
+		return Overview{}, err
+	}
+	var interviewers int64
+	if err := db.Table("interviewers x").
+		Joins("JOIN interviews i ON i.id = x.interview_id").
+		Joins("JOIN applications a ON a.id = i.application_id").
+		Where("a.cycle_id = ?", cycleID).Count(&interviewers).Error; err != nil {
+		return Overview{}, err
+	}
+	f.InterviewersAssigned = int(interviewers)
 	return f.Overview(c, now, late, counts), nil
 }
 
@@ -103,7 +118,7 @@ func (f *CycleState) StepConfigs() []StepConfig {
 type LateCounts map[key]map[models.StepKind]int
 
 func (f *CycleState) Overview(c Caller, now time.Time, late LateCounts, counts []TaskCount) Overview {
-	v := Overview{CycleID: f.CycleID, Role: c.Tier.role(), Steps: []StepView{}, Phases: f.Phases(), NextActions: []NextAction{}, Tasks: f.Tasks(counts)}
+	v := Overview{CycleID: f.CycleID, Role: c.Tier.role(), Steps: []StepView{}, Phases: f.Phases(now), NextActions: []NextAction{}, Tasks: f.Tasks(counts)}
 	if c.CanOverride() {
 		v.NextActions = f.NextActions(now)
 	}

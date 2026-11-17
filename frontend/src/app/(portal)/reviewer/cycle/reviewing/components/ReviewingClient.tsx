@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { ArrowRight, Check, ChevronRight } from 'lucide-react'
+import { ArrowRight, Check, ChevronRight, Clock } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { DueLine } from '@/components/ui/due-line'
 import { Card } from '@/components/ui/card'
@@ -325,7 +325,7 @@ function Everyone({
             [
               ['reviewers', 'Reviewers', people.length],
               ['waiting', 'Waiting on reviews', waiting.length],
-              ['done', 'Reviewed', done.length],
+              ['done', 'All reviews in', done.length],
             ] as const
           ).map(([id, label, n]) => (
             <button
@@ -465,24 +465,28 @@ function Everyone({
                   <span className="text-ink w-48 shrink-0 truncate text-sm font-medium">
                     {r.name}
                   </span>
-                  <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                  <span className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
                     {r.reviewers.map((x) => (
                       <span
                         key={x.assignmentId}
-                        title={x.name}
+                        title={
+                          x.submitted
+                            ? `${x.name} reviewed`
+                            : `${x.name} hasn’t reviewed yet`
+                        }
                         className={cn(
-                          'flex items-center gap-1',
-                          x.submitted ? 'text-ink' : 'text-text-subtle'
+                          'inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium',
+                          x.submitted
+                            ? 'bg-emerald-50 text-emerald-800'
+                            : 'text-text-muted bg-gray-100'
                         )}
                       >
-                        {x.submitted && (
-                          <Check
-                            size={12}
-                            strokeWidth={3}
-                            className="text-emerald-600"
-                          />
+                        {x.submitted ? (
+                          <Check size={12} strokeWidth={3} />
+                        ) : (
+                          <Clock size={12} />
                         )}
-                        {x.name.split(' ')[0]}
+                        {x.name}
                       </span>
                     ))}
                   </span>

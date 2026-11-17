@@ -67,6 +67,15 @@ type CycleState struct {
 	PeersReleased map[key]bool
 	Missing       map[key][]missingSetup
 	HasTeam       bool
+	// Reviews is how far written reviews have got, loaded for the overview's page locks.
+	Reviews ReviewProgress
+	// InterviewersAssigned counts interviewer slots filled across the cycle.
+	InterviewersAssigned int
+}
+
+type ReviewProgress struct {
+	Assigned  int
+	Submitted int
 }
 
 func NewCycleState(cycleID string) *CycleState {
@@ -307,6 +316,13 @@ func Load(db *gorm.DB, cycleID string) (*CycleState, error) {
 	}
 	for _, a := range assignments {
 		f.SetAssignment(a.Step, a.Kind, a.PerApplicant)
+	}
+	for _, t := range stepTypes {
+		for k, n := range t.DefaultCounts {
+			if _, set := f.Assignments[t.Step][k]; !set {
+				f.SetAssignment(t.Step, k, n)
+			}
+		}
 	}
 
 	if err := db.Model(&models.Role{}).Select("id AS role_id, name").Where("cycle_id = ?", cycleID).

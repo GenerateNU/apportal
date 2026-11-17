@@ -1,6 +1,8 @@
 package workflow
 
 import (
+	"time"
+
 	"github.com/danielgtaylor/huma/v2"
 
 	"github.com/GenerateNU/apportal/backend/internal/models"
@@ -66,7 +68,7 @@ type PhaseView struct {
 
 func reason(s string) *string { return &s }
 
-func (f *CycleState) Phases() []PhaseView {
+func (f *CycleState) Phases(now time.Time) []PhaseView {
 	setup := PhaseView{Key: PhaseSetup, Label: "Setup", Status: StatusOpen, Pages: []PageView{{Page: PagePositions}, {Page: PageTeam}}}
 	if len(f.Openings) == 0 {
 		setup.Pages[1].LockedReason = reason("Add a position first.")
@@ -82,14 +84,49 @@ func (f *CycleState) Phases() []PhaseView {
 		}
 		for _, pg := range stepPages[s] {
 			v := PageView{Page: pg, LockedReason: p.LockedReason}
-			if pg == PageApplicants && v.LockedReason == nil && !f.StartedAnywhere(models.StepApplications) {
-				v.LockedReason = reason("Opens once you release an application.")
+			if v.LockedReason == nil {
+				v.LockedReason = f.pageLock(pg, now)
 			}
 			p.Pages = append(p.Pages, v)
 		}
 		out = append(out, p)
 	}
 	return out
+}
+
+// pageLock is a page waiting on work inside its own step.
+func (f *CycleState) pageLock(pg Page, now time.Time) *string {
+	switch pg {
+	case PageApplicants:
+		if !f.StartedAnywhere(models.StepApplications) {
+			return reason("Opens once you release an application.")
+		}
+	case PageReviewProgress:
+		if f.Reviews.Assigned == 0 {
+			return reason("Assign reviewers first.")
+		}
+	case PageInterviewProgress:
+		if f.InterviewersAssigned == 0 {
+			return reason("Assign interviewers first.")
+		}
+	case PageShortlist:
+		if !f.reviewsIn(now) {
+			return reason("Opens once every review is in or the review deadline passes.")
+		}
+	}
+	return nil
+}
+
+func (f *CycleState) reviewsIn(now time.Time) bool {
+	if f.Reviews.Assigned > 0 && f.Reviews.Submitted >= f.Reviews.Assigned {
+		return true
+	}
+	for _, o := range f.Openings {
+		if f.State(o.RoleID, models.StepReviews, now) != StateClosed {
+			return false
+		}
+	}
+	return len(f.Openings) > 0
 }
 
 func (f *CycleState) lockedBecause() *string {

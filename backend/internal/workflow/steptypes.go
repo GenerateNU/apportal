@@ -24,8 +24,10 @@ type StepType struct {
 	MainKind        models.StepKind
 	DeadlineKinds   []models.StepKind
 	AssignmentKinds []models.StepKind
-	Stages          []models.ApplicationStage
-	Entry           models.ApplicationStage
+	// People per applicant for each assignment kind until a cycle sets its own.
+	DefaultCounts map[models.StepKind]int
+	Stages        []models.ApplicationStage
+	Entry         models.ApplicationStage
 	// ByOutcome steps are reached by setting an outcome (a decision letter), not by advance.
 	ByOutcome bool
 }
@@ -41,6 +43,7 @@ var stepTypes = []StepType{
 		Step: models.StepReviews, Label: "Reviews", After: []models.Step{models.StepApplications},
 		MainKind: models.KindReviewer, DeadlineKinds: []models.StepKind{models.KindReviewer},
 		AssignmentKinds: []models.StepKind{models.KindReviewer},
+		DefaultCounts:   map[models.StepKind]int{models.KindReviewer: 3},
 		Stages:          []models.ApplicationStage{models.StageLeadReview, models.StageChiefReview},
 		Entry:           models.StageLeadReview,
 	},
@@ -49,6 +52,7 @@ var stepTypes = []StepType{
 		MainKind:        models.KindInterviewer,
 		DeadlineKinds:   []models.StepKind{models.KindInterviewer, models.KindRecordingReviewer},
 		AssignmentKinds: []models.StepKind{models.KindInterviewer, models.KindRecordingReviewer},
+		DefaultCounts:   map[models.StepKind]int{models.KindInterviewer: 2},
 		Stages:          []models.ApplicationStage{models.StageInterview, models.StageInterviewScheduled, models.StageInterviewConducted, models.StageInterviewReview},
 		Entry:           models.StageInterview,
 	},
