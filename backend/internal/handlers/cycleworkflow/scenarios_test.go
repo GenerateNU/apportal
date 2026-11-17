@@ -282,8 +282,8 @@ func TestScenarioPreferenceListDeadline(t *testing.T) {
 	f.must(svc.RequireAnyOpeningWorkEditable(f.as(f.leadA), f.cycleA, workflow.WorkPreferenceList))
 
 	_, err = f.s.clearDeadline(f.as(f.chiefA), &DeadlineKindInput{ID: f.cycleA, RoleID: f.roleA, Step: models.StepDecisions, Kind: models.KindPreferenceList})
-	f.must(err)
-	f.must(edit(f.as(f.leadA)))
+	testutil.WantStatus(t, err, http.StatusConflict)
+	testutil.WantStatus(t, edit(f.as(f.leadA)), http.StatusForbidden)
 }
 
 func TestScenarioWorkForAStepThatIsOff(t *testing.T) {

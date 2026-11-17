@@ -31,6 +31,7 @@ const KINDS: DecisionKind[] = ['rejection_post_interview', 'rejection_generic']
 
 const PLACEHOLDERS = [
   ['{{applicant_name}}', 'first name'],
+  ['{{branch}}', 'branch'],
   ['{{role}}', 'position'],
   ['{{cycle}}', 'cycle'],
   ['{{feedback}}', "interviewer's feedback"],

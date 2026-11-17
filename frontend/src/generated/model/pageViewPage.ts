@@ -27,5 +27,4 @@ export const PageViewPage = {
   preference_lists: 'preference_lists',
   draft: 'draft',
   feedback: 'feedback',
-  wrap_up: 'wrap_up',
 } as const;

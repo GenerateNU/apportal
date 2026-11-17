@@ -2,7 +2,13 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
-import { Pencil } from 'lucide-react'
+import { Archive, Pencil } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { useToast } from '@/components/ui/toast'
+import { closeCycle as closeCycleApi } from '@/generated/workflow/workflow'
+import { queryKeys } from '@/lib/queries/keys'
 import { PageContainer } from '@/components/PageContainer'
 import { Button } from '@/components/ui/button'
 import { LoadingText } from '@/components/ui/loading-text'
@@ -52,6 +58,16 @@ export function DecisionsClient() {
   const { role, setRole, roleIds, roleLabel } = useCycleRolePicker(cycleId)
   const [search, setSearch] = useState('')
   const [openId, setOpenId] = useState<string | null>(null)
+  const [closing, setClosing] = useState(false)
+  const router = useRouter()
+  const toast = useToast()
+  const queryClient = useQueryClient()
+  const closeCycle = useMutation({
+    mutationFn: () =>
+      closeCycleApi(cycleId, undefined, { params: { confirm_override: true } }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: queryKeys.workflow.all }),
+  })
 
   const { data: rows = [], isLoading } = useDecisions(cycleId, {
     role_id: role || undefined,
@@ -99,6 +115,10 @@ export function DecisionsClient() {
                 <Pencil size={14} />
                 Letter templates
               </Link>
+            </Button>
+            <Button variant="outline" onClick={() => setClosing(true)}>
+              <Archive size={14} />
+              Close cycle
             </Button>
           </>
         }
@@ -228,6 +248,26 @@ export function DecisionsClient() {
           )}
         </>
       )}
+      <ConfirmDialog
+        open={closing}
+        onOpenChange={setClosing}
+        title={`Close ${cycleName}?`}
+        description={
+          rows.length > sent
+            ? `${rows.length - sent} letters aren't marked sent yet. Closing ends the cycle for everyone.`
+            : 'Every letter is sent. Closing ends the cycle for everyone.'
+        }
+        confirmLabel="Close cycle"
+        pending={closeCycle.isPending}
+        onConfirm={() =>
+          closeCycle.mutate(undefined, {
+            onSuccess: () => {
+              toast(`${cycleName} closed`, { variant: 'success' })
+              router.push('/reviewer/cycle/workflow')
+            },
+          })
+        }
+      />
     </PageContainer>
   )
 }

@@ -18,11 +18,9 @@ export type Phase = {
   lockedReason?: string
 }
 
-export const WRAP_UP_PATH = '/reviewer/cycle/wrap-up'
-
 type StepPage = Omit<Step, 'locked'>
 
-const PAGES: Record<Exclude<PageViewPage, 'wrap_up'>, StepPage> = {
+const PAGES: Record<PageViewPage, StepPage> = {
   positions: {
     href: '/reviewer/cycle/workflow',
     label: 'Openings & process',
@@ -83,9 +81,7 @@ export function toPhases(view: Overview | undefined): Phase[] {
     count: p.applicant_count,
     lockedReason: p.locked_reason,
     steps: (p.pages ?? []).map(({ page, locked_reason }) => ({
-      ...(page === 'wrap_up'
-        ? { href: `${WRAP_UP_PATH}?stage=${p.key}`, label: 'Wrap up' }
-        : PAGES[page]),
+      ...PAGES[page],
       locked: locked_reason,
     })),
   }))

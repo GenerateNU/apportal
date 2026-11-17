@@ -591,7 +591,7 @@ func TestTasks(t *testing.T) {
 		{Kind: TaskReview, RoleID: swe, Total: 3, Done: 3},
 		{Kind: TaskRecordingReview, RoleID: swe, Total: 0},
 		{Kind: TaskPreferenceList, Total: 1},
-	})
+	}, now)
 	if len(tasks) != 2 {
 		t.Fatalf("got %+v", tasks)
 	}

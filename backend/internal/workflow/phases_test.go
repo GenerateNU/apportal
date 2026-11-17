@@ -105,9 +105,6 @@ func TestPhasesLockUntilSetUp(t *testing.T) {
 	if r, _ := pageLock(f.Phases(now), decisions, PageDraft); r != "" {
 		t.Fatalf("draft once preference lists close: %q", r)
 	}
-	if _, ok := pageLock(f.Phases(now), decisions, PageWrapUp); ok {
-		t.Fatal("decisions has no wrap up page")
-	}
 
 	f.CompletedAt[models.StepDecisions] = &past
 	feedback := string(models.StepFeedback)

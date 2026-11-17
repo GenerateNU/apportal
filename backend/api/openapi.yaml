@@ -2970,7 +2970,6 @@ components:
             - preference_lists
             - draft
             - feedback
-            - wrap_up
           type: string
       required:
         - page

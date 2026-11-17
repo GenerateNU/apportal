@@ -24,11 +24,11 @@ func NewDecisionDB(db *gorm.DB) *DecisionDB {
 // sending by hand. {{placeholders}} are filled in by the frontend's
 // renderDecision; the trailing signature is left as a bracket for the admin to
 // replace once per cycle.
-const defaultDecisionSubject = `Generate Software Branch — {{cycle}} {{role}} Application Update`
+const defaultDecisionSubject = `Generate {{branch}} Branch: {{cycle}} {{role}} Application Update`
 
 const defaultPostInterviewBody = `Dear {{applicant_name}},
 
-Thank you for your continued interest and investment in Generate's Software Branch and for taking the time to apply for the {{role}} position for {{cycle}}. Although you had a strong application after careful review, we have decided to move forward with other candidates.
+Thank you for your continued interest and investment in Generate's {{branch}} Branch and for taking the time to apply for the {{role}} position for {{cycle}}. Although you had a strong application after careful review, we have decided to move forward with other candidates.
 
 To shed some light on this decision, {{feedback}} That being said, I really loved talking to you about {{compliments}}
 
@@ -40,7 +40,7 @@ Thanking You,
 
 const defaultGenericBody = `Dear {{applicant_name}},
 
-Thank you for your continued interest and investment in Generate's Software Branch and for taking the time to apply for the {{role}} position for {{cycle}}. After careful review, we have decided to move forward with other candidates.
+Thank you for your continued interest and investment in Generate's {{branch}} Branch and for taking the time to apply for the {{role}} position for {{cycle}}. After careful review, we have decided to move forward with other candidates.
 
 We received an exceptional number of strong applications this cycle and were only able to move a small portion of them forward to interviews, so this decision says far more about how competitive the pool was than it does about your application.
 

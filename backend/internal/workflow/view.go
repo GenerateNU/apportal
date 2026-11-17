@@ -111,7 +111,7 @@ func (f *CycleState) StepConfigs() []StepConfig {
 type LateCounts map[key]map[models.StepKind]int
 
 func (f *CycleState) Overview(c Caller, now time.Time, late LateCounts, counts []TaskCount) Overview {
-	v := Overview{CycleID: f.CycleID, Role: c.Tier.role(), Steps: []StepView{}, Phases: f.Phases(now), NextActions: []NextAction{}, Tasks: f.Tasks(counts)}
+	v := Overview{CycleID: f.CycleID, Role: c.Tier.role(), Steps: []StepView{}, Phases: f.Phases(now), NextActions: []NextAction{}, Tasks: f.Tasks(counts, now)}
 	if c.CanOverride() {
 		v.NextActions = f.NextActions(now)
 	}

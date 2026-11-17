@@ -8,6 +8,7 @@ import type { DecisionRow, DecisionTemplate } from '@/lib/api/types'
 import { useMarkGenericSent } from '@/lib/queries/decisions'
 import { fillTemplate } from './render'
 import { useCopy } from './useCopy'
+import { useBranchName } from './useBranchName'
 
 export function NoInterviewCard({
   rows,
@@ -29,7 +30,13 @@ export function NoInterviewCard({
   const [confirming, setConfirming] = useState(false)
 
   const unsent = rows.filter((r) => !r.sent_at)
-  const vars = { applicant_name: 'there', role: roleName, cycle: cycleName }
+  const branchName = useBranchName(cycleId)
+  const vars = {
+    applicant_name: 'there',
+    branch: branchName,
+    role: roleName,
+    cycle: cycleName,
+  }
   const subject = fillTemplate(template?.subject ?? '', vars)
   const body = fillTemplate(template?.body ?? '', vars)
 

@@ -25,12 +25,11 @@ const (
 	PagePreferenceLists    Page = "preference_lists"
 	PageDraft              Page = "draft"
 	PageFeedback           Page = "feedback"
-	PageWrapUp             Page = "wrap_up"
 )
 
 var allPages = []Page{PagePositions, PageTeam, PageApplicationForms, PageReviewForms, PageApplicants,
 	PageAssignReviewers, PageReviewProgress, PageShortlist, PageInterviewScript, PageAssignInterviewers,
-	PageInterviewProgress, PagePreferenceLists, PageDraft, PageFeedback, PageWrapUp}
+	PageInterviewProgress, PagePreferenceLists, PageDraft, PageFeedback}
 
 func (Page) Schema(huma.Registry) *huma.Schema {
 	enum := make([]any, len(allPages))
@@ -48,7 +47,7 @@ var stepPages = map[models.Step][]Page{
 	models.StepReviews:      {PageAssignReviewers, PageReviewProgress, PageShortlist},
 	models.StepInterviews:   {PageInterviewScript, PageAssignInterviewers, PageInterviewProgress},
 	models.StepDecisions:    {PagePreferenceLists, PageDraft},
-	models.StepFeedback:     {PageFeedback, PageWrapUp},
+	models.StepFeedback:     {PageFeedback},
 }
 
 type PageView struct {
