@@ -113,6 +113,10 @@ func (f *CycleState) pageLock(pg Page, now time.Time) *string {
 		if !f.preferenceListsClosed(now) {
 			return reason("Opens once the preference list deadline passes.")
 		}
+	case PageFeedback:
+		if !f.releasedAnywhere(models.StepFeedback) {
+			return reason("Opens once a chief opens Feedback.")
+		}
 	case PageShortlist:
 		if !f.reviewsIn(now) {
 			return reason("Opens once every review is in or the review deadline passes.")

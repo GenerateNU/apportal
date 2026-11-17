@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import { Trash2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import type { PreferenceListSummary } from '@/lib/api/types'
@@ -12,11 +11,9 @@ import { MEETING_DAY_LABEL } from '@/app/(portal)/reviewer/applications/componen
 export function TeamCard({
   list,
   counts,
-  onDelete,
 }: {
   list: PreferenceListSummary
   counts: { label: string; count: number }[]
-  onDelete?: () => void
 }) {
   const people =
     list.member_names.length > 0
@@ -51,16 +48,6 @@ export function TeamCard({
             {people}
             {list.meeting_day && ` · ${MEETING_DAY_LABEL[list.meeting_day]}`}
           </p>
-          {onDelete && (
-            <button
-              type="button"
-              onClick={onDelete}
-              aria-label={`Delete ${list.name}`}
-              className="text-text-faint relative z-10 -mr-1 shrink-0 p-1 opacity-0 group-hover:opacity-100 hover:text-red-600 focus-visible:opacity-100"
-            >
-              <Trash2 size={14} />
-            </button>
-          )}
         </div>
       </div>
       {counts.length > 0 && (

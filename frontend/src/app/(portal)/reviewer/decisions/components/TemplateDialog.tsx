@@ -52,7 +52,7 @@ export function TemplateDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle>Rejection letters: {roleLabel(role)}</DialogTitle>
+          <DialogTitle>Letter templates: {roleLabel(role)}</DialogTitle>
           <DialogDescription>
             Edited once per cycle. Every unsent message renders from these, so a
             fix here fixes all of them. The signature at the bottom is part of

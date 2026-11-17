@@ -36,6 +36,8 @@ import type {
   ListDecisionTemplatesParams,
   ListDecisions200,
   ListDecisionsParams,
+  MarkSentInputBody,
+  MarkSentOutputBody,
   UpdateDecisionTemplateInputBody,
   UpdateDecisionTemplateParams,
   UpsertDecisionInputBody
@@ -408,6 +410,72 @@ export function useListDecisions<TData = Awaited<ReturnType<typeof listDecisions
 
 
 /**
+ * Chief only. Marks each listed no-interview letter sent and rejects the applicant, in one transaction. Post-interview letters and ones already sent are skipped.
+ * @summary Mark no-interview letters sent
+ */
+export const markDecisionsSent = (
+    id: string,
+    markSentInputBody: NonReadonly<MarkSentInputBody>,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<MarkSentOutputBody>(
+      {url: `/cycles/${id}/decisions/sent`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: markSentInputBody, signal
+    },
+      options);
+    }
+  
+
+
+export const getMarkDecisionsSentMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markDecisionsSent>>, TError,{id: string;data: NonReadonly<MarkSentInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof markDecisionsSent>>, TError,{id: string;data: NonReadonly<MarkSentInputBody>}, TContext> => {
+
+const mutationKey = ['markDecisionsSent'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof markDecisionsSent>>, {id: string;data: NonReadonly<MarkSentInputBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  markDecisionsSent(id,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type MarkDecisionsSentMutationResult = NonNullable<Awaited<ReturnType<typeof markDecisionsSent>>>
+    export type MarkDecisionsSentMutationBody = NonReadonly<MarkSentInputBody>
+    export type MarkDecisionsSentMutationError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel
+
+    /**
+ * @summary Mark no-interview letters sent
+ */
+export const useMarkDecisionsSent = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markDecisionsSent>>, TError,{id: string;data: NonReadonly<MarkSentInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof markDecisionsSent>>,
+        TError,
+        {id: string;data: NonReadonly<MarkSentInputBody>},
+        TContext
+      > => {
+
+      const mutationOptions = getMarkDecisionsSentMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
  * Reviewer only. ?application_ids= is comma-separated. Returns each applicant's interview write-up, recording reviews, and lead written reviews — the material an interviewer draws on to write feedback. Blind review still applies: a lead sees only their own written review, and peers' recording comments are withheld, until a chief releases the cycle's reviews. Leads only get applicants they interviewed.
  * @summary The review history behind a batch of decisions
  */

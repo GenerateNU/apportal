@@ -154,6 +154,15 @@ func (d *DraftDB) CreateDraft(ctx context.Context, cycleID string, role string, 
 	return draft, err
 }
 
+// CountUndecided is how many of the opening's applicants are still in Decisions.
+func (d *DraftDB) CountUndecided(ctx context.Context, cycleID, roleID string) (int64, error) {
+	var n int64
+	err := d.db.WithContext(ctx).Model(&models.Application{}).
+		Where("cycle_id = ? AND role_id = ? AND stage IN ?", cycleID, roleID, workflow.Stages(models.StepDecisions)).
+		Count(&n).Error
+	return n, err
+}
+
 func (d *DraftDB) UpdateDraft(ctx context.Context, id string, in DraftUpdate) (models.Draft, error) {
 	updates := map[string]any{}
 	utils.SetIf(updates, "status", in.Status)

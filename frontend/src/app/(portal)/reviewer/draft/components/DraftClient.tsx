@@ -3,6 +3,8 @@
 import { useIsChief } from '@/lib/queries/cycle-staff'
 import { useState } from 'react'
 import {
+  CheckCircle2,
+  Circle,
   Eye,
   ListOrdered,
   ListRestart,
@@ -26,6 +28,14 @@ import { Card } from '@/components/ui/card'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { ArrowRight } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { useQueryClient } from '@tanstack/react-query'
+import { queryKeys } from '@/lib/queries/keys'
+import {
+  released,
+  useWorkflow,
+  useWorkflowMutations,
+} from '@/lib/queries/workflow'
 import { Input } from '@/components/ui/input'
 import {
   Dialog,
@@ -141,6 +151,25 @@ export function DraftClient() {
 
   const draftScope = { cycleId, roleId: role, draftId: board?.id ?? '' }
   const undrafted = pool.filter((a) => a.stage === 'selection').length
+  const finalized = !!board && board.status === 'complete' && undrafted === 0
+  const queryClient = useQueryClient()
+  const { data: workflow } = useWorkflow(cycleId)
+  const workflowMutations = useWorkflowMutations(cycleId)
+  const decisionsDone = !!(workflow?.steps ?? []).find(
+    (s) => s.step === 'decisions'
+  )?.completed_at
+  const feedbackOpen = roleIds.some((r) => released(workflow, 'feedback', r))
+
+  async function openFeedback() {
+    for (const roleId of roleIds) {
+      await workflowMutations.release.mutateAsync({
+        roleId,
+        step: 'feedback',
+        released: true,
+      })
+    }
+    router.push('/reviewer/decisions')
+  }
   const effectiveOrder =
     order ?? board?.teams.map((t) => t.preference_list_id) ?? []
   const effectiveRounds = rounds ?? board?.rounds ?? 1
@@ -202,49 +231,124 @@ export function DraftClient() {
     )
   }
 
+  const decisionOpenings =
+    (workflow?.steps ?? []).find((st) => st.step === 'decisions')?.openings ??
+    []
+  const left = decisionOpenings.filter((o) => o.applicant_count > 0).length
+
   const header = (
-    <PageHeader
-      title={
-        <span className="inline-flex items-center gap-3">
-          Draft
-          {board && board.status !== 'setup' && (
-            <Badge
-              className={cn(
-                'font-sans tracking-normal normal-case',
-                DRAFT_STATUS_BADGE[board.status]
-              )}
-            >
-              {DRAFT_STATUS_LABEL[board.status]}
-            </Badge>
+    <>
+      <PageHeader
+        title={
+          <span className="inline-flex items-center gap-3">
+            Draft
+            {board && board.status !== 'setup' && (
+              <Badge
+                className={cn(
+                  'font-sans tracking-normal normal-case',
+                  DRAFT_STATUS_BADGE[board.status]
+                )}
+              >
+                {DRAFT_STATUS_LABEL[board.status]}
+              </Badge>
+            )}
+          </span>
+        }
+        subtitle="Teams claim applicants in snake order: the first round runs down the order, the next back up it, so the last team picks twice at the turn."
+        actions={
+          <>
+            {/* Every control on this page is already chief-gated; this just says
+              so up front rather than leaving a lead hunting for the buttons. */}
+            {!isChief && (
+              <Badge className="text-text-muted">
+                <Eye size={12} />
+                View only
+              </Badge>
+            )}
+            <Select value={role} onValueChange={setRole}>
+              <SelectTrigger className="w-48" aria-label="Draft board role">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {roleIds.map((r) => (
+                  <SelectItem key={r} value={r}>
+                    {roleLabel(r)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </>
+        }
+      />
+      {decisionOpenings.length > 0 && (
+        <Card
+          padding="none"
+          className="flex flex-wrap items-center justify-between gap-4 px-5 py-4"
+        >
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+            {decisionOpenings.map((o) => {
+              const done = o.applicant_count === 0
+              return (
+                <button
+                  key={o.role_id}
+                  type="button"
+                  onClick={() => setRole(o.role_id)}
+                  className="flex items-center gap-2 text-sm"
+                >
+                  {done ? (
+                    <CheckCircle2 size={15} className="text-green-600" />
+                  ) : (
+                    <Circle size={15} className="text-gray-300" />
+                  )}
+                  <span
+                    className={cn(
+                      'text-ink font-medium',
+                      o.role_id === role && 'underline underline-offset-4'
+                    )}
+                  >
+                    {o.role_name}
+                  </span>
+                  <span className="text-text-muted">
+                    {done ? 'Finalized' : `${o.applicant_count} left to draft`}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+          {feedbackOpen ? (
+            <Button asChild variant="outline">
+              <Link href="/reviewer/decisions">
+                Go to Feedback
+                <ArrowRight data-icon="inline-end" size={14} />
+              </Link>
+            </Button>
+          ) : (
+            isChief && (
+              <div className="flex items-center gap-3">
+                {!decisionsDone && (
+                  <span className="text-text-subtle text-xs">
+                    Finalize{' '}
+                    {left === 1
+                      ? 'the last position'
+                      : `${left} more positions`}{' '}
+                    first
+                  </span>
+                )}
+                <Button
+                  onClick={openFeedback}
+                  disabled={
+                    !decisionsDone || workflowMutations.release.isPending
+                  }
+                >
+                  Open Feedback
+                  <ArrowRight data-icon="inline-end" size={14} />
+                </Button>
+              </div>
+            )
           )}
-        </span>
-      }
-      subtitle="Teams claim applicants in snake order: the first round runs down the order, the next back up it, so the last team picks twice at the turn."
-      actions={
-        <>
-          {/* Every control on this page is already chief-gated; this just says
-            so up front rather than leaving a lead hunting for the buttons. */}
-          {!isChief && (
-            <Badge className="text-text-muted">
-              <Eye size={12} />
-              View only
-            </Badge>
-          )}
-          <Select value={role} onValueChange={setRole}>
-            <SelectTrigger className="w-48" aria-label="Draft board role">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {roleIds.map((r) => (
-                <SelectItem key={r} value={r}>
-                  {roleLabel(r)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </>
-      }
-    />
+        </Card>
+      )}
+    </>
   )
 
   if (!cycleId || isLoading) {
@@ -364,7 +468,7 @@ export function DraftClient() {
 
       <DraftBoardGrid
         board={board}
-        canEdit={isChief}
+        canEdit={isChief && !finalized}
         onChangePick={setChangingSlot}
         removingPick={removingPick}
         onRemovePick={(pickNumber) => {
@@ -378,11 +482,13 @@ export function DraftClient() {
 
       {isChief && (
         <div className="flex flex-wrap items-center gap-2">
-          {board.status === 'complete' ? (
-            <Button onClick={() => setFinishing(true)}>
-              Advance to Feedback
-              <ArrowRight data-icon="inline-end" size={14} />
-            </Button>
+          {board.status === 'complete' && finalized ? (
+            <span className="text-text-muted inline-flex items-center gap-1.5 text-sm">
+              <CheckCircle2 size={14} className="text-green-600" />
+              {roleLabel(role)} is finalized.
+            </span>
+          ) : board.status === 'complete' ? (
+            <Button onClick={() => setFinishing(true)}>Finalize</Button>
           ) : (
             <>
               <Button
@@ -408,51 +514,53 @@ export function DraftClient() {
               </Button>
             </>
           )}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" aria-label="More actions">
-                <MoreHorizontal size={14} />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              {board.status === 'active' && (
+          {!finalized && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" aria-label="More actions">
+                  <MoreHorizontal size={14} />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                {board.status === 'active' && (
+                  <DropdownMenuItem
+                    onSelect={() => {
+                      setReorderError('')
+                      setReordering(true)
+                    }}
+                  >
+                    <ListOrdered size={14} />
+                    Reorder pick order
+                  </DropdownMenuItem>
+                )}
+                {board.status === 'complete' && (
+                  <DropdownMenuItem
+                    onSelect={() =>
+                      updateDraft.mutate({ ...draftScope, status: 'active' })
+                    }
+                  >
+                    <RotateCcw size={14} />
+                    Reopen draft
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  onSelect={() => {
-                    setReorderError('')
-                    setReordering(true)
-                  }}
+                  variant="destructive"
+                  onSelect={() => setConfirming('reset')}
                 >
-                  <ListOrdered size={14} />
-                  Reorder pick order
+                  <ListRestart size={14} />
+                  Reset picks
                 </DropdownMenuItem>
-              )}
-              {board.status === 'complete' && (
                 <DropdownMenuItem
-                  onSelect={() =>
-                    updateDraft.mutate({ ...draftScope, status: 'active' })
-                  }
+                  variant="destructive"
+                  onSelect={() => setConfirming('delete')}
                 >
-                  <RotateCcw size={14} />
-                  Reopen draft
+                  <Trash2 size={14} />
+                  Delete board
                 </DropdownMenuItem>
-              )}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                variant="destructive"
-                onSelect={() => setConfirming('reset')}
-              >
-                <ListRestart size={14} />
-                Reset picks
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                variant="destructive"
-                onSelect={() => setConfirming('delete')}
-              >
-                <Trash2 size={14} />
-                Delete board
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       )}
 
@@ -569,17 +677,22 @@ export function DraftClient() {
       <ConfirmDialog
         open={finishing}
         onOpenChange={setFinishing}
-        title="Advance to Feedback?"
+        title={`Finalize ${roleLabel(role)}?`}
         description={
           undrafted > 0
             ? `Drafted applicants will be marked as accepted. ${undrafted} not drafted will be rejected.`
             : 'Drafted applicants will be marked as accepted.'
         }
-        confirmLabel="Advance"
+        confirmLabel="Finalize"
         pending={finishDraft.isPending}
         onConfirm={() =>
           finishDraft.mutate(draftScope, {
-            onSuccess: () => router.push('/reviewer/decisions'),
+            onSuccess: () => {
+              setFinishing(false)
+              queryClient.invalidateQueries({
+                queryKey: queryKeys.workflow.all,
+              })
+            },
           })
         }
       />

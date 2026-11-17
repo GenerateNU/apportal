@@ -2,7 +2,6 @@
 
 import { ChevronRight } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
-import { Card } from '@/components/ui/card'
 import type { DecisionRow, DecisionTemplate } from '@/lib/api/types'
 import { STATUS_BADGE, STATUS_LABEL, isDecided } from './constants'
 import { DecisionEditor } from './DecisionEditor'
@@ -27,12 +26,12 @@ export function DecisionListRow({
   onSent,
 }: DecisionListRowProps) {
   return (
-    <Card variant="flat" padding="none" className="overflow-hidden">
+    <div className="overflow-hidden">
       <button
         type="button"
         onClick={onToggle}
         aria-expanded={open}
-        className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-gray-50"
+        className="flex w-full items-center gap-3 px-5 py-3 text-left transition-colors hover:bg-gray-50"
       >
         <ChevronRight
           size={16}
@@ -70,6 +69,6 @@ export function DecisionListRow({
           onSent={onSent}
         />
       )}
-    </Card>
+    </div>
   )
 }

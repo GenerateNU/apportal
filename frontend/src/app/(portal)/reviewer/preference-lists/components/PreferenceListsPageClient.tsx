@@ -28,10 +28,8 @@ import { pickDefaultCycleId } from '@/lib/queries/cycles'
 import { useStaffCycles } from '@/lib/queries/cycle-staff'
 import { TeamCard } from './TeamCard'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
-import type { PreferenceListSummary } from '@/lib/api/types'
 import {
   useCreatePreferenceList,
-  useDeletePreferenceList,
   usePreferenceListDeadline,
   usePreferenceListDetails,
   usePreferenceLists,
@@ -59,8 +57,6 @@ export function PreferenceListsPageClient({ isChief }: { isChief: boolean }) {
     }))
   }
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [deleting, setDeleting] = useState<PreferenceListSummary | null>(null)
-  const deleteList = useDeletePreferenceList()
   const { data: lists = [] } = usePreferenceLists(cycleId)
 
   const submitted = lists.filter((l) => l.status === 'submitted').length
@@ -180,7 +176,6 @@ export function PreferenceListsPageClient({ isChief }: { isChief: boolean }) {
                     key={list.id}
                     list={list}
                     counts={countsFor(list.id)}
-                    onDelete={isChief ? () => setDeleting(list) : undefined}
                   />
                 ))}
               </div>
@@ -197,22 +192,6 @@ export function PreferenceListsPageClient({ isChief }: { isChief: boolean }) {
         confirmLabel="Close lists and start"
         pending={closeLists.isPending}
         onConfirm={closeAndStart}
-      />
-
-      <ConfirmDialog
-        open={!!deleting}
-        onOpenChange={(open) => !open && setDeleting(null)}
-        title="Delete this team?"
-        description={`${deleting?.name ?? ''} and its rankings are deleted for everyone.`}
-        confirmLabel="Delete team"
-        pending={deleteList.isPending}
-        onConfirm={() =>
-          deleting &&
-          deleteList.mutate(
-            { id: deleting.id, cycleId },
-            { onSuccess: () => setDeleting(null) }
-          )
-        }
       />
 
       <CreateListDialog

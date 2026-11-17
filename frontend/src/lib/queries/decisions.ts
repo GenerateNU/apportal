@@ -3,6 +3,7 @@ import {
   listDecisionContext,
   listDecisionTemplates,
   listDecisions,
+  markDecisionsSent,
   updateDecisionTemplate,
   upsertDecision,
 } from '@/generated/decisions/decisions'
@@ -147,6 +148,22 @@ export function useUpdateDecisionTemplate(
           templates?.map((t) => (t.kind === template.kind ? template : t)) ??
           templates
       )
+    },
+  })
+}
+
+export function useMarkGenericSent(cycleId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (applicationIds: string[]) =>
+      markDecisionsSent(cycleId, { application_ids: applicationIds }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.decisions.listsForCycle(cycleId),
+      })
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.applications.all,
+      })
     },
   })
 }

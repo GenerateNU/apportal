@@ -231,7 +231,10 @@ func TestReleaseBlock(t *testing.T) {
 			f.SetRelease(swe, models.StepInterviews, past)
 			f.SetDeadline(swe, models.StepInterviews, Deadline{Kind: models.KindInterviewer, DueAt: past})
 		}, 0},
-		{"feedback needs decisions released", models.StepFeedback, nil, http.StatusConflict},
+		{"feedback waits on people still in decisions", models.StepFeedback, func(f *CycleState) {
+			f.Counts[key{swe, models.StepDecisions}] = 3
+		}, http.StatusConflict},
+		{"feedback once nobody is left in decisions", models.StepFeedback, nil, 0},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

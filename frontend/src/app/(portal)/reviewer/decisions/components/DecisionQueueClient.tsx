@@ -66,7 +66,7 @@ export function DecisionQueueClient() {
   return (
     <PageContainer>
       <PageHeader
-        title="Decision feedback"
+        title="Feedback"
         subtitle="Applicants you interviewed who are being rejected. Your two paragraphs go into the letter a chief sends them."
         actions={
           <Select value={cycleId} onValueChange={setCycleId}>

@@ -70,4 +70,14 @@ func Route(api huma.API, db *gorm.DB) {
 		Tags:        []string{"Decisions"},
 		Errors:      []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound, http.StatusUnprocessableEntity},
 	}, s.upsert)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "mark-decisions-sent",
+		Method:      http.MethodPost,
+		Path:        "/cycles/{id}/decisions/sent",
+		Summary:     "Mark no-interview letters sent",
+		Description: "Chief only. Marks each listed no-interview letter sent and rejects the applicant, in one transaction. Post-interview letters and ones already sent are skipped.",
+		Tags:        []string{"Decisions"},
+		Errors:      []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound, http.StatusConflict, http.StatusUnprocessableEntity},
+	}, s.markSent)
 }

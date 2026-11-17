@@ -30,6 +30,15 @@ func (s *draftService) requireDraftEditable(ctx context.Context, draftID string)
 	if err != nil {
 		return utils.StoreErr(err)
 	}
+	if draft.Status == models.DraftComplete {
+		left, err := s.draftDB.CountUndecided(ctx, draft.CycleID, draft.RoleID)
+		if err != nil {
+			return utils.StoreErr(err)
+		}
+		if left == 0 {
+			return huma.Error409Conflict("This draft is finalized.")
+		}
+	}
 	return s.workflow.RequireOpeningWorkEditable(ctx, draft.CycleID, draft.RoleID, workflow.WorkDraft)
 }
 

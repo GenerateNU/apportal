@@ -351,3 +351,55 @@ func DecisionStatusFor(kind models.DecisionKind, feedback, compliments, bodyOver
 }
 
 func nonEmpty(s *string) bool { return s != nil && *s != "" }
+
+// MarkGenericSent marks unsent no-interview letters sent and rejects their applicants.
+func (d *DecisionDB) MarkGenericSent(ctx context.Context, cycleID string, applicationIDs []string, sentBy string) (int, error) {
+	generic := models.DecisionRejectionGeneric
+	var rows []struct {
+		ApplicationID string
+		Stage         models.ApplicationStage
+	}
+	err := d.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := decisionsFrom(tx, DecisionFilter{CycleID: cycleID, ApplicationIDs: applicationIDs, Kind: &generic}, "").
+			Where("dd.sent_at IS NULL").Scan(&rows).Error; err != nil {
+			return err
+		}
+		if len(rows) == 0 {
+			return nil
+		}
+		ids := make([]string, len(rows))
+		moves := []workflow.Move{}
+		drafts := make([]map[string]any, len(rows))
+		for i, r := range rows {
+			ids[i] = r.ApplicationID
+			var prev any
+			if r.Stage != models.StageRejected {
+				moves = append(moves, workflow.Move{ApplicationID: r.ApplicationID, To: models.StageRejected})
+				prev = r.Stage
+			}
+			drafts[i] = map[string]any{
+				"application_id": r.ApplicationID,
+				"kind":           generic,
+				"sent_at":        gorm.Expr("NOW()"),
+				"sent_by":        sentBy,
+				"previous_stage": prev,
+			}
+		}
+		if err := workflow.GuardMoves(ctx, tx, moves...); err != nil {
+			return err
+		}
+		if err := tx.Model(&decisionDraft{}).Clauses(clause.OnConflict{
+			Columns: []clause.Column{{Name: "application_id"}},
+			DoUpdates: clause.Set{
+				{Column: clause.Column{Name: "sent_at"}, Value: gorm.Expr("COALESCE(decision_drafts.sent_at, NOW())")},
+				{Column: clause.Column{Name: "sent_by"}, Value: gorm.Expr("COALESCE(decision_drafts.sent_by, EXCLUDED.sent_by)")},
+				{Column: clause.Column{Name: "previous_stage"}, Value: gorm.Expr("COALESCE(EXCLUDED.previous_stage, decision_drafts.previous_stage)")},
+			},
+		}).Create(drafts).Error; err != nil {
+			return err
+		}
+		return tx.Model(&models.Application{}).Where("id IN ? AND stage <> ?", ids, models.StageRejected).
+			UpdateColumn("stage", models.StageRejected).Error
+	})
+	return len(rows), err
+}

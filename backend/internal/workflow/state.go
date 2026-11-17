@@ -247,6 +247,9 @@ func (f *CycleState) Frozen(role string, s models.Step) bool {
 
 // Ready is a step being over for an opening: past its deadline, or with nothing left to do.
 func (f *CycleState) Ready(role string, s models.Step, now time.Time) bool {
+	if s == models.StepDecisions {
+		return f.Done(s) || f.Count(role, s) == 0
+	}
 	if _, ok := MainKind(s); !ok {
 		return f.Released(role, s)
 	}

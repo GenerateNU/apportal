@@ -108,6 +108,19 @@ func TestPhasesLockUntilSetUp(t *testing.T) {
 	if _, ok := pageLock(f.Phases(now), decisions, PageWrapUp); ok {
 		t.Fatal("decisions has no wrap up page")
 	}
+
+	f.CompletedAt[models.StepDecisions] = &past
+	feedback := string(models.StepFeedback)
+	if r, _ := pageLock(f.Phases(now), feedback, PageFeedback); r != "Opens once a chief opens Feedback." {
+		t.Fatalf("feedback before a chief opens it: %q", r)
+	}
+	if err := f.ReleaseBlock(swe, models.StepFeedback, now); err != nil {
+		t.Fatalf("feedback can be opened once decisions are done: %v", err)
+	}
+	f.SetRelease(swe, models.StepFeedback, now)
+	if r, _ := pageLock(f.Phases(now), feedback, PageFeedback); r != "" {
+		t.Fatalf("feedback once opened: %q", r)
+	}
 }
 
 func TestClosedPreferenceListsCannotMove(t *testing.T) {
