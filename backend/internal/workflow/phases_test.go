@@ -2,6 +2,7 @@ package workflow
 
 import (
 	"testing"
+	"time"
 
 	"github.com/GenerateNU/apportal/backend/internal/models"
 )
@@ -106,5 +107,24 @@ func TestPhasesLockUntilSetUp(t *testing.T) {
 	}
 	if _, ok := pageLock(f.Phases(now), decisions, PageWrapUp); ok {
 		t.Fatal("decisions has no wrap up page")
+	}
+}
+
+func TestClosedPreferenceListsCannotMove(t *testing.T) {
+	f := NewCycleState("c1")
+	f.Openings = []Opening{{RoleID: swe, Name: "Software Engineer"}}
+	if err := f.listsClosedBlock(swe, models.StepDecisions, models.KindPreferenceList, now); err != nil {
+		t.Fatalf("no deadline yet: %v", err)
+	}
+	f.SetDeadline(swe, models.StepDecisions, Deadline{Kind: models.KindPreferenceList, DueAt: now.Add(time.Hour)})
+	if err := f.listsClosedBlock(swe, models.StepDecisions, models.KindPreferenceList, now); err != nil {
+		t.Fatalf("an open deadline can move: %v", err)
+	}
+	f.SetDeadline(swe, models.StepDecisions, Deadline{Kind: models.KindPreferenceList, DueAt: past})
+	if err := f.listsClosedBlock(swe, models.StepDecisions, models.KindPreferenceList, now); err == nil {
+		t.Fatal("a passed deadline is locked")
+	}
+	if err := f.listsClosedBlock(swe, models.StepReviews, models.KindReviewer, now); err != nil {
+		t.Fatalf("other deadlines are unaffected: %v", err)
 	}
 }

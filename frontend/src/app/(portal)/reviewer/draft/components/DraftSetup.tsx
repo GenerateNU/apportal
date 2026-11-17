@@ -1,5 +1,7 @@
 'use client'
 
+import { useState } from 'react'
+
 import {
   DndContext,
   KeyboardSensor,
@@ -16,14 +18,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import {
-  ArrowDown,
-  ArrowUp,
-  GripVertical,
-  Loader2,
-  Plus,
-  X,
-} from 'lucide-react'
+import { ArrowDown, ArrowUp, GripVertical, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -39,7 +34,6 @@ export function DraftSetup({
   groups,
   order,
   rounds,
-  onToggle,
   onMove,
   onReorder,
   onRoundsChange,
@@ -53,7 +47,6 @@ export function DraftSetup({
   // Preference list ids, in pick order.
   order: string[]
   rounds: number
-  onToggle: (id: string) => void
   onMove: (index: number, direction: -1 | 1) => void
   // Drag drops a seat at an arbitrary index; onMove only ever shifts by one.
   onReorder: (from: number, to: number) => void
@@ -63,6 +56,7 @@ export function DraftSetup({
   saving: boolean
   starting: boolean
 }) {
+  const [roundsText, setRoundsText] = useState<string | null>(null)
   const sensors = useSensors(
     // Without a threshold, a tap on the row's buttons starts a drag on touch.
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -81,9 +75,6 @@ export function DraftSetup({
   }
 
   const byId = new Map(groups.map((g) => [g.id, g]))
-  const unselected = groups.filter((g) => !order.includes(g.id))
-  // Saving is what puts the seats on the board; starting before that would
-  // begin a draft with nobody in it.
   const unsaved =
     order.join(',') !== board.teams.map((t) => t.preference_list_id).join(',')
 
@@ -100,8 +91,7 @@ export function DraftSetup({
 
         {order.length === 0 ? (
           <p className="text-text-muted text-sm">
-            Add the groups drafting this role, then put them in the order they
-            pick.
+            No teams yet. Create them on the Teams page.
           </p>
         ) : (
           <DndContext
@@ -123,48 +113,11 @@ export function DraftSetup({
                     name={byId.get(id)?.name ?? id}
                     memberNames={byId.get(id)?.member_names ?? []}
                     onMove={onMove}
-                    onRemove={() => onToggle(id)}
                   />
                 ))}
               </ol>
             </SortableContext>
           </DndContext>
-        )}
-      </Card>
-
-      <Card padding="none" className="flex flex-col gap-3 p-5">
-        <SectionLabel>Groups not drafting</SectionLabel>
-        {unselected.length === 0 ? (
-          <p className="text-text-muted text-sm">
-            Every group in this cycle is in the draft.
-          </p>
-        ) : (
-          <ul className="flex flex-col gap-2">
-            {unselected.map((g) => (
-              <li
-                key={g.id}
-                className="flex items-center gap-3 border border-gray-100 bg-gray-50/60 px-3 py-2.5"
-              >
-                <div className="min-w-0 flex-1">
-                  <span className="text-text-secondary block truncate text-sm font-medium">
-                    {g.name}
-                  </span>
-                  <span className="text-text-subtle block truncate text-xs">
-                    {g.member_count} members · {g.entry_count} ranked
-                  </span>
-                </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => onToggle(g.id)}
-                  className="shrink-0"
-                >
-                  <Plus size={13} />
-                  Add
-                </Button>
-              </li>
-            ))}
-          </ul>
         )}
       </Card>
 
@@ -175,8 +128,13 @@ export function DraftSetup({
             id="draft-rounds"
             type="number"
             min={1}
-            value={rounds}
-            onChange={(e) => onRoundsChange(Number(e.target.value))}
+            value={roundsText ?? String(rounds)}
+            onChange={(e) => {
+              setRoundsText(e.target.value)
+              const n = Number(e.target.value)
+              if (Number.isInteger(n) && n >= 1) onRoundsChange(n)
+            }}
+            onBlur={() => setRoundsText(null)}
             aria-label="Rounds"
             className="h-9 w-24"
           />
@@ -187,21 +145,19 @@ export function DraftSetup({
       </Card>
 
       <div className="flex flex-wrap items-center gap-2">
-        <Button variant="outline" onClick={onSave} disabled={saving}>
-          {saving && <Loader2 className="animate-spin" size={14} />}
-          Save order
-        </Button>
         <Button
           onClick={onStart}
-          disabled={starting || board.teams.length === 0 || unsaved}
+          disabled={starting || saving || order.length === 0}
         >
-          {starting && <Loader2 className="animate-spin" size={14} />}
+          {(starting || saving) && (
+            <Loader2 className="animate-spin" size={14} />
+          )}
           Start draft
         </Button>
         {unsaved && order.length > 0 && (
-          <span className="text-text-muted text-xs">
-            Save the order before starting.
-          </span>
+          <Button variant="outline" onClick={onSave} disabled={saving}>
+            Save order
+          </Button>
         )}
       </div>
     </>
@@ -218,7 +174,6 @@ function SeatRow({
   name,
   memberNames,
   onMove,
-  onRemove,
 }: {
   id: string
   index: number
@@ -226,7 +181,6 @@ function SeatRow({
   name: string
   memberNames: string[]
   onMove: (index: number, direction: -1 | 1) => void
-  onRemove: () => void
 }) {
   const {
     attributes,
@@ -285,14 +239,6 @@ function SeatRow({
           className="text-text-subtle hover:text-ink disabled:hover:text-text-subtle p-1 transition-colors disabled:opacity-30 pointer-coarse:p-2"
         >
           <ArrowDown size={14} />
-        </button>
-        <button
-          type="button"
-          onClick={onRemove}
-          aria-label={`Remove ${name} from the draft`}
-          className="text-text-subtle hover:text-destructive p-1 transition-colors pointer-coarse:p-2"
-        >
-          <X size={14} />
         </button>
       </div>
     </li>

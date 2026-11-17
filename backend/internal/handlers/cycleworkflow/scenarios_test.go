@@ -373,3 +373,13 @@ func TestScenarioDecideRejectsTheUndrafted(t *testing.T) {
 		t.Fatal("decisions should close once nobody is left in it")
 	}
 }
+
+func TestScenarioRejectionsDoNotFreezePreferenceLists(t *testing.T) {
+	f := newFixture(t)
+	f.application(f.cycleA, f.roleA, models.StageSelection)
+	f.exec("UPDATE applications SET stage = 'rejected' WHERE id IN ?", f.apps[:len(f.apps)-1])
+	_, _, err := f.s.workflow.Decide(f.confirmed(f.admin), f.cycleA, f.roleA, nil)
+	f.must(err)
+	f.exec("UPDATE cycle_steps SET completed_at = NULL WHERE cycle_id = ? AND step = ?", f.cycleA, models.StepDecisions)
+	f.must(f.s.workflow.RequireOpeningWorkEditable(f.as(f.admin), f.cycleA, f.roleA, workflow.WorkPreferenceList))
+}

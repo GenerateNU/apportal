@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Trash2, Users } from 'lucide-react'
 import { PageContainer } from '@/components/PageContainer'
 import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
 import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -95,7 +96,12 @@ export function ChiefTeamClient({ id }: { id: string }) {
         title={
           <span className="inline-flex items-center gap-3">
             {list.name}
-            <Badge className={PREFERENCE_LIST_STATUS_BADGE[list.status]}>
+            <Badge
+              className={cn(
+                'font-sans tracking-normal normal-case',
+                PREFERENCE_LIST_STATUS_BADGE[list.status]
+              )}
+            >
               {PREFERENCE_LIST_STATUS_LABEL[list.status]}
             </Badge>
           </span>

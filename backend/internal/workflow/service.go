@@ -64,7 +64,7 @@ func (s *Service) ClearDeadline(ctx context.Context, cycleID, roleID string, ste
 	if err != nil {
 		return Preview{}, err
 	}
-	return clearDeadline(db, cycleID, roleID, step, k, c)
+	return clearDeadline(db, cycleID, roleID, step, k, c, s.now())
 }
 
 func (s *Service) Release(ctx context.Context, cycleID, roleID string, step models.Step) (Preview, error) {

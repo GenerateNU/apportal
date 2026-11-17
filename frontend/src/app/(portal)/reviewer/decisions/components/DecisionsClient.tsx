@@ -64,20 +64,6 @@ export function DecisionsClient() {
         subtitle="Rejection letters, ready to copy and send."
         actions={
           <>
-            {cycles.length > 1 && (
-              <Select value={cycleId} onValueChange={setCycleId}>
-                <SelectTrigger className="h-9 w-40" aria-label="Cycle">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {cycles.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
             <Button
               variant="outline"
               onClick={() => setEditingTemplates(true)}

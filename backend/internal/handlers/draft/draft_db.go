@@ -132,15 +132,26 @@ func (d *DraftDB) GetDraftByID(ctx context.Context, id string) (models.Draft, er
 // existing board, so two chiefs opening the page at once don't race.
 func (d *DraftDB) CreateDraft(ctx context.Context, cycleID string, role string, rounds int, createdBy string) (models.Draft, error) {
 	draft := models.Draft{CycleID: cycleID, RoleID: role, Rounds: rounds, CreatedBy: createdBy}
-	res := d.db.WithContext(ctx).Select("cycle_id", "role_id", "rounds", "created_by").
-		Clauses(clause.OnConflict{DoNothing: true}, clause.Returning{}).Create(&draft)
-	if res.Error != nil {
-		return models.Draft{}, res.Error
-	}
-	if res.RowsAffected == 0 {
-		return d.GetDraft(ctx, cycleID, role)
-	}
-	return draft, nil
+	err := d.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		res := tx.Select("cycle_id", "role_id", "rounds", "created_by").
+			Clauses(clause.OnConflict{DoNothing: true}, clause.Returning{}).Create(&draft)
+		if res.Error != nil {
+			return res.Error
+		}
+		if res.RowsAffected == 0 {
+			if err := tx.Where("cycle_id = ? AND role_id = ?", cycleID, role).Take(&draft).Error; err != nil {
+				return utils.DBErr(err)
+			}
+		}
+		if draft.Status != "" && draft.Status != models.DraftSetup {
+			return nil
+		}
+		return tx.Exec(`INSERT INTO draft_teams (draft_id, preference_list_id, position)
+			SELECT ?, id, row_number() OVER (ORDER BY created_at, name) - 1 FROM preference_lists
+			WHERE cycle_id = ? AND NOT EXISTS (SELECT 1 FROM draft_teams WHERE draft_id = ?)`,
+			draft.ID, cycleID, draft.ID).Error
+	})
+	return draft, err
 }
 
 func (d *DraftDB) UpdateDraft(ctx context.Context, id string, in DraftUpdate) (models.Draft, error) {

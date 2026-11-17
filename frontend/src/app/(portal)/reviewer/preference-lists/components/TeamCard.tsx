@@ -1,6 +1,7 @@
 import Link from 'next/link'
-import { ArrowRight, Trash2 } from 'lucide-react'
+import { Trash2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
 import type { PreferenceListSummary } from '@/lib/api/types'
 import {
   PREFERENCE_LIST_STATUS_BADGE,
@@ -10,55 +11,75 @@ import { MEETING_DAY_LABEL } from '@/app/(portal)/reviewer/applications/componen
 
 export function TeamCard({
   list,
+  counts,
   onDelete,
 }: {
   list: PreferenceListSummary
+  counts: { label: string; count: number }[]
   onDelete?: () => void
 }) {
+  const people =
+    list.member_names.length > 0
+      ? list.member_names.join(', ')
+      : 'No members yet'
+
   return (
-    <div className="group relative flex flex-col gap-3 border border-gray-200 bg-white p-4 transition-colors hover:bg-gray-50">
-      <div className="flex items-start justify-between gap-2">
-        <Link
-          href={`/reviewer/preference-lists/${list.id}`}
-          className="text-ink truncate font-semibold after:absolute after:inset-0"
-        >
-          {list.name}
-        </Link>
-        <div className="flex shrink-0 items-center gap-1">
+    <div className="group relative flex flex-col border border-gray-200 bg-white transition-colors hover:border-gray-300">
+      <div className="flex flex-col gap-1 p-4">
+        <div className="flex items-center justify-between gap-2">
+          <Link
+            href={`/reviewer/preference-lists/${list.id}`}
+            className="text-ink truncate font-semibold after:absolute after:inset-0"
+          >
+            {list.name}
+          </Link>
           <Badge
             size="sm"
-            className={PREFERENCE_LIST_STATUS_BADGE[list.status]}
+            className={cn(
+              'shrink-0',
+              PREFERENCE_LIST_STATUS_BADGE[list.status]
+            )}
           >
             {PREFERENCE_LIST_STATUS_LABEL[list.status]}
           </Badge>
+        </div>
+        <div className="flex items-center gap-2">
+          <p
+            className="text-text-muted min-w-0 flex-1 truncate text-sm"
+            title={people}
+          >
+            {people}
+            {list.meeting_day && ` · ${MEETING_DAY_LABEL[list.meeting_day]}`}
+          </p>
           {onDelete && (
             <button
               type="button"
               onClick={onDelete}
               aria-label={`Delete ${list.name}`}
-              className="text-text-faint relative z-10 p-1 hover:text-red-600"
+              className="text-text-faint relative z-10 -mr-1 shrink-0 p-1 opacity-0 group-hover:opacity-100 hover:text-red-600 focus-visible:opacity-100"
             >
               <Trash2 size={14} />
             </button>
           )}
         </div>
       </div>
-      <p className="text-text-muted line-clamp-2 text-sm">
-        {list.member_names.length > 0
-          ? list.member_names.join(', ')
-          : 'No members yet'}
-      </p>
-      <div className="text-text-subtle mt-auto flex items-center justify-between text-xs">
-        <span>
-          {list.entry_count} ranked
-          {list.meeting_day &&
-            ` · meets ${MEETING_DAY_LABEL[list.meeting_day]}`}
-        </span>
-        <ArrowRight
-          size={14}
-          className="group-hover:text-ink transition-transform group-hover:translate-x-1"
-        />
-      </div>
+      {counts.length > 0 && (
+        <div
+          className="mt-auto grid divide-x divide-gray-100 border-t border-gray-100"
+          style={{ gridTemplateColumns: `repeat(${counts.length}, 1fr)` }}
+        >
+          {counts.map((c) => (
+            <div key={c.label} className="flex flex-col px-4 py-3">
+              <span className="text-ink text-lg font-semibold tabular-nums">
+                {c.count}
+              </span>
+              <span className="text-text-subtle truncate text-xs">
+                {c.label}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

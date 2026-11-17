@@ -16,6 +16,8 @@ import { pickDefaultCycleId } from '@/lib/queries/cycles'
 import { useStaffCycles } from '@/lib/queries/cycle-staff'
 import { useCycleRoles } from '@/lib/queries/roles'
 import { CandidatesBoard } from '../../components/CandidatesBoard'
+import { CompareTable } from '../../components/CompareTable'
+import { SegmentedTabs } from '@/components/ui/segmented-tabs'
 
 export function CandidatesPageClient() {
   const searchParams = useSearchParams()
@@ -23,6 +25,7 @@ export function CandidatesPageClient() {
   const cycleId = searchParams.get('cycle') || pickDefaultCycleId(cycles) || ''
   const { roleIds, roleLabel } = useCycleRoles(cycleId)
   const [role, setRole] = useState('')
+  const [view, setView] = useState<'board' | 'compare'>('board')
   const activeRole = roleIds.includes(role) ? role : roleIds[0]
 
   return (
@@ -35,33 +38,49 @@ export function CandidatesPageClient() {
                 label: 'Teams & preference lists',
                 href: `/reviewer/preference-lists${cycleId ? `?cycle=${cycleId}` : ''}`,
               },
-              { label: 'Candidates' },
+              { label: 'Compare candidates' },
             ]}
           />
         }
-        title="Candidates"
-        subtitle="Everyone still in the running, grouped by interview rating."
+        title="Compare candidates"
+        subtitle="Everyone still in the running, and which teams want them."
         actions={
-          roleIds.length > 1 && (
-            <Select value={activeRole} onValueChange={setRole}>
-              <SelectTrigger className="h-9 w-52" aria-label="Position">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {roleIds.map((r) => (
-                  <SelectItem key={r} value={r}>
-                    {roleLabel(r)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )
+          <>
+            <SegmentedTabs<'board' | 'compare'>
+              className="h-9 w-fit"
+              tabs={[
+                { id: 'board', label: 'By rating' },
+                { id: 'compare', label: 'By team' },
+              ]}
+              value={view}
+              onChange={setView}
+            />
+            {roleIds.length > 1 && (
+              <Select value={activeRole} onValueChange={setRole}>
+                <SelectTrigger className="h-9 w-52" aria-label="Position">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {roleIds.map((r) => (
+                    <SelectItem key={r} value={r}>
+                      {roleLabel(r)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </>
         }
       />
       {!cycleId ? (
         <EmptyState title="No cycles yet" />
       ) : (
-        activeRole && <CandidatesBoard cycleId={cycleId} roleId={activeRole} />
+        activeRole &&
+        (view === 'board' ? (
+          <CandidatesBoard cycleId={cycleId} roleId={activeRole} />
+        ) : (
+          <CompareTable cycleId={cycleId} roleId={activeRole} />
+        ))
       )}
     </>
   )

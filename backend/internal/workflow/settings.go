@@ -116,7 +116,7 @@ func setDeadline(db *gorm.DB, in DeadlineInput) (Preview, error) {
 	})
 }
 
-func clearDeadline(db *gorm.DB, cycleID, roleID string, s models.Step, k models.StepKind, caller Caller) (Preview, error) {
+func clearDeadline(db *gorm.DB, cycleID, roleID string, s models.Step, k models.StepKind, caller Caller, now time.Time) (Preview, error) {
 	if !s.Valid() || !k.Valid() {
 		return Preview{}, invalid("invalid step or kind")
 	}
@@ -126,6 +126,9 @@ func clearDeadline(db *gorm.DB, cycleID, roleID string, s models.Step, k models.
 			if _, ok := f.Deadline(roleID, s, k); !ok {
 				p.Unchanged = true
 				return p, nil
+			}
+			if err := f.listsClosedBlock(roleID, s, k, now); err != nil {
+				return p, err
 			}
 			p.Require(caller.operation(OpSetDeadline, s, roleID))
 			p.Say(fmt.Sprintf("Remove the %s deadline for %s (%s)", k, Label(s), f.RoleName(roleID)))
@@ -145,6 +148,9 @@ func previewDeadline(f *CycleState, in DeadlineInput) (Preview, error) {
 	if err := f.DeadlineBlock(in.RoleID, in.Step, in.Kind, in.DueAt); err != nil {
 		return p, err
 	}
+	if err := f.listsClosedBlock(in.RoleID, in.Step, in.Kind, in.Now); err != nil {
+		return p, err
+	}
 	op := in.Caller.operation(OpSetDeadline, in.Step, in.RoleID)
 	if f.closesEarly(in) {
 		op.Level = LevelDestructive
@@ -162,6 +168,17 @@ func previewDeadline(f *CycleState, in DeadlineInput) (Preview, error) {
 func (f *CycleState) closesEarly(in DeadlineInput) bool {
 	k, ok := MainKind(in.Step)
 	return ok && k == in.Kind && f.State(in.RoleID, in.Step, in.Now) == StateOpen && !in.DueAt.After(in.Now)
+}
+
+// A passed preference-list deadline is what opens the draft, so it can't move.
+func (f *CycleState) listsClosedBlock(role string, s models.Step, k models.StepKind, now time.Time) error {
+	if s != models.StepDecisions || k != models.KindPreferenceList {
+		return nil
+	}
+	if d, ok := f.Deadline(role, s, k); ok && !d.DueAt.After(now) {
+		return conflict("Preference lists for %s are closed", f.RoleName(role))
+	}
+	return nil
 }
 
 func plural(n int, one, many string) string {

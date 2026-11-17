@@ -1,15 +1,15 @@
 'use client'
 
 import { EmptyState } from '@/components/ui/empty-state'
-import { PageSection } from '@/components/ui/page-section'
 import { CARD_GRID, SECTION } from '@/components/ui/page-shell'
 import { Subheading } from '@/components/ui/subheading'
+import { PageHeader } from '@/components/ui/page-header'
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
-import { Plus, Users, X } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useWorkflow } from '@/lib/queries/workflow'
+import { ArrowRight, Plus, Users, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import {
@@ -22,14 +22,8 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { DateTimePicker } from '@/components/ui/datetime-picker'
+import { cn } from '@/lib/utils'
 import { pickDefaultCycleId } from '@/lib/queries/cycles'
 import { useStaffCycles } from '@/lib/queries/cycle-staff'
 import { TeamCard } from './TeamCard'
@@ -39,6 +33,7 @@ import {
   useCreatePreferenceList,
   useDeletePreferenceList,
   usePreferenceListDeadline,
+  usePreferenceListDetails,
   usePreferenceLists,
   useSetPreferenceListDeadline,
 } from '@/lib/queries/preference-lists'
@@ -54,62 +49,109 @@ export function PreferenceListsPageClient({ isChief }: { isChief: boolean }) {
     if (defaultId) setCycleId(defaultId)
   }
 
-  const { roleIds } = useCycleRoles(cycleId)
+  const { roleIds, roleLabel } = useCycleRoles(cycleId)
+  const { data: details = [] } = usePreferenceListDetails(cycleId)
+  const countsFor = (listId: string) => {
+    const entries = details.find((d) => d.id === listId)?.entries ?? []
+    return roleIds.map((r) => ({
+      label: roleLabel(r),
+      count: entries.filter((e) => e.role_id === r).length,
+    }))
+  }
   const [dialogOpen, setDialogOpen] = useState(false)
   const [deleting, setDeleting] = useState<PreferenceListSummary | null>(null)
   const deleteList = useDeletePreferenceList()
   const { data: lists = [] } = usePreferenceLists(cycleId)
 
   const submitted = lists.filter((l) => l.status === 'submitted').length
+  const allSubmitted = lists.length > 0 && submitted === lists.length
+  const { data: workflow } = useWorkflow(cycleId)
+  const draftPage = (workflow?.phases ?? [])
+    .flatMap((p) => p.pages ?? [])
+    .find((p) => p.page === 'draft')
+  const draftLocked = !draftPage || !!draftPage.locked_reason
+  const [closing, setClosing] = useState(false)
+  const closeLists = useSetPreferenceListDeadline()
+  const router = useRouter()
+
+  async function closeAndStart() {
+    const now = new Date().toISOString()
+    await Promise.all(
+      roleIds.map((roleId) =>
+        closeLists.mutateAsync({ cycleId, roleId, closesAt: now })
+      )
+    )
+    router.push('/reviewer/draft')
+  }
 
   return (
     <>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-3">
-          {cycles.length > 1 && (
-            <Select value={cycleId} onValueChange={setCycleId}>
-              <SelectTrigger className="h-9 w-40" aria-label="Filter by cycle">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {cycles.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </div>
-        {cycleId && (
-          <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" asChild>
-              <Link
-                href={`/reviewer/preference-lists/candidates?cycle=${cycleId}`}
-              >
-                <Users size={14} />
-                View candidates
-              </Link>
-            </Button>
-          </div>
-        )}
-      </div>
+      <PageHeader
+        title="Teams & preference lists"
+        subtitle="Form teams and have each one rank who they want before the draft."
+        actions={
+          <>
+            {cycleId && (
+              <Button variant="outline" asChild>
+                <Link
+                  href={`/reviewer/preference-lists/candidates?cycle=${cycleId}`}
+                >
+                  <Users size={14} />
+                  Compare candidates
+                </Link>
+              </Button>
+            )}
+          </>
+        }
+      />
 
       {!cycleId ? (
         <EmptyState title="No cycles yet" />
       ) : (
         <>
           {isChief && (
-            <PageSection
-              label="Deadline"
-              hint="Teams can edit their lists until then. The draft unlocks once every deadline passes."
-            >
+            <section className={SECTION}>
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <Subheading
+                  title="Deadline"
+                  hint={
+                    !draftLocked
+                      ? 'Lists are closed. The draft is ready.'
+                      : lists.length > 0
+                        ? `${submitted} of ${lists.length} teams submitted. Teams can edit until the deadline.`
+                        : 'Teams can edit their lists until then.'
+                  }
+                />
+                {!draftLocked ? (
+                  <Button asChild>
+                    <Link href="/reviewer/draft">
+                      Start the draft
+                      <ArrowRight size={14} />
+                    </Link>
+                  </Button>
+                ) : (
+                  <Button
+                    disabled={!allSubmitted}
+                    title={
+                      allSubmitted
+                        ? undefined
+                        : lists.length === 0
+                          ? 'Create teams first'
+                          : `${lists.length - submitted} ${lists.length - submitted === 1 ? "team hasn't" : "teams haven't"} submitted`
+                    }
+                    onClick={() => setClosing(true)}
+                  >
+                    Start the draft
+                    <ArrowRight size={14} />
+                  </Button>
+                )}
+              </div>
               <Card padding="none" className="divide-y divide-gray-100">
                 {roleIds.map((r) => (
                   <DeadlineEditor key={r} cycleId={cycleId} role={r} />
                 ))}
               </Card>
-            </PageSection>
+            </section>
           )}
           <section className={SECTION}>
             <div className="flex flex-wrap items-end justify-between gap-3">
@@ -137,6 +179,7 @@ export function PreferenceListsPageClient({ isChief }: { isChief: boolean }) {
                   <TeamCard
                     key={list.id}
                     list={list}
+                    counts={countsFor(list.id)}
                     onDelete={isChief ? () => setDeleting(list) : undefined}
                   />
                 ))}
@@ -145,6 +188,16 @@ export function PreferenceListsPageClient({ isChief }: { isChief: boolean }) {
           </section>
         </>
       )}
+
+      <ConfirmDialog
+        open={closing}
+        onOpenChange={setClosing}
+        title="Close lists and start the draft?"
+        description="Every team has submitted. This closes preference lists now, so teams can't edit them anymore."
+        confirmLabel="Close lists and start"
+        pending={closeLists.isPending}
+        onConfirm={closeAndStart}
+      />
 
       <ConfirmDialog
         open={!!deleting}
@@ -185,47 +238,58 @@ function DeadlineEditor({ cycleId, role }: { cycleId: string; role: string }) {
         <span className="text-ink truncate font-semibold">
           {roleLabel(role)}
         </span>
-        <Badge
-          size="sm"
-          className={
+        <span
+          className={cn(
+            'text-xs',
             !closesAt
-              ? 'text-text-muted bg-gray-100'
+              ? 'text-amber-600'
               : closed
-                ? 'bg-green-50 text-green-700'
-                : 'bg-blue-50 text-blue-700'
-          }
+                ? 'text-green-700'
+                : 'text-text-muted'
+          )}
         >
-          {!closesAt ? 'Not set' : closed ? 'Closed' : 'Open'}
-        </Badge>
+          {!closesAt ? 'Not set' : closed ? 'Closed' : closesIn(closesAt, now)}
+        </span>
       </div>
-      <div className="flex items-center gap-2">
-        {setDeadline.isError && (
-          <span className="text-xs text-red-600">Couldn&apos;t save</span>
-        )}
-        <DateTimePicker
-          value={closesAt ?? undefined}
-          onValueChange={(date) =>
-            setDeadline.mutate({
-              cycleId,
-              roleId: role,
-              closesAt: date.toISOString(),
-            })
-          }
-          placeholder="Set a deadline"
-        />
-        {closesAt && (
-          <Button
-            size="icon"
-            variant="ghost"
-            aria-label="Clear deadline"
-            onClick={() =>
-              setDeadline.mutate({ cycleId, roleId: role, closesAt: null })
+      {closed && closesAt ? (
+        <span className="text-text-muted text-sm">
+          {closesAt.toLocaleString(undefined, {
+            month: 'short',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+          })}
+        </span>
+      ) : (
+        <div className="flex items-center gap-2">
+          {setDeadline.isError && (
+            <span className="text-xs text-red-600">Couldn&apos;t save</span>
+          )}
+          <DateTimePicker
+            value={closesAt ?? undefined}
+            onValueChange={(date) =>
+              setDeadline.mutate({
+                cycleId,
+                roleId: role,
+                closesAt: date.toISOString(),
+              })
             }
-          >
-            <X size={14} />
-          </Button>
-        )}
-      </div>
+            placeholder="Set a deadline"
+          />
+          {closesAt && (
+            <Button
+              size="icon"
+              variant="ghost"
+              aria-label="Clear deadline"
+              onClick={() =>
+                setDeadline.mutate({ cycleId, roleId: role, closesAt: null })
+              }
+            >
+              <X size={14} />
+            </Button>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -298,4 +362,12 @@ function CreateListDialog({
       </DialogContent>
     </Dialog>
   )
+}
+
+function closesIn(at: Date, now: number) {
+  const mins = Math.max(1, Math.round((at.getTime() - now) / 60_000))
+  if (mins < 60) return `Closes in ${mins}m`
+  const hours = Math.round(mins / 60)
+  if (hours < 48) return `Closes in ${hours}h`
+  return `Closes in ${Math.round(hours / 24)} days`
 }
