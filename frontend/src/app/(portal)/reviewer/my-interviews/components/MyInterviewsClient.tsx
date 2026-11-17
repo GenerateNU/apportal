@@ -328,7 +328,7 @@ export function MyInterviewsClient() {
               ? 'No interviewees match that search.'
               : viewingOther
                 ? `Nothing assigned to ${viewingName} to interview yet.`
-                : 'Nothing assigned to you yet — a chief assigns the applicants you interview.'}
+                : 'Nothing assigned to you yet. A chief assigns the applicants you interview.'}
           </p>
         ) : (
           sections.map(({ role, rows: roleRows }) => (

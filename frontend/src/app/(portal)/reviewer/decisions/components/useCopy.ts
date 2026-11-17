@@ -28,7 +28,7 @@ export function useCopy(resetMs = 1500) {
       } catch {
         // Clipboard access needs a secure context and can be blocked outright,
         // and a copy that silently does nothing is worse than saying so.
-        toast(`Could not copy the ${label} — select it instead`, {
+        toast(`Could not copy the ${label}. Select it instead`, {
           variant: 'error',
         })
       }

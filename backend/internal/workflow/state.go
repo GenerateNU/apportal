@@ -66,6 +66,7 @@ type CycleState struct {
 	// PeersReleased marks openings whose reviewers may see each other's reviews for a step.
 	PeersReleased map[key]bool
 	Missing       map[key][]missingSetup
+	HasTeam       bool
 }
 
 func NewCycleState(cycleID string) *CycleState {
@@ -244,9 +245,15 @@ func (f *CycleState) Current() (models.Step, bool) {
 	return "", false
 }
 
+// SetUp is whether the cycle has a position and a recruitment team, which every step waits on.
+func (f *CycleState) SetUp() bool { return len(f.Openings) > 0 && f.HasTeam }
+
 func (f *CycleState) StepStatus(s models.Step) Status {
 	if f.Done(s) {
 		return StatusDone
+	}
+	if !f.SetUp() {
+		return StatusLocked
 	}
 	if cur, ok := f.Current(); (ok && cur == s) || f.StartedAnywhere(s) {
 		return StatusOpen
@@ -306,6 +313,12 @@ func Load(db *gorm.DB, cycleID string) (*CycleState, error) {
 		Order("name").Order("id").Scan(&f.Openings).Error; err != nil {
 		return nil, err
 	}
+
+	var staff int64
+	if err := db.Table("(?) AS p", StaffPool(db, cycleID)).Limit(1).Count(&staff).Error; err != nil {
+		return nil, err
+	}
+	f.HasTeam = staff > 0
 
 	var releases []models.OpeningStep
 	if err := db.Where("cycle_id = ? AND released_at IS NOT NULL", cycleID).Find(&releases).Error; err != nil {

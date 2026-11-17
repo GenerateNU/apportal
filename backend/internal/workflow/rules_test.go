@@ -24,6 +24,7 @@ const swe = "role-swe"
 func newTestFacts() *CycleState {
 	f := NewCycleState("c1")
 	f.Openings = []Opening{{RoleID: swe, Name: "Software Engineer"}}
+	f.HasTeam = true
 	return f
 }
 
@@ -398,6 +399,35 @@ func TestStepStatusAndCurrent(t *testing.T) {
 	}
 	if cur, _ := f.Current(); cur != models.StepReviews {
 		t.Errorf("current: got %s, want reviews", cur)
+	}
+}
+
+func TestStepsLockedWithoutPositions(t *testing.T) {
+	f := newTestFacts()
+	f.Openings = nil
+	for _, s := range f.EnabledSteps() {
+		if got := f.StepStatus(s); got != StatusLocked {
+			t.Errorf("%s: got %s, want locked", s, got)
+		}
+	}
+}
+
+func TestStepsWaitOnSetup(t *testing.T) {
+	for name, unset := range map[string]func(*CycleState){
+		"no positions": func(f *CycleState) { f.Openings = nil },
+		"no team":      func(f *CycleState) { f.HasTeam = false },
+	} {
+		f := newTestFacts()
+		unset(f)
+		for _, s := range f.EnabledSteps() {
+			if got := f.StepStatus(s); got != StatusLocked {
+				t.Errorf("%s, %s: got %s, want locked", name, s, got)
+			}
+		}
+		f.SetDeadline(swe, models.StepApplications, Deadline{Kind: models.KindApplicant, DueAt: now.Add(time.Hour)})
+		if got := statusOf(f.ReleaseBlock(swe, models.StepApplications, now)); got != http.StatusConflict {
+			t.Errorf("%s: release got %d, want 409", name, got)
+		}
 	}
 }
 

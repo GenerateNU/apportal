@@ -8,22 +8,13 @@ import { Tooltip } from '@/components/Tooltip'
 import { useCycleScope } from '@/hooks/useCycleScope'
 import { useWorkflow } from '@/lib/queries/workflow'
 import { cn } from '@/lib/utils'
-import {
-  currentPhaseIndex,
-  type Phase,
-  stepActive,
-  toPhases,
-} from './chief-stages'
+import { type Phase, stepActive, toPhases } from './chief-stages'
 import { CycleSwitcher } from './CycleSwitcher'
 
 export function useChiefPhases() {
   const scope = useCycleScope('chief')
   const { data: workflow } = useWorkflow(scope.cycleId)
-  const hasOpenings = scope.roles.roleIds.length > 0
-  const phases = useMemo(
-    () => toPhases(workflow, hasOpenings),
-    [workflow, hasOpenings]
-  )
+  const phases = useMemo(() => toPhases(workflow), [workflow])
   return { scope, phases }
 }
 
@@ -31,7 +22,6 @@ export function ChiefCycleNav({ collapsed }: { collapsed?: boolean }) {
   const pathname = usePathname()
   const search = useSearchParams().toString()
   const { phases } = useChiefPhases()
-  const current = currentPhaseIndex(phases)
   const onPage = phases.findIndex((p) =>
     p.steps.some((s) => stepActive(pathname, search, s))
   )
@@ -74,16 +64,13 @@ export function ChiefCycleNav({ collapsed }: { collapsed?: boolean }) {
       <CycleSwitcher mode="chief" />
       <ol className="mt-2 flex flex-col">
         {phases.map((p, i) => {
-          const expanded = opened
-            ? opened === p.key
-            : i === (onPage >= 0 ? onPage : current)
+          const expanded = opened ? opened === p.key : i === onPage
           return (
             <PhaseRow
               key={p.key}
               phase={p}
               index={i}
               expanded={expanded}
-              blockedBy={phases[current]?.label}
               pathname={pathname}
               search={search}
               onToggle={() => setOpened(expanded ? '__none' : p.key)}
@@ -99,7 +86,6 @@ function PhaseRow({
   phase,
   index,
   expanded,
-  blockedBy,
   pathname,
   search,
   onToggle,
@@ -107,7 +93,6 @@ function PhaseRow({
   phase: Phase
   index: number
   expanded: boolean
-  blockedBy?: string
   pathname: string
   search: string
   onToggle: () => void
@@ -153,8 +138,8 @@ function PhaseRow({
 
   return (
     <li className="flex flex-col">
-      {locked && blockedBy ? (
-        <Tooltip side="right" label={`Unlocks after ${blockedBy}`}>
+      {locked && phase.lockedReason ? (
+        <Tooltip side="right" label={phase.lockedReason}>
           {header}
         </Tooltip>
       ) : (
@@ -162,9 +147,7 @@ function PhaseRow({
       )}
       {expanded && !locked && phase.steps.length === 0 && (
         <p className="text-text-subtle mb-1 ml-[1.375rem] border-l border-gray-200 py-1.5 pl-4 text-xs">
-          {locked
-            ? `Unlocks after ${blockedBy}`
-            : 'Chiefs are running this stage.'}
+          Chiefs are running this stage.
         </p>
       )}
       {expanded && !locked && phase.steps.length > 0 && (
@@ -192,7 +175,7 @@ function PhaseRow({
                 {disabled ? (
                   <Tooltip
                     side="right"
-                    label={step.locked ?? `Unlocks after ${blockedBy}`}
+                    label={step.locked ?? phase.lockedReason ?? ''}
                   >
                     <span className="block cursor-not-allowed">{label}</span>
                   </Tooltip>

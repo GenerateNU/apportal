@@ -165,7 +165,7 @@ export function WrapUpClient() {
         ) : phase.status === 'done' ? (
           <>
             <span className="text-text-muted text-sm">
-              This stage is done{next ? ` — ${next.label} is open.` : '.'}
+              This stage is done{next ? `, and ${next.label} is open.` : '.'}
             </span>
           </>
         ) : (

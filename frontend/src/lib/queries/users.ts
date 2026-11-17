@@ -5,17 +5,13 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query'
-import type { InfiniteData } from '@tanstack/react-query'
 import {
   createUser,
   getCurrentUser,
-  getListUsersInfiniteQueryKey,
   listUsers,
   updateUser,
-  useListUsersInfinite,
 } from '@/generated/users/users'
 import type { RequestOptions } from '@/lib/api/orval-mutator'
-import type { UsersOutputBody } from '@/generated/model'
 import type { ReviewerRole, User } from '@/lib/api/types'
 import { useAuth } from '@/lib/auth/auth-context'
 import { queryKeys } from './keys'
@@ -25,7 +21,6 @@ import { queryKeys } from './keys'
 // queryKeys.users.* — invalidate both so mutations refresh every list view.
 function invalidateUserLists(queryClient: ReturnType<typeof useQueryClient>) {
   queryClient.invalidateQueries({ queryKey: queryKeys.users.lists() })
-  queryClient.invalidateQueries({ queryKey: getListUsersInfiniteQueryKey() })
 }
 
 // Omitting `limit` (as both hooks below do) returns every matching user in
@@ -96,20 +91,12 @@ export function useReviewerNames() {
   }, [leads, chiefReviewers])
 }
 
-// Paginated member list for admin/members' infinite scroll. `limit` is a
-// fixed page size chosen by the caller.
-export function useMembersInfinite(limit: number, opts?: RequestOptions) {
-  return useListUsersInfinite(
-    { limit },
-    {
-      query: {
-        initialPageParam: 0,
-        getNextPageParam: (lastPage, allPages) =>
-          lastPage?.has_more ? allPages.length * limit : undefined,
-      },
-      request: opts,
-    }
-  )
+export function useAdmins(opts?: RequestOptions) {
+  return useQuery({
+    queryKey: [...queryKeys.users.lists(), 'admin'],
+    queryFn: async () =>
+      ((await listUsers({ role: 'admin' }, opts))?.users ?? []) as User[],
+  })
 }
 
 // Resolves the signed-in Supabase session to its backend user record
@@ -149,65 +136,6 @@ export function useUpdateUser() {
     onSuccess: (data, vars) => {
       queryClient.setQueryData(queryKeys.users.detail(vars.nuid), data)
       invalidateUserLists(queryClient)
-    },
-  })
-}
-
-// Chief/admin-only, per the backend. Separate from useUpdateUser because the
-// flag is denormalized onto every ApplicationSummary and preference-list
-// entry the reviewer surfaces render — invalidating only the user caches
-// would leave every one of those badges stale.
-export function useSetReturner() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (vars: { nuid: string; returner: boolean }) =>
-      updateUser(vars.nuid, { returner: vars.returner }),
-    // The control is a checkbox in a paged table, and marking returners is a
-    // batch job — a tick that waits on the round trip reads as a dropped
-    // click. Rolled back below if the write fails.
-    onMutate: async (vars) => {
-      const listKey = getListUsersInfiniteQueryKey()
-      await queryClient.cancelQueries({ queryKey: listKey })
-      const previous = queryClient.getQueriesData({ queryKey: listKey })
-      queryClient.setQueriesData<InfiniteData<UsersOutputBody>>(
-        { queryKey: listKey },
-        (data) =>
-          data && {
-            ...data,
-            pages: data.pages.map((page) => ({
-              ...page,
-              users:
-                page.users?.map((u) =>
-                  u.nuid === vars.nuid ? { ...u, returner: vars.returner } : u
-                ) ?? null,
-            })),
-          }
-      )
-      return { previous }
-    },
-    onError: (_error, _vars, context) => {
-      for (const [key, data] of context?.previous ?? []) {
-        queryClient.setQueryData(key, data)
-      }
-    },
-    // Settled rather than success: a failed write has to resync too, since the
-    // rollback above restores a snapshot that may itself be stale by now.
-    onSettled: (_data, _error, vars) => {
-      invalidateUserLists(queryClient)
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.users.detail(vars.nuid),
-      })
-      // Invalidated rather than written: the applicant cache holds the
-      // profile subset of a user, not a user.
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.applicants.detail(vars.nuid),
-      })
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.applications.lists(),
-      })
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.preferenceLists.all,
-      })
     },
   })
 }

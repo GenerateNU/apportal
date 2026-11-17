@@ -65,7 +65,7 @@ export function DecisionContextPanel({
               </span>
               {!interview.submitted_at && (
                 <span className="text-text-faint text-xs">
-                  Draft — not submitted
+                  Draft, not submitted
                 </span>
               )}
             </div>
@@ -113,8 +113,8 @@ export function DecisionContextPanel({
         )}
         {written_reviews.length > 0 && context.written_reviews_blind && (
           <p className="text-text-faint text-xs">
-            Only your own review is shown — a chief releases the rest from
-            Review Progress.
+            Only your own review is shown. A chief releases the rest from Review
+            Progress.
           </p>
         )}
       </Section>

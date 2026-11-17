@@ -1,15 +1,13 @@
 'use client'
 
-import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { AlertTriangle, ArrowRight } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { PAGE_SHELL } from '@/components/ui/page-shell'
 import { StatusDot } from '@/components/ui/badge'
 import { Tooltip } from '@/components/Tooltip'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { DeadlinePicker } from '@/components/ui/deadline-picker'
 import { EmptyState } from '@/components/ui/empty-state'
 import { LoadingText } from '@/components/ui/loading-text'
@@ -30,6 +28,7 @@ import {
   cycleStatusLabel,
 } from '../../../../admin/applications/components/constants'
 import { cn } from '@/lib/utils'
+import { FormStatusBadge } from '../../components/FormStatusBadge'
 
 type Status = ApplicationTemplate['status']
 
@@ -188,7 +187,6 @@ function PositionRelease({
   const action = status ? NEXT_ACTION[status] : null
   const missing = releaseBlocker(questions > 0, !!template?.closes_at)
   const blocked = action?.to === 'open' && !!missing
-  const [confirmClose, setConfirmClose] = useState(false)
   const router = useRouter()
 
   async function save(change: { status?: CycleStatus; dueAt?: string }) {
@@ -201,6 +199,10 @@ function PositionRelease({
       })
       if (change.status === 'open' && cycle?.status === 'draft') {
         toast(`${cycle.name} is now open to applicants`)
+      } else if (change.status === 'open') {
+        toast(`${roleName} applications open`)
+      } else if (change.status === 'closed') {
+        toast(`${roleName} applications closed`)
       }
     } catch (err) {
       toast(apiErrorDetail(err), { variant: 'error' })
@@ -224,7 +226,10 @@ function PositionRelease({
       )}
     >
       <div className="min-w-0">
-        <div className="text-ink truncate font-semibold">{roleName}</div>
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="text-ink truncate font-semibold">{roleName}</span>
+          <FormStatusBadge written={questions > 0} />
+        </div>
         {status && (
           <div className="text-text-muted flex items-center gap-1.5 text-xs">
             <StatusDot className={cycleStatusDot[status]} />
@@ -272,33 +277,12 @@ function PositionRelease({
               size="sm"
               variant={action.to === 'open' ? 'default' : 'outline'}
               disabled={!template || setStep.isPending}
-              onClick={() =>
-                action.to === 'closed' && applicants > 0
-                  ? setConfirmClose(true)
-                  : save({ status: action.to })
-              }
+              onClick={() => save({ status: action.to })}
             >
               {action.label}
             </Button>
           )
         )}
-        <ConfirmDialog
-          open={confirmClose}
-          onOpenChange={setConfirmClose}
-          title={
-            <span className="flex items-center gap-2">
-              <AlertTriangle size={18} className="text-amber-500" />
-              Close {roleName} early?
-            </span>
-          }
-          description={`${applicants} ${applicants === 1 ? 'person has' : 'people have'} applied. Applications stop right away, and anyone still writing theirs won't be able to submit.`}
-          confirmLabel="Close applications"
-          pending={setStep.isPending}
-          onConfirm={async () => {
-            await save({ status: 'closed' })
-            setConfirmClose(false)
-          }}
-        />
       </div>
     </div>
   )

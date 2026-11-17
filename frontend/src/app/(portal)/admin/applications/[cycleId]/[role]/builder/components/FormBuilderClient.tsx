@@ -2,10 +2,14 @@
 
 import { SaveStatusLabel, SaveTrackerProvider, useSave } from './SaveTracker'
 import { Fragment, useState } from 'react'
-import { Eye, Pencil, Clock, AlertCircle } from 'lucide-react'
+import { useSearchParams } from 'next/navigation'
+import { Eye, Pencil } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { statusBlockedReason } from '../lib/status'
-import { BackLink } from '@/components/ui/back-link'
+import { Button } from '@/components/ui/button'
+import { StatusDot } from '@/components/ui/badge'
+import { cycleStatusDot } from '@/app/(portal)/admin/applications/components/constants'
+import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import { PageHeader } from '@/components/ui/page-header'
 import { SectionLabel } from '@/components/ui/section-label'
 import { DateTimePicker } from '@/components/ui/datetime-picker'
@@ -56,7 +60,7 @@ function FormBuilder({
   cycleId,
   cycleName,
   role,
-  back = <BackLink href="/admin/applications">Back to Applications</BackLink>,
+  back: backOverride,
 }: {
   cycleId: string
   cycleName: string
@@ -77,7 +81,35 @@ function FormBuilder({
   // The backend refuses every edit once a cycle closes.
   const readOnly = cycle?.status === 'closed' || cycle?.status === 'archived'
 
-  const [mode, setMode] = useState<'application' | 'review'>('application')
+  const searchParams = useSearchParams()
+  const from = searchParams.get('from')
+  const only =
+    from === 'forms' ? 'application' : from === 'review-forms' ? 'review' : null
+  const back =
+    backOverride ??
+    (only ? (
+      <Breadcrumbs
+        items={[
+          only === 'review'
+            ? { label: 'Review forms', href: '/reviewer/cycle/review-forms' }
+            : {
+                label: 'Application forms',
+                href: '/reviewer/cycle/application',
+              },
+          { label: roleLabel(role) },
+        ]}
+      />
+    ) : (
+      <Breadcrumbs
+        items={[
+          { label: 'Branches', href: '/admin/branches' },
+          { label: roleLabel(role) },
+        ]}
+      />
+    ))
+  const [mode, setMode] = useState<'application' | 'review'>(
+    only ?? (searchParams.get('tab') === 'review' ? 'review' : 'application')
+  )
 
   // Each side's status and deadline are its workflow step's release and deadline.
   const status =
@@ -163,78 +195,63 @@ function FormBuilder({
           </span>
         }
         actions={
-          <div className="flex flex-wrap items-center gap-3 sm:gap-6">
-            <SegmentedTabs
-              tabs={[
-                { id: 'application', label: 'Application questions' },
-                { id: 'review', label: 'Review questions' },
-              ]}
-              value={mode}
-              onChange={setMode}
-            />
+          <div className="flex flex-wrap items-center gap-2">
+            {!only && (
+              <SegmentedTabs
+                tabs={[
+                  { id: 'application', label: 'Application questions' },
+                  { id: 'review', label: 'Review questions' },
+                ]}
+                value={mode}
+                onChange={setMode}
+              />
+            )}
 
             {template && status && (
               <fieldset disabled={readOnly} className="contents">
-                <div className="flex items-center gap-1.5">
-                  <AlertCircle className="h-5 w-5 text-gray-500" />
-                  <span className="text-sm font-medium whitespace-nowrap text-gray-600">
-                    Status
-                  </span>
-                  <Select value={status} onValueChange={changeStatus}>
-                    <SelectTrigger className="h-8 w-32 px-2.5 py-1.5 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {TEMPLATE_STATUS_ORDER.map((s) => {
-                        const blocked = statusBlockedReason(
-                          mode,
-                          s,
-                          template.status
-                        )
-                        return (
-                          <SelectItem key={s} value={s} disabled={!!blocked}>
-                            {blocked
-                              ? `${TEMPLATE_STATUS_LABEL[s]} — ${blocked.toLowerCase()}`
-                              : TEMPLATE_STATUS_LABEL[s]}
-                          </SelectItem>
-                        )
-                      })}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="flex items-center gap-1.5">
-                  <Clock className="h-5 w-5 text-gray-500" />
-                  <span className="text-sm font-medium whitespace-nowrap text-gray-600">
-                    Deadline
-                  </span>
-                  <DateTimePicker
-                    value={closesAt ? new Date(closesAt) : undefined}
-                    onValueChange={changeDeadline}
-                    placeholder="Set deadline"
-                    className="w-56 truncate"
-                  />
-                </div>
+                <Select value={status} onValueChange={changeStatus}>
+                  <SelectTrigger
+                    aria-label="Status"
+                    className="h-8 w-auto gap-2 px-3 text-sm"
+                  >
+                    <StatusDot className={cycleStatusDot[status]} />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TEMPLATE_STATUS_ORDER.map((s) => {
+                      const blocked = statusBlockedReason(
+                        mode,
+                        s,
+                        template.status
+                      )
+                      return (
+                        <SelectItem key={s} value={s} disabled={!!blocked}>
+                          {blocked
+                            ? `${TEMPLATE_STATUS_LABEL[s]} (${blocked.toLowerCase()})`
+                            : TEMPLATE_STATUS_LABEL[s]}
+                        </SelectItem>
+                      )
+                    })}
+                  </SelectContent>
+                </Select>
+                <DateTimePicker
+                  value={closesAt ? new Date(closesAt) : undefined}
+                  onValueChange={changeDeadline}
+                  placeholder="Set deadline"
+                  className="h-8 max-w-60 truncate px-3"
+                />
               </fieldset>
             )}
 
-            <button
-              type="button"
+            <span aria-hidden className="h-5 w-px bg-gray-200" />
+
+            <Button
+              variant="outline"
               onClick={() => setShowPreview((prev) => !prev)}
-              className="text-text-secondary border-input focus-visible:border-ring focus-visible:ring-ring/50 flex h-8 items-center gap-2 border bg-transparent px-2.5 py-1.5 text-sm font-medium transition-all hover:border-gray-300 focus-visible:ring-3"
             >
-              {showPreview ? (
-                <>
-                  <Pencil className="h-5 w-5" />
-                  Edit
-                </>
-              ) : (
-                <>
-                  <Eye className="h-5 w-5" />
-                  Preview
-                </>
-              )}
-            </button>
+              {showPreview ? <Pencil /> : <Eye />}
+              {showPreview ? 'Edit' : 'Preview'}
+            </Button>
           </div>
         }
       />
@@ -298,7 +315,7 @@ function FormBuilder({
                   cycleId={cycleId}
                   role={role}
                   field="description"
-                  label="Intro text — shown before the questions"
+                  label="Intro text, shown before the questions"
                   placeholder="Add an introduction applicants will see before the questions…"
                   value={template?.description}
                 />
@@ -338,9 +355,14 @@ function FormBuilder({
                         </Fragment>
                       ))}
                       {order.length === 0 && (
-                        <p className="text-text-subtle mt-10 text-center text-sm">
-                          Add a block to start building this form.
-                        </p>
+                        <BlockPalette
+                          cycleId={cycleId}
+                          role={role}
+                          nextOrder={0}
+                          variant="start"
+                          title="Start your application form"
+                          hint="Pick the first question applicants will answer. You can reorder and edit everything after."
+                        />
                       )}
                     </div>
                   </SortableContext>
@@ -350,7 +372,7 @@ function FormBuilder({
                   cycleId={cycleId}
                   role={role}
                   field="instructions"
-                  label="Closing text — shown after the questions"
+                  label="Closing text, shown after the questions"
                   placeholder="Add submission instructions or closing notes applicants will see after the questions…"
                   value={template?.instructions}
                 />

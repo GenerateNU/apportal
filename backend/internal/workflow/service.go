@@ -55,7 +55,7 @@ func (s *Service) SetDeadline(ctx context.Context, in DeadlineInput) (Preview, e
 	if err != nil {
 		return Preview{}, err
 	}
-	in.Caller = c
+	in.Caller, in.Now = c, s.now()
 	return setDeadline(db, in)
 }
 

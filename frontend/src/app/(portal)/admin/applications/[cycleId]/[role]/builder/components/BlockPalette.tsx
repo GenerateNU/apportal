@@ -8,16 +8,22 @@ import {
   QUESTION_TYPES,
   QUESTION_TYPE_META,
 } from './constants'
-import { SectionLabel } from '@/components/ui/section-label'
+import { QuestionTypeButtons } from './QuestionTypeButtons'
 
 export function BlockPalette({
   cycleId,
   role,
   nextOrder,
+  variant,
+  title,
+  hint,
 }: {
   cycleId: string
   role: string
   nextOrder: number
+  variant?: 'list' | 'start'
+  title?: string
+  hint?: string
 }) {
   const createQuestion = useCreateQuestion()
   const save = useSave()
@@ -38,28 +44,13 @@ export function BlockPalette({
   }
 
   return (
-    <div>
-      <SectionLabel as="p" className="mb-2 px-3">
-        Add a block
-      </SectionLabel>
-      <div className="flex flex-col gap-0.5">
-        {QUESTION_TYPES.map((type) => {
-          const meta = QUESTION_TYPE_META[type]
-          const Icon = meta.icon
-          return (
-            <button
-              key={type}
-              type="button"
-              onClick={() => handleAdd(type)}
-              disabled={createQuestion.isPending}
-              className="text-text-secondary hover:text-text-default flex items-center gap-3 rounded-md px-3 py-2.5 text-left text-base font-medium transition-colors hover:bg-gray-100 disabled:opacity-60"
-            >
-              <Icon className="text-text-subtle h-5 w-5 shrink-0" />
-              {meta.label}
-            </button>
-          )
-        })}
-      </div>
-    </div>
+    <QuestionTypeButtons
+      types={QUESTION_TYPES}
+      onAdd={handleAdd}
+      disabled={createQuestion.isPending}
+      variant={variant}
+      title={title}
+      hint={hint}
+    />
   )
 }

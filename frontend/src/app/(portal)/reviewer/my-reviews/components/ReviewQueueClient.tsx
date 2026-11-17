@@ -224,8 +224,8 @@ export function ReviewQueueClient() {
           {debouncedSearch
             ? 'No applications match that search.'
             : scope === 'mine'
-              ? 'Nothing assigned to you yet — a chief assigns applications for you to review.'
-              : 'Nothing to review yet — submitted applications will show up here.'}
+              ? 'Nothing assigned to you yet. A chief assigns applications for you to review.'
+              : 'Nothing to review yet. Submitted applications will show up here.'}
         </p>
       ) : (
         sections.map(({ role, applications: roleApplications }) => (

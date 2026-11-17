@@ -42,6 +42,7 @@ export function MemberRow({
       <Button
         variant="outline"
         size="sm"
+        className="justify-self-end"
         disabled={isSelf}
         title={isSelf ? 'You can’t remove yourself' : undefined}
         onClick={() => setConfirming(true)}

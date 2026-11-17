@@ -2,12 +2,12 @@
 
 import { MeetingTimes } from '../../components/MeetingTimes'
 import { useState } from 'react'
-import { Info, Plus, X } from 'lucide-react'
-import { Tooltip } from '@/components/Tooltip'
+import { Plus, X } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { EmptyState } from '@/components/ui/empty-state'
 import { LoadingText } from '@/components/ui/loading-text'
 import { PageHeader } from '@/components/ui/page-header'
+import { Subheading } from '@/components/ui/subheading'
 import { PAGE_SHELL } from '@/components/ui/page-shell'
 import { useToast } from '@/components/ui/toast'
 import { type CycleScope, useCycleScope } from '@/hooks/useCycleScope'
@@ -63,7 +63,7 @@ export function TeamClient() {
           <GroupsGrid
             cycleId={scope.cycleId}
             header={
-              <SectionIntro
+              <Subheading
                 title="Groups"
                 hint="Group chiefs and leads by what they're responsible for. Keep everyone in one group, or split into groups like Design Chiefs or Engineering TLs."
               />
@@ -71,7 +71,7 @@ export function TeamClient() {
           />
           {scope.roles.roleIds.length > 0 && (
             <section className="flex flex-col gap-3">
-              <SectionIntro
+              <Subheading
                 title="Who reviews and interviews"
                 hint="Choose which groups review and interview each opening. If none are picked, the whole team is included. Auto-assign uses this too."
               />
@@ -82,7 +82,7 @@ export function TeamClient() {
           )}
           {scope.cycle && (
             <section className="flex flex-col gap-3">
-              <SectionIntro
+              <Subheading
                 title="Meeting times"
                 hint="For teams that hire around weekly meetings."
               />
@@ -108,28 +108,6 @@ export function WorkflowClient() {
         </>
       )}
     </SetupShell>
-  )
-}
-
-function SectionIntro({
-  title,
-  hint,
-  children,
-}: {
-  title: React.ReactNode
-  hint?: string
-  children?: React.ReactNode
-}) {
-  return (
-    <div className="flex flex-col gap-1">
-      <span className="flex items-center gap-1.5">
-        <h2 className="font-display text-ink text-base font-bold tracking-wide uppercase">
-          {title}
-        </h2>
-        {children}
-      </span>
-      {hint && <p className="text-text-muted text-sm">{hint}</p>}
-    </div>
   )
 }
 
@@ -162,7 +140,7 @@ function PositionsSection({ scope }: { scope: CycleScope }) {
 
   return (
     <section className="flex flex-col gap-3">
-      <SectionIntro
+      <Subheading
         title="Positions"
         hint="Each position gets its own application, rubric and ranking."
       />
@@ -247,11 +225,10 @@ function PipelineSection({ cycleId }: { cycleId: string }) {
 
   return (
     <section className="flex flex-col gap-3">
-      <SectionIntro title="Pipeline">
-        <Tooltip label="Adding your own steps is coming soon">
-          <Info size={13} className="text-text-subtle" />
-        </Tooltip>
-      </SectionIntro>
+      <Subheading
+        title="Workflow"
+        hint="How your team wants to run this application cycle. Turn off anything you don't need."
+      />
       <Card padding="none">
         <ol>
           {PIPELINE_STEPS.map((step, i) => {

@@ -1,7 +1,12 @@
 package workflow
 
 import (
+	"context"
+
+	"github.com/danielgtaylor/huma/v2"
 	"gorm.io/gorm"
+
+	"github.com/GenerateNU/apportal/backend/internal/models"
 )
 
 type setupCheck struct {
@@ -46,6 +51,18 @@ func (f *CycleState) LoadSetup(db *gorm.DB) error {
 				f.Missing[k] = append(f.Missing[k], missingSetup{c.work, c.label})
 			}
 		}
+	}
+	return nil
+}
+
+// RequirePositions refuses building the recruitment team before the cycle has a position to recruit for.
+func (s *Service) RequirePositions(ctx context.Context, cycleID string) error {
+	var n int64
+	if err := s.db.WithContext(ctx).Model(&models.Role{}).Where("cycle_id = ?", cycleID).Limit(1).Count(&n).Error; err != nil {
+		return HTTPErr(err)
+	}
+	if n == 0 {
+		return huma.Error409Conflict("add a position first")
 	}
 	return nil
 }

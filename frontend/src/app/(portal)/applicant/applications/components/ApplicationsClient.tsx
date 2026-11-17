@@ -11,7 +11,6 @@ import { MyApplicationsList } from './MyApplicationsList'
 import { useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
-import { HelpContact } from '@/components/HelpContact'
 import { EmptyState } from '@/components/ui/empty-state'
 import { PageHeader } from '@/components/ui/page-header'
 import { SectionLabel } from '@/components/ui/section-label'
@@ -158,8 +157,6 @@ function Dashboard({ user }: { user: User }) {
             </section>
           ))
         )}
-
-        <HelpContact className="text-left" />
       </div>
     </ApplicantPage>
   )

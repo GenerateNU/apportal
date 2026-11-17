@@ -1,9 +1,7 @@
 'use client'
 
-import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ChevronDown } from 'lucide-react'
 import { PAGE_SHELL } from '@/components/ui/page-shell'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -14,10 +12,10 @@ import { useCycleScope } from '@/hooks/useCycleScope'
 import type { ReviewQuestion } from '@/lib/api/types'
 import { useReviewQuestions } from '@/lib/queries/review-questions'
 import { cn } from '@/lib/utils'
-import { RubricSettings } from '../../components/FormParts'
+import { FormStatusBadge } from '../../components/FormStatusBadge'
 
 const ROW =
-  'grid items-center gap-3 px-5 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1.6fr)] md:gap-4'
+  'grid items-center gap-3 px-5 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1.3fr)_minmax(0,1fr)] md:gap-4'
 
 export function ReviewFormsClient() {
   const scope = useCycleScope()
@@ -27,7 +25,7 @@ export function ReviewFormsClient() {
     <div className={PAGE_SHELL}>
       <PageHeader
         title="Review forms"
-        subtitle="How leads score each position's applicants. Write them any time before reviews start."
+        subtitle="Reviewers use this form to evaluate each position's applicants. Write it any time before reviews start."
       />
       {!scope.cycleId ? (
         scope.isLoading ? (
@@ -54,12 +52,13 @@ export function ReviewFormsClient() {
           >
             <span>Position</span>
             <span>Review form</span>
-            <span>Scoring</span>
+            <span>Ranking</span>
           </div>
           {scope.roles.roleIds.map((roleId) => (
             <PositionReviewForm
               key={roleId}
-              href={`/admin/applications/${scope.cycleId}/${roleId}/builder?from=review-forms&tab=review`}
+              cycleId={scope.cycleId}
+              roleId={roleId}
               roleName={scope.roles.roleLabel(roleId)}
               questions={reviewQuestions.filter(
                 (q) => q.role_id === null || q.role_id === roleId
@@ -73,83 +72,65 @@ export function ReviewFormsClient() {
 }
 
 function PositionReviewForm({
-  href,
+  cycleId,
+  roleId,
   roleName,
   questions,
 }: {
-  href: string
+  cycleId: string
+  roleId: string
   roleName: string
   questions: ReviewQuestion[]
 }) {
-  const rubric = questions.filter((q) => q.question_type === 'score')
   const router = useRouter()
-  const [open, setOpen] = useState(false)
-  const sameScale = rubric.every(
-    (q) =>
-      q.score_min === rubric[0].score_min && q.score_max === rubric[0].score_max
-  )
-  const counted = rubric.filter((q) => q.ranked).length
+  const written = questions.length > 0
+  const ranked = questions.filter(
+    (q) => q.question_type === 'score' && q.ranked
+  ).length
+  const href = `/admin/applications/${cycleId}/${roleId}/builder?from=review-forms&tab=review`
 
   return (
-    <div className="border-b border-gray-100 last:border-b-0">
-      <div
-        role="link"
-        tabIndex={0}
-        onClick={() => router.push(href)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') router.push(href)
-        }}
+    <div
+      role="link"
+      tabIndex={0}
+      onClick={() => router.push(href)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') router.push(href)
+      }}
+      className={cn(
+        ROW,
+        'cursor-pointer border-b border-gray-100 py-3 transition-colors last:border-b-0 hover:bg-gray-50'
+      )}
+    >
+      <div className="flex min-w-0 items-center gap-2">
+        <span className="text-ink truncate font-semibold">{roleName}</span>
+        <FormStatusBadge written={written} />
+      </div>
+
+      <span
+        className={cn('text-sm', written ? 'text-ink' : 'text-text-subtle')}
+      >
+        {written
+          ? `${questions.length} question${questions.length === 1 ? '' : 's'}`
+          : 'No questions yet'}
+      </span>
+
+      <span
         className={cn(
-          ROW,
-          'cursor-pointer py-3 transition-colors hover:bg-gray-50'
+          'text-sm',
+          !written
+            ? 'text-text-subtle'
+            : ranked > 0
+              ? 'text-text-muted'
+              : 'text-amber-600'
         )}
       >
-        <span className="text-ink truncate font-semibold">{roleName}</span>
-        <span className="flex flex-col text-sm">
-          {questions.length === 0 ? (
-            <span className="text-text-subtle">Not written</span>
-          ) : (
-            <>
-              <span className="text-ink">
-                {questions.length} question{questions.length === 1 ? '' : 's'}
-                {rubric.length > 0 && ` · ${rubric.length} scored`}
-              </span>
-              {rubric.length === 0 && (
-                <span className="text-xs text-amber-600">
-                  Needs a score question
-                </span>
-              )}
-            </>
-          )}
-        </span>
-        {rubric.length > 0 ? (
-          <button
-            type="button"
-            aria-expanded={open}
-            onClick={(e) => {
-              e.stopPropagation()
-              setOpen(!open)
-            }}
-            className="text-text-muted hover:text-ink flex items-center gap-1 justify-self-start text-sm"
-          >
-            {sameScale
-              ? `${rubric[0].score_min}–${rubric[0].score_max}`
-              : 'Mixed scales'}{' '}
-            · {counted} of {rubric.length} count toward cutoff
-            <ChevronDown
-              size={14}
-              className={cn('transition-transform', open && 'rotate-180')}
-            />
-          </button>
-        ) : (
-          <span className="text-text-subtle text-sm">—</span>
-        )}
-      </div>
-      {open && rubric.length > 0 && (
-        <div className="px-5 pb-3">
-          <RubricSettings roleName={roleName} rubric={rubric} />
-        </div>
-      )}
+        {!written
+          ? '—'
+          : ranked > 0
+            ? `${ranked} count${ranked === 1 ? 's' : ''} toward ranking`
+            : 'None count toward ranking'}
+      </span>
     </div>
   )
 }

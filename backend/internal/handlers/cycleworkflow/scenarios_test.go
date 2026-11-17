@@ -37,7 +37,7 @@ func (f *fixture) dryRun(a middleware.Actor) context.Context {
 
 func (f *fixture) overrides(op workflow.Op) []models.WorkflowOverride {
 	var rows []models.WorkflowOverride
-	f.must(f.db.Where("cycle_id = ? AND op = ?", f.cycleA, op).Find(&rows).Error)
+	f.must(f.db.Where("cycle_id = ? AND op = ?", f.cycleA, op).Order("created_at").Order("id").Find(&rows).Error)
 	return rows
 }
 
@@ -77,6 +77,7 @@ func TestScenarioDryRunPreviewsWithoutChanging(t *testing.T) {
 func TestScenarioOverridesNeedConfirmAndAreAudited(t *testing.T) {
 	f := newFixture(t)
 	f.intoReviews()
+	before := len(f.overrides(workflow.OpSetDeadline))
 	in := &SetDeadlineInput{ID: f.cycleA, RoleID: f.roleA, Step: models.StepApplications, Kind: models.KindApplicant}
 	in.Body.DueAt = f.now.Add(2 * time.Hour)
 
@@ -87,13 +88,13 @@ func TestScenarioOverridesNeedConfirmAndAreAudited(t *testing.T) {
 	confirmedDry := middleware.WithIntent(f.as(f.chiefA), middleware.Intent{Confirm: true, DryRun: true})
 	_, err = f.s.setDeadline(confirmedDry, in)
 	f.must(err)
-	if n := len(f.overrides(workflow.OpSetDeadline)); n != 0 {
+	if n := len(f.overrides(workflow.OpSetDeadline)) - before; n != 0 {
 		t.Fatalf("a dry run recorded %d overrides", n)
 	}
 
 	_, err = f.s.setDeadline(f.confirmed(f.chiefA), in)
 	f.must(err)
-	rows := f.overrides(workflow.OpSetDeadline)
+	rows := f.overrides(workflow.OpSetDeadline)[before:]
 	if len(rows) != 1 || rows[0].ActorNUID != f.chiefA.NUID || rows[0].Level != string(workflow.LevelOverride) || len(rows[0].Plan) == 0 {
 		t.Fatalf("audit rows: %+v", rows)
 	}
@@ -292,4 +293,35 @@ func TestScenarioWorkForAStepThatIsOff(t *testing.T) {
 	if len(visible) != 0 {
 		t.Fatalf("selections stay hidden while decisions is off: %v", visible)
 	}
+}
+
+func TestScenarioClosingEarlyNeedsConfirm(t *testing.T) {
+	f := newFixture(t)
+	f.openApplications()
+	closeNow := func(ctx context.Context) error {
+		_, err := f.s.workflow.SetDeadline(ctx, workflow.DeadlineInput{CycleID: f.cycleA, RoleID: f.roleA, Step: models.StepApplications, Kind: models.KindApplicant, DueAt: f.now})
+		return err
+	}
+	needsConfirm(t, closeNow(f.as(f.chiefA)))
+	if f.stateOf(f.roleA) != workflow.StateOpen {
+		t.Fatal("an unconfirmed close must leave applications open")
+	}
+	f.must(closeNow(f.confirmed(f.chiefA)))
+	if f.stateOf(f.roleA) != workflow.StateClosed {
+		t.Fatal("a confirmed close shuts applications")
+	}
+	if len(f.overrides(workflow.OpSetDeadline)) == 0 {
+		t.Fatal("closing early should be recorded")
+	}
+	_, err := f.s.workflow.SetDeadline(f.as(f.chiefA), workflow.DeadlineInput{CycleID: f.cycleA, RoleID: f.roleA, Step: models.StepApplications, Kind: models.KindApplicant, DueAt: f.now.Add(48 * time.Hour)})
+	if err == nil {
+		return
+	}
+	needsConfirm(t, err)
+}
+
+func (f *fixture) stateOf(role string) workflow.State {
+	st, err := f.s.workflow.State(context.Background(), f.cycleA)
+	f.must(err)
+	return st.State(role, models.StepApplications, time.Now())
 }

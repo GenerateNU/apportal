@@ -54,7 +54,7 @@ export function OnTheClockPanel({
           {board.status === 'complete'
             ? 'This draft is complete.'
             : board.picks.length >= board.rounds * board.teams.length
-              ? 'Every slot is filled — add a round to keep going.'
+              ? 'Every slot is filled. Add a round to keep going.'
               : 'Nothing is on the clock.'}
         </p>
       </Card>

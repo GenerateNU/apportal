@@ -39,10 +39,6 @@ export function TableView({
   answersByApplicationId,
   answersLoadingByApplicationId,
   availabilityByApplicationId,
-  selectable,
-  selectedIds,
-  onToggleSelect,
-  onToggleSelectAll,
   selectedApplicationId,
   onSelectApplication,
   filters,
@@ -50,8 +46,9 @@ export function TableView({
   hasAvailability,
   roleOptions,
   tagNames,
-  bulkBar,
   loading,
+  showStages = true,
+  fullPageHref = (id) => `/reviewer/applications/${id}`,
   hasMore,
   loadingMore,
   onLoadMore,
@@ -68,12 +65,6 @@ export function TableView({
   // Per application, whether its answers request is still in flight.
   answersLoadingByApplicationId: Record<string, boolean>
   availabilityByApplicationId: Record<string, string[]>
-  // Row/select-all checkboxes only make sense alongside the bulk-move
-  // toolbar, which is chief/admin-only — other reviewers never see them.
-  selectable: boolean
-  selectedIds: Set<string>
-  onToggleSelect: (id: string) => void
-  onToggleSelectAll: () => void
   selectedApplicationId: string | null
   onSelectApplication: (id: string) => void
   filters: AnswerFilter[]
@@ -81,11 +72,10 @@ export function TableView({
   hasAvailability?: boolean
   roleOptions?: string[]
   tagNames?: string[]
-  // Rendered in the filter row's place while a selection is active. Owned by
-  // the parent, which holds the selection and the bulk mutation.
-  bulkBar?: React.ReactNode
   // A fetch is in flight while the previous rows are still on screen.
   loading?: boolean
+  showStages?: boolean
+  fullPageHref?: (applicationId: string) => string
   hasMore?: boolean
   loadingMore?: boolean
   onLoadMore?: () => void
@@ -96,10 +86,6 @@ export function TableView({
   const countByStage = (stage: ApplicationStage | 'all') =>
     stage === 'all' ? totalCount : (stageCounts[stage] ?? 0)
 
-  const allSelected =
-    applicants.length > 0 && applicants.every((a) => selectedIds.has(a.id))
-  const someSelected = applicants.some((a) => selectedIds.has(a.id))
-
   // Meeting availability is already a trailing column, rendered as compact day
   // tags — as a regular column it would be a truncated wall of checkbox text.
   // That's a fact about this grid, so the exclusion lives here rather than in
@@ -108,8 +94,7 @@ export function TableView({
     () => columns.filter((q) => !isAvailabilityQuestion(q.question_text)),
     [columns]
   )
-  const columnCount =
-    (selectable ? 1 : 0) + 2 + tableColumns.length + TRAILING_COLUMNS.length
+  const columnCount = 2 + tableColumns.length + TRAILING_COLUMNS.length
 
   // Batch fetch interviews for the current page of applications. One request for
   // the whole page rather than one per row, following the pattern in CLAUDE.md.
@@ -160,35 +145,35 @@ export function TableView({
   return (
     <div className={cn(TABLE_FRAME, 'flex min-h-0 flex-1 flex-col')}>
       <div className="flex flex-wrap items-center gap-3 border-b border-gray-100 px-4 py-3">
-        <Select
-          value={activeStage}
-          onValueChange={(v) => onStageChange(v as ApplicationStage | 'all')}
-        >
-          <SelectTrigger
-            className="h-8 w-52 border-gray-200 text-xs font-normal"
-            aria-label="Filter by stage"
+        {showStages && (
+          <Select
+            value={activeStage}
+            onValueChange={(v) => onStageChange(v as ApplicationStage | 'all')}
           >
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {FILTER_STAGES.map(({ label, value }) => (
-              <SelectItem key={value} value={value}>
-                {label} ({countByStage(value)})
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+            <SelectTrigger
+              className="h-8 w-52 border-gray-200 text-xs font-normal"
+              aria-label="Filter by stage"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {FILTER_STAGES.map(({ label, value }) => (
+                <SelectItem key={value} value={value}>
+                  {label} ({countByStage(value)})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
         <div className="min-w-0 flex-1">
-          {bulkBar ?? (
-            <FilterChips
-              filters={filters}
-              columns={columns}
-              onFilterChange={onFilterChange}
-              hasAvailability={hasAvailability}
-              roleOptions={roleOptions}
-              tagNames={tagNames}
-            />
-          )}
+          <FilterChips
+            filters={filters}
+            columns={columns}
+            onFilterChange={onFilterChange}
+            hasAvailability={hasAvailability}
+            roleOptions={roleOptions}
+            tagNames={tagNames}
+          />
         </div>
       </div>
 
@@ -204,20 +189,6 @@ export function TableView({
         <table className="h-full w-full min-w-180">
           <thead className="sticky top-0 z-20">
             <tr>
-              {selectable && (
-                <th className={cn(HEAD_CELL, 'w-10')}>
-                  <input
-                    type="checkbox"
-                    className="accent-primary"
-                    checked={allSelected}
-                    ref={(el) => {
-                      if (el) el.indeterminate = !allSelected && someSelected
-                    }}
-                    onChange={onToggleSelectAll}
-                    aria-label="Select all"
-                  />
-                </th>
-              )}
               <th className={cn(HEAD_CELL, 'min-w-48 whitespace-nowrap')}>
                 Name
               </th>
@@ -257,11 +228,9 @@ export function TableView({
                     answersLoading={!!answersLoadingByApplicationId[a.id]}
                     availabilityDays={availabilityByApplicationId[a.id] ?? []}
                     interview={interviewsByApplicationId[a.id] ?? null}
-                    selectable={selectable}
-                    selected={selectedIds.has(a.id)}
-                    onToggleSelect={() => onToggleSelect(a.id)}
                     isSelected={selectedApplicationId === a.id}
                     onSelect={() => onSelectApplication(a.id)}
+                    fullPageHref={fullPageHref(a.id)}
                   />
                   {i === triggerIndex && (
                     // 1px rather than 0: a zero-area target is an edge case

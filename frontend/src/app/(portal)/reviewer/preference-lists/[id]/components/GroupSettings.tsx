@@ -144,7 +144,7 @@ export function GroupSettings({
               })}
               {deadlineError && (
                 <span className="text-xs text-red-600">
-                  Couldn&apos;t save the deadline — try again.
+                  Couldn&apos;t save the deadline. Try again.
                 </span>
               )}
             </div>

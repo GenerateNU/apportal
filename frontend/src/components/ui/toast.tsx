@@ -50,6 +50,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const toast = React.useCallback((message: string, options?: ToastOptions) => {
+    if (!message) return -1
     const entry: Toast = {
       id: nextId.current++,
       message,

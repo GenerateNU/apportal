@@ -125,7 +125,7 @@ var defaultChallengeTracks = json.RawMessage(`{
 		"Which challenge did you choose, and why this one in particular?",
 		"Walk me through your solution, as you do that, explain why you made the choices you made? How did you approach the challenge?",
 		"If there was anything new you had to learn, how did you approach teaching yourself?",
-		"What was the most challenging aspect of the challenge — how did you overcome it?",
+		"What was the most challenging aspect of the challenge, and how did you overcome it?",
 		"Now that you look at it again, are there ways you could improve your solution?",
 		"How did you leverage the provided materials to make the development process easier?"
 	]},
@@ -133,7 +133,7 @@ var defaultChallengeTracks = json.RawMessage(`{
 		"Which challenge did you choose, and why this one in particular?",
 		"Walk me through your solution, as you do that, explain why you made the choices you made? How did you approach the challenge?",
 		"If there was anything new you had to learn, how did you approach teaching yourself?",
-		"What was the most challenging aspect of the challenge — how did you overcome it?",
+		"What was the most challenging aspect of the challenge, and how did you overcome it?",
 		"Now that you look at it again, are there ways you could improve your solution?",
 		"How did you leverage the provided materials to make the development process easier?"
 	]}
@@ -144,7 +144,7 @@ var defaultPostInterviewChecklist = json.RawMessage(`[
 	"In the Interview section above, summarize your thoughts in Comments.",
 	"Set a Rating for this applicant.",
 	"Add the recording link (and notes link, if you took any) before submitting.",
-	"Submit the interview — this unlocks the recording reviewer's review."
+	"Submit the interview. This unlocks the recording reviewer's review."
 ]`)
 
 // GetOrCreateInterviewScript fetches the (cycle, role) script, creating it

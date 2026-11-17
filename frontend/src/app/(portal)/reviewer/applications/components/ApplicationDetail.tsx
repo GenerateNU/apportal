@@ -31,9 +31,11 @@ export function toApplicantDetail(
 export function ApplicationDetail({
   applicant,
   onClose,
+  fullPageHref = `/reviewer/applications/${applicant.id}`,
 }: {
   applicant: ApplicantApplication
   onClose: () => void
+  fullPageHref?: string
 }) {
   if (typeof document === 'undefined') return null
   return createPortal(
@@ -61,7 +63,7 @@ export function ApplicationDetail({
             <PanelRightClose className="h-5 w-5" />
           </button>
           <Link
-            href={`/reviewer/applications/${applicant.id}`}
+            href={fullPageHref}
             className="text-text-muted hover:text-text-default inline-flex items-center gap-1 py-1.5 text-sm transition-colors"
           >
             <Maximize2 className="h-3 w-3" />

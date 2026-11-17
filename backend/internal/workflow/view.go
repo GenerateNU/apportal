@@ -53,6 +53,7 @@ type Overview struct {
 	Role        string       `json:"role" enum:"admin,chief,lead"`
 	CurrentStep *models.Step `json:"current_step,omitempty"`
 	Steps       []StepView   `json:"steps"`
+	Phases      []PhaseView  `json:"phases"`
 	NextActions []NextAction `json:"next_actions"`
 	Tasks       []Task       `json:"tasks"`
 }
@@ -102,7 +103,7 @@ func (f *CycleState) StepConfigs() []StepConfig {
 type LateCounts map[key]map[models.StepKind]int
 
 func (f *CycleState) Overview(c Caller, now time.Time, late LateCounts, counts []TaskCount) Overview {
-	v := Overview{CycleID: f.CycleID, Role: c.Tier.role(), Steps: []StepView{}, NextActions: []NextAction{}, Tasks: f.Tasks(counts)}
+	v := Overview{CycleID: f.CycleID, Role: c.Tier.role(), Steps: []StepView{}, Phases: f.Phases(), NextActions: []NextAction{}, Tasks: f.Tasks(counts)}
 	if c.CanOverride() {
 		v.NextActions = f.NextActions(now)
 	}

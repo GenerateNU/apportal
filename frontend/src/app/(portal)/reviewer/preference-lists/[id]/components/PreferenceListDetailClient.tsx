@@ -4,6 +4,8 @@ import { useCallback, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { LayoutGrid, Lock, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
 import { PageContainer } from '@/components/PageContainer'
+import { PAGE_BLEED, PAGE_X } from '@/components/ui/page-shell'
+import { cn } from '@/lib/utils'
 import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -456,7 +458,13 @@ export function PreferenceListDetailClient({
       {/* Sticky: on a long ranking you otherwise lose the list's name, its
           status and how long is left. Not on phones, where the wrapped bar
           would cover a third of the screen. */}
-      <div className="z-10 -mx-4 flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 bg-white px-4 py-3 sm:sticky sm:top-0 sm:-mx-8 sm:px-8">
+      <div
+        className={cn(
+          'z-10 flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 bg-white py-3 sm:sticky sm:top-0',
+          PAGE_BLEED,
+          PAGE_X
+        )}
+      >
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
           {editingName ? (
             <Input
@@ -557,7 +565,7 @@ export function PreferenceListDetailClient({
               className="border-border bg-muted/40 text-text-muted flex items-center gap-2 border px-4 py-3 text-sm"
             >
               <Lock size={14} />
-              The {roleLabel(r)} deadline has passed — its shared list is
+              The {roleLabel(r)} deadline has passed, so its shared list is
               read-only. Other roles and group settings remain editable.
             </div>
           ))

@@ -8,6 +8,7 @@ import {
   createApplication,
   deleteApplication,
   getApplication,
+  getApplicationSummary,
   listApplications,
   updateApplication,
 } from '@/generated/applications/applications'
@@ -130,6 +131,14 @@ export function useInfiniteApplications(
     total: pages[0]?.total ?? 0,
     stageCounts: pages[0]?.stage_counts ?? {},
   }
+}
+
+export function useApplicationSummary(cycleId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: queryKeys.applications.summary(cycleId),
+    queryFn: async () => (await getApplicationSummary(cycleId)).positions ?? [],
+    enabled: enabled && !!cycleId,
+  })
 }
 
 // Two params don't cross the wire as they're typed here. answer_filters is

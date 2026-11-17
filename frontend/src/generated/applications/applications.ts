@@ -32,6 +32,7 @@ import type {
   CreateApplicationInputBody,
   ErrorModel,
   ListApplicationsParams,
+  SummaryOutputBody,
   UpdateApplicationInputBody
 } from '.././model';
 
@@ -445,4 +446,95 @@ export const useUpdateApplication = <TError = ErrorModel | ErrorModel | ErrorMod
 
       return useMutation(mutationOptions, queryClient);
     }
+    /**
+ * Chiefs and admins. How many have applied, recent submissions, and the deadline.
+ * @summary How applications are going, per position
+ */
+export const getApplicationSummary = (
+    id: string,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<SummaryOutputBody>(
+      {url: `/cycles/${id}/application-summary`, method: 'GET', signal
+    },
+      options);
+    }
+  
+
+
+
+export const getGetApplicationSummaryQueryKey = (id?: string,) => {
+    return [
+    `/cycles/${id}/application-summary`
+    ] as const;
+    }
+
     
+export const getGetApplicationSummaryQueryOptions = <TData = Awaited<ReturnType<typeof getApplicationSummary>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getApplicationSummary>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetApplicationSummaryQueryKey(id);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getApplicationSummary>>> = ({ signal }) => getApplicationSummary(id, requestOptions, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getApplicationSummary>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetApplicationSummaryQueryResult = NonNullable<Awaited<ReturnType<typeof getApplicationSummary>>>
+export type GetApplicationSummaryQueryError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel
+
+
+export function useGetApplicationSummary<TData = Awaited<ReturnType<typeof getApplicationSummary>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
+ id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getApplicationSummary>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getApplicationSummary>>,
+          TError,
+          Awaited<ReturnType<typeof getApplicationSummary>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetApplicationSummary<TData = Awaited<ReturnType<typeof getApplicationSummary>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getApplicationSummary>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getApplicationSummary>>,
+          TError,
+          Awaited<ReturnType<typeof getApplicationSummary>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetApplicationSummary<TData = Awaited<ReturnType<typeof getApplicationSummary>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getApplicationSummary>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary How applications are going, per position
+ */
+
+export function useGetApplicationSummary<TData = Awaited<ReturnType<typeof getApplicationSummary>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getApplicationSummary>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetApplicationSummaryQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+

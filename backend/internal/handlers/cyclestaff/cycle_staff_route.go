@@ -3,6 +3,8 @@ package cyclestaff
 import (
 	"net/http"
 
+	"github.com/GenerateNU/apportal/backend/internal/workflow"
+
 	"github.com/danielgtaylor/huma/v2"
 	"gorm.io/gorm"
 
@@ -10,7 +12,7 @@ import (
 )
 
 func Route(api huma.API, db *gorm.DB) {
-	s := &cycleStaffService{staffDB: NewCycleStaffDB(db), access: access.NewChecker(db)}
+	s := &cycleStaffService{staffDB: NewCycleStaffDB(db), access: access.NewChecker(db), workflow: workflow.NewService(db)}
 
 	huma.Register(api, huma.Operation{
 		OperationID: "list-my-cycles",

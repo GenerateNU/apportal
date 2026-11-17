@@ -102,11 +102,6 @@ const sectionsByRole: Record<Role, NavSection[]> = {
       label: 'Admin',
       items: [
         { href: '/admin/branches', label: 'Branches', icon: GitBranch },
-        {
-          href: '/admin/applications',
-          label: 'Application Forms',
-          icon: FileText,
-        },
         { href: '/admin/members', label: 'Members', icon: Users },
       ],
     },
@@ -398,7 +393,7 @@ export default function Sidebar({
         ))}
       </nav>
 
-      {!collapsed && (
+      {!collapsed && staffSections.length === 0 && !cycleNavMode && (
         <HelpContact className="px-5 pb-4 text-left leading-relaxed" />
       )}
       {/* User */}

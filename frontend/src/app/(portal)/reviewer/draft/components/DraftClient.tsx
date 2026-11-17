@@ -180,7 +180,7 @@ export function DraftClient() {
       {
         onError: () =>
           setPickError(
-            'That pick didn’t go through — someone may have filled the slot first. The board refreshes every few seconds.'
+            'That pick didn’t go through. Someone may have filled the slot first. The board refreshes every few seconds.'
           ),
       }
     )
@@ -189,7 +189,7 @@ export function DraftClient() {
   const header = (
     <PageHeader
       title="Draft"
-      subtitle="Teams claim applicants in snake order — the first round runs down the order, the next back up it, so the last team picks twice at the turn."
+      subtitle="Teams claim applicants in snake order: the first round runs down the order, the next back up it, so the last team picks twice at the turn."
       actions={
         <>
           {board && (
@@ -426,7 +426,7 @@ export function DraftClient() {
                 setReorderError(
                   err instanceof APIError
                     ? err.message
-                    : "Couldn't save the new order — try again."
+                    : "Couldn't save the new order. Try again."
                 ),
             }
           )
@@ -448,7 +448,7 @@ export function DraftClient() {
           </DialogHeader>
           {replacePick.isError && (
             <p className="text-destructive text-sm">
-              Couldn&apos;t change that pick — they may already be picked in
+              Couldn&apos;t change that pick. They may already be picked in
               another slot.
             </p>
           )}

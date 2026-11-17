@@ -10,7 +10,16 @@ export class APIError extends Error {
   }
 }
 
+// Thrown when someone cancels an override or destructive confirm; it's a choice, not an error.
+export class OverrideDeclined extends Error {
+  constructor() {
+    super('')
+    this.name = 'OverrideDeclined'
+  }
+}
+
 export function apiErrorDetail(error: unknown): string {
+  if (error instanceof OverrideDeclined) return ''
   const message = error instanceof Error ? error.message : String(error)
   try {
     const body = JSON.parse(message) as {

@@ -1,4 +1,4 @@
-import type { Overview } from '@/generated/model'
+import type { Overview, PageViewPage } from '@/generated/model'
 
 export type Step = {
   href: string
@@ -15,20 +15,21 @@ export type Phase = {
   steps: Step[]
   status: PhaseStatus
   count: number
+  lockedReason?: string
 }
 
 export const WRAP_UP_PATH = '/reviewer/cycle/wrap-up'
 
 type StepPage = Omit<Step, 'locked'>
 
-const STEP_PAGES: Record<string, StepPage> = {
+const PAGES: Record<Exclude<PageViewPage, 'wrap_up'>, StepPage> = {
   positions: {
     href: '/reviewer/cycle/workflow',
     label: 'Openings & process',
     also: ['/reviewer/cycle/positions'],
   },
   team: { href: '/reviewer/cycle/team', label: 'Recruitment team' },
-  open_applications: {
+  application_forms: {
     href: '/reviewer/cycle/application',
     label: 'Application forms',
     also: [
@@ -42,13 +43,16 @@ const STEP_PAGES: Record<string, StepPage> = {
     also: [{ path: '/admin/applications', when: 'from=review-forms' }],
   },
   applicants: { href: '/reviewer/applications', label: 'Applicants' },
-  run_reviews: { href: '/reviewer/cycle/reviews', label: 'Assign reviewers' },
+  assign_reviewers: {
+    href: '/reviewer/cycle/reviews',
+    label: 'Assign reviewers',
+  },
   review_progress: {
     href: '/reviewer/cycle/reviewing',
     label: 'Reviews & progress',
     also: ['/reviewer/my-reviews'],
   },
-  advance: { href: '/reviewer/cycle/cutoff', label: 'Shortlist' },
+  shortlist: { href: '/reviewer/cycle/cutoff', label: 'Shortlist' },
   interview_script: {
     href: '/reviewer/interview-script',
     label: 'Interview script',
@@ -70,57 +74,21 @@ const STEP_PAGES: Record<string, StepPage> = {
   feedback: { href: '/reviewer/decisions', label: 'Write & send feedback' },
 }
 
-const STEPS_FOR: Record<string, string[]> = {
-  applications: ['open_applications', 'review_forms', 'applicants'],
-  reviews: ['run_reviews', 'review_progress', 'advance'],
-  interviews: ['interview_script', 'assign_interviewers', 'interview_progress'],
-  decisions: ['preference_lists', 'draft', 'wrap_up'],
-  feedback: ['feedback', 'wrap_up'],
-}
-
-export function toPhases(
-  view: Overview | undefined,
-  hasOpenings: boolean
-): Phase[] {
-  if (!view) return []
-  const steps = view.steps ?? []
-  const applicationsOpen = steps.some(
-    (s) =>
-      s.step === 'applications' &&
-      (s.openings ?? []).some((o) => o.state !== 'draft')
-  )
-  const setup: Phase = {
-    key: 'setup',
-    label: 'Setup',
-    status: hasOpenings ? 'done' : 'current',
-    count: 0,
-    steps: [STEP_PAGES.positions, STEP_PAGES.team],
-  }
-  return [
-    setup,
-    ...steps.map((s) => ({
-      key: s.step,
-      label: s.label,
-      status: (s.status === 'open' ? 'current' : s.status) as PhaseStatus,
-      count: s.applicant_count,
-      steps: (STEPS_FOR[s.step] ?? []).map((id) =>
-        id === 'wrap_up'
-          ? { href: `${WRAP_UP_PATH}?stage=${s.step}`, label: 'Wrap up' }
-          : {
-              ...STEP_PAGES[id],
-              locked:
-                id === 'applicants' && !applicationsOpen
-                  ? 'Opens once you release an application.'
-                  : undefined,
-            }
-      ),
+// Which pages a phase has and what is locked come from the backend; this only names and links them.
+export function toPhases(view: Overview | undefined): Phase[] {
+  return (view?.phases ?? []).map((p) => ({
+    key: p.key,
+    label: p.label,
+    status: (p.status === 'open' ? 'current' : p.status) as PhaseStatus,
+    count: p.applicant_count,
+    lockedReason: p.locked_reason,
+    steps: (p.pages ?? []).map(({ page, locked_reason }) => ({
+      ...(page === 'wrap_up'
+        ? { href: `${WRAP_UP_PATH}?stage=${p.key}`, label: 'Wrap up' }
+        : PAGES[page]),
+      locked: locked_reason,
     })),
-  ]
-}
-
-export function currentPhaseIndex(phases: Phase[]) {
-  const i = phases.findIndex((p) => p.status === 'current')
-  return i === -1 ? phases.length - 1 : i
+  }))
 }
 
 export function stepActive(pathname: string, search: string, step: Step) {

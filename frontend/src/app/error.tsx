@@ -22,8 +22,8 @@ export default function Error({
           Something went wrong
         </h1>
         <p className="text-text-muted text-sm">
-          We couldn&apos;t load this page. This is usually temporary — try again
-          in a moment.
+          We couldn&apos;t load this page. This is usually temporary, so try
+          again in a moment.
         </p>
         {error.digest && (
           <p className="text-text-subtle font-mono text-xs break-all">

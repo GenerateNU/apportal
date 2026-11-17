@@ -99,6 +99,9 @@ func (f *CycleState) RequireEnabled(s models.Step) error {
 }
 
 func (f *CycleState) ReleaseBlock(role string, s models.Step, now time.Time) error {
+	if !f.SetUp() {
+		return conflict("add a position and a recruitment team before releasing %s", Label(s))
+	}
 	if k, ok := MainKind(s); ok {
 		d, ok := f.Deadline(role, s, k)
 		if !ok || !d.DueAt.After(now) {

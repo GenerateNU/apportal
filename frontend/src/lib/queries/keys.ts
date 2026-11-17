@@ -30,6 +30,8 @@ export const queryKeys = {
 
   applications: {
     all: ['applications'] as const,
+    summary: (cycleId: string) =>
+      [...queryKeys.applications.all, 'summary', cycleId] as const,
     lists: () => [...queryKeys.applications.all, 'list'] as const,
     list: (params?: {
       cycle_id?: string

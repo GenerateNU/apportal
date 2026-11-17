@@ -37,19 +37,24 @@ export function OverrideConfirmProvider({
       <ConfirmDialog
         open={!!request}
         onOpenChange={(open) => !open && answer(false)}
-        title={
-          destructive ? 'This change is destructive' : 'This needs an override'
-        }
+        title={destructive ? 'Are you sure?' : 'This needs an override'}
         description={
-          <>
-            {request?.reason}
-            {request?.reason && '. '}
-            {destructive
-              ? 'It can remove or hide work that has already started. It will be recorded.'
-              : 'It goes past what the workflow normally allows. It will be recorded.'}
-          </>
+          destructive ? (
+            request?.reason ? (
+              `${request.reason}.`
+            ) : (
+              'Do you want to continue?'
+            )
+          ) : (
+            <>
+              {request?.reason}
+              {request?.reason && '. '}
+              It goes past what the workflow normally allows. It will be
+              recorded.
+            </>
+          )
         }
-        confirmLabel={destructive ? 'Do it anyway' : 'Override'}
+        confirmLabel={destructive ? 'Yes, continue' : 'Override'}
         onConfirm={() => answer(true)}
       />
     </>

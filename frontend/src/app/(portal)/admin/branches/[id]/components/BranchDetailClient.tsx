@@ -51,16 +51,25 @@ export function BranchDetailClient({ branchId }: { branchId: string }) {
         }
       />
 
-      <div className="flex flex-col gap-8">
-        {BRANCH_CYCLE_STATUSES.map((status) => (
-          <CycleStatusList
-            key={status}
-            status={status}
-            cycles={groups[status]}
-            roles={roles}
-          />
-        ))}
-      </div>
+      {BRANCH_CYCLE_STATUSES.every((s) => groups[s].length === 0) ? (
+        <EmptyState
+          title="No cycles yet"
+          description="Create a cycle to start recruiting for this branch."
+        />
+      ) : (
+        <div className="flex flex-col gap-8">
+          {BRANCH_CYCLE_STATUSES.filter((s) => groups[s].length > 0).map(
+            (status) => (
+              <CycleStatusList
+                key={status}
+                status={status}
+                cycles={groups[status]}
+                roles={roles}
+              />
+            )
+          )}
+        </div>
+      )}
 
       <CycleDialog
         open={showNewCycle}

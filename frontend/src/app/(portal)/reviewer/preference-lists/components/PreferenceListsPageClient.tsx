@@ -103,7 +103,7 @@ export function PreferenceListsPageClient({ isChief }: { isChief: boolean }) {
         <p className="text-text-faint px-1 text-sm">No cycles yet.</p>
       ) : lists.length === 0 ? (
         <p className="text-text-faint px-1 text-sm">
-          No preference list groups yet for this cycle — create one to get
+          No preference list groups yet for this cycle. Create one to get
           started.
         </p>
       ) : (
@@ -197,7 +197,7 @@ function DeadlineEditor({ cycleId, role }: { cycleId: string; role: string }) {
       )}
       {setDeadline.isError && (
         <span className="text-xs text-red-600">
-          Couldn&apos;t save the deadline — try again.
+          Couldn&apos;t save the deadline. Try again.
         </span>
       )}
     </Card>

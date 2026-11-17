@@ -39,13 +39,13 @@ export function StaffRow({
   const canChange = roles.length > 1 && !noAccess
 
   return (
-    <li className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3">
+    <li className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-2.5">
       <PersonCell
         name={member.full_name}
         secondary={
           noAccess ? (
             <span className="text-destructive font-medium">
-              {`No access — ${STAFF_ROLE_LABEL[member.role].toLowerCase()}s can’t see ${applicationType} cycles`}
+              {`No access: ${STAFF_ROLE_LABEL[member.role].toLowerCase()}s can’t see ${applicationType} cycles`}
             </span>
           ) : (
             member.email
@@ -66,7 +66,7 @@ export function StaffRow({
             disabled={setStaff.isPending}
           >
             <SelectTrigger
-              className="w-28"
+              className="h-8 w-24 text-sm"
               aria-label={`Role for ${member.full_name}`}
             >
               <SelectValue />

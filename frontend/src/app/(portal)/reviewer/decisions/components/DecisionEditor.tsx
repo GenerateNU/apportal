@@ -63,7 +63,7 @@ export function DecisionEditor({
           ) : (
             <p className="text-text-muted text-sm">
               This applicant did not interview, so their letter has no feedback
-              paragraph — it’s ready to send as written.
+              paragraph, so it’s ready to send as written.
             </p>
           )}
 
@@ -173,13 +173,13 @@ function ChiefControls({
             )
           }
         >
-          {sent ? 'Undo — not sent' : 'Mark sent & reject'}
+          {sent ? 'Undo, not sent' : 'Mark sent & reject'}
         </Button>
       </div>
       <p className="text-text-faint text-xs">
         {sent
           ? `Sent, and ${row.full_name} is marked rejected. Undoing puts them back where they were.`
-          : `Records the email as sent and moves ${row.full_name} to the rejected stage${isDecided(row.stage) ? '' : ' — they’re still in the pipeline right now'}.`}
+          : `Records the email as sent and moves ${row.full_name} to the rejected stage${isDecided(row.stage) ? '' : '. They’re still in the workflow right now'}.`}
       </p>
     </div>
   )

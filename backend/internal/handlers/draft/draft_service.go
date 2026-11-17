@@ -155,7 +155,7 @@ func (s *draftService) setTeams(ctx context.Context, in *SetDraftTeamsInput) (*D
 			return nil, utils.StoreErr(err)
 		}
 		if !sameTeams(existing, in.Body.PreferenceListIDs) {
-			return nil, huma.Error409Conflict("teams can't be added or removed once picking has started — only reordered")
+			return nil, huma.Error409Conflict("teams can't be added or removed once picking has started; they can only be reordered")
 		}
 	}
 	if err := s.draftDB.SetDraftTeams(ctx, in.ID, in.Body.PreferenceListIDs); err != nil {
