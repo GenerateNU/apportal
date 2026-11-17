@@ -149,11 +149,11 @@ func (f *CycleState) reviewsIn(now time.Time) bool {
 		return true
 	}
 	for _, o := range f.Openings {
-		if f.State(o.RoleID, models.StepReviews, now) != StateClosed {
-			return false
+		if f.Ready(o.RoleID, models.StepReviews, now) {
+			return true
 		}
 	}
-	return len(f.Openings) > 0
+	return false
 }
 
 func (f *CycleState) lockedBecause() *string {

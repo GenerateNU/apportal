@@ -4107,11 +4107,14 @@ components:
           type: string
         full_name:
           type: string
+        role_id:
+          type: string
         submitted_at:
           format: date-time
           type: string
       required:
         - application_id
+        - role_id
         - applicant_nuid
         - full_name
         - email
@@ -11535,6 +11538,13 @@ paths:
           name: role_id
           schema:
             description: Applicant role
+            type: string
+        - description: Comma-separated roles, instead of role_id
+          explode: false
+          in: query
+          name: role_ids
+          schema:
+            description: Comma-separated roles, instead of role_id
             type: string
       responses:
         "200":

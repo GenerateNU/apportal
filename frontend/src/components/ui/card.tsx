@@ -29,12 +29,3 @@ export function Card({
     />
   )
 }
-
-export function Toolbar({ className, ...props }: React.ComponentProps<'div'>) {
-  return (
-    <Card
-      className={cn('flex flex-wrap items-center gap-3', className)}
-      {...props}
-    />
-  )
-}

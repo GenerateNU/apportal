@@ -19,7 +19,9 @@ const ROW =
 
 export function ReviewFormsClient() {
   const scope = useCycleScope()
-  const { data: reviewQuestions = [] } = useReviewQuestions(scope.cycleId)
+  const { data: reviewQuestions = [], isLoading } = useReviewQuestions(
+    scope.cycleId
+  )
 
   return (
     <div className={PAGE_SHELL}>
@@ -33,6 +35,8 @@ export function ReviewFormsClient() {
         ) : (
           <EmptyState title="You're not a chief on any cycle yet" />
         )
+      ) : scope.roles.isLoading ? (
+        <LoadingText />
       ) : scope.roles.roleIds.length === 0 ? (
         <EmptyState
           title="Add a position first"
@@ -54,17 +58,21 @@ export function ReviewFormsClient() {
             <span>Review form</span>
             <span>Ranking</span>
           </div>
-          {scope.roles.roleIds.map((roleId) => (
-            <PositionReviewForm
-              key={roleId}
-              cycleId={scope.cycleId}
-              roleId={roleId}
-              roleName={scope.roles.roleLabel(roleId)}
-              questions={reviewQuestions.filter(
-                (q) => q.role_id === null || q.role_id === roleId
-              )}
-            />
-          ))}
+          {isLoading ? (
+            <LoadingText className="px-5 py-4" />
+          ) : (
+            scope.roles.roleIds.map((roleId) => (
+              <PositionReviewForm
+                key={roleId}
+                cycleId={scope.cycleId}
+                roleId={roleId}
+                roleName={scope.roles.roleLabel(roleId)}
+                questions={reviewQuestions.filter(
+                  (q) => q.role_id === null || q.role_id === roleId
+                )}
+              />
+            ))
+          )}
         </Card>
       )}
     </div>

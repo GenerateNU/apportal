@@ -57,9 +57,10 @@ const IN_INTERVIEWS = new Set<string>([
 ])
 
 export function useInterviewSetup(cycleId: string) {
-  const { data: steps = [] } = useCycleSteps(cycleId)
+  const { data: steps = [], isLoading } = useCycleSteps(cycleId)
   const recEach = perApplicant(steps, 'interviews', 'recording_reviewer')
   return {
+    isLoading,
     ivEach: perApplicant(steps, 'interviews', 'interviewer'),
     withRecording: recEach > 0,
     recEach,
@@ -92,7 +93,7 @@ export function InterviewAssignClient() {
         }
       />
       {!scope.cycleId || !scope.roleId ? (
-        scope.isLoading ? (
+        scope.isLoading || scope.roles.isLoading ? (
           <LoadingText />
         ) : (
           <EmptyState title="Add an opening first" />
@@ -126,10 +127,15 @@ function Board({
   const { data: board = [], isLoading } = useInterviewBoard(cycleId, {
     history: true,
   })
-  const { data: staffing } = useStaffing(cycleId)
+  const { data: staffing, isLoading: staffingLoading } = useStaffing(cycleId)
   const { data: conflicts = [] } = useReviewConflicts(cycleId)
   const { data: staff = [] } = useCycleStaff(cycleId)
-  const { ivEach, withRecording, recEach } = useInterviewSetup(cycleId)
+  const {
+    isLoading: setupLoading,
+    ivEach,
+    withRecording,
+    recEach,
+  } = useInterviewSetup(cycleId)
   const m = useInterviewBoardMutations(cycleId)
   const toast = useToast()
   const [plan, setPlan] = useState<InterviewPlan | null>(null)
@@ -138,7 +144,7 @@ function Board({
   const { data: panels = [] } = useInterviewPanels(cycleId)
   const usable = panels.filter((g) => (g.members ?? []).length > 0)
   const panelMode = usable.length > 0
-  const { data: workflow } = useWorkflow(cycleId)
+  const { data: workflow, isLoading: workflowLoading } = useWorkflow(cycleId)
   const released = isReleased(workflow, 'interviews', roleId)
   const interviewDue = dueAt(workflow, 'interviews', roleId, 'interviewer')
   const editable = !plan && !released
@@ -302,7 +308,8 @@ function Board({
     }
   }
 
-  if (isLoading) return <LoadingText />
+  if (isLoading || staffingLoading || setupLoading || workflowLoading)
+    return <LoadingText />
 
   const eligible = (id: string) =>
     staffing?.positions.find((p) => p.role_id === id)?.interviewers ?? []

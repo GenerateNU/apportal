@@ -7,7 +7,9 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
+import { LoadingText } from '@/components/ui/loading-text'
 import { SearchableSelect } from '@/components/ui/searchable-select'
+import { Skeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/components/ui/toast'
 import { apiErrorDetail } from '@/lib/api/client'
 import { useApplications } from '@/lib/queries/applications'
@@ -29,7 +31,7 @@ type Person = { nuid: string; name: string; chief: boolean }
 function useTeam(cycleId: string) {
   const { data: staff = [] } = useCycleStaff(cycleId)
   const { data: users = [] } = useUsers()
-  const { data } = useStaffing(cycleId)
+  const { data, isLoading } = useStaffing(cycleId)
   const m = useStaffingMutations(cycleId)
   const toast = useToast()
   const chiefs = new Set(
@@ -54,6 +56,7 @@ function useTeam(cycleId: string) {
   return {
     groups: data?.categories ?? [],
     positions: data?.positions ?? [],
+    isLoading,
     people,
     label,
     m,
@@ -68,7 +71,7 @@ export function GroupsGrid({
   cycleId: string
   header: React.ReactNode
 }) {
-  const { groups, people, label, m, run } = useTeam(cycleId)
+  const { groups, isLoading, people, label, m, run } = useTeam(cycleId)
   const [adding, setAdding] = useState(false)
   const [newName, setNewName] = useState('')
   const personOf = (nuid: string) => people.find((p) => p.nuid === nuid)
@@ -94,10 +97,14 @@ export function GroupsGrid({
           </button>
         )}
       </div>
-      {groups.length === 0 && !adding && (
+      {!isLoading && groups.length === 0 && !adding && (
         <p className="text-text-subtle text-sm">No groups yet.</p>
       )}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {isLoading &&
+          Array.from({ length: 3 }, (_, i) => (
+            <Skeleton key={i} className="h-32" />
+          ))}
         {groups.map((g) => (
           <div
             key={g.id}
@@ -225,8 +232,8 @@ export function StaffingTable({
   cycleId: string
   roles: { id: string; name: string }[]
 }) {
-  const { groups, positions, label, m, run } = useTeam(cycleId)
-  const { data: steps = [] } = useCycleSteps(cycleId)
+  const { groups, positions, isLoading, label, m, run } = useTeam(cycleId)
+  const { data: steps = [], isLoading: stepsLoading } = useCycleSteps(cycleId)
   const showReview = !!stepConfig(steps, 'reviews')?.enabled
   const showInterview = !!stepConfig(steps, 'interviews')?.enabled
   const cols = cn(
@@ -235,6 +242,7 @@ export function StaffingTable({
       ? 'md:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)_minmax(0,1.3fr)]'
       : 'md:grid-cols-[minmax(0,1fr)_minmax(0,2.6fr)]'
   )
+  if (isLoading || stepsLoading) return <LoadingText className="px-5 py-4" />
   if (!showReview && !showInterview)
     return (
       <p className="text-text-subtle px-5 py-4 text-sm">
@@ -400,7 +408,7 @@ function Faces({ names }: { names: string[] }) {
 }
 
 export function ConflictsEditor({ cycleId }: { cycleId: string }) {
-  const { data: conflicts = [] } = useReviewConflicts(cycleId)
+  const { data: conflicts = [], isLoading } = useReviewConflicts(cycleId)
   const { data: applicants = [] } = useApplications({ cycle_id: cycleId })
   const { data: staff = [] } = useCycleStaff(cycleId)
   const setConflict = useSetConflict(cycleId)
@@ -426,6 +434,7 @@ export function ConflictsEditor({ cycleId }: { cycleId: string }) {
 
   return (
     <div className="flex flex-wrap items-center gap-1.5">
+      {isLoading && <Skeleton className="h-7 w-48 rounded-full" />}
       {conflicts.map((c) => (
         <Chip
           key={`${c.lead_nuid}:${c.applicant_nuid}`}

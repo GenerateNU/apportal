@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import { LoadingText } from '@/components/ui/loading-text'
 import { PersonCell } from '@/components/ui/person-cell'
 import { SearchInput } from '@/components/ui/search-input'
 import type { User } from '@/lib/api/types'
@@ -25,7 +26,7 @@ export function AddAdminDialog({
   onOpenChange: (open: boolean) => void
 }) {
   // Every account, not the paged table's, so anyone can be promoted.
-  const { data: users = [] } = useUsers()
+  const { data: users = [], isLoading: usersLoading } = useUsers()
   const updateUser = useUpdateUser()
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState<User[]>([])
@@ -124,7 +125,9 @@ export function AddAdminDialog({
 
           {search.trim() && (
             <div className="flex max-h-72 flex-col gap-1 overflow-y-auto">
-              {results.length === 0 ? (
+              {usersLoading ? (
+                <LoadingText className="px-1 py-2" />
+              ) : results.length === 0 ? (
                 <p className="text-text-faint px-1 py-2 text-sm">
                   No users found
                 </p>

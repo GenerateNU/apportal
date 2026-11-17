@@ -62,7 +62,7 @@ export function LeadPreferenceListClient({
     router.replace(`${pathname}?${params.toString()}`, { scroll: false })
   }
 
-  const { data: pool = [] } = useApplications(
+  const { data: pool = [], isLoading: poolLoading } = useApplications(
     { cycle_id: cycleId, role_id: role, stages: 'selection' },
     undefined,
     { enabled: !!cycleId && !!role }
@@ -179,6 +179,7 @@ export function LeadPreferenceListClient({
             role={role}
             roleIds={roleIds}
             pool={pool}
+            poolLoading={poolLoading}
             groups={groups}
             ratings={ratings}
             closesAtByRole={closesAtByRole}

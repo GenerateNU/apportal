@@ -13,7 +13,6 @@ import {
   removePreferenceListMember,
   reorderPreferenceListEntries,
   reorderPreferenceListPersonalEntries,
-  setPreferenceListMeetingDay,
   updatePreferenceList,
   updatePreferenceListComment,
   upsertPreferenceListEntry,
@@ -27,8 +26,6 @@ import type { WorkflowChange } from '@/generated/model'
 import type { RequestOptions } from '@/lib/api/orval-mutator'
 import { useWorkflow } from './workflow'
 import type {
-  MeetingDay,
-  PreferenceList,
   PreferenceListComment,
   PreferenceListDetail,
   PreferenceListEntry,
@@ -489,31 +486,6 @@ export function useSetPreferenceListDeadline() {
           )) as Promise<WorkflowChange>,
     onSuccess: (data, vars) => {
       queryClient.setQueryData(queryKeys.workflow.detail(vars.cycleId), data)
-    },
-  })
-}
-
-export function useSetPreferenceListMeetingDay() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (vars: {
-      id: string
-      meetingDay: MeetingDay | null
-      opts?: RequestOptions
-    }) =>
-      setPreferenceListMeetingDay(
-        vars.id,
-        { meeting_day: vars.meetingDay ?? undefined },
-        vars.opts
-      ) as Promise<PreferenceList>,
-    // The endpoint returns a bare PreferenceList, not the full
-    // PreferenceListDetail (members/entries/personal_entries/comments) that's
-    // actually cached under this key — writing it in directly would strip
-    // those fields and crash the next render. Invalidate and refetch instead.
-    onSuccess: (_data, vars) => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.preferenceLists.detail(vars.id),
-      })
     },
   })
 }

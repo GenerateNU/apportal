@@ -11,10 +11,11 @@ export function useCycleCrumbs(
   page: string
 ) {
   const { data: branches = [] } = useBranches()
-  const { data: cycles = [] } = useCycles({ branch_id: branchId })
+  const { data: cycles = [], isLoading } = useCycles({ branch_id: branchId })
   const cycle = cycles.find((c) => c.id === cycleId)
   return {
     cycle,
+    isLoading,
     back: (
       <Breadcrumbs
         items={branchCrumbs({

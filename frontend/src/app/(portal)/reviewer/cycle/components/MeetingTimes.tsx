@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Skeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/components/ui/toast'
 import { apiErrorDetail } from '@/lib/api/client'
 import type { Cycle } from '@/lib/api/types'
@@ -28,7 +29,7 @@ export function MeetingTimes({ cycle }: { cycle: Cycle }) {
   const { data: staff = [] } = useCycleStaff(cycle.id)
   const { data: staffing } = useStaffing(cycle.id)
   const { data: days = new Map<string, string>() } = useStaffSlots(cycle.id)
-  const { data: slots = [] } = useMeetingSlots(cycle.id)
+  const { data: slots = [], isLoading } = useMeetingSlots(cycle.id)
   const [label, setLabel] = useState('')
   const fail = (err: unknown) =>
     toast(apiErrorDetail(err), { variant: 'error' })
@@ -74,6 +75,7 @@ export function MeetingTimes({ cycle }: { cycle: Cycle }) {
           <div className="flex flex-col gap-2 border-t border-gray-100 pt-4">
             <span className="text-text-muted text-xs">Times</span>
             <div className="flex flex-wrap items-center gap-1.5">
+              {isLoading && <Skeleton className="h-6 w-32" />}
               {slots.map((s) => (
                 <span
                   key={s.id}

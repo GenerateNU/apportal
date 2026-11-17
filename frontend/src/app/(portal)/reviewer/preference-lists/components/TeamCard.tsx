@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import type { PreferenceListSummary } from '@/lib/api/types'
 import {
@@ -11,9 +12,11 @@ import { MEETING_DAY_LABEL } from '@/app/(portal)/reviewer/applications/componen
 export function TeamCard({
   list,
   counts,
+  countsLoading,
 }: {
   list: PreferenceListSummary
   counts: { label: string; count: number }[]
+  countsLoading?: boolean
 }) {
   const people =
     list.member_names.length > 0
@@ -57,9 +60,13 @@ export function TeamCard({
         >
           {counts.map((c) => (
             <div key={c.label} className="flex flex-col px-4 py-3">
-              <span className="text-ink text-lg font-semibold tabular-nums">
-                {c.count}
-              </span>
+              {countsLoading ? (
+                <Skeleton className="my-1 h-5 w-6" />
+              ) : (
+                <span className="text-ink text-lg font-semibold tabular-nums">
+                  {c.count}
+                </span>
+              )}
               <span className="text-text-subtle truncate text-xs">
                 {c.label}
               </span>

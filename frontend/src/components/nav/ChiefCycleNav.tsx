@@ -32,6 +32,8 @@ export function ChiefCycleNav({ collapsed }: { collapsed?: boolean }) {
     setOpened(null)
   }
 
+  if (phases.length === 0) return null
+
   if (collapsed) {
     return (
       <div className="flex flex-col items-center gap-1">

@@ -10,10 +10,11 @@ import { MyApplicationsList } from './MyApplicationsList'
 
 import { useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Loader2 } from 'lucide-react'
 import { EmptyState } from '@/components/ui/empty-state'
 import { PageHeader } from '@/components/ui/page-header'
 import { SectionLabel } from '@/components/ui/section-label'
+import { PageSkeletonBody, Skeleton } from '@/components/ui/skeleton'
+import { LoadingText } from '@/components/ui/loading-text'
 import { ApplicationRoleCard } from './ApplicationRoleCard'
 import type {
   Application,
@@ -33,10 +34,11 @@ export function ApplicationsClient() {
 
   if (isLoading) {
     return (
-      <div className="text-text-muted flex items-center gap-2 px-4 py-10 text-sm sm:px-8">
-        <Loader2 className="animate-spin" size={16} />
-        Loading…
-      </div>
+      <ApplicantPage>
+        <div className="flex flex-col gap-8">
+          <PageSkeletonBody />
+        </div>
+      </ApplicantPage>
     )
   }
 
@@ -62,10 +64,11 @@ type BranchGroup = {
 
 function Dashboard({ user }: { user: User }) {
   const { data: cycles = [] } = useCycles({})
-  const { data: branches = [] } = useBranches()
-  const { data: applications = [] } = useApplications({
-    user_nuid: user.nuid,
-  })
+  const { data: branches = [], isLoading: branchesLoading } = useBranches()
+  const { data: applications = [], isLoading: applicationsLoading } =
+    useApplications({
+      user_nuid: user.nuid,
+    })
   // Already filtered server-side to "cycle open AND template open".
   const { data: openTemplates = [] } = useOpenApplicationTemplates()
 
@@ -119,7 +122,7 @@ function Dashboard({ user }: { user: User }) {
             {
               id: 'mine',
               label: 'My applications',
-              count: applications.length,
+              count: applicationsLoading ? undefined : applications.length,
             },
           ]}
           value={tab}
@@ -128,7 +131,9 @@ function Dashboard({ user }: { user: User }) {
           }
         />
 
-        {tab === 'mine' ? (
+        {applicationsLoading || branchesLoading ? (
+          <LoadingText />
+        ) : tab === 'mine' ? (
           <MyApplicationsList
             applications={applications}
             cycles={cycles}
@@ -173,7 +178,7 @@ function CycleRoles({
   templates: ApplicationTemplate[]
   applications: Application[]
 }) {
-  const { data: summaries = [] } = useCycleTemplateSummary(cycle.id)
+  const { data: summaries = [], isLoading } = useCycleTemplateSummary(cycle.id)
   const mine = applications.filter((a) => a.cycle_id === cycle.id)
   const byRole = new Map(mine.map((a) => [a.role_id, a]))
 
@@ -181,19 +186,23 @@ function CycleRoles({
     <div className="flex flex-col gap-3">
       <SectionLabel as="h3">{cycle.name}</SectionLabel>
       <div className="grid gap-3 sm:grid-cols-2">
-        {templates.map((template) => (
-          <ApplicationRoleCard
-            key={template.role_id}
-            cycle={cycle}
-            cycleColorIndex={cycleColorIndex}
-            template={template}
-            questionCount={
-              summaries.find((s) => s.role_id === template.role_id)
-                ?.question_count ?? 0
-            }
-            application={byRole.get(template.role_id)}
-          />
-        ))}
+        {templates.map((template) =>
+          isLoading ? (
+            <Skeleton key={template.role_id} className="h-30" />
+          ) : (
+            <ApplicationRoleCard
+              key={template.role_id}
+              cycle={cycle}
+              cycleColorIndex={cycleColorIndex}
+              template={template}
+              questionCount={
+                summaries.find((s) => s.role_id === template.role_id)
+                  ?.question_count ?? 0
+              }
+              application={byRole.get(template.role_id)}
+            />
+          )
+        )}
       </div>
     </div>
   )

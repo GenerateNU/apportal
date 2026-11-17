@@ -27,7 +27,7 @@ import {
 import type { DecisionRow, DecisionStatus } from '@/lib/api/types'
 import { defaultPipelineCycleId } from '@/lib/cycles'
 import { useDecisionTemplates, useDecisions } from '@/lib/queries/decisions'
-import { useStaffCycles } from '@/lib/queries/cycle-staff'
+import { useStaffAccess, useStaffCycles } from '@/lib/queries/cycle-staff'
 import { DecisionListRow } from './DecisionListRow'
 import { NoInterviewCard } from './NoInterviewCard'
 import { useCycleRolePicker } from '@/hooks/useRoleSelection'
@@ -60,13 +60,16 @@ export function DecisionsClient() {
   const [openId, setOpenId] = useState<string | null>(null)
   const [closing, setClosing] = useState(false)
   const router = useRouter()
+  const { isAdmin } = useStaffAccess()
   const toast = useToast()
   const queryClient = useQueryClient()
   const closeCycle = useMutation({
     mutationFn: () =>
       closeCycleApi(cycleId, undefined, { params: { confirm_override: true } }),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: queryKeys.workflow.all }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.cycles.all })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.cycleStaff.all })
+    },
   })
 
   const { data: rows = [], isLoading } = useDecisions(cycleId, {
@@ -254,8 +257,8 @@ export function DecisionsClient() {
         title={`Close ${cycleName}?`}
         description={
           rows.length > sent
-            ? `${rows.length - sent} letters aren't marked sent yet. Closing ends the cycle for everyone.`
-            : 'Every letter is sent. Closing ends the cycle for everyone.'
+            ? `${rows.length - sent} letters aren't marked sent yet. The cycle will disappear for everyone, chiefs and leads included.`
+            : 'The cycle will disappear for everyone, chiefs and leads included.'
         }
         confirmLabel="Close cycle"
         pending={closeCycle.isPending}
@@ -263,7 +266,7 @@ export function DecisionsClient() {
           closeCycle.mutate(undefined, {
             onSuccess: () => {
               toast(`${cycleName} closed`, { variant: 'success' })
-              router.push('/reviewer/cycle/workflow')
+              router.replace(isAdmin ? '/admin/branches' : '/')
             },
           })
         }

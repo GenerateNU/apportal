@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card'
 import { EmptyState } from '@/components/ui/empty-state'
 import { LoadingText } from '@/components/ui/loading-text'
 import { PageHeader } from '@/components/ui/page-header'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Subheading } from '@/components/ui/subheading'
 import { PAGE_SHELL } from '@/components/ui/page-shell'
 import { useToast } from '@/components/ui/toast'
@@ -145,6 +146,7 @@ function PositionsSection({ scope }: { scope: CycleScope }) {
         hint="Each position gets its own application, rubric and ranking."
       />
       <Card className="flex flex-wrap items-center gap-2">
+        {scope.roles.isLoading && <Skeleton className="h-8 w-32" />}
         {scope.roles.roles.map((r) => (
           <span
             key={r.id}

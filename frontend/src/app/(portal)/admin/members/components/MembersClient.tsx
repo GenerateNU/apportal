@@ -5,6 +5,7 @@ import { UserPlus } from 'lucide-react'
 import { PageContainer } from '@/components/PageContainer'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
+import { LoadingText } from '@/components/ui/loading-text'
 import { PageHeader } from '@/components/ui/page-header'
 import { SearchInput } from '@/components/ui/search-input'
 import { SegmentedTabs } from '@/components/ui/segmented-tabs'
@@ -90,10 +91,16 @@ export function MembersClient() {
       </div>
 
       {view === 'teams' ? (
-        <CycleTeams cycle={teams.cycle} />
+        teams.isLoading ? (
+          <LoadingText />
+        ) : (
+          <CycleTeams cycle={teams.cycle} />
+        )
       ) : (
         <>
-          {!isLoading && shown.length === 0 ? (
+          {isLoading ? (
+            <LoadingText />
+          ) : shown.length === 0 ? (
             <EmptyState
               title={search.trim() ? 'No matches found' : 'No admins yet'}
             />

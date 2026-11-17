@@ -27,7 +27,12 @@ import {
 type View = 'everyone' | 'mine'
 
 export function ReviewingClient() {
-  const { scope, cycleId, positions } = usePositions()
+  const {
+    scope,
+    cycleId,
+    positions,
+    isLoading: positionsLoading,
+  } = usePositions()
   const { data: board, isLoading } = useReviewBoard(cycleId, { history: true })
   const { data: me } = useCurrentUser()
   const params = useSearchParams()
@@ -96,7 +101,7 @@ export function ReviewingClient() {
         ) : (
           <EmptyState title="You're not a chief on any cycle yet" />
         )
-      ) : isLoading ? (
+      ) : isLoading || positionsLoading || scope.roles.isLoading ? (
         <LoadingText />
       ) : rows.length === 0 ? (
         <EmptyState

@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import { Flame } from 'lucide-react'
 import { EmptyState } from '@/components/ui/empty-state'
+import { Skeleton } from '@/components/ui/skeleton'
 import { TagPill } from '@/components/ui/tag-select'
 import type { InterviewRating } from '@/lib/api/types'
 import { RATING_COLORS, RATING_OPTIONS } from '@/lib/interview-ratings'
@@ -34,7 +35,8 @@ export function CandidatesBoard({
     { enabled: !!cycleId && !!roleId }
   )
   const ids = useMemo(() => apps.map((a) => a.id), [apps])
-  const { data: interviews = {} } = useInterviewsByApplicationIds(ids)
+  const { data: interviews = {}, isLoading: interviewsLoading } =
+    useInterviewsByApplicationIds(ids)
   const { data: lists = [] } = usePreferenceListDetails(cycleId)
   const { data: tags = [] } = useCycleTags(cycleId)
   const [open, setOpen] = useState<string | null>(null)
@@ -54,7 +56,26 @@ export function CandidatesBoard({
   }, [lists, roleId])
   const tagById = new Map(tags.map((t) => [t.id, t]))
 
-  if (!isLoading && apps.length === 0) {
+  if (isLoading || interviewsLoading) {
+    return (
+      <div
+        role="status"
+        aria-label="Loading"
+        className="grid grid-cols-[repeat(5,minmax(13rem,1fr))] gap-3 overflow-x-auto pb-2"
+      >
+        {Array.from({ length: 5 }, (_, i) => (
+          <div key={i} className="flex flex-col gap-2">
+            <Skeleton className="h-5 w-20" />
+            {Array.from({ length: 3 }, (_, j) => (
+              <Skeleton key={j} className="h-16 w-full" />
+            ))}
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  if (apps.length === 0) {
     return (
       <EmptyState
         title="No one is in Decisions for this position yet"

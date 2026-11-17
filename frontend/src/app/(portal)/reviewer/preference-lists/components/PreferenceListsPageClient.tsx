@@ -1,6 +1,7 @@
 'use client'
 
 import { EmptyState } from '@/components/ui/empty-state'
+import { Skeleton } from '@/components/ui/skeleton'
 import { CARD_GRID, SECTION } from '@/components/ui/page-shell'
 import { Subheading } from '@/components/ui/subheading'
 import { PageHeader } from '@/components/ui/page-header'
@@ -48,7 +49,8 @@ export function PreferenceListsPageClient({ isChief }: { isChief: boolean }) {
   }
 
   const { roleIds, roleLabel } = useCycleRoles(cycleId)
-  const { data: details = [] } = usePreferenceListDetails(cycleId)
+  const { data: details = [], isLoading: detailsLoading } =
+    usePreferenceListDetails(cycleId)
   const countsFor = (listId: string) => {
     const entries = details.find((d) => d.id === listId)?.entries ?? []
     return roleIds.map((r) => ({
@@ -176,6 +178,7 @@ export function PreferenceListsPageClient({ isChief }: { isChief: boolean }) {
                     key={list.id}
                     list={list}
                     counts={countsFor(list.id)}
+                    countsLoading={detailsLoading}
                   />
                 ))}
               </div>
@@ -205,7 +208,7 @@ export function PreferenceListsPageClient({ isChief }: { isChief: boolean }) {
 
 function DeadlineEditor({ cycleId, role }: { cycleId: string; role: string }) {
   const { roleLabel } = useRoleLookup()
-  const { data: deadline } = usePreferenceListDeadline(cycleId, role)
+  const { data: deadline, isLoading } = usePreferenceListDeadline(cycleId, role)
   const setDeadline = useSetPreferenceListDeadline()
   const closesAt = deadline?.closes_at ? new Date(deadline.closes_at) : null
   const [now] = useState(() => Date.now())
@@ -217,18 +220,26 @@ function DeadlineEditor({ cycleId, role }: { cycleId: string; role: string }) {
         <span className="text-ink truncate font-semibold">
           {roleLabel(role)}
         </span>
-        <span
-          className={cn(
-            'text-xs',
-            !closesAt
-              ? 'text-amber-600'
+        {isLoading ? (
+          <Skeleton className="h-3 w-16" />
+        ) : (
+          <span
+            className={cn(
+              'text-xs',
+              !closesAt
+                ? 'text-amber-600'
+                : closed
+                  ? 'text-green-700'
+                  : 'text-text-muted'
+            )}
+          >
+            {!closesAt
+              ? 'Not set'
               : closed
-                ? 'text-green-700'
-                : 'text-text-muted'
-          )}
-        >
-          {!closesAt ? 'Not set' : closed ? 'Closed' : closesIn(closesAt, now)}
-        </span>
+                ? 'Closed'
+                : closesIn(closesAt, now)}
+          </span>
+        )}
       </div>
       {closed && closesAt ? (
         <span className="text-text-muted text-sm">

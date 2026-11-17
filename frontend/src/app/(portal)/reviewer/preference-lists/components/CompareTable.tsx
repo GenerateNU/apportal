@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { EmptyState } from '@/components/ui/empty-state'
+import { Skeleton } from '@/components/ui/skeleton'
 import { SegmentedTabs } from '@/components/ui/segmented-tabs'
 import { TABLE_FRAME, TABLE_HEAD } from '@/components/ui/table-styles'
 import { RATING_COLORS, RATING_LABEL } from '@/lib/interview-ratings'
@@ -29,8 +30,10 @@ export function CompareTable({
     { enabled: !!cycleId && !!roleId }
   )
   const ids = useMemo(() => apps.map((a) => a.id), [apps])
-  const { data: interviews = {} } = useInterviewsByApplicationIds(ids)
-  const { data: teams = [] } = usePreferenceListDetails(cycleId)
+  const { data: interviews = {}, isLoading: interviewsLoading } =
+    useInterviewsByApplicationIds(ids)
+  const { data: teams = [], isLoading: teamsLoading } =
+    usePreferenceListDetails(cycleId)
   const [filter, setFilter] = useState<Filter>('all')
   const [open, setOpen] = useState<string | null>(null)
 
@@ -77,7 +80,23 @@ export function CompareTable({
   )
   const opened = apps.find((a) => a.id === open)
 
-  if (!isLoading && apps.length === 0) {
+  if (isLoading || teamsLoading || interviewsLoading) {
+    return (
+      <div role="status" aria-label="Loading" className={TABLE_FRAME}>
+        {Array.from({ length: 6 }, (_, i) => (
+          <div
+            key={i}
+            className="flex items-center gap-6 border-b border-gray-200 px-4 py-4 last:border-b-0"
+          >
+            <Skeleton className="h-4 flex-1" />
+            <Skeleton className="h-5 w-20" />
+            <Skeleton className="h-4 w-14" />
+          </div>
+        ))}
+      </div>
+    )
+  }
+  if (apps.length === 0) {
     return <EmptyState title="No one is in Decisions for this position yet" />
   }
   if (teams.length === 0) {

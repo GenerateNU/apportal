@@ -7,6 +7,7 @@ import { ExternalLink } from 'lucide-react'
 import { Avatar } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
+import { LoadingText } from '@/components/ui/loading-text'
 import { PageHeader } from '@/components/ui/page-header'
 import { SectionLabel } from '@/components/ui/section-label'
 import { ReturnerBadge } from '@/components/ReturnerBadge'
@@ -92,8 +93,12 @@ export function ApplicantOverview({
   const { roleLabel, roleChipClass } = useRoleLookup()
   const { data: applicant } = useApplicant(applicantNuid)
   const { data: application } = useApplication(applicationId)
-  const { data: answers = [] } = useAnswers(applicationId)
-  const { data: questions = [] } = useQuestions(cycleId, role)
+  const { data: answers = [], isLoading: answersLoading } =
+    useAnswers(applicationId)
+  const { data: questions = [], isLoading: questionsLoading } = useQuestions(
+    cycleId,
+    role
+  )
   const { data: leads = [] } = useLeads()
   const { data: chiefs = [] } = useChiefs()
 
@@ -104,9 +109,11 @@ export function ApplicantOverview({
   // from a plain lead until a chief releases them for this cycle/role, same
   // gating the lead-review page itself relies on.
   const { data: reviewQuestions = [] } = useReviewQuestions(cycleId, role)
-  const { data: writtenReviews = [] } = useWrittenReviews(applicationId)
+  const { data: writtenReviews = [], isLoading: writtenReviewsLoading } =
+    useWrittenReviews(applicationId)
 
-  const { data: interview } = useInterview(applicationId)
+  const { data: interview, isLoading: interviewLoading } =
+    useInterview(applicationId)
   const { data: recordingReviews = [] } = useRecordingReviews(
     interview ? applicationId : ''
   )
@@ -187,7 +194,9 @@ export function ApplicantOverview({
               </Link>
             )}
           </div>
-          {!interview ? (
+          {interviewLoading ? (
+            <LoadingText />
+          ) : !interview ? (
             <p className="text-text-faint text-sm">Not yet interviewed.</p>
           ) : (
             <div className="flex flex-col gap-4 text-sm">
@@ -325,16 +334,20 @@ export function ApplicantOverview({
 
       <Card className={SECTION_CLASS}>
         <SectionLabel>Application</SectionLabel>
-        <div className="space-y-4">
-          {questions.map((q) => (
-            <ResponseField
-              key={q.id}
-              question={q}
-              answer={answers.find((a) => a.question_id === q.id)}
-              applicable
-            />
-          ))}
-        </div>
+        {answersLoading || questionsLoading ? (
+          <LoadingText />
+        ) : (
+          <div className="space-y-4">
+            {questions.map((q) => (
+              <ResponseField
+                key={q.id}
+                question={q}
+                answer={answers.find((a) => a.question_id === q.id)}
+                applicable
+              />
+            ))}
+          </div>
+        )}
       </Card>
 
       {showReviews && (
@@ -367,7 +380,9 @@ export function ApplicantOverview({
               nameByNuid={nameByNuid}
             />
           )}
-          {writtenReviews.length === 0 ? (
+          {writtenReviewsLoading ? (
+            <LoadingText />
+          ) : writtenReviews.length === 0 ? (
             <p className="text-text-faint text-sm">No lead reviews yet.</p>
           ) : (
             <div className="flex flex-col gap-3">

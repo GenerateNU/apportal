@@ -8,6 +8,7 @@ import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
 import { PageHeader } from '@/components/ui/page-header'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Subheading } from '@/components/ui/subheading'
 import { useBranches } from '@/lib/queries/branches'
 import { useCycles, useCycleTemplateSummary } from '@/lib/queries/cycles'
@@ -39,7 +40,7 @@ export function CycleDetailClient({
   const { data: branches = [] } = useBranches()
   const { data: cycles = [] } = useCycles({ branch_id: branchId })
   const { data: templates = [] } = useCycleApplicationTemplates(cycleId)
-  const { data: workflow } = useWorkflow(cycleId)
+  const { data: workflow, isLoading: workflowLoading } = useWorkflow(cycleId)
   const { data: summaries = [] } = useCycleTemplateSummary(cycleId)
   const { data: staff = [] } = useCycleStaff(cycleId)
   const [editing, setEditing] = useState(false)
@@ -147,7 +148,15 @@ export function CycleDetailClient({
             Add position
           </Button>
         </div>
-        {cards.length === 0 ? (
+        {workflowLoading && cards.length > 0 ? (
+          <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {cards.map((card) => (
+              <li key={card.role}>
+                <Skeleton className="h-28" />
+              </li>
+            ))}
+          </ul>
+        ) : cards.length === 0 ? (
           <EmptyState
             size="sm"
             title="No application forms yet."

@@ -51,7 +51,9 @@ const NEXT_ACTION: Record<Status, { label: string; to: Status } | null> = {
 
 export function ApplicationHubClient() {
   const scope = useCycleScope()
-  const { data: summaries = [] } = useCycleTemplateSummary(scope.cycleId)
+  const { data: summaries = [], isLoading } = useCycleTemplateSummary(
+    scope.cycleId
+  )
   const summary = (roleId: string) =>
     summaries.find((s) => s.role_id === roleId)
   const roleIds = scope.roles.roleIds
@@ -119,6 +121,8 @@ export function ApplicationHubClient() {
         ) : (
           <EmptyState title="You're not a chief on any cycle yet" />
         )
+      ) : scope.roles.isLoading ? (
+        <LoadingText />
       ) : scope.roles.roleIds.length === 0 ? (
         <EmptyState
           title="Add a position first"
@@ -141,16 +145,20 @@ export function ApplicationHubClient() {
             <span>Closes</span>
             <span />
           </div>
-          {roleIds.map((roleId) => (
-            <PositionRelease
-              key={roleId}
-              cycleId={scope.cycleId}
-              roleId={roleId}
-              roleName={scope.roles.roleLabel(roleId)}
-              questions={summary(roleId)?.question_count ?? 0}
-              applicants={summary(roleId)?.submission_count ?? 0}
-            />
-          ))}
+          {isLoading ? (
+            <LoadingText className="px-5 py-4" />
+          ) : (
+            roleIds.map((roleId) => (
+              <PositionRelease
+                key={roleId}
+                cycleId={scope.cycleId}
+                roleId={roleId}
+                roleName={scope.roles.roleLabel(roleId)}
+                questions={summary(roleId)?.question_count ?? 0}
+                applicants={summary(roleId)?.submission_count ?? 0}
+              />
+            ))
+          )}
           {templates.some((t) => t.data?.status === 'closed') && (
             <Link
               href="/reviewer/cycle/reviews"

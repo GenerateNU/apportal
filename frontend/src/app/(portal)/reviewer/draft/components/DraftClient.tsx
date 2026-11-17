@@ -108,7 +108,7 @@ export function DraftClient() {
   })
   // Only the operator picks, and the pool exists solely to pick from — so a
   // roomful of leads watching a polling board doesn't each fetch it.
-  const { data: pool = [] } = useApplications(
+  const { data: pool = [], isLoading: poolLoading } = useApplications(
     cycleId ? { cycle_id: cycleId, role_id: role } : undefined,
     undefined,
     { enabled: !!cycleId && !!role && isChief }
@@ -151,7 +151,8 @@ export function DraftClient() {
 
   const draftScope = { cycleId, roleId: role, draftId: board?.id ?? '' }
   const undrafted = pool.filter((a) => a.stage === 'selection').length
-  const finalized = !!board && board.status === 'complete' && undrafted === 0
+  const finalized =
+    !!board && board.status === 'complete' && !poolLoading && undrafted === 0
   const queryClient = useQueryClient()
   const { data: workflow } = useWorkflow(cycleId)
   const workflowMutations = useWorkflowMutations(cycleId)

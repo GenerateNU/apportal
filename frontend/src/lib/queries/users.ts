@@ -5,12 +5,7 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query'
-import {
-  createUser,
-  getCurrentUser,
-  listUsers,
-  updateUser,
-} from '@/generated/users/users'
+import { getCurrentUser, listUsers, updateUser } from '@/generated/users/users'
 import type { RequestOptions } from '@/lib/api/orval-mutator'
 import type { ReviewerRole, User } from '@/lib/api/types'
 import { useAuth } from '@/lib/auth/auth-context'
@@ -109,19 +104,6 @@ export function useCurrentUser(opts?: RequestOptions) {
     queryKey: queryKeys.users.me(user?.id ?? ''),
     queryFn: () => getCurrentUser(opts) as Promise<User>,
     enabled: !!user,
-  })
-}
-
-export function useCreateUser() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (vars: {
-      body: Parameters<typeof createUser>[0]
-      opts?: RequestOptions
-    }) => createUser(vars.body, vars.opts),
-    onSuccess: () => {
-      invalidateUserLists(queryClient)
-    },
   })
 }
 

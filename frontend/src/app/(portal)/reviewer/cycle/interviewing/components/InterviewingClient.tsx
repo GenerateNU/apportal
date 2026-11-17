@@ -174,7 +174,7 @@ export function InterviewingClient() {
         ) : (
           <EmptyState title="You're not a chief on any cycle yet" />
         )
-      ) : isLoading ? (
+      ) : isLoading || scope.roles.isLoading ? (
         <LoadingText />
       ) : rows.length === 0 ? (
         <EmptyState
@@ -715,7 +715,7 @@ function MoveOn({
   rows: InterviewEntry[]
   withRecording: boolean
 }) {
-  const { data: steps = [] } = useCycleSteps(cycleId)
+  const { data: steps = [], isLoading: stepsLoading } = useCycleSteps(cycleId)
   const { advance } = useWorkflowMutations(cycleId)
   const queryClient = useQueryClient()
   const toast = useToast()
@@ -758,7 +758,7 @@ function MoveOn({
     }
   }
 
-  if (rows.length === 0) return null
+  if (rows.length === 0 || stepsLoading) return null
 
   if (!ready)
     return (

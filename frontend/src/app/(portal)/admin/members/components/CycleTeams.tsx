@@ -16,11 +16,15 @@ import { CycleStaffPanel } from '../../branches/components/CycleStaff'
 
 // Cycles that have a team to manage: chief cycles are run by admins, and archived ones are done.
 export function useTeamCycles(picked: string) {
-  const { data: cycles = [] } = useCycles({})
+  const { data: cycles = [], isLoading } = useCycles({})
   const list = cycles.filter(
     (c) => c.status !== 'archived' && c.application_type !== 'chief'
   )
-  return { list, cycle: list.find((c) => c.id === picked) ?? list[0] }
+  return {
+    list,
+    cycle: list.find((c) => c.id === picked) ?? list[0],
+    isLoading,
+  }
 }
 
 export function CyclePicker({

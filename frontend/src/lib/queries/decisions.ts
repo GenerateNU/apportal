@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  listDecisionContext,
   listDecisionTemplates,
   listDecisions,
   markDecisionsSent,
@@ -9,7 +8,6 @@ import {
 } from '@/generated/decisions/decisions'
 import type { RequestOptions } from '@/lib/api/orval-mutator'
 import type {
-  DecisionContext,
   DecisionKind,
   DecisionRow,
   DecisionTemplate,
@@ -53,35 +51,6 @@ export function useDecisionTemplates(
       ((await listDecisionTemplates(cycleId, { role_id: roleId }, opts)) ??
         []) as DecisionTemplate[],
     enabled: !!cycleId && !!roleId,
-  })
-}
-
-// The review history behind a batch of applicants, keyed by application id.
-// One request for the batch rather than three per row (interview, then its
-// recording reviews, then the written ones) — a lead's queue loads its whole
-// context in a single round trip, so opening a row is instant.
-export async function fetchDecisionContext(
-  applicationIds: string[],
-  opts?: RequestOptions
-) {
-  const entries = ((await listDecisionContext(
-    { application_ids: applicationIds.join(',') },
-    opts
-  )) ?? []) as DecisionContext[]
-
-  const byApplicationId: Record<string, DecisionContext> = {}
-  for (const entry of entries) byApplicationId[entry.application_id] = entry
-  return byApplicationId
-}
-
-export function useDecisionContext(
-  applicationIds: string[],
-  opts?: RequestOptions
-) {
-  return useQuery({
-    queryKey: queryKeys.decisions.context(applicationIds),
-    queryFn: () => fetchDecisionContext(applicationIds, opts),
-    enabled: applicationIds.length > 0,
   })
 }
 

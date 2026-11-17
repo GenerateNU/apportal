@@ -72,10 +72,19 @@ export function usePositions() {
   const cycleId = scope.cycleId
   const roleIds = scope.roles.roleIds
   const progress = useReviewerProgressByRoles(cycleId, roleIds)
-  const { data: summaries = [] } = useCycleTemplateSummary(cycleId)
-  const { data: reviewQuestions = [] } = useReviewQuestions(cycleId)
-  const { data: steps = [] } = useCycleSteps(cycleId)
-  const { data: workflow } = useWorkflow(cycleId)
+  const summaryQuery = useCycleTemplateSummary(cycleId)
+  const questionsQuery = useReviewQuestions(cycleId)
+  const stepsQuery = useCycleSteps(cycleId)
+  const { data: workflow, isLoading: workflowLoading } = useWorkflow(cycleId)
+  const summaries = summaryQuery.data ?? []
+  const reviewQuestions = questionsQuery.data ?? []
+  const steps = stepsQuery.data ?? []
+  const isLoading =
+    summaryQuery.isLoading ||
+    questionsQuery.isLoading ||
+    stepsQuery.isLoading ||
+    workflowLoading ||
+    progress.some((q) => q.isLoading)
   const coverage = perApplicant(steps, 'reviews', 'reviewer')
 
   const positions: PositionState[] = roleIds.map((roleId, i) => {
@@ -103,7 +112,7 @@ export function usePositions() {
       reviewClosesAt: reviewDue ? new Date(reviewDue) : null,
     }
   })
-  return { scope, cycleId, positions, coverage }
+  return { scope, cycleId, positions, coverage, isLoading }
 }
 
 function Shell({
@@ -142,7 +151,7 @@ function Shell({
 }
 
 export function ReviewsClient() {
-  const { scope, cycleId, positions, coverage } = usePositions()
+  const { scope, cycleId, positions, coverage, isLoading } = usePositions()
   return (
     <Shell
       title="Assign reviewers"
@@ -150,7 +159,7 @@ export function ReviewsClient() {
       actions={cycleId && <ConflictsButton cycleId={cycleId} />}
     >
       {(id) =>
-        positions.length === 0 ? (
+        positions.length === 0 || isLoading ? (
           <LoadingText />
         ) : (
           <AssignBoard
@@ -215,11 +224,14 @@ function AssignBoard({
   roleId: string
   setRoleId: (id: string) => void
 }) {
-  const { data: board = [] } = useReviewBoard(cycleId, { history: true })
+  const { data: board = [], isLoading: boardLoading } = useReviewBoard(
+    cycleId,
+    { history: true }
+  )
   // Moved on or turned down: kept for the record, no longer assignable.
   const current = (r: BoardEntry) => IN_REVIEW.has(r.stage)
   const { data: staff = [] } = useCycleStaff(cycleId)
-  const { data: staffing } = useStaffing(cycleId)
+  const { data: staffing, isLoading: staffingLoading } = useStaffing(cycleId)
   const { data: conflicts = [] } = useReviewConflicts(cycleId)
   const auto = useAutoAssign(cycleId)
   const assign = useBoardAssign(cycleId)
@@ -476,7 +488,9 @@ function AssignBoard({
             </div>
             <ReleaseControls cycleId={cycleId} position={position} />
           </div>
-          {shown.length === 0 ? (
+          {boardLoading ? (
+            <LoadingText className="px-5 py-4" />
+          ) : shown.length === 0 ? (
             <p className="text-text-subtle px-5 py-6 text-center text-sm">
               {rows.length === 0
                 ? 'No one is waiting on reviews.'
@@ -599,7 +613,9 @@ function AssignBoard({
             </span>
             <span className="text-text-subtle text-xs">all openings</span>
           </div>
-          {loads.length === 0 ? (
+          {boardLoading || staffingLoading ? (
+            <LoadingText className="px-4 py-3" />
+          ) : loads.length === 0 ? (
             <p className="text-text-subtle px-4 py-6 text-center text-sm">
               Add people on Recruitment team.
             </p>

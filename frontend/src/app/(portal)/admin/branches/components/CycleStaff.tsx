@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { EmptyState } from '@/components/ui/empty-state'
+import { LoadingText } from '@/components/ui/loading-text'
 import { PersonCell } from '@/components/ui/person-cell'
 import { SectionLabel } from '@/components/ui/section-label'
 import { SegmentedTabs } from '@/components/ui/segmented-tabs'
@@ -26,12 +27,13 @@ const MAX_RESULTS = 20
 
 export function CycleStaffPanel({ cycle }: { cycle: Cycle }) {
   const roles = staffRolesFor(cycle.application_type)
-  const { data: staff = [] } = useCycleStaff(cycle.id)
+  const { data: staff = [], isLoading } = useCycleStaff(cycle.id)
   const groups = ROLE_ORDER.map((role) => ({
     role,
     members: staff.filter((m) => m.role === role),
   })).filter((g) => g.members.length > 0)
 
+  if (isLoading) return <LoadingText />
   if (staff.length === 0) {
     return <EmptyState size="sm" title="No one is on this cycle yet." />
   }
@@ -92,7 +94,7 @@ function AddStaff({
   cycleId: string
   roles: CycleStaffRole[]
 }) {
-  const { data: users = [] } = useUsers()
+  const { data: users = [], isLoading: usersLoading } = useUsers()
   const { data: staff = [] } = useCycleStaff(cycleId)
   const setStaff = useSetCycleStaff()
   const [role, setRole] = useState<CycleStaffRole>(roles[roles.length - 1])
@@ -148,6 +150,8 @@ function AddStaff({
           <p className="text-text-faint py-6 text-center text-sm">
             Start typing to find someone.
           </p>
+        ) : usersLoading ? (
+          <LoadingText className="py-6" />
         ) : matches.length === 0 ? (
           <p className="text-text-faint py-6 text-center text-sm">
             No one matches.

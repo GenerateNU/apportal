@@ -14,6 +14,7 @@ import {
 import { Card } from '@/components/ui/card'
 import { EmptyState } from '@/components/ui/empty-state'
 import { LoadingText } from '@/components/ui/loading-text'
+import { Skeleton } from '@/components/ui/skeleton'
 import { PageHeader } from '@/components/ui/page-header'
 import { PAGE_SHELL } from '@/components/ui/page-shell'
 import { useToast } from '@/components/ui/toast'
@@ -43,7 +44,8 @@ const INLINE =
 
 export function InterviewScriptPageClient() {
   const scope = useCycleScope()
-  const { data: summaries = [] } = useCycleTemplateSummary(scope.cycleId)
+  const { data: summaries = [], isLoading: summariesLoading } =
+    useCycleTemplateSummary(scope.cycleId)
   const router = useRouter()
 
   return (
@@ -80,17 +82,21 @@ export function InterviewScriptPageClient() {
                   <div className="text-ink truncate font-semibold">
                     {scope.roles.roleLabel(id)}
                   </div>
-                  <div className="text-text-muted flex items-center gap-1.5 text-xs">
-                    <span
-                      className={cn(
-                        'size-1.5 rounded-full',
-                        s?.script_written ? 'bg-emerald-500' : 'bg-amber-400'
-                      )}
-                    />
-                    {s?.script_written ? 'Written' : 'Not written'}
-                    {!!s?.script_questions &&
-                      ` · ${s.script_questions} question${s.script_questions === 1 ? '' : 's'}`}
-                  </div>
+                  {summariesLoading ? (
+                    <Skeleton className="mt-1 h-3 w-24" />
+                  ) : (
+                    <div className="text-text-muted flex items-center gap-1.5 text-xs">
+                      <span
+                        className={cn(
+                          'size-1.5 rounded-full',
+                          s?.script_written ? 'bg-emerald-500' : 'bg-amber-400'
+                        )}
+                      />
+                      {s?.script_written ? 'Written' : 'Not written'}
+                      {!!s?.script_questions &&
+                        ` · ${s.script_questions} question${s.script_questions === 1 ? '' : 's'}`}
+                    </div>
+                  )}
                 </div>
                 <ArrowRight
                   size={16}

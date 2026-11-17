@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { StatusDot } from '@/components/ui/badge'
 import { cycleStatusDot } from '@/app/(portal)/admin/applications/components/constants'
 import { Breadcrumbs } from '@/components/ui/breadcrumbs'
+import { LoadingText } from '@/components/ui/loading-text'
 import { PageHeader } from '@/components/ui/page-header'
 import { SectionLabel } from '@/components/ui/section-label'
 import { DateTimePicker } from '@/components/ui/datetime-picker'
@@ -72,7 +73,8 @@ function FormBuilder({
   const reorderQuestions = useReorderQuestions(cycleId, role)
   const updateQuestion = useUpdateQuestion()
   const deleteQuestion = useDeleteQuestion()
-  const { data: reviewQuestions = [] } = useReviewQuestions(cycleId, role)
+  const { data: reviewQuestions = [], isLoading: reviewQuestionsLoading } =
+    useReviewQuestions(cycleId, role)
 
   const { data: template } = useApplicationTemplate(cycleId, role)
   const setOpeningStep = useSetOpeningStep()
@@ -262,7 +264,11 @@ function FormBuilder({
         </p>
       )}
 
-      {mode === 'review' && showPreview ? (
+      {mode === 'review' && reviewQuestionsLoading ? (
+        <div className="flex-1 p-4 sm:p-10">
+          <LoadingText className="mx-auto max-w-2xl" />
+        </div>
+      ) : mode === 'review' && showPreview ? (
         <div className="flex-1 overflow-y-auto bg-gray-50 p-4 sm:p-10">
           <div className="mx-auto max-w-2xl">
             <LivePreview

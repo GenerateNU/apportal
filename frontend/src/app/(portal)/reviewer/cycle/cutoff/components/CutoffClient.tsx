@@ -82,7 +82,7 @@ export function CutoffClient() {
         }
       />
       {!scope.cycleId || !scope.roleId ? (
-        scope.isLoading ? (
+        scope.isLoading || scope.roles.isLoading ? (
           <LoadingText />
         ) : (
           <EmptyState title="Pick a cycle with at least one opening" />
@@ -106,9 +106,10 @@ function Ranking({ cycleId, roleId }: { cycleId: string; roleId: string }) {
     role_id: roleId,
   })
   const { data: steps = [] } = useCycleSteps(cycleId)
-  const { data: questions = [] } = useReviewQuestions(cycleId, roleId)
-  const { data: board = [] } = useReviewBoard(cycleId)
-  const { data: workflow } = useWorkflow(cycleId)
+  const { data: questions = [], isLoading: questionsLoading } =
+    useReviewQuestions(cycleId, roleId)
+  const { data: board = [], isLoading: boardLoading } = useReviewBoard(cycleId)
+  const { data: workflow, isLoading: workflowLoading } = useWorkflow(cycleId)
   const { mutate: saveCutoff, isPending: saving } = useSetCutoff(
     cycleId,
     roleId
@@ -231,7 +232,8 @@ function Ranking({ cycleId, roleId }: { cycleId: string; roleId: string }) {
     }
   }
 
-  if (isLoading) return <LoadingText />
+  if (isLoading || questionsLoading || boardLoading || workflowLoading)
+    return <LoadingText />
 
   const assigned = board
     .filter((r) => r.roleId === roleId)

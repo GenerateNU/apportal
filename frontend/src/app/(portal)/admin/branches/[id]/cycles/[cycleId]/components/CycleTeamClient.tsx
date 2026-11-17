@@ -2,6 +2,7 @@
 
 import { PageContainer } from '@/components/PageContainer'
 import { EmptyState } from '@/components/ui/empty-state'
+import { LoadingText } from '@/components/ui/loading-text'
 import { PageHeader } from '@/components/ui/page-header'
 import {
   AddStaffButton,
@@ -17,7 +18,11 @@ export function CycleTeamClient({
   branchId: string
   cycleId: string
 }) {
-  const { cycle, back } = useCycleCrumbs(branchId, cycleId, 'Recruitment team')
+  const { cycle, isLoading, back } = useCycleCrumbs(
+    branchId,
+    cycleId,
+    'Recruitment team'
+  )
   return (
     <PageContainer>
       <PageHeader
@@ -26,7 +31,9 @@ export function CycleTeamClient({
         subtitle={cycle ? staffHelpText(cycle.application_type) : undefined}
         actions={cycle && <AddStaffButton cycle={cycle} />}
       />
-      {cycle ? (
+      {isLoading ? (
+        <LoadingText />
+      ) : cycle ? (
         <CycleStaffPanel cycle={cycle} />
       ) : (
         <EmptyState title="Cycle not found" />

@@ -8,7 +8,6 @@ import { usePathname, useRouter } from 'next/navigation'
 import {
   Users,
   FileText,
-  Calendar,
   PanelLeftClose,
   PanelLeftOpen,
   GitBranch,
