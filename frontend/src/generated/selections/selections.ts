@@ -29,8 +29,8 @@ import type {
 import type {
   ErrorModel,
   LeadSelection,
-  ListCycleSelections200,
   ListCycleSelectionsParams,
+  SelectionsOutputBody,
   UpsertSelectionInputBody
 } from '.././model';
 
@@ -205,7 +205,7 @@ export const listCycleSelections = (
 ) => {
       
       
-      return customInstance<ListCycleSelections200>(
+      return customInstance<SelectionsOutputBody>(
       {url: `/cycles/${id}/selections`, method: 'GET',
         params, signal
     },

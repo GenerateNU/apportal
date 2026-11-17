@@ -6,6 +6,15 @@ type DraftBoardOutput struct {
 	Body models.DraftBoard
 }
 
+type DraftBoardsOutput struct {
+	Body []models.DraftBoard
+}
+
+type ListDraftBoardsInput struct {
+	ID      string `path:"id" doc:"Cycle ID"`
+	RoleIDs string `query:"role_ids" doc:"Comma-separated applicant role IDs; omit for every opened board"`
+}
+
 type DraftOutput struct {
 	Body models.Draft
 }

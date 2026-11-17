@@ -1,6 +1,9 @@
 package decision
 
-import "github.com/GenerateNU/apportal/backend/internal/models"
+import (
+	"github.com/GenerateNU/apportal/backend/internal/models"
+	"github.com/GenerateNU/apportal/backend/internal/utils"
+)
 
 type DecisionTemplatesOutput struct {
 	Body []models.DecisionTemplate
@@ -11,7 +14,14 @@ type DecisionTemplateOutput struct {
 }
 
 type DecisionsOutput struct {
-	Body []models.DecisionRow
+	Body struct {
+		Rows []models.DecisionRow `json:"rows"`
+		// Total counts every match under the status filter, not just this page.
+		Total int `json:"total"`
+		// StatusCounts counts every match by status, ignoring the status filter.
+		StatusCounts map[models.DecisionStatus]int `json:"status_counts"`
+		NextCursor   string                        `json:"next_cursor,omitempty"`
+	}
 }
 
 type DecisionOutput struct {
@@ -39,6 +49,9 @@ type ListDecisionsInput struct {
 	Kind            string `query:"kind" doc:"Which letter applies" enum:"rejection_post_interview,rejection_generic"`
 	InterviewerNUID string `query:"interviewer_nuid" doc:"Limit to applicants this reviewer interviewed — a lead's own feedback queue"`
 	Search          string `query:"search" doc:"Case-insensitive substring match on the applicant's name, NUID, or email"`
+	Status          string `query:"status" doc:"Only rows in this status" enum:"pending,ready,sent"`
+	Limit           int    `query:"limit" doc:"Max rows per page; omit (or 0) for every match" minimum:"0" maximum:"200"`
+	Cursor          string `query:"cursor" doc:"next_cursor from the previous page; omit for the first page"`
 }
 
 type UpsertDecisionInput struct {
@@ -83,6 +96,16 @@ type DecisionFilter struct {
 	Search          string
 	// ApplicationIDs backs the context endpoint's "which may this caller see".
 	ApplicationIDs []string
+	Status         *models.DecisionStatus
+	Limit          int
+	After          *utils.Cursor
+}
+
+type DecisionPage struct {
+	Rows         []models.DecisionRow
+	Total        int
+	StatusCounts map[models.DecisionStatus]int
+	NextCursor   string
 }
 
 // DecisionDraftUpdate is a partial write: nil leaves a field alone and "" clears

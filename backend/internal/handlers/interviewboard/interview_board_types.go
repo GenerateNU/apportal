@@ -36,11 +36,16 @@ type BoardInput struct {
 	ID     string `path:"id" doc:"Cycle ID"`
 	RoleID string `query:"role_id" doc:"Only this opening"`
 	// History keeps applicants who were interviewed and have since moved on or been turned down.
-	History bool `query:"history" doc:"Also list everyone with an interview on record, whatever their stage now"`
+	History bool   `query:"history" doc:"Also list everyone with an interview on record, whatever their stage now"`
+	Limit   int    `query:"limit" doc:"Max rows per page; omit (or 0) to return every match" minimum:"0" maximum:"200"`
+	Cursor  string `query:"cursor" doc:"next_cursor from the previous page; omit for the first page"`
 }
 
 type BoardOutput struct {
-	Body []InterviewBoardRow
+	Body struct {
+		Rows       []InterviewBoardRow `json:"rows"`
+		NextCursor string              `json:"next_cursor,omitempty"`
+	}
 }
 
 type AutoPlanInput struct {

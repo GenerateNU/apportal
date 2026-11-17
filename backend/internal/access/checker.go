@@ -37,6 +37,7 @@ type applicationFacts struct {
 	Stage             models.ApplicationStage
 	Interviewer       bool
 	RecordingReviewer bool
+	LeadReviewer      bool
 }
 
 func (f cycleFacts) level(actor middleware.Actor) Level {
@@ -130,14 +131,16 @@ func (c *Checker) application(ctx context.Context, from applicationQuery) (Appli
 		draft:             f.Stage == models.StageDraft,
 		interviewer:       f.Interviewer,
 		recordingReviewer: f.RecordingReviewer,
+		leadReviewer:      f.LeadReviewer,
 	}, nil
 }
 
 func applicationFactsQuery(db *gorm.DB, nuid string, from applicationQuery) *gorm.DB {
 	q := from(db).Select(cycleFactColumns+`, a.user_nuid = ? AS owner, a.stage,
 		EXISTS (SELECT 1 FROM interviews ai JOIN interviewers ax ON ax.interview_id = ai.id WHERE ai.application_id = a.id AND ax.interviewer_nuid = ?) AS interviewer,
-		EXISTS (SELECT 1 FROM interviews ri JOIN interview_reviewers rx ON rx.interview_id = ri.id WHERE ri.application_id = a.id AND rx.reviewer_nuid = ?) AS recording_reviewer`,
-		nuid, nuid, nuid)
+		EXISTS (SELECT 1 FROM interviews ri JOIN interview_reviewers rx ON rx.interview_id = ri.id WHERE ri.application_id = a.id AND rx.reviewer_nuid = ?) AS recording_reviewer,
+		EXISTS (SELECT 1 FROM lead_assignments la WHERE la.application_id = a.id AND la.lead_nuid = ?) AS lead_reviewer`,
+		nuid, nuid, nuid, nuid)
 	return withStaff(q, nuid)
 }
 

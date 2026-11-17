@@ -68,6 +68,7 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
 /**
+ * Anyone who can view the application.
  * @summary List an application's code submissions
  */
 export const listCodeSubmissions = (
@@ -92,7 +93,7 @@ export const getListCodeSubmissionsQueryKey = (id?: string,) => {
     }
 
     
-export const getListCodeSubmissionsQueryOptions = <TData = Awaited<ReturnType<typeof listCodeSubmissions>>, TError = ErrorModel>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listCodeSubmissions>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export const getListCodeSubmissionsQueryOptions = <TData = Awaited<ReturnType<typeof listCodeSubmissions>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listCodeSubmissions>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -111,10 +112,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListCodeSubmissionsQueryResult = NonNullable<Awaited<ReturnType<typeof listCodeSubmissions>>>
-export type ListCodeSubmissionsQueryError = ErrorModel
+export type ListCodeSubmissionsQueryError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel
 
 
-export function useListCodeSubmissions<TData = Awaited<ReturnType<typeof listCodeSubmissions>>, TError = ErrorModel>(
+export function useListCodeSubmissions<TData = Awaited<ReturnType<typeof listCodeSubmissions>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
  id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listCodeSubmissions>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listCodeSubmissions>>,
@@ -124,7 +125,7 @@ export function useListCodeSubmissions<TData = Awaited<ReturnType<typeof listCod
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListCodeSubmissions<TData = Awaited<ReturnType<typeof listCodeSubmissions>>, TError = ErrorModel>(
+export function useListCodeSubmissions<TData = Awaited<ReturnType<typeof listCodeSubmissions>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
  id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listCodeSubmissions>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listCodeSubmissions>>,
@@ -134,7 +135,7 @@ export function useListCodeSubmissions<TData = Awaited<ReturnType<typeof listCod
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListCodeSubmissions<TData = Awaited<ReturnType<typeof listCodeSubmissions>>, TError = ErrorModel>(
+export function useListCodeSubmissions<TData = Awaited<ReturnType<typeof listCodeSubmissions>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
  id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listCodeSubmissions>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
@@ -142,7 +143,7 @@ export function useListCodeSubmissions<TData = Awaited<ReturnType<typeof listCod
  * @summary List an application's code submissions
  */
 
-export function useListCodeSubmissions<TData = Awaited<ReturnType<typeof listCodeSubmissions>>, TError = ErrorModel>(
+export function useListCodeSubmissions<TData = Awaited<ReturnType<typeof listCodeSubmissions>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
  id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listCodeSubmissions>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -159,7 +160,7 @@ export function useListCodeSubmissions<TData = Awaited<ReturnType<typeof listCod
 
 
 /**
- * Records the submission URL. Scores are populated externally (deferred).
+ * The applicant, while their application is a draft and applications are open. The challenge must belong to the application's cycle and role. Scores are populated externally.
  * @summary Submit or update the challenge link
  */
 export const upsertCodeSubmission = (
@@ -178,7 +179,7 @@ export const upsertCodeSubmission = (
   
 
 
-export const getUpsertCodeSubmissionMutationOptions = <TError = ErrorModel,
+export const getUpsertCodeSubmissionMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upsertCodeSubmission>>, TError,{id: string;data: NonReadonly<UpsertCodeSubmissionInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
 ): UseMutationOptions<Awaited<ReturnType<typeof upsertCodeSubmission>>, TError,{id: string;data: NonReadonly<UpsertCodeSubmissionInputBody>}, TContext> => {
 
@@ -205,12 +206,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type UpsertCodeSubmissionMutationResult = NonNullable<Awaited<ReturnType<typeof upsertCodeSubmission>>>
     export type UpsertCodeSubmissionMutationBody = NonReadonly<UpsertCodeSubmissionInputBody>
-    export type UpsertCodeSubmissionMutationError = ErrorModel
+    export type UpsertCodeSubmissionMutationError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel
 
     /**
  * @summary Submit or update the challenge link
  */
-export const useUpsertCodeSubmission = <TError = ErrorModel,
+export const useUpsertCodeSubmission = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upsertCodeSubmission>>, TError,{id: string;data: NonReadonly<UpsertCodeSubmissionInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof upsertCodeSubmission>>,

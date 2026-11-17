@@ -14,6 +14,7 @@ export interface ApplicationsOutputBody {
   /** A URL to the JSON Schema for this object. */
   readonly $schema?: string;
   applications: ApplicationsOutputBodyApplications;
+  next_cursor?: string;
   stage_counts: ApplicationsOutputBodyStageCounts;
   total: number;
 }

@@ -114,8 +114,8 @@ type Question struct {
 
 type CodeChallenge struct {
 	ID           string     `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
-	CycleID      string     `json:"cycle_id" gorm:"type:uuid;not null"`
-	RoleID       string     `json:"role_id" gorm:"type:uuid;not null"`
+	CycleID      string     `json:"cycle_id" gorm:"type:uuid;not null;index:idx_code_challenges_cycle_role,priority:1"`
+	RoleID       string     `json:"role_id" gorm:"type:uuid;not null;index:idx_code_challenges_cycle_role,priority:2"`
 	Name         string     `json:"name" gorm:"not null"`
 	ChallengeURL *string    `json:"challenge_url,omitempty"`
 	Instructions *string    `json:"instructions,omitempty"`
@@ -131,12 +131,15 @@ type CodeChallenge struct {
 // been submitted. Computed via COUNT queries rather than requiring callers to
 // fetch the full row sets just to take their length.
 type CycleRoleSummary struct {
-	RoleID          string `json:"role_id"`
-	QuestionCount   int    `json:"question_count"`
-	ChallengeCount  int    `json:"challenge_count"`
-	SubmissionCount int    `json:"submission_count"`
-	ScriptQuestions int    `json:"script_questions"`
-	ScriptWritten   bool   `json:"script_written" doc:"The interview script has an opening or a question"`
+	CycleID         string      `json:"cycle_id"`
+	RoleID          string      `json:"role_id"`
+	Title           string      `json:"title" doc:"The application form's title"`
+	Status          CycleStatus `json:"status" doc:"Whether the role's applications are open"`
+	QuestionCount   int         `json:"question_count"`
+	ChallengeCount  int         `json:"challenge_count"`
+	SubmissionCount int         `json:"submission_count"`
+	ScriptQuestions int         `json:"script_questions"`
+	ScriptWritten   bool        `json:"script_written" doc:"The interview script has an opening or a question"`
 }
 
 type Applicant struct {
@@ -156,10 +159,10 @@ func (Applicant) TableName() string { return "users" }
 
 type Application struct {
 	ID           string           `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
-	CycleID      string           `json:"cycle_id" gorm:"type:uuid;not null;index:idx_applications_cycle;uniqueIndex:applications_cycle_id_user_nuid_role_key,priority:1"`
+	CycleID      string           `json:"cycle_id" gorm:"type:uuid;not null;index:idx_applications_cycle;uniqueIndex:applications_cycle_id_user_nuid_role_key,priority:1;index:idx_applications_cycle_role_stage,priority:1"`
 	UserNUID     string           `json:"user_nuid" gorm:"not null;index:idx_applications_user;uniqueIndex:applications_cycle_id_user_nuid_role_key,priority:2"`
-	RoleID       string           `json:"role_id" gorm:"type:uuid;not null;uniqueIndex:applications_cycle_id_user_nuid_role_key,priority:3"`
-	Stage        ApplicationStage `json:"stage" gorm:"type:application_stage;not null;default:draft;index:idx_applications_stage"`
+	RoleID       string           `json:"role_id" gorm:"type:uuid;not null;uniqueIndex:applications_cycle_id_user_nuid_role_key,priority:3;index:idx_applications_cycle_role_stage,priority:2"`
+	Stage        ApplicationStage `json:"stage" gorm:"type:application_stage;not null;default:draft;index:idx_applications_stage;index:idx_applications_cycle_role_stage,priority:3"`
 	Availability json.RawMessage  `json:"availability,omitempty" gorm:"serializer:jsonb;type:jsonb"`
 	ResumeURL    *string          `json:"resume_url,omitempty"`
 	// SubmittedAt is nil until the applicant actually submits (draft ->
@@ -200,7 +203,7 @@ type ApplicationSummary struct {
 type WrittenAnswer struct {
 	ID            string          `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
 	ApplicationID string          `json:"application_id" gorm:"type:uuid;not null;index:idx_written_answers_app;uniqueIndex:written_answers_application_id_question_id_key,priority:1"`
-	QuestionID    string          `json:"question_id" gorm:"type:uuid;not null;uniqueIndex:written_answers_application_id_question_id_key,priority:2"`
+	QuestionID    string          `json:"question_id" gorm:"type:uuid;not null;uniqueIndex:written_answers_application_id_question_id_key,priority:2;index:idx_written_answers_question"`
 	AnswerText    *string         `json:"answer_text,omitempty"`
 	AnswerOptions json.RawMessage `json:"answer_options,omitempty" gorm:"serializer:jsonb;type:jsonb"`
 	// AnswerFilePath/AnswerFileName let a `url`-type question be answered by

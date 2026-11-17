@@ -7,6 +7,6 @@
 A write the workflow flags as an override or destructive answers 409 with an error at `query.confirm_override`; chiefs and admins repeat it with `?confirm_override=true` to go ahead, and it is recorded.
  * OpenAPI spec version: 0.1.0
  */
-import type { BoardRow } from './boardRow';
+import type { DraftBoard } from './draftBoard';
 
-export type GetReviewBoard200 = BoardRow[] | null;
+export type ListDraftBoards200 = DraftBoard[] | null;

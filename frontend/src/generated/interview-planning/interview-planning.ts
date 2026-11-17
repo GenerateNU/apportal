@@ -29,8 +29,8 @@ import type {
 import type {
   AutoPlanInputBody,
   AutoPlanInterviewsParams,
+  BoardOutputBody,
   ErrorModel,
-  GetInterviewBoard200,
   GetInterviewBoardParams,
   InterviewPlan,
   ListAssignableStaff200,
@@ -182,7 +182,7 @@ export const getInterviewBoard = (
 ) => {
       
       
-      return customInstance<GetInterviewBoard200>(
+      return customInstance<BoardOutputBody>(
       {url: `/cycles/${id}/interview-board`, method: 'GET',
         params, signal
     },

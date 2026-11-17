@@ -445,6 +445,8 @@ components:
           type:
             - array
             - "null"
+        next_cursor:
+          type: string
         stage_counts:
           additionalProperties:
             format: int64
@@ -662,6 +664,27 @@ components:
         with_recording:
           description: Also plan recording reviewers, after interviewers
           type: boolean
+      type: object
+    BoardOutputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/BoardOutputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        next_cursor:
+          type: string
+        rows:
+          items:
+            $ref: "#/components/schemas/InterviewBoardRow"
+          type:
+            - array
+            - "null"
+      required:
+        - rows
       type: object
     BoardReviewer:
       additionalProperties: false
@@ -1543,6 +1566,8 @@ components:
         challenge_count:
           format: int64
           type: integer
+        cycle_id:
+          type: string
         question_count:
           format: int64
           type: integer
@@ -1554,11 +1579,25 @@ components:
         script_written:
           description: The interview script has an opening or a question
           type: boolean
+        status:
+          description: Whether the role's applications are open
+          enum:
+            - draft
+            - open
+            - closed
+            - archived
+          type: string
         submission_count:
           format: int64
           type: integer
+        title:
+          description: The application form's title
+          type: string
       required:
+        - cycle_id
         - role_id
+        - title
+        - status
         - question_count
         - challenge_count
         - submission_count
@@ -1836,6 +1875,37 @@ components:
         - body
         - created_at
         - updated_at
+      type: object
+    DecisionsOutputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/DecisionsOutputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        next_cursor:
+          type: string
+        rows:
+          items:
+            $ref: "#/components/schemas/DecisionRow"
+          type:
+            - array
+            - "null"
+        status_counts:
+          additionalProperties:
+            format: int64
+            type: integer
+          type: object
+        total:
+          format: int64
+          type: integer
+      required:
+        - rows
+        - total
+        - status_counts
       type: object
     DeleteAllLeadAssignmentsOutputBody:
       additionalProperties: false
@@ -3809,6 +3879,27 @@ components:
       required:
         - review_question_id
       type: object
+    ReviewBoardOutputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/ReviewBoardOutputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        next_cursor:
+          type: string
+        rows:
+          items:
+            $ref: "#/components/schemas/BoardRow"
+          type:
+            - array
+            - "null"
+      required:
+        - rows
+      type: object
     ReviewCutoff:
       additionalProperties: false
       properties:
@@ -4144,6 +4235,27 @@ components:
         - cycle_id
         - name
         - created_at
+      type: object
+    SelectionsOutputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/SelectionsOutputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        next_cursor:
+          type: string
+        selections:
+          items:
+            $ref: "#/components/schemas/LeadSelection"
+          type:
+            - array
+            - "null"
+      required:
+        - selections
       type: object
     SetApplicationSlotsInputBody:
       additionalProperties: false
@@ -4653,6 +4765,43 @@ components:
             - rejected
             - withdrawn
           type: string
+      type: object
+    UpdateApplicationStagesInputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/UpdateApplicationStagesInputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        application_ids:
+          items:
+            type: string
+          maxItems: 200
+          minItems: 1
+          type:
+            - array
+            - "null"
+        stage:
+          enum:
+            - draft
+            - submitted
+            - lead_review
+            - chief_review
+            - interview
+            - interview_scheduled
+            - interview_conducted
+            - interview_review
+            - selection
+            - accepted
+            - rejected
+            - withdrawn
+          type: string
+      required:
+        - application_ids
+        - stage
       type: object
     UpdateApplicationTemplateInputBody:
       additionalProperties: false
@@ -5296,6 +5445,8 @@ components:
         has_more:
           description: True if more results exist beyond this page
           type: boolean
+        next_cursor:
+          type: string
         users:
           items:
             $ref: "#/components/schemas/User"
@@ -5525,7 +5676,7 @@ paths:
         - Answers
   /applicants:
     post:
-      description: Applicant-facing; upserts by NUID.
+      description: Needs a verified session whose email matches the body. Creates your users row the first time; after that only updates your own profile, never email or roles. An NUID already registered is a conflict.
       operationId: upsert-applicant
       requestBody:
         content:
@@ -5540,6 +5691,18 @@ paths:
               schema:
                 $ref: "#/components/schemas/Applicant"
           description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
         "409":
           content:
             application/problem+json:
@@ -5558,11 +5721,12 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorModel"
           description: Internal Server Error
-      summary: Create or update an applicant
+      summary: Create or update your profile
       tags:
         - Applicants
   /applicants/{nuid}:
     get:
+      description: Yourself, or staff who can see one of their applications.
       operationId: get-applicant
       parameters:
         - in: path
@@ -5577,6 +5741,18 @@ paths:
               schema:
                 $ref: "#/components/schemas/Applicant"
           description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
         "404":
           content:
             application/problem+json:
@@ -5768,15 +5944,13 @@ paths:
             maximum: 200
             minimum: 0
             type: integer
-        - description: Number of results to skip
+        - description: next_cursor from the previous page; omit for the first page
           explode: false
           in: query
-          name: offset
+          name: cursor
           schema:
-            description: Number of results to skip
-            format: int64
-            minimum: 0
-            type: integer
+            description: next_cursor from the previous page; omit for the first page
+            type: string
       responses:
         "200":
           content:
@@ -5803,6 +5977,59 @@ paths:
                 $ref: "#/components/schemas/ErrorModel"
           description: Internal Server Error
       summary: List applications
+      tags:
+        - Applications
+    patch:
+      description: Moves several submitted applications at once, all or none, under the same workflow rules as a single stage change.
+      operationId: update-application-stages
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateApplicationStagesInputBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/Application"
+                type:
+                  - array
+                  - "null"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "409":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Conflict
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Move applications to a stage
       tags:
         - Applications
     post:
@@ -6478,6 +6705,7 @@ paths:
         - Chief reviews
   /applications/{id}/code-submission:
     get:
+      description: Anyone who can view the application.
       operationId: list-code-submissions
       parameters:
         - description: Application ID
@@ -6498,17 +6726,41 @@ paths:
                   - array
                   - "null"
           description: OK
-        default:
+        "401":
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/ErrorModel"
-          description: Error
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
       summary: List an application's code submissions
       tags:
         - Code submissions
     put:
-      description: Records the submission URL. Scores are populated externally (deferred).
+      description: The applicant, while their application is a draft and applications are open. The challenge must belong to the application's cycle and role. Scores are populated externally.
       operationId: upsert-code-submission
       parameters:
         - description: Application ID
@@ -6531,12 +6783,36 @@ paths:
               schema:
                 $ref: "#/components/schemas/CodeSubmission"
           description: OK
-        default:
+        "401":
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/ErrorModel"
-          description: Error
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
       summary: Submit or update the challenge link
       tags:
         - Code submissions
@@ -7595,7 +7871,7 @@ paths:
         - Tags
   /applications/{id}/written-review:
     put:
-      description: Reviewer only; upserts the calling reviewer's review-question answers.
+      description: A lead assigned to review this application, or a chief; upserts the caller's own review-question answers.
       operationId: upsert-written-review
       parameters:
         - description: Application ID
@@ -8033,6 +8309,38 @@ paths:
                 $ref: "#/components/schemas/ErrorModel"
           description: Internal Server Error
       summary: Create a cycle
+      tags:
+        - Cycles
+  /cycles/template-summaries:
+    get:
+      description: The template summary of each requested cycle the caller can review, in one call. Cycles the caller can't review are left out.
+      operationId: cycle-template-summaries
+      parameters:
+        - description: Comma-separated cycle ids
+          explode: false
+          in: query
+          name: cycle_ids
+          schema:
+            description: Comma-separated cycle ids
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/CycleRoleSummary"
+                type:
+                  - array
+                  - "null"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      summary: Per-role template summaries for several cycles
       tags:
         - Cycles
   /cycles/{id}:
@@ -8646,16 +8954,40 @@ paths:
           schema:
             description: Case-insensitive substring match on the applicant's name, NUID, or email
             type: string
+        - description: Only rows in this status
+          explode: false
+          in: query
+          name: status
+          schema:
+            description: Only rows in this status
+            enum:
+              - pending
+              - ready
+              - sent
+            type: string
+        - description: Max rows per page; omit (or 0) for every match
+          explode: false
+          in: query
+          name: limit
+          schema:
+            description: Max rows per page; omit (or 0) for every match
+            format: int64
+            maximum: 200
+            minimum: 0
+            type: integer
+        - description: next_cursor from the previous page; omit for the first page
+          explode: false
+          in: query
+          name: cursor
+          schema:
+            description: next_cursor from the previous page; omit for the first page
+            type: string
       responses:
         "200":
           content:
             application/json:
               schema:
-                items:
-                  $ref: "#/components/schemas/DecisionRow"
-                type:
-                  - array
-                  - "null"
+                $ref: "#/components/schemas/DecisionsOutputBody"
           description: OK
         "401":
           content:
@@ -8846,6 +9178,63 @@ paths:
       summary: Open the draft board for a cycle and applicant role
       tags:
         - Draft
+  /cycles/{id}/draft-boards:
+    get:
+      description: Reviewer only. The boards get-draft-board returns, for several roles in one request; roles with no board are left out.
+      operationId: list-draft-boards
+      parameters:
+        - description: Cycle ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Cycle ID
+            type: string
+        - description: Comma-separated applicant role IDs; omit for every opened board
+          explode: false
+          in: query
+          name: role_ids
+          schema:
+            description: Comma-separated applicant role IDs; omit for every opened board
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/DraftBoard"
+                type:
+                  - array
+                  - "null"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Every opened draft board for a cycle
+      tags:
+        - Draft
   /cycles/{id}/drafted:
     get:
       description: Reviewer only. Application id to the team name that took them, for marking them as taken wherever they're still listed.
@@ -8914,16 +9303,29 @@ paths:
           schema:
             description: Also list everyone with an interview on record, whatever their stage now
             type: boolean
+        - description: Max rows per page; omit (or 0) to return every match
+          explode: false
+          in: query
+          name: limit
+          schema:
+            description: Max rows per page; omit (or 0) to return every match
+            format: int64
+            maximum: 200
+            minimum: 0
+            type: integer
+        - description: next_cursor from the previous page; omit for the first page
+          explode: false
+          in: query
+          name: cursor
+          schema:
+            description: next_cursor from the previous page; omit for the first page
+            type: string
       responses:
         "200":
           content:
             application/json:
               schema:
-                items:
-                  $ref: "#/components/schemas/InterviewBoardRow"
-                type:
-                  - array
-                  - "null"
+                $ref: "#/components/schemas/BoardOutputBody"
           description: OK
         "401":
           content:
@@ -10713,16 +11115,29 @@ paths:
           schema:
             description: Also list everyone with reviewers assigned, whatever their stage now
             type: boolean
+        - description: Max rows per page; omit (or 0) to return every match
+          explode: false
+          in: query
+          name: limit
+          schema:
+            description: Max rows per page; omit (or 0) to return every match
+            format: int64
+            maximum: 200
+            minimum: 0
+            type: integer
+        - description: next_cursor from the previous page; omit for the first page
+          explode: false
+          in: query
+          name: cursor
+          schema:
+            description: next_cursor from the previous page; omit for the first page
+            type: string
       responses:
         "200":
           content:
             application/json:
               schema:
-                items:
-                  $ref: "#/components/schemas/BoardRow"
-                type:
-                  - array
-                  - "null"
+                $ref: "#/components/schemas/ReviewBoardOutputBody"
           description: OK
         "401":
           content:
@@ -11603,16 +12018,29 @@ paths:
           schema:
             description: Optional lead filter
             type: string
+        - description: Max results per page; omit (or 0) to return every match
+          explode: false
+          in: query
+          name: limit
+          schema:
+            description: Max results per page; omit (or 0) to return every match
+            format: int64
+            maximum: 200
+            minimum: 0
+            type: integer
+        - description: next_cursor from the previous page; omit for the first page
+          explode: false
+          in: query
+          name: cursor
+          schema:
+            description: next_cursor from the previous page; omit for the first page
+            type: string
       responses:
         "200":
           content:
             application/json:
               schema:
-                items:
-                  $ref: "#/components/schemas/LeadSelection"
-                type:
-                  - array
-                  - "null"
+                $ref: "#/components/schemas/SelectionsOutputBody"
           description: OK
         "401":
           content:
@@ -13168,7 +13596,7 @@ paths:
         - Application Templates
   /cycles/{id}/template-summary:
     get:
-      description: "One entry per role of the cycle: question count (role-specific plus global), code challenge count, and submitted application count — computed via COUNT queries instead of requiring the full row sets."
+      description: "One entry per role of the cycle: question count (role-specific plus global), code challenge count, and submitted application count — plus the form title and whether applications are open."
       operationId: cycle-template-summary
       parameters:
         - in: path
@@ -15559,14 +15987,13 @@ paths:
             description: Max results per page; omit (or 0) to return all matching users
             format: int64
             type: integer
-        - description: Number of results to skip
+        - description: next_cursor from the previous page; omit for the first page
           explode: false
           in: query
-          name: offset
+          name: cursor
           schema:
-            description: Number of results to skip
-            format: int64
-            type: integer
+            description: next_cursor from the previous page; omit for the first page
+            type: string
       responses:
         "200":
           content:

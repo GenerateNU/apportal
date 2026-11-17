@@ -53,7 +53,7 @@ export interface ApplicationListParams {
   // Omit to fetch every match. Paging is opt-in: the review queues and the
   // assignment planner all need the full set.
   limit?: number
-  offset?: number
+  cursor?: string
 }
 
 // fetchApplicationPage is the shared queryFn. The cache always holds the whole
@@ -87,10 +87,9 @@ export function useApplications(
   })
 }
 
-// useInfiniteApplications walks the same paged endpoint one offset at a time,
+// useInfiniteApplications walks the same paged endpoint one cursor at a time,
 // accumulating rows for a scroll-to-load table. `params` carries the page size
-// but never the offset — that comes from the page param, so every filter
-// change starts a fresh scroll from the top on its own.
+// but never the cursor, so every filter change starts a fresh scroll from the top.
 export function useInfiniteApplications(
   params?: ApplicationListParams,
   opts?: RequestOptions,
@@ -99,19 +98,9 @@ export function useInfiniteApplications(
   const query = useInfiniteQuery({
     queryKey: queryKeys.applications.infiniteList(params),
     queryFn: ({ pageParam }) =>
-      fetchApplicationPage({ ...params, offset: pageParam }, opts),
-    initialPageParam: 0,
-    // The next offset is however many rows are already in hand; undefined once
-    // that reaches the total. Only the first page carries the totals — the
-    // server skips those scans on later pages, since they cost more than the
-    // page itself and can't change while the filter doesn't.
-    getNextPageParam: (_lastPage, allPages) => {
-      const loaded = allPages.reduce(
-        (sum, p) => sum + (p.applications?.length ?? 0),
-        0
-      )
-      return loaded < (allPages[0]?.total ?? 0) ? loaded : undefined
-    },
+      fetchApplicationPage({ ...params, cursor: pageParam }, opts),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => lastPage.next_cursor || undefined,
     enabled,
   })
 

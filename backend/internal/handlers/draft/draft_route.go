@@ -27,6 +27,16 @@ func Route(api huma.API, db *gorm.DB) {
 	}, s.board)
 
 	huma.Register(api, huma.Operation{
+		OperationID: "list-draft-boards",
+		Method:      http.MethodGet,
+		Path:        "/cycles/{id}/draft-boards",
+		Summary:     "Every opened draft board for a cycle",
+		Description: "Reviewer only. The boards get-draft-board returns, for several roles in one request; roles with no board are left out.",
+		Tags:        []string{"Draft"},
+		Errors:      []int{http.StatusUnauthorized, http.StatusNotFound, http.StatusUnprocessableEntity},
+	}, s.boards)
+
+	huma.Register(api, huma.Operation{
 		OperationID: "open-draft",
 		Method:      http.MethodPost,
 		Path:        "/cycles/{id}/draft",

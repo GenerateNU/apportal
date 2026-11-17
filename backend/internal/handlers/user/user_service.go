@@ -62,13 +62,21 @@ func (s *userService) list(ctx context.Context, in *ListUsersInput) (*UsersOutpu
 		limit = &in.Limit
 	}
 
-	users, hasMore, err := s.userDB.ListUsers(ctx, filter, limit, in.Offset)
+	after, err := utils.ParseCursor(in.Cursor)
+	if err != nil {
+		return nil, err
+	}
+	users, hasMore, err := s.userDB.ListUsers(ctx, filter, limit, after)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
 	out := &UsersOutput{}
 	out.Body.Users = users
 	out.Body.HasMore = hasMore
+	if hasMore {
+		last := users[len(users)-1]
+		out.Body.NextCursor = utils.Cursor{Text: last.FullName, ID: last.NUID}.Encode()
+	}
 	return out, nil
 }
 

@@ -37,13 +37,15 @@ func TestApplicationPolicies(t *testing.T) {
 			[]ApplicationAction{ViewApplication, ReviewApplication, EditInterview, WriteInterviewNotes, WriteDecisionFeedback}},
 		{"lead reviewing the recording", ApplicationAccess{level: Review, recordingReviewer: true},
 			[]ApplicationAction{ViewApplication, ReviewApplication, SubmitRecordingReview}},
+		{"lead assigned to review them", ApplicationAccess{level: Review, leadReviewer: true},
+			[]ApplicationAction{ViewApplication, ReviewApplication, WriteReview}},
 		{"chief", ApplicationAccess{level: Manage},
 			[]ApplicationAction{ViewApplication, ReviewApplication, ManageApplication, ChangeStage, EditInterview,
-				OverrideInterviewRating, WriteDecisionFeedback, EditDecisionLetter}},
+				OverrideInterviewRating, WriteDecisionFeedback, EditDecisionLetter, WriteReview}},
 		// Drafts are private to the owner, whoever else is asking.
 		{"chief on a draft", ApplicationAccess{level: Manage, draft: true}, nil},
 		// An assignment means nothing once the cycle is hidden from them.
-		{"interviewer no longer on staff", ApplicationAccess{interviewer: true, recordingReviewer: true}, nil},
+		{"interviewer no longer on staff", ApplicationAccess{interviewer: true, recordingReviewer: true, leadReviewer: true}, nil},
 	}
 	for _, p := range personas {
 		allowed := map[ApplicationAction]bool{}

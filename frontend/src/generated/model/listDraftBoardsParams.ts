@@ -7,6 +7,10 @@
 A write the workflow flags as an override or destructive answers 409 with an error at `query.confirm_override`; chiefs and admins repeat it with `?confirm_override=true` to go ahead, and it is recorded.
  * OpenAPI spec version: 0.1.0
  */
-import type { InterviewBoardRow } from './interviewBoardRow';
 
-export type GetInterviewBoard200 = InterviewBoardRow[] | null;
+export type ListDraftBoardsParams = {
+/**
+ * Comma-separated applicant role IDs; omit for every opened board
+ */
+role_ids?: string;
+};

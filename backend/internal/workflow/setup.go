@@ -2,6 +2,8 @@ package workflow
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	"github.com/danielgtaylor/huma/v2"
 	"gorm.io/gorm"
@@ -32,21 +34,33 @@ type missingSetup struct {
 
 // LoadSetup records which enabled steps are still missing setup per opening, for the next actions.
 func (f *CycleState) LoadSetup(db *gorm.DB) error {
-	for _, c := range setupChecks {
+	parts := make([]string, 0, len(setupChecks))
+	args := make([]any, 0, len(setupChecks)*2)
+	for i, c := range setupChecks {
+		parts = append(parts, fmt.Sprintf("SELECT %d AS idx, ready.* FROM (%s) AS ready(role_id)", i, c.ready))
+		args = append(args, f.CycleID)
+	}
+	var rows []struct {
+		Idx    int
+		RoleID string
+	}
+	if err := db.Raw(strings.Join(parts, " UNION ALL "), args...).Scan(&rows).Error; err != nil {
+		return err
+	}
+	done := map[int]map[string]bool{}
+	for _, r := range rows {
+		if done[r.Idx] == nil {
+			done[r.Idx] = map[string]bool{}
+		}
+		done[r.Idx][r.RoleID] = true
+	}
+	for i, c := range setupChecks {
 		s := StepOf(c.work)
 		if !f.Enabled[s] {
 			continue
 		}
-		var ready []string
-		if err := db.Raw(c.ready, f.CycleID).Scan(&ready).Error; err != nil {
-			return err
-		}
-		done := map[string]bool{}
-		for _, r := range ready {
-			done[r] = true
-		}
 		for _, o := range f.Openings {
-			if !done[o.RoleID] {
+			if !done[i][o.RoleID] {
 				k := key{o.RoleID, s}
 				f.Missing[k] = append(f.Missing[k], missingSetup{c.work, c.label})
 			}

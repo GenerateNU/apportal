@@ -29,6 +29,8 @@ import type {
 import type {
   CreateCycleInputBody,
   Cycle,
+  CycleTemplateSummaries200,
+  CycleTemplateSummariesParams,
   CycleTemplateSummary200,
   ErrorModel,
   ListCycles200,
@@ -229,6 +231,99 @@ export const useCreateCycle = <TError = ErrorModel | ErrorModel | ErrorModel | E
       return useMutation(mutationOptions, queryClient);
     }
     /**
+ * The template summary of each requested cycle the caller can review, in one call. Cycles the caller can't review are left out.
+ * @summary Per-role template summaries for several cycles
+ */
+export const cycleTemplateSummaries = (
+    params?: CycleTemplateSummariesParams,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<CycleTemplateSummaries200>(
+      {url: `/cycles/template-summaries`, method: 'GET',
+        params, signal
+    },
+      options);
+    }
+  
+
+
+
+export const getCycleTemplateSummariesQueryKey = (params?: CycleTemplateSummariesParams,) => {
+    return [
+    `/cycles/template-summaries`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getCycleTemplateSummariesQueryOptions = <TData = Awaited<ReturnType<typeof cycleTemplateSummaries>>, TError = ErrorModel>(params?: CycleTemplateSummariesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof cycleTemplateSummaries>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getCycleTemplateSummariesQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof cycleTemplateSummaries>>> = ({ signal }) => cycleTemplateSummaries(params, requestOptions, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof cycleTemplateSummaries>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type CycleTemplateSummariesQueryResult = NonNullable<Awaited<ReturnType<typeof cycleTemplateSummaries>>>
+export type CycleTemplateSummariesQueryError = ErrorModel
+
+
+export function useCycleTemplateSummaries<TData = Awaited<ReturnType<typeof cycleTemplateSummaries>>, TError = ErrorModel>(
+ params: undefined |  CycleTemplateSummariesParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof cycleTemplateSummaries>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof cycleTemplateSummaries>>,
+          TError,
+          Awaited<ReturnType<typeof cycleTemplateSummaries>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCycleTemplateSummaries<TData = Awaited<ReturnType<typeof cycleTemplateSummaries>>, TError = ErrorModel>(
+ params?: CycleTemplateSummariesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof cycleTemplateSummaries>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof cycleTemplateSummaries>>,
+          TError,
+          Awaited<ReturnType<typeof cycleTemplateSummaries>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCycleTemplateSummaries<TData = Awaited<ReturnType<typeof cycleTemplateSummaries>>, TError = ErrorModel>(
+ params?: CycleTemplateSummariesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof cycleTemplateSummaries>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Per-role template summaries for several cycles
+ */
+
+export function useCycleTemplateSummaries<TData = Awaited<ReturnType<typeof cycleTemplateSummaries>>, TError = ErrorModel>(
+ params?: CycleTemplateSummariesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof cycleTemplateSummaries>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getCycleTemplateSummariesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+/**
  * @summary Get a cycle
  */
 export const getCycle = (
@@ -385,7 +480,7 @@ export const useUpdateCycle = <TError = ErrorModel | ErrorModel | ErrorModel | E
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * One entry per role of the cycle: question count (role-specific plus global), code challenge count, and submitted application count — computed via COUNT queries instead of requiring the full row sets.
+ * One entry per role of the cycle: question count (role-specific plus global), code challenge count, and submitted application count — plus the form title and whether applications are open.
  * @summary Per-role template counts for a cycle
  */
 export const cycleTemplateSummary = (

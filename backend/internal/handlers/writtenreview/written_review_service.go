@@ -23,7 +23,7 @@ type writtenReviewService struct {
 }
 
 func (s *writtenReviewService) upsert(ctx context.Context, in *UpsertWrittenReviewInput) (*WrittenReviewOutput, error) {
-	if err := s.access.CanApplication(ctx, access.ReviewApplication, in.ID); err != nil {
+	if err := s.access.CanApplication(ctx, access.WriteReview, in.ID); err != nil {
 		return nil, err
 	}
 	answers := make([]ReviewAnswerInput, 0, len(in.Body.Answers))

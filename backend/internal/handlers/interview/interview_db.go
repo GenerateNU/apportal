@@ -26,24 +26,52 @@ func NewInterviewDB(db *gorm.DB) *InterviewDB {
 	return &InterviewDB{db: db, users: user.NewUserDB(db), assignments: interviewassignment.NewInterviewAssignmentDB(db)}
 }
 
-func (i *InterviewDB) UpsertInterview(ctx context.Context, in InterviewUpsert) error {
-	updates := map[string]any{}
-	utils.SetIf(updates, "scheduled_at", in.ScheduledAt)
-	utils.SetIf(updates, "conducted_at", in.ConductedAt)
-	utils.SetIf(updates, "recording_url", in.RecordingURL)
-	utils.SetIf(updates, "notes_url", in.NotesURL)
-	utils.SetIf(updates, "rating", in.Rating)
-	utils.SetIf(updates, "writeup", in.Writeup)
-	if in.Submit {
-		updates["submitted_at"] = gorm.Expr("COALESCE(submitted_at, NOW())")
-	}
-	if len(updates) == 0 {
-		return nil
-	}
-	updates["updated_at"] = gorm.Expr("NOW()")
-	return i.db.WithContext(ctx).Model(&models.Interview{}).
-		Where("application_id = ?", in.ApplicationID).
-		UpdateColumns(updates).Error
+func (i *InterviewDB) SaveInterview(ctx context.Context, in InterviewUpsert, check func(tx *gorm.DB, current *models.Interview) error, after func(tx *gorm.DB) error) error {
+	return i.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var app models.Application
+		if err := tx.Select("id", "cycle_id").Where("id = ?", in.ApplicationID).Take(&app).Error; err != nil {
+			return utils.DBErr(err)
+		}
+		if err := workflow.HoldCycle(tx, app.CycleID); err != nil {
+			return err
+		}
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("id").Where("id = ?", app.ID).Take(&app).Error; err != nil {
+			return err
+		}
+		var rows []models.Interview
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("application_id = ?", in.ApplicationID).Find(&rows).Error; err != nil {
+			return err
+		}
+		var current *models.Interview
+		if len(rows) > 0 {
+			current = &rows[0]
+		}
+		if err := check(tx, current); err != nil {
+			return err
+		}
+		updates := map[string]any{}
+		utils.SetIf(updates, "scheduled_at", in.ScheduledAt)
+		utils.SetIf(updates, "conducted_at", in.ConductedAt)
+		utils.SetIf(updates, "recording_url", in.RecordingURL)
+		utils.SetIf(updates, "notes_url", in.NotesURL)
+		utils.SetIf(updates, "rating", in.Rating)
+		utils.SetIf(updates, "writeup", in.Writeup)
+		if in.Submit {
+			updates["submitted_at"] = gorm.Expr("COALESCE(submitted_at, NOW())")
+		}
+		if current == nil {
+			if err := tx.Create(&models.Interview{ApplicationID: in.ApplicationID}).Error; err != nil {
+				return err
+			}
+		}
+		if len(updates) > 0 {
+			updates["updated_at"] = gorm.Expr("NOW()")
+			if err := tx.Model(&models.Interview{}).Where("application_id = ?", in.ApplicationID).UpdateColumns(updates).Error; err != nil {
+				return err
+			}
+		}
+		return after(tx)
+	})
 }
 
 func (i *InterviewDB) ListInterviewDetails(ctx context.Context, applicationIDs []string) ([]models.InterviewDetail, error) {

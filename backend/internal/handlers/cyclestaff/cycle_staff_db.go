@@ -8,6 +8,7 @@ import (
 
 	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
+	"github.com/GenerateNU/apportal/backend/internal/workflow"
 )
 
 type CycleStaffDB struct {
@@ -58,14 +59,43 @@ func (s *CycleStaffDB) SetStaff(ctx context.Context, cycleID, nuid string, role 
 }
 
 func (s *CycleStaffDB) RemoveStaff(ctx context.Context, cycleID, nuid string) error {
-	res := s.db.WithContext(ctx).Where("cycle_id = ? AND user_nuid = ?", cycleID, nuid).Delete(&models.CycleStaff{})
-	if res.Error != nil {
-		return res.Error
-	}
-	if res.RowsAffected == 0 {
-		return utils.ErrNotFound
-	}
-	return nil
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := workflow.HoldCycle(tx, cycleID); err != nil {
+			return err
+		}
+		res := tx.Where("cycle_id = ? AND user_nuid = ?", cycleID, nuid).Delete(&models.CycleStaff{})
+		if res.Error != nil {
+			return res.Error
+		}
+		if res.RowsAffected == 0 {
+			return utils.ErrNotFound
+		}
+		for _, q := range []struct {
+			sql  string
+			args []any
+		}{
+			{`DELETE FROM lead_assignments l USING applications a
+				WHERE a.id = l.application_id AND a.cycle_id = ? AND l.lead_nuid = ?
+				AND NOT EXISTS (SELECT 1 FROM written_reviews w
+					WHERE w.application_id = l.application_id AND w.reviewer_nuid = l.lead_nuid AND w.submitted_at IS NOT NULL)`,
+				[]any{cycleID, nuid}},
+			{`DELETE FROM interviewers x USING interviews i, applications a
+				WHERE i.id = x.interview_id AND a.id = i.application_id AND a.cycle_id = ?
+				AND x.interviewer_nuid = ? AND i.submitted_at IS NULL`, []any{cycleID, nuid}},
+			{`DELETE FROM interview_reviewers r USING interviews i, applications a
+				WHERE i.id = r.interview_id AND a.id = i.application_id AND a.cycle_id = ?
+				AND r.reviewer_nuid = ? AND r.writeup_submitted_at IS NULL`, []any{cycleID, nuid}},
+			{`DELETE FROM staff_group_members m USING staff_groups g
+				WHERE g.id = m.group_id AND g.cycle_id = ? AND m.user_nuid = ?`, []any{cycleID, nuid}},
+			{`DELETE FROM interview_panel_members WHERE cycle_id = ? AND user_nuid = ?`, []any{cycleID, nuid}},
+			{`DELETE FROM staff_slots WHERE cycle_id = ? AND user_nuid = ?`, []any{cycleID, nuid}},
+		} {
+			if err := tx.Exec(q.sql, q.args...).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 // CopyPreviousCycleStaff gives a new cycle the staff of the latest earlier

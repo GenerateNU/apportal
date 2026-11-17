@@ -111,9 +111,9 @@ func (c *ChiefReviewDB) CreateChiefReviewComment(ctx context.Context, applicatio
 
 // UpdateChiefReviewComment edits the author's own comment. ErrNotFound covers
 // both "doesn't exist" and "isn't yours".
-func (c *ChiefReviewDB) UpdateChiefReviewComment(ctx context.Context, commentID, authorNUID, body string) (models.ChiefReviewCommentDetail, error) {
+func (c *ChiefReviewDB) UpdateChiefReviewComment(ctx context.Context, applicationID, commentID, authorNUID, body string) (models.ChiefReviewCommentDetail, error) {
 	comment, err := utils.UpdateReturning[models.ChiefReviewComment](c.db.WithContext(ctx),
-		map[string]any{"body": body, "updated_at": gorm.Expr("NOW()")}, "id = ? AND author_nuid = ?", commentID, authorNUID)
+		map[string]any{"body": body, "updated_at": gorm.Expr("NOW()")}, "id = ? AND application_id = ? AND author_nuid = ?", commentID, applicationID, authorNUID)
 	if err != nil {
 		return models.ChiefReviewCommentDetail{}, err
 	}

@@ -33,6 +33,9 @@ describe('cycleApplicationCards', () => {
       [
         {
           role_id: 'r1',
+          cycle_id: fall.id,
+          title: 'Web Application',
+          status: 'open',
           question_count: 4,
           challenge_count: 1,
           submission_count: 9,

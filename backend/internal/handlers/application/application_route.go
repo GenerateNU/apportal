@@ -69,6 +69,16 @@ func registerApplication(api huma.API, s *applicationService) {
 	}, s.update)
 
 	huma.Register(api, huma.Operation{
+		OperationID: "update-application-stages",
+		Method:      http.MethodPatch,
+		Path:        "/applications",
+		Summary:     "Move applications to a stage",
+		Description: "Moves several submitted applications at once, all or none, under the same workflow rules as a single stage change.",
+		Tags:        []string{"Applications"},
+		Errors:      []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusConflict, http.StatusUnprocessableEntity},
+	}, s.updateStages)
+
+	huma.Register(api, huma.Operation{
 		OperationID:   "delete-application",
 		Method:        http.MethodDelete,
 		Path:          "/applications/{id}",

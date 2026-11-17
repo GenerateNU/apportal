@@ -33,7 +33,8 @@ export function useDecisions(
   return useQuery({
     queryKey: queryKeys.decisions.list(cycleId, params),
     queryFn: async () =>
-      ((await listDecisions(cycleId, params, opts)) ?? []) as DecisionRow[],
+      ((await listDecisions(cycleId, params, opts))?.rows ??
+        []) as DecisionRow[],
     enabled: !!cycleId,
   })
 }

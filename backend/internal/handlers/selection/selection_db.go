@@ -56,11 +56,25 @@ func (s *SelectionDB) DeleteSelection(ctx context.Context, applicationID, leadNU
 }
 
 // ListSelections returns a cycle's selections, optionally for one lead.
-func (s *SelectionDB) ListSelections(ctx context.Context, cycleID string, leadNUID string) ([]models.LeadSelection, error) {
+func (s *SelectionDB) ListSelections(ctx context.Context, cycleID string, leadNUID string, limit int, after *utils.Cursor) ([]models.LeadSelection, string, error) {
 	q := s.db.WithContext(ctx).Where("cycle_id = ?", cycleID)
 	if leadNUID != "" {
 		q = q.Where("lead_nuid = ?", leadNUID)
 	}
+	if limit > 0 {
+		if after != nil && after.At != nil {
+			q = q.Where("(created_at, id) > (?, ?::uuid)", *after.At, after.ID)
+		}
+		q = q.Limit(limit + 1)
+	}
 	selections := []models.LeadSelection{}
-	return selections, q.Order("created_at").Find(&selections).Error
+	if err := q.Order("created_at").Order("id").Find(&selections).Error; err != nil {
+		return nil, "", err
+	}
+	selections, more := utils.TrimPage(selections, limit)
+	if !more {
+		return selections, "", nil
+	}
+	last := selections[len(selections)-1]
+	return selections, utils.Cursor{At: &last.CreatedAt, ID: last.ID}.Encode(), nil
 }

@@ -8,8 +8,9 @@ type UserOutput struct {
 
 type UsersOutput struct {
 	Body struct {
-		Users   []models.User `json:"users"`
-		HasMore bool          `json:"has_more" doc:"True if more results exist beyond this page"`
+		Users      []models.User `json:"users"`
+		HasMore    bool          `json:"has_more" doc:"True if more results exist beyond this page"`
+		NextCursor string        `json:"next_cursor,omitempty"`
 	}
 }
 
@@ -28,7 +29,7 @@ type CreateUserInput struct {
 type ListUsersInput struct {
 	Role   string `query:"role" doc:"Optional filter: a global role (applicant, admin), or lead/chief for anyone with that role on some cycle"`
 	Limit  int    `query:"limit" doc:"Max results per page; omit (or 0) to return all matching users"`
-	Offset int    `query:"offset" doc:"Number of results to skip"`
+	Cursor string `query:"cursor" doc:"next_cursor from the previous page; omit for the first page"`
 }
 
 type UserNUIDInput struct {

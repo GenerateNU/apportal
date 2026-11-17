@@ -58,10 +58,13 @@ func usersQuery(db *gorm.DB, f userFilter) *gorm.DB {
 // ListUsers returns users matching the filter. A nil limit returns every match
 // (the lead dropdown needs them all); otherwise one extra row is fetched to
 // report whether more pages remain.
-func (u *UserDB) ListUsers(ctx context.Context, f userFilter, limit *int, offset int) ([]models.User, bool, error) {
+func (u *UserDB) ListUsers(ctx context.Context, f userFilter, limit *int, after *utils.Cursor) ([]models.User, bool, error) {
 	q := usersQuery(u.db.WithContext(ctx), f)
 	if limit != nil {
-		q = q.Limit(*limit + 1).Offset(offset)
+		if after != nil {
+			q = q.Where("(full_name, nuid) > (?, ?)", after.Text, after.ID)
+		}
+		q = q.Limit(*limit + 1)
 	}
 	users := []models.User{}
 	if err := q.Find(&users).Error; err != nil {

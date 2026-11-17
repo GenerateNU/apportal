@@ -300,6 +300,58 @@ func TestScenarioWorkForAStepThatIsOff(t *testing.T) {
 	}
 }
 
+func TestScenarioOverviewCounts(t *testing.T) {
+	f := newFixture(t)
+	f.closeApplications()
+	f.deadline(f.roleA, models.StepReviews, models.KindReviewer, f.now.Add(-time.Hour))
+	for _, app := range f.apps {
+		f.exec("INSERT INTO lead_assignments (application_id, lead_nuid, assigned_by) VALUES (?, ?, ?)", app, f.leadA.NUID, f.chiefA.NUID)
+	}
+	f.exec("INSERT INTO written_reviews (application_id, reviewer_nuid, submitted_at) VALUES (?, ?, now())", f.apps[0], f.leadA.NUID)
+
+	out, err := f.s.getWorkflow(f.as(f.chiefA), &CycleInput{ID: f.cycleA})
+	f.must(err)
+	late := func(step models.Step, kind models.StepKind) int {
+		for _, s := range out.Body.Steps {
+			for _, o := range s.Openings {
+				for _, d := range o.Deadlines {
+					if s.Step == step && o.RoleID == f.roleA && d.Kind == kind && d.LateCount != nil {
+						return *d.LateCount
+					}
+				}
+			}
+		}
+		return -1
+	}
+	if a, r := late(models.StepApplications, models.KindApplicant), late(models.StepReviews, models.KindReviewer); a != 2 || r != 1 {
+		t.Fatalf("late applications %d, late reviews %d", a, r)
+	}
+
+	gates, err := f.s.workflow.ReviewGates(f.as(f.chiefA), f.cycleA)
+	f.must(err)
+	found := false
+	for _, g := range gates {
+		if g.RoleID == f.roleA && g.Kind == models.ReviewKindWritten {
+			found = g.AssignedCount == 2 && g.SubmittedCount == 1
+		}
+	}
+	if !found {
+		t.Fatalf("gates: %+v", gates)
+	}
+
+	lead, err := f.s.getWorkflow(f.as(f.leadA), &CycleInput{ID: f.cycleA})
+	f.must(err)
+	var review *workflow.Task
+	for i, task := range lead.Body.Tasks {
+		if task.Kind == workflow.TaskReview {
+			review = &lead.Body.Tasks[i]
+		}
+	}
+	if review == nil || review.Total != 2 || review.Done != 1 {
+		t.Fatalf("review task: %+v", review)
+	}
+}
+
 func TestScenarioClosingEarlyNeedsConfirm(t *testing.T) {
 	f := newFixture(t)
 	f.openApplications()

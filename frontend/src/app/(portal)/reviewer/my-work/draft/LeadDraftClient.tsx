@@ -49,17 +49,12 @@ export function LeadDraftClient() {
   const myGroup = groups.find((g) =>
     (g.members ?? []).some((m) => m.lead_nuid === user?.nuid)
   )
-  const { boards, boardsPending } = useDraftBoards(
-    cycleId,
-    roleIds,
-    (results) => ({
-      boards: results.map((q, i): RoleBoard => ({
-        roleId: roleIds[i],
-        board: q.data,
-      })),
-      boardsPending: results.some((q) => q.isPending),
-    })
-  )
+  const { data: boardsByRole, isPending } = useDraftBoards(cycleId, roleIds)
+  const boardsPending = roleIds.length > 0 && isPending
+  const boards = roleIds.map((roleId): RoleBoard => ({
+    roleId,
+    board: boardsByRole?.[roleId],
+  }))
 
   if (cyclesLoading) {
     return (

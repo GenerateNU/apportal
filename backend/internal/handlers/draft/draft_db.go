@@ -213,54 +213,113 @@ func (d *DraftDB) SetDraftTeams(ctx context.Context, draftID string, preferenceL
 }
 
 func (d *DraftDB) ListDraftTeams(ctx context.Context, draftID string) ([]models.DraftTeamDetail, error) {
+	return d.draftTeams(ctx, []string{draftID})
+}
+
+func (d *DraftDB) ListDraftPicks(ctx context.Context, draftID string) ([]models.DraftPickDetail, error) {
+	return d.draftPicks(ctx, []string{draftID})
+}
+
+func (d *DraftDB) draftTeams(ctx context.Context, draftIDs []string) ([]models.DraftTeamDetail, error) {
 	teams := []models.DraftTeamDetail{}
 	err := d.db.WithContext(ctx).Table("draft_teams t").
 		Select("t.*, pl.name, COALESCE((SELECT array_agg(u.full_name ORDER BY u.full_name) "+
 			"FROM preference_list_members m JOIN users u ON u.nuid = m.lead_nuid "+
 			"WHERE m.preference_list_id = pl.id), '{}') AS member_names").
 		Joins("JOIN preference_lists pl ON pl.id = t.preference_list_id").
-		Where("t.draft_id = ?", draftID).
+		Where("t.draft_id IN ?", draftIDs).
 		Order("t.position").
 		Find(&teams).Error
 	return teams, err
 }
 
-func (d *DraftDB) ListDraftPicks(ctx context.Context, draftID string) ([]models.DraftPickDetail, error) {
+func (d *DraftDB) draftPicks(ctx context.Context, draftIDs []string) ([]models.DraftPickDetail, error) {
 	picks := []models.DraftPickDetail{}
 	err := d.db.WithContext(ctx).Table("draft_picks p").
 		Select("p.*, COALESCE(u.full_name, '') AS full_name, COALESCE(u.email, '') AS email").
 		Joins("JOIN applications a ON a.id = p.application_id").
 		Joins("LEFT JOIN users u ON u.nuid = a.user_nuid").
-		Where("p.draft_id = ?", draftID).
+		Where("p.draft_id IN ?", draftIDs).
 		Order("p.pick_number").
 		Find(&picks).Error
 	return picks, err
 }
 
+func (d *DraftDB) DraftBoards(ctx context.Context, cycleID string, roleIDs []string) ([]models.DraftBoard, error) {
+	q := d.db.WithContext(ctx).Table("drafts dr").Select("dr.*").
+		Joins("JOIN roles r ON r.id = dr.role_id").
+		Where("dr.cycle_id = ?", cycleID).
+		Order("r.created_at").Order("dr.id")
+	if len(roleIDs) > 0 {
+		q = q.Where("dr.role_id IN ?", roleIDs)
+	}
+	var drafts []models.Draft
+	if err := q.Find(&drafts).Error; err != nil {
+		return nil, err
+	}
+	boards := make([]models.DraftBoard, 0, len(drafts))
+	if len(drafts) == 0 {
+		return boards, nil
+	}
+	ids := make([]string, len(drafts))
+	for i, dr := range drafts {
+		ids[i] = dr.ID
+	}
+	teams, err := d.draftTeams(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+	picks, err := d.draftPicks(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+	teamsOf := map[string][]models.DraftTeamDetail{}
+	for _, t := range teams {
+		teamsOf[t.DraftID] = append(teamsOf[t.DraftID], t)
+	}
+	picksOf := map[string][]models.DraftPickDetail{}
+	for _, p := range picks {
+		picksOf[p.DraftID] = append(picksOf[p.DraftID], p)
+	}
+	for _, dr := range drafts {
+		t, p := teamsOf[dr.ID], picksOf[dr.ID]
+		if t == nil {
+			t = []models.DraftTeamDetail{}
+		}
+		if p == nil {
+			p = []models.DraftPickDetail{}
+		}
+		boards = append(boards, assembleBoard(dr, t, p))
+	}
+	return boards, nil
+}
+
 // DraftBoard assembles the order, the picks, and which slot is on the clock.
 func (d *DraftDB) DraftBoard(ctx context.Context, draft models.Draft) (models.DraftBoard, error) {
-	board := models.DraftBoard{Draft: draft}
 	teams, err := d.ListDraftTeams(ctx, draft.ID)
 	if err != nil {
-		return board, err
+		return models.DraftBoard{Draft: draft}, err
 	}
 	picks, err := d.ListDraftPicks(ctx, draft.ID)
 	if err != nil {
-		return board, err
+		return models.DraftBoard{Draft: draft}, err
 	}
-	board.Teams = teams
-	board.Picks = picks
+	return assembleBoard(draft, teams, picks), nil
+}
+
+func assembleBoard(draft models.Draft, teams []models.DraftTeamDetail, picks []models.DraftPickDetail) models.DraftBoard {
+	board := models.DraftBoard{Draft: draft, Teams: teams, Picks: picks}
 	board.Slots = SlotOwners(teams, picks, draft.Rounds)
 	if draft.Status != models.DraftActive || len(teams) == 0 {
-		return board, nil
+		return board
 	}
 	slot := nextOpenSlot(pickNumbers(picks), draft.Rounds*len(teams))
 	if slot == 0 {
-		return board, nil
+		return board
 	}
 	board.OnTheClock = slot
 	board.OnTheClockTeamID = ownerOf(board.Slots, slot)
-	return board, nil
+	return board
 }
 
 // nextOpenSlot is the lowest unfilled pick number, so undoing a pick mid-board

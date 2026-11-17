@@ -29,12 +29,12 @@ import type {
 import type {
   DecisionRow,
   DecisionTemplate,
+  DecisionsOutputBody,
   ErrorModel,
   ListDecisionContext200,
   ListDecisionContextParams,
   ListDecisionTemplates200,
   ListDecisionTemplatesParams,
-  ListDecisions200,
   ListDecisionsParams,
   MarkSentInputBody,
   MarkSentOutputBody,
@@ -320,7 +320,7 @@ export const listDecisions = (
 ) => {
       
       
-      return customInstance<ListDecisions200>(
+      return customInstance<DecisionsOutputBody>(
       {url: `/cycles/${id}/decisions`, method: 'GET',
         params, signal
     },

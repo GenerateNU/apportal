@@ -10,6 +10,7 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/assign"
 	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/staffing"
+	"github.com/GenerateNU/apportal/backend/internal/utils"
 )
 
 type fakeStore struct {
@@ -45,6 +46,21 @@ func (f *fakeStore) Reviewers(_ context.Context, _ string, stages []models.Appli
 			if a.ID == r.ApplicationID && (len(stages) == 0 || slices.Contains(stages, a.Stage)) {
 				out = append(out, r)
 			}
+		}
+	}
+	return out, nil
+}
+
+func (f *fakeStore) ApplicationsPage(ctx context.Context, cycleID string, stages []models.ApplicationStage, _ int, _ *utils.Cursor) ([]models.ApplicationSummary, string, error) {
+	apps, err := f.Applications(ctx, cycleID, stages)
+	return apps, "", err
+}
+
+func (f *fakeStore) ReviewersFor(_ context.Context, ids []string) ([]assignedReviewer, error) {
+	out := []assignedReviewer{}
+	for _, r := range f.reviewers {
+		if slices.Contains(ids, r.ApplicationID) {
+			out = append(out, r)
 		}
 	}
 	return out, nil
@@ -89,9 +105,11 @@ func (f fakeRules) ForKind(_ context.Context, _ string, _ models.StepKind) (staf
 	return p, nil
 }
 
-func (f fakeRules) RequireAdd(_ context.Context, _, roleID string, _ models.StepKind) error {
-	if f.frozen[roleID] {
-		return huma.Error409Conflict("frozen")
+func (f fakeRules) RequireAdd(_ context.Context, _ string, roleIDs []string, _ models.StepKind) error {
+	for _, roleID := range roleIDs {
+		if f.frozen[roleID] {
+			return huma.Error409Conflict("frozen")
+		}
 	}
 	return nil
 }

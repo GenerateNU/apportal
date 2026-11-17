@@ -2,6 +2,8 @@ package cycle
 
 import (
 	"context"
+	"slices"
+	"time"
 
 	"gorm.io/gorm"
 
@@ -71,43 +73,91 @@ func (c *CycleDB) GetCycle(ctx context.Context, id string, f CycleFilter) (model
 	return cycle, utils.DBErr(err)
 }
 
-// CycleRoleSummary counts a role's questions (including global ones),
-// challenges, and submitted applications within a cycle.
-func (c *CycleDB) CycleRoleSummary(ctx context.Context, cycleID string, role string) (models.CycleRoleSummary, error) {
+// CycleRoleSummaries reports every role of the given cycles, in cycle order then role order.
+func (c *CycleDB) CycleRoleSummaries(ctx context.Context, cycleIDs []string) ([]models.CycleRoleSummary, error) {
 	db := c.db.WithContext(ctx)
-	var questions, challenges, submissions int64
-	err := db.Model(&models.Question{}).
-		Where("cycle_id = ? AND (role_id = ? OR role_id IS NULL)", cycleID, role).
-		Count(&questions).Error
-	if err == nil {
-		err = db.Model(&models.CodeChallenge{}).
-			Where("cycle_id = ? AND role_id = ?", cycleID, role).
-			Count(&challenges).Error
+	out := []models.CycleRoleSummary{}
+	if len(cycleIDs) == 0 {
+		return out, nil
 	}
-	if err == nil {
-		err = db.Model(&models.Application{}).
-			Where("cycle_id = ? AND role_id = ? AND stage != ?", cycleID, role, models.StageDraft).
-			Count(&submissions).Error
+	if err := db.Table("roles r").
+		Select("r.cycle_id, r.id AS role_id, COALESCE(at.title, r.name || ' Application') AS title").
+		Joins("LEFT JOIN application_templates at ON at.cycle_id = r.cycle_id AND at.role_id = r.id").
+		Where("r.cycle_id IN ?", cycleIDs).
+		Order("r.created_at").Order("r.name").
+		Scan(&out).Error; err != nil {
+		return nil, err
 	}
-	var script []struct {
+	slices.SortStableFunc(out, func(a, b models.CycleRoleSummary) int {
+		return slices.Index(cycleIDs, a.CycleID) - slices.Index(cycleIDs, b.CycleID)
+	})
+	type count struct {
+		CycleID string
+		RoleID  *string
+		N       int
+	}
+	type at struct{ cycle, role string }
+	grouped := func(q *gorm.DB) (map[at]int, error) {
+		var rows []count
+		if err := q.Select("cycle_id, role_id, count(*) AS n").Where("cycle_id IN ?", cycleIDs).Group("cycle_id, role_id").Scan(&rows).Error; err != nil {
+			return nil, err
+		}
+		m := map[at]int{}
+		for _, r := range rows {
+			role := ""
+			if r.RoleID != nil {
+				role = *r.RoleID
+			}
+			m[at{r.CycleID, role}] = r.N
+		}
+		return m, nil
+	}
+	questions, err := grouped(db.Model(&models.Question{}))
+	if err != nil {
+		return nil, err
+	}
+	challenges, err := grouped(db.Model(&models.CodeChallenge{}))
+	if err != nil {
+		return nil, err
+	}
+	submissions, err := grouped(db.Model(&models.Application{}).Where("stage != ?", models.StageDraft))
+	if err != nil {
+		return nil, err
+	}
+	var scripts []struct {
+		CycleID   string
+		RoleID    string
 		Questions int
 		Written   bool
 	}
-	if err == nil {
-		err = db.Raw(`SELECT jsonb_array_length(questions) AS questions,
-				(intro_speech <> '' OR jsonb_array_length(questions) > 0) AS written
-			FROM interview_script WHERE cycle_id = ? AND role_id = ?`, cycleID, role).Scan(&script).Error
+	if err := db.Raw(`SELECT cycle_id, role_id, jsonb_array_length(questions) AS questions,
+			(intro_speech <> '' OR jsonb_array_length(questions) > 0) AS written
+		FROM interview_script WHERE cycle_id IN ?`, cycleIDs).Scan(&scripts).Error; err != nil {
+		return nil, err
 	}
-	out := models.CycleRoleSummary{
-		RoleID:          role,
-		QuestionCount:   int(questions),
-		ChallengeCount:  int(challenges),
-		SubmissionCount: int(submissions),
+	script := map[at]int{}
+	for i, sc := range scripts {
+		script[at{sc.CycleID, sc.RoleID}] = i
 	}
-	if len(script) > 0 {
-		out.ScriptQuestions, out.ScriptWritten = script[0].Questions, script[0].Written
+	templates := make([]models.ApplicationTemplate, len(out))
+	for i, sum := range out {
+		templates[i] = models.ApplicationTemplate{CycleID: sum.CycleID, RoleID: sum.RoleID}
 	}
-	return out, err
+	if err := workflow.FillTemplates(db, templates, time.Now()); err != nil {
+		return nil, err
+	}
+	for i := range out {
+		sum := &out[i]
+		k := at{sum.CycleID, sum.RoleID}
+		sum.QuestionCount = questions[at{sum.CycleID, ""}] + questions[k]
+		sum.ChallengeCount = challenges[k]
+		sum.SubmissionCount = submissions[k]
+		sum.Status = templates[i].Status
+		if j, ok := script[k]; ok {
+			sum.ScriptQuestions, sum.ScriptWritten = scripts[j].Questions, scripts[j].Written
+		}
+	}
+	return out, nil
 }
 
 func (c *CycleDB) UpdateCycle(ctx context.Context, id string, in CycleUpdate) (models.Cycle, error) {

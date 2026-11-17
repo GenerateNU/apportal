@@ -13,7 +13,7 @@ import (
 
 type staffPool interface {
 	ForKind(ctx context.Context, cycleID string, kind models.StepKind) (staffing.KindRules, error)
-	RequireAdd(ctx context.Context, cycleID, roleID string, kind models.StepKind) error
+	RequireAdd(ctx context.Context, cycleID string, roleIDs []string, kind models.StepKind) error
 }
 
 type reviewService struct {

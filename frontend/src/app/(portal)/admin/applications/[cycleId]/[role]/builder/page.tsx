@@ -5,6 +5,7 @@ import {
   QueryClient,
 } from '@tanstack/react-query'
 import { getServerRequestOptions } from '@/lib/api/server-request-options'
+import { requireChief } from '@/lib/auth/guards'
 import { FormBuilderClient } from './components/FormBuilderClient'
 import { prefetchFormBuilder } from './lib/prefetch'
 
@@ -18,6 +19,7 @@ export default async function FormBuilderPage({
   params: Promise<{ cycleId: string; role: string }>
 }) {
   const { cycleId, role: roleId } = await params
+  await requireChief(cycleId)
   const queryClient = new QueryClient()
   const loaded = await prefetchFormBuilder(
     queryClient,

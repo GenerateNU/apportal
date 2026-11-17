@@ -46,7 +46,6 @@ func (s *Service) ForKind(ctx context.Context, cycleID string, kind models.StepK
 	return out, nil
 }
 
-// RequireAdd authorizes adding to an opening outside a Guard check, recording it when it goes ahead as an override.
-func (s *Service) RequireAdd(ctx context.Context, cycleID, roleID string, kind models.StepKind) error {
-	return workflow.NewService(s.db).RequireAssignmentChange(ctx, cycleID, roleID, WorkOf(kind), false)
+func (s *Service) RequireAdd(ctx context.Context, cycleID string, roleIDs []string, kind models.StepKind) error {
+	return workflow.NewService(s.db).RequireAssignmentChanges(ctx, cycleID, roleIDs, WorkOf(kind), false)
 }

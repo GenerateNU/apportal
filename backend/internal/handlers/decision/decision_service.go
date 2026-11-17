@@ -91,6 +91,16 @@ func (s *decisionService) list(ctx context.Context, in *ListDecisionsInput) (*De
 		CycleID:         in.ID,
 		InterviewerNUID: in.InterviewerNUID,
 		Search:          in.Search,
+		Limit:           in.Limit,
+	}
+	after, err := utils.ParseCursor(in.Cursor)
+	if err != nil {
+		return nil, err
+	}
+	filter.After = after
+	if in.Status != "" {
+		st := models.DecisionStatus(in.Status)
+		filter.Status = &st
 	}
 	if in.RoleID != "" {
 		if err := role.ParseRoleID(in.RoleID); err != nil {
@@ -117,14 +127,14 @@ func (s *decisionService) list(ctx context.Context, in *ListDecisionsInput) (*De
 	if !cycle.Allows(access.ManageCycle) {
 		filter.InterviewerNUID = utils.CurrentActor(ctx).NUID
 	}
-	rows, err := s.decisionDB.ListDecisions(ctx, filter)
+	page, err := s.decisionDB.ListDecisions(ctx, filter)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
-	if rows == nil {
-		rows = []models.DecisionRow{}
-	}
-	return &DecisionsOutput{Body: rows}, nil
+	out := &DecisionsOutput{}
+	out.Body.Rows, out.Body.Total, out.Body.StatusCounts = page.Rows, page.Total, page.StatusCounts
+	out.Body.NextCursor = page.NextCursor
+	return out, nil
 }
 
 func (s *decisionService) upsert(ctx context.Context, in *UpsertDecisionInput) (*DecisionOutput, error) {
@@ -297,7 +307,7 @@ func (s *decisionService) contextRows(ctx context.Context, ids []string, nuid st
 		if err != nil {
 			return nil, utils.StoreErr(err)
 		}
-		rows = append(rows, part...)
+		rows = append(rows, part.Rows...)
 	}
 	return rows, nil
 }

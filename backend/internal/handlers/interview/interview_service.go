@@ -3,11 +3,15 @@ package interview
 import (
 	"context"
 
+	"gorm.io/gorm"
+
+	"github.com/danielgtaylor/huma/v2"
+
 	"github.com/GenerateNU/apportal/backend/internal/handlers/application"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/interviewassignment"
+	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
 	"github.com/GenerateNU/apportal/backend/internal/workflow"
-	"github.com/danielgtaylor/huma/v2"
 
 	"github.com/GenerateNU/apportal/backend/internal/access"
 )
@@ -56,19 +60,8 @@ func (s *interviewService) upsert(ctx context.Context, in *UpsertInterviewInput)
 	if in.Body.Submit || in.Body.Writeup != nil || in.Body.Rating != nil {
 		work = workflow.WorkInterview
 	}
-	if err := s.workflow.RequireWorkEditable(ctx, in.ID, work); err != nil {
-		return nil, err
-	}
 	actor := utils.CurrentActor(ctx)
-	current, err := s.interviewDB.GetInterviewDetail(ctx, in.ID)
-	if err != nil {
-		return nil, utils.StoreErr(err)
-	}
-	if in.Body.Submit && in.Body.Rating == nil && current.Rating == nil {
-		return nil, huma.Error422UnprocessableEntity("a rating is required to submit")
-	}
-
-	err = s.interviewDB.UpsertInterview(ctx, InterviewUpsert{
+	err = s.interviewDB.SaveInterview(ctx, InterviewUpsert{
 		ApplicationID:   in.ID,
 		InterviewerNUID: actor.NUID,
 		ScheduledAt:     in.Body.ScheduledAt,
@@ -78,15 +71,22 @@ func (s *interviewService) upsert(ctx context.Context, in *UpsertInterviewInput)
 		Rating:          in.Body.Rating,
 		Writeup:         in.Body.Writeup,
 		Submit:          in.Body.Submit,
+	}, func(tx *gorm.DB, current *models.Interview) error {
+		if err := s.workflow.In(tx).RequireWorkEditable(ctx, in.ID, work); err != nil {
+			return err
+		}
+		if in.Body.Submit && in.Body.Rating == nil && (current == nil || current.Rating == nil) {
+			return huma.Error422UnprocessableEntity("a rating is required to submit")
+		}
+		return nil
+	}, func(tx *gorm.DB) error {
+		if !in.Body.Submit {
+			return nil
+		}
+		return application.AdvanceToInterviewReview(ctx, tx, in.ID)
 	})
 	if err != nil {
 		return nil, utils.StoreErr(err)
-	}
-
-	if in.Body.Submit {
-		if err := s.applicationDB.AdvanceApplicationToInterviewReview(ctx, in.ID); err != nil {
-			return nil, utils.StoreErr(err)
-		}
 	}
 
 	iv, err := s.interviewDB.GetInterviewDetail(ctx, in.ID)

@@ -1,9 +1,11 @@
 import { PageContainer } from '@/components/PageContainer'
+import { requireChief } from '@/lib/auth/guards'
 import { LetterTemplatesClient } from './components/LetterTemplatesClient'
 
 export const dynamic = 'force-dynamic'
 
-export default function LetterTemplatesPage() {
+export default async function LetterTemplatesPage() {
+  await requireChief()
   return (
     <PageContainer>
       <LetterTemplatesClient />

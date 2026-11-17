@@ -38,6 +38,12 @@ type CycleTemplateSummaryOutput struct {
 	Body []models.CycleRoleSummary
 }
 
+const maxBulkCycles = 200
+
+type TemplateSummariesInput struct {
+	CycleIDs string `query:"cycle_ids" doc:"Comma-separated cycle ids"`
+}
+
 type CycleIDInput struct {
 	ID string `path:"id"`
 }

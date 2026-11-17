@@ -8,6 +8,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/GenerateNU/apportal/backend/internal/middleware"
+	"github.com/GenerateNU/apportal/backend/internal/models"
 )
 
 type PreviewItem struct {
@@ -135,15 +136,14 @@ func (p *Preview) enforce(tx *gorm.DB, f *CycleState) error {
 			return err
 		}
 	}
+	var rows []models.WorkflowOverride
 	for _, op := range p.ops {
 		op = p.withLevel(op)
 		if d := f.CheckPermission(op); d.Level != LevelNormal {
-			if err := recordOverride(tx, f.CycleID, op, d, p); err != nil {
-				return err
-			}
+			rows = append(rows, overrideRow(f.CycleID, op, d, p))
 		}
 	}
-	return nil
+	return insertOverrides(tx, rows)
 }
 
 // Authorize enforces each operation and records, in tx, the ones that went through as a confirmed override.
@@ -154,11 +154,14 @@ func Authorize(tx *gorm.DB, f *CycleState, ops ...Operation) error {
 	return recordAll(tx, f, ops)
 }
 
-// authorizeOnSuccess is Authorize for checks that run before a handler's own write: the overrides are recorded only
-// once the request succeeds, so a write that fails afterwards leaves no audit row.
+// authorizeOnSuccess is Authorize for checks ahead of a handler's own write: inside a transaction the overrides commit
+// with it; otherwise they are recorded once the request succeeds, so a write that fails leaves no audit row.
 func authorizeOnSuccess(ctx context.Context, db *gorm.DB, f *CycleState, ops ...Operation) error {
 	if err := enforceAll(f, ops); err != nil {
 		return err
+	}
+	if _, inTx := db.Statement.ConnPool.(gorm.TxCommitter); inTx {
+		return recordAll(db, f, ops)
 	}
 	return middleware.OnSuccess(ctx, func() error { return recordAll(db, f, ops) })
 }
@@ -174,17 +177,16 @@ func enforceAll(f *CycleState, ops []Operation) error {
 
 func recordAll(tx *gorm.DB, f *CycleState, ops []Operation) error {
 	seen := map[Operation]bool{}
+	var rows []models.WorkflowOverride
 	for _, op := range ops {
 		d := f.CheckPermission(op)
 		if d.Level == LevelNormal || seen[op] {
 			continue
 		}
 		seen[op] = true
-		if err := recordOverride(tx, f.CycleID, op, d, nil); err != nil {
-			return err
-		}
+		rows = append(rows, overrideRow(f.CycleID, op, d, nil))
 	}
-	return nil
+	return insertOverrides(tx, rows)
 }
 
 func orEmpty(s []string) []string {

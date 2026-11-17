@@ -30,6 +30,7 @@ const (
 	SubmitRecordingReview
 	WriteDecisionFeedback
 	EditDecisionLetter
+	WriteReview // a chief, or a lead assigned to review this application
 	applicationActionCount
 )
 
@@ -50,6 +51,7 @@ const (
 	unassigned assignment = iota
 	interviewer
 	recordingReviewer
+	leadReviewer
 )
 
 // applicationPolicy allows the action to anyone with level on the cycle, the
@@ -73,6 +75,7 @@ var applicationPolicies = map[ApplicationAction]applicationPolicy{
 	SubmitRecordingReview:   {assigned: recordingReviewer, denied: "only an assigned recording reviewer may submit this review"},
 	WriteDecisionFeedback:   {level: Manage, assigned: interviewer, denied: "only this applicant's interviewer or a chief can write their decision"},
 	EditDecisionLetter:      {level: Manage, denied: "chief role required to change the kind, override the message, or mark it sent"},
+	WriteReview:             {level: Manage, assigned: leadReviewer, denied: "only a reviewer assigned to this application can review it"},
 }
 
 // CycleAccess is what the caller may do with one cycle.
@@ -123,6 +126,7 @@ type ApplicationAccess struct {
 	draft             bool
 	interviewer       bool
 	recordingReviewer bool
+	leadReviewer      bool
 }
 
 func (a ApplicationAccess) Allows(action ApplicationAction) bool {
@@ -162,6 +166,8 @@ func (a ApplicationAccess) has(job assignment) bool {
 		return a.interviewer
 	case recordingReviewer:
 		return a.recordingReviewer
+	case leadReviewer:
+		return a.leadReviewer
 	}
 	return false
 }

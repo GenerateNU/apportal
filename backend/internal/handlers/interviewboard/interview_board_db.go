@@ -6,10 +6,11 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/GenerateNU/apportal/backend/internal/models"
+	"github.com/GenerateNU/apportal/backend/internal/utils"
 	"github.com/GenerateNU/apportal/backend/internal/workflow"
 )
 
-func boardApplicants(db *gorm.DB, cycleID, roleID string, history bool) ([]InterviewBoardRow, error) {
+func boardApplicants(db *gorm.DB, cycleID, roleID string, history bool, limit int, after *utils.Cursor) ([]InterviewBoardRow, string, error) {
 	rows := []InterviewBoardRow{}
 	q := db.Table("applications a").
 		Select("a.id AS application_id, a.user_nuid AS applicant_nuid, COALESCE(u.full_name, a.user_nuid) AS full_name, COALESCE(u.email, '') AS email, a.role_id, a.stage").
@@ -24,7 +25,21 @@ func boardApplicants(db *gorm.DB, cycleID, roleID string, history bool) ([]Inter
 	if roleID != "" {
 		q = q.Where("a.role_id = ?", roleID)
 	}
-	return rows, q.Scan(&rows).Error
+	if limit > 0 {
+		if after != nil {
+			q = q.Where("(COALESCE(u.full_name, a.user_nuid), a.id) > (?, ?::uuid)", after.Text, after.ID)
+		}
+		q = q.Limit(limit + 1)
+	}
+	if err := q.Scan(&rows).Error; err != nil {
+		return nil, "", err
+	}
+	rows, more := utils.TrimPage(rows, limit)
+	if !more {
+		return rows, "", nil
+	}
+	last := rows[len(rows)-1]
+	return rows, utils.Cursor{Text: last.FullName, ID: last.ApplicationID}.Encode(), nil
 }
 
 type boardPersonRow struct {

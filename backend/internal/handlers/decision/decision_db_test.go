@@ -8,6 +8,7 @@ import (
 
 	appdb "github.com/GenerateNU/apportal/backend/internal/db"
 	"github.com/GenerateNU/apportal/backend/internal/models"
+	"github.com/GenerateNU/apportal/backend/internal/testutil"
 )
 
 // decisionsFrom backs both the list and the single-row authorization lookup,
@@ -91,7 +92,8 @@ func TestDecisionsFromEscapesSearch(t *testing.T) {
 	}
 }
 
-func TestDecisionStatusFor(t *testing.T) {
+func TestDecisionStatusExpr(t *testing.T) {
+	db := testutil.TestDB(t)
 	text := "written"
 	empty := ""
 	sent := time.Now()
@@ -149,7 +151,13 @@ func TestDecisionStatusFor(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := DecisionStatusFor(tc.kind, tc.feedback, tc.compliments, tc.bodyOverride, tc.sentAt)
+			var got models.DecisionStatus
+			err := db.Raw(`SELECT `+decisionStatusExpr+` FROM (SELECT ?::decision_kind AS kind, ?::text AS feedback, ?::text AS compliments,
+				?::text AS body_override, ?::timestamptz AS sent_at) dd, (SELECT NULL::text[] AS nuids) ivs`,
+				tc.kind, tc.feedback, tc.compliments, tc.bodyOverride, tc.sentAt).Scan(&got).Error
+			if err != nil {
+				t.Fatal(err)
+			}
 			if got != tc.want {
 				t.Errorf("got %q, want %q", got, tc.want)
 			}

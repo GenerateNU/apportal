@@ -7,13 +7,19 @@
 A write the workflow flags as an override or destructive answers 409 with an error at `query.confirm_override`; chiefs and admins repeat it with `?confirm_override=true` to go ahead, and it is recorded.
  * OpenAPI spec version: 0.1.0
  */
+import type { CycleRoleSummaryStatus } from './cycleRoleSummaryStatus';
 
 export interface CycleRoleSummary {
   challenge_count: number;
+  cycle_id: string;
   question_count: number;
   role_id: string;
   script_questions: number;
   /** The interview script has an opening or a question */
   script_written: boolean;
+  /** Whether the role's applications are open */
+  status: CycleRoleSummaryStatus;
   submission_count: number;
+  /** The application form's title */
+  title: string;
 }

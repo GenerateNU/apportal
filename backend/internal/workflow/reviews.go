@@ -56,11 +56,6 @@ func setPeerRelease(db *gorm.DB, cycleID, roleID string, k models.ReviewKind, re
 	})
 }
 
-type gateCount struct {
-	RoleID string
-	N      int
-}
-
 // loadReviewGates reports, per opening and review kind, assignment and submission progress and whether peers are released.
 func loadReviewGates(db *gorm.DB, cycleID string) ([]models.ReviewGate, error) {
 	f, err := Load(db, cycleID)
@@ -71,23 +66,31 @@ func loadReviewGates(db *gorm.DB, cycleID string) ([]models.ReviewGate, error) {
 	writtenDone := db.Table("written_reviews wr").Joins("JOIN applications a ON a.id = wr.application_id").Where("wr.submitted_at IS NOT NULL")
 	recording := db.Table("interview_reviewers r").Joins("JOIN interviews i ON i.id = r.interview_id").Joins("JOIN applications a ON a.id = i.application_id")
 	recordingDone := db.Table("interview_reviewers r").Joins("JOIN interviews i ON i.id = r.interview_id").Joins("JOIN applications a ON a.id = i.application_id").Where("r.writeup_submitted_at IS NOT NULL")
+	var rows []struct {
+		Kind   models.ReviewKind
+		Done   bool
+		RoleID string
+		N      int
+	}
+	scope := func(q *gorm.DB, k models.ReviewKind, done bool) *gorm.DB {
+		return q.Select("? AS kind, ? AS done, a.role_id, count(*) AS n", k, done).Where("a.cycle_id = ?", cycleID).Group("a.role_id")
+	}
+	if err := db.Raw("? UNION ALL ? UNION ALL ? UNION ALL ?",
+		scope(written, models.ReviewKindWritten, false), scope(writtenDone, models.ReviewKindWritten, true),
+		scope(recording, models.ReviewKindRecording, false), scope(recordingDone, models.ReviewKindRecording, true),
+	).Scan(&rows).Error; err != nil {
+		return nil, err
+	}
 	counts := map[models.ReviewKind][2]map[string]int{}
-	for k, qs := range map[models.ReviewKind][2]*gorm.DB{
-		models.ReviewKindWritten:   {written, writtenDone},
-		models.ReviewKindRecording: {recording, recordingDone},
-	} {
-		var pair [2]map[string]int
-		for i, q := range qs {
-			var rows []gateCount
-			if err := q.Select("a.role_id, count(*) AS n").Where("a.cycle_id = ?", cycleID).Group("a.role_id").Scan(&rows).Error; err != nil {
-				return nil, err
-			}
-			pair[i] = map[string]int{}
-			for _, r := range rows {
-				pair[i][r.RoleID] = r.N
-			}
+	for _, k := range []models.ReviewKind{models.ReviewKindWritten, models.ReviewKindRecording} {
+		counts[k] = [2]map[string]int{{}, {}}
+	}
+	for _, r := range rows {
+		i := 0
+		if r.Done {
+			i = 1
 		}
-		counts[k] = pair
+		counts[r.Kind][i][r.RoleID] = r.N
 	}
 	var releases []models.ReviewRelease
 	if err := db.Where("cycle_id = ?", cycleID).Find(&releases).Error; err != nil {

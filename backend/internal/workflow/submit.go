@@ -116,6 +116,13 @@ type Service struct {
 
 func NewService(db *gorm.DB) *Service { return &Service{db: db, now: time.Now} }
 
+// In runs the Service's checks inside tx, so they hold for the caller's write and record overrides with it.
+func (s *Service) In(tx *gorm.DB) *Service {
+	c := *s
+	c.db = tx
+	return &c
+}
+
 func (s *Service) WithClock(now func() time.Time) *Service {
 	c := *s
 	c.now = now

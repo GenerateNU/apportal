@@ -40,13 +40,19 @@ func (s *interviewBoardService) board(ctx context.Context, in *BoardInput) (*Boa
 	if err := s.gate.CanCycle(ctx, access.ManageCycle, in.ID); err != nil {
 		return nil, err
 	}
+	after, err := utils.ParseCursor(in.Cursor)
+	if err != nil {
+		return nil, err
+	}
 	db := s.db.WithContext(ctx)
-	rows, err := boardApplicants(db, in.ID, in.RoleID, in.History)
+	rows, next, err := boardApplicants(db, in.ID, in.RoleID, in.History, in.Limit, after)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
+	out := &BoardOutput{}
+	out.Body.Rows, out.Body.NextCursor = rows, next
 	if len(rows) == 0 {
-		return &BoardOutput{Body: rows}, nil
+		return out, nil
 	}
 	ids := make([]string, len(rows))
 	for i, r := range rows {
@@ -82,7 +88,7 @@ func (s *interviewBoardService) board(ctx context.Context, in *BoardInput) (*Boa
 			r.SlotIDs = []string{}
 		}
 	}
-	return &BoardOutput{Body: rows}, nil
+	return out, nil
 }
 
 func orEmpty(p []InterviewBoardPerson) []InterviewBoardPerson {

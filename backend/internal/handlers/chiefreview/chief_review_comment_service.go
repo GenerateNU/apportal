@@ -52,7 +52,7 @@ func (s *chiefReviewCommentService) update(ctx context.Context, in *UpdateChiefR
 	if err := s.workflow.RequireWorkEditable(ctx, in.ID, workflow.WorkChiefReview); err != nil {
 		return nil, err
 	}
-	comment, err := s.chiefReviewDB.UpdateChiefReviewComment(ctx, in.CommentID, utils.CurrentActor(ctx).NUID, in.Body.Body)
+	comment, err := s.chiefReviewDB.UpdateChiefReviewComment(ctx, in.ID, in.CommentID, utils.CurrentActor(ctx).NUID, in.Body.Body)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}

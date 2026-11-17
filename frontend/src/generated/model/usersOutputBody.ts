@@ -14,5 +14,6 @@ export interface UsersOutputBody {
   readonly $schema?: string;
   /** True if more results exist beyond this page */
   has_more: boolean;
+  next_cursor?: string;
   users: UsersOutputBodyUsers;
 }

@@ -44,7 +44,10 @@ func (s *draftService) requireDraftEditable(ctx context.Context, draftID string)
 
 // maxDraftRounds bounds the board so one bad number can't render thousands of
 // empty slots.
-const maxDraftRounds = 50
+const (
+	maxDraftRounds = 50
+	maxBoardRoles  = 50
+)
 
 func (s *draftService) board(ctx context.Context, in *DraftScopedInput) (*DraftBoardOutput, error) {
 	if err := role.ParseRoleID(in.RoleID); err != nil {
@@ -62,6 +65,24 @@ func (s *draftService) board(ctx context.Context, in *DraftScopedInput) (*DraftB
 		return nil, utils.StoreErr(err)
 	}
 	return &DraftBoardOutput{Body: board}, nil
+}
+
+func (s *draftService) boards(ctx context.Context, in *ListDraftBoardsInput) (*DraftBoardsOutput, error) {
+	roleIDs, err := utils.UUIDList("role_ids", utils.SplitIDs(in.RoleIDs))
+	if err != nil {
+		return nil, err
+	}
+	if len(roleIDs) > maxBoardRoles {
+		return nil, huma.Error422UnprocessableEntity("too many role_ids")
+	}
+	if err := s.access.CanCycle(ctx, access.ReviewCycle, in.ID); err != nil {
+		return nil, err
+	}
+	boards, err := s.draftDB.DraftBoards(ctx, in.ID, roleIDs)
+	if err != nil {
+		return nil, utils.StoreErr(err)
+	}
+	return &DraftBoardsOutput{Body: boards}, nil
 }
 
 func (s *draftService) open(ctx context.Context, in *OpenDraftInput) (*DraftOutput, error) {

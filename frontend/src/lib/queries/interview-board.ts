@@ -58,10 +58,8 @@ export function useInterviewBoard(
       : queryKeys.interviewBoard.detail(cycleId),
     queryFn: async () =>
       (
-        ((await getInterviewBoard(
-          cycleId,
-          history ? { history } : undefined
-        )) ?? []) as InterviewBoardRow[]
+        ((await getInterviewBoard(cycleId, history ? { history } : undefined))
+          ?.rows ?? []) as InterviewBoardRow[]
       ).map((r): InterviewEntry => ({
         applicationId: r.application_id,
         applicantNuid: r.applicant_nuid,

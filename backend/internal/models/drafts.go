@@ -42,7 +42,7 @@ type Draft struct {
 type DraftTeam struct {
 	ID               string         `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
 	DraftID          string         `json:"draft_id" gorm:"type:uuid;not null;uniqueIndex:draft_teams_draft_id_preference_list_id_key,priority:1;index:idx_draft_teams_draft,priority:1"`
-	PreferenceListID string         `json:"preference_list_id" gorm:"type:uuid;not null;uniqueIndex:draft_teams_draft_id_preference_list_id_key,priority:2"`
+	PreferenceListID string         `json:"preference_list_id" gorm:"type:uuid;not null;uniqueIndex:draft_teams_draft_id_preference_list_id_key,priority:2;index:idx_draft_teams_preference_list"`
 	Position         int            `json:"position" gorm:"type:integer;not null;index:idx_draft_teams_draft,priority:2"`
 	Draft            Draft          `json:"-" gorm:"foreignKey:DraftID;references:ID;constraint:OnDelete:CASCADE"`
 	PreferenceList   PreferenceList `json:"-" gorm:"foreignKey:PreferenceListID;references:ID;constraint:OnDelete:CASCADE"`
@@ -60,7 +60,7 @@ type DraftPick struct {
 	ID            string      `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
 	DraftID       string      `json:"draft_id" gorm:"type:uuid;not null;uniqueIndex:draft_picks_draft_id_application_id_key,priority:1;uniqueIndex:draft_picks_draft_id_pick_number_key,priority:1;index:idx_draft_picks_draft,priority:1"`
 	PickNumber    int         `json:"pick_number" gorm:"type:integer;not null;check:draft_picks_pick_number_check,pick_number > 0;uniqueIndex:draft_picks_draft_id_pick_number_key,priority:2;index:idx_draft_picks_draft,priority:2"`
-	DraftTeamID   string      `json:"draft_team_id" gorm:"type:uuid;not null"`
+	DraftTeamID   string      `json:"draft_team_id" gorm:"type:uuid;not null;index:idx_draft_picks_team"`
 	ApplicationID string      `json:"application_id" gorm:"type:uuid;not null;index:idx_draft_picks_application;uniqueIndex:draft_picks_draft_id_application_id_key,priority:2"`
 	PreviousStage string      `json:"previous_stage" gorm:"type:application_stage;not null"`
 	PickedBy      string      `json:"picked_by" gorm:"not null"`

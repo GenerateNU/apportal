@@ -68,8 +68,8 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
 /**
- * Applicant-facing; upserts by NUID.
- * @summary Create or update an applicant
+ * Needs a verified session whose email matches the body. Creates your users row the first time; after that only updates your own profile, never email or roles. An NUID already registered is a conflict.
+ * @summary Create or update your profile
  */
 export const upsertApplicant = (
     upsertApplicantInputBody: NonReadonly<UpsertApplicantInputBody>,
@@ -87,7 +87,7 @@ export const upsertApplicant = (
   
 
 
-export const getUpsertApplicantMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel,
+export const getUpsertApplicantMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upsertApplicant>>, TError,{data: NonReadonly<UpsertApplicantInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
 ): UseMutationOptions<Awaited<ReturnType<typeof upsertApplicant>>, TError,{data: NonReadonly<UpsertApplicantInputBody>}, TContext> => {
 
@@ -114,12 +114,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type UpsertApplicantMutationResult = NonNullable<Awaited<ReturnType<typeof upsertApplicant>>>
     export type UpsertApplicantMutationBody = NonReadonly<UpsertApplicantInputBody>
-    export type UpsertApplicantMutationError = ErrorModel | ErrorModel | ErrorModel
+    export type UpsertApplicantMutationError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel
 
     /**
- * @summary Create or update an applicant
+ * @summary Create or update your profile
  */
-export const useUpsertApplicant = <TError = ErrorModel | ErrorModel | ErrorModel,
+export const useUpsertApplicant = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upsertApplicant>>, TError,{data: NonReadonly<UpsertApplicantInputBody>}, TContext>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof upsertApplicant>>,
@@ -133,6 +133,7 @@ export const useUpsertApplicant = <TError = ErrorModel | ErrorModel | ErrorModel
       return useMutation(mutationOptions, queryClient);
     }
     /**
+ * Yourself, or staff who can see one of their applications.
  * @summary Get an applicant
  */
 export const getApplicant = (
@@ -157,7 +158,7 @@ export const getGetApplicantQueryKey = (nuid?: string,) => {
     }
 
     
-export const getGetApplicantQueryOptions = <TData = Awaited<ReturnType<typeof getApplicant>>, TError = ErrorModel | ErrorModel | ErrorModel>(nuid: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getApplicant>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export const getGetApplicantQueryOptions = <TData = Awaited<ReturnType<typeof getApplicant>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel>(nuid: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getApplicant>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -176,10 +177,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetApplicantQueryResult = NonNullable<Awaited<ReturnType<typeof getApplicant>>>
-export type GetApplicantQueryError = ErrorModel | ErrorModel | ErrorModel
+export type GetApplicantQueryError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel
 
 
-export function useGetApplicant<TData = Awaited<ReturnType<typeof getApplicant>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+export function useGetApplicant<TData = Awaited<ReturnType<typeof getApplicant>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
  nuid: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getApplicant>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getApplicant>>,
@@ -189,7 +190,7 @@ export function useGetApplicant<TData = Awaited<ReturnType<typeof getApplicant>>
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetApplicant<TData = Awaited<ReturnType<typeof getApplicant>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+export function useGetApplicant<TData = Awaited<ReturnType<typeof getApplicant>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
  nuid: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getApplicant>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getApplicant>>,
@@ -199,7 +200,7 @@ export function useGetApplicant<TData = Awaited<ReturnType<typeof getApplicant>>
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetApplicant<TData = Awaited<ReturnType<typeof getApplicant>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+export function useGetApplicant<TData = Awaited<ReturnType<typeof getApplicant>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
  nuid: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getApplicant>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
@@ -207,7 +208,7 @@ export function useGetApplicant<TData = Awaited<ReturnType<typeof getApplicant>>
  * @summary Get an applicant
  */
 
-export function useGetApplicant<TData = Awaited<ReturnType<typeof getApplicant>>, TError = ErrorModel | ErrorModel | ErrorModel>(
+export function useGetApplicant<TData = Awaited<ReturnType<typeof getApplicant>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
  nuid: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getApplicant>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {

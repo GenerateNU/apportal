@@ -69,7 +69,7 @@ export default async function DecisionsPage() {
       queryClient.prefetchQuery({
         queryKey: queryKeys.decisions.list(cycleId, params),
         queryFn: async () =>
-          ((await listDecisions(cycleId, params, requestOptions)) ??
+          ((await listDecisions(cycleId, params, requestOptions))?.rows ??
             []) as DecisionRow[],
       }),
       reviewer.isChief &&
