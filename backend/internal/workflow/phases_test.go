@@ -94,4 +94,17 @@ func TestPhasesLockUntilSetUp(t *testing.T) {
 	if r, _ := pageLock(f.Phases(now), interviews, PageInterviewProgress); r != "" {
 		t.Fatalf("interview progress once released: %q", r)
 	}
+
+	f.CompletedAt[models.StepInterviews] = &past
+	decisions := string(models.StepDecisions)
+	if r, _ := pageLock(f.Phases(now), decisions, PageDraft); r != "Opens once the preference list deadline passes." {
+		t.Fatalf("draft before the deadline: %q", r)
+	}
+	f.SetDeadline(swe, models.StepDecisions, Deadline{Kind: models.KindPreferenceList, DueAt: past})
+	if r, _ := pageLock(f.Phases(now), decisions, PageDraft); r != "" {
+		t.Fatalf("draft once preference lists close: %q", r)
+	}
+	if _, ok := pageLock(f.Phases(now), decisions, PageWrapUp); ok {
+		t.Fatal("decisions has no wrap up page")
+	}
 }

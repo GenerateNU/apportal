@@ -97,6 +97,8 @@ type PreferenceListCreate struct {
 	CycleID   string
 	Name      string
 	CreatedBy string
+	// Leads join the team they create so they can see it; chiefs don't.
+	Join bool
 }
 
 // PreferenceListUpdate carries a partial rename/status change. Submitting

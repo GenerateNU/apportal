@@ -7,6 +7,8 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { ArrowRight } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { Input } from '@/components/ui/input'
 import {
   Dialog,
@@ -39,6 +41,7 @@ import {
   useOpenDraft,
   useRemoveDraftPick,
   useReplaceDraftPick,
+  useFinishDraft,
   useResetDraft,
   useSetDraftTeams,
   useUpdateDraft,
@@ -100,6 +103,9 @@ export function DraftClient() {
   const removePick = useRemoveDraftPick()
   const replacePick = useReplaceDraftPick()
   const resetDraft = useResetDraft()
+  const finishDraft = useFinishDraft()
+  const router = useRouter()
+  const [finishing, setFinishing] = useState(false)
   // Which filled slot is being reassigned; null while that dialog is closed.
   const [changingSlot, setChangingSlot] = useState<number | null>(null)
   const [changeQuery, setChangeQuery] = useState('')
@@ -117,6 +123,7 @@ export function DraftClient() {
   const [pickError, setPickError] = useState('')
 
   const draftScope = { cycleId, roleId: role, draftId: board?.id ?? '' }
+  const undrafted = pool.filter((a) => a.stage === 'selection').length
   const effectiveOrder =
     order ?? board?.teams.map((t) => t.preference_list_id) ?? []
   const effectiveRounds = rounds ?? board?.rounds ?? 1
@@ -392,6 +399,12 @@ export function DraftClient() {
           >
             {board.status === 'complete' ? 'Reopen draft' : 'Mark complete'}
           </Button>
+          {board.status === 'complete' && (
+            <Button onClick={() => setFinishing(true)}>
+              Finish and go to Decisions
+              <ArrowRight data-icon="inline-end" size={14} />
+            </Button>
+          )}
           <span className="mx-1 h-5 w-px bg-gray-200" aria-hidden />
           <Button
             variant="outline"
@@ -519,6 +532,24 @@ export function DraftClient() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={finishing}
+        onOpenChange={setFinishing}
+        title="Finish the draft?"
+        description={
+          undrafted > 0
+            ? `${undrafted} not drafted will be rejected. Drafted applicants are already accepted.`
+            : 'Everyone left has been drafted.'
+        }
+        confirmLabel="Finish"
+        pending={finishDraft.isPending}
+        onConfirm={() =>
+          finishDraft.mutate(draftScope, {
+            onSuccess: () => router.push('/reviewer/decisions'),
+          })
+        }
+      />
 
       <ConfirmDialog
         open={confirming !== null}

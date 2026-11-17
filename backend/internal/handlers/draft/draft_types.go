@@ -67,6 +67,12 @@ type DraftIDInput struct {
 	ID string `path:"id" doc:"Draft ID"`
 }
 
+type FinishDraftOutput struct {
+	Body struct {
+		Rejected int `json:"rejected" doc:"How many undrafted applicants were turned down"`
+	}
+}
+
 type DraftedApplicationsOutput struct {
 	Body map[string]string
 }

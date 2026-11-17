@@ -1,9 +1,14 @@
 'use client'
 
+import { EmptyState } from '@/components/ui/empty-state'
+import { PageSection } from '@/components/ui/page-section'
+import { CARD_GRID, SECTION } from '@/components/ui/page-shell'
+import { Subheading } from '@/components/ui/subheading'
+
 import { useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { ArrowRight, LayoutGrid, Plus, X } from 'lucide-react'
+import { Plus, Users, X } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -25,19 +30,18 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { DateTimePicker } from '@/components/ui/datetime-picker'
-import { MEETING_DAY_LABEL } from '@/app/(portal)/reviewer/applications/components/meetingAvailability'
 import { pickDefaultCycleId } from '@/lib/queries/cycles'
 import { useStaffCycles } from '@/lib/queries/cycle-staff'
+import { TeamCard } from './TeamCard'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import type { PreferenceListSummary } from '@/lib/api/types'
 import {
   useCreatePreferenceList,
+  useDeletePreferenceList,
   usePreferenceListDeadline,
   usePreferenceLists,
   useSetPreferenceListDeadline,
 } from '@/lib/queries/preference-lists'
-import {
-  PREFERENCE_LIST_STATUS_BADGE,
-  PREFERENCE_LIST_STATUS_LABEL,
-} from '@/lib/preference-list-status'
 import { useCycleRoles, useRoleLookup } from '@/lib/queries/roles'
 
 export function PreferenceListsPageClient({ isChief }: { isChief: boolean }) {
@@ -52,102 +56,111 @@ export function PreferenceListsPageClient({ isChief }: { isChief: boolean }) {
 
   const { roleIds } = useCycleRoles(cycleId)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [deleting, setDeleting] = useState<PreferenceListSummary | null>(null)
+  const deleteList = useDeletePreferenceList()
   const { data: lists = [] } = usePreferenceLists(cycleId)
+
+  const submitted = lists.filter((l) => l.status === 'submitted').length
 
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
-          <Select value={cycleId} onValueChange={setCycleId}>
-            <SelectTrigger className="w-40" aria-label="Filter by cycle">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {cycles.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3">
-          {cycleId && (
-            <Link
-              href={`/reviewer/preference-lists/overview?cycle=${cycleId}`}
-              className="text-ink inline-flex items-center gap-1.5 text-sm hover:underline"
-            >
-              <LayoutGrid size={14} />
-              Compare all groups
-            </Link>
+          {cycles.length > 1 && (
+            <Select value={cycleId} onValueChange={setCycleId}>
+              <SelectTrigger className="h-9 w-40" aria-label="Filter by cycle">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {cycles.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           )}
-          {cycleId && (
-            <Button onClick={() => setDialogOpen(true)}>
-              <Plus data-icon="inline-start" size={14} />
-              Create group
+        </div>
+        {cycleId && (
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" asChild>
+              <Link
+                href={`/reviewer/preference-lists/candidates?cycle=${cycleId}`}
+              >
+                <Users size={14} />
+                View candidates
+              </Link>
             </Button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
-      {isChief && cycleId && (
-        <div className="flex flex-col gap-2">
-          {roleIds.map((r) => (
-            <DeadlineEditor key={r} cycleId={cycleId} role={r} />
-          ))}
-        </div>
+      {!cycleId ? (
+        <EmptyState title="No cycles yet" />
+      ) : (
+        <>
+          {isChief && (
+            <PageSection
+              label="Deadline"
+              hint="Teams can edit their lists until then. The draft unlocks once every deadline passes."
+            >
+              <Card padding="none" className="divide-y divide-gray-100">
+                {roleIds.map((r) => (
+                  <DeadlineEditor key={r} cycleId={cycleId} role={r} />
+                ))}
+              </Card>
+            </PageSection>
+          )}
+          <section className={SECTION}>
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <Subheading
+                title={`Teams · ${lists.length}`}
+                hint={
+                  lists.length > 0
+                    ? `${submitted} of ${lists.length} submitted their list.`
+                    : undefined
+                }
+              />
+              <Button onClick={() => setDialogOpen(true)}>
+                <Plus data-icon="inline-start" size={14} />
+                New team
+              </Button>
+            </div>
+            {lists.length === 0 ? (
+              <EmptyState
+                title="No teams yet"
+                description="Create a team, then open it to add people."
+              />
+            ) : (
+              <div className={CARD_GRID}>
+                {lists.map((list) => (
+                  <TeamCard
+                    key={list.id}
+                    list={list}
+                    onDelete={isChief ? () => setDeleting(list) : undefined}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
+        </>
       )}
 
-      {!cycleId ? (
-        <p className="text-text-faint px-1 text-sm">No cycles yet.</p>
-      ) : lists.length === 0 ? (
-        <p className="text-text-faint px-1 text-sm">
-          No preference list groups yet for this cycle. Create one to get
-          started.
-        </p>
-      ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {lists.map((list) => (
-            <Link
-              key={list.id}
-              href={`/reviewer/preference-lists/${list.id}`}
-              className="group flex flex-col gap-2 border border-gray-200 bg-white p-4 transition-colors hover:bg-gray-50"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <p className="text-text-default truncate text-sm font-medium">
-                  {list.name}
-                </p>
-                <ArrowRight
-                  size={14}
-                  className="text-text-faint group-hover:text-ink mt-0.5 shrink-0 transition-transform group-hover:translate-x-1"
-                />
-              </div>
-              <div className="flex flex-wrap items-center gap-1.5">
-                <Badge
-                  size="sm"
-                  className={PREFERENCE_LIST_STATUS_BADGE[list.status]}
-                >
-                  {PREFERENCE_LIST_STATUS_LABEL[list.status]}
-                </Badge>
-                <span className="text-text-subtle text-xs">
-                  {list.entry_count} entr{list.entry_count === 1 ? 'y' : 'ies'}
-                </span>
-                {list.meeting_day && (
-                  <Badge size="sm" className="bg-ink/10 text-ink">
-                    Meets {MEETING_DAY_LABEL[list.meeting_day]}
-                  </Badge>
-                )}
-              </div>
-              <p className="text-text-subtle truncate text-xs">
-                {list.member_names.length > 0
-                  ? list.member_names.join(', ')
-                  : 'No members yet'}
-              </p>
-            </Link>
-          ))}
-        </div>
-      )}
+      <ConfirmDialog
+        open={!!deleting}
+        onOpenChange={(open) => !open && setDeleting(null)}
+        title="Delete this team?"
+        description={`${deleting?.name ?? ''} and its rankings are deleted for everyone.`}
+        confirmLabel="Delete team"
+        pending={deleteList.isPending}
+        onConfirm={() =>
+          deleting &&
+          deleteList.mutate(
+            { id: deleting.id, cycleId },
+            { onSuccess: () => setDeleting(null) }
+          )
+        }
+      />
 
       <CreateListDialog
         open={dialogOpen}
@@ -162,45 +175,58 @@ function DeadlineEditor({ cycleId, role }: { cycleId: string; role: string }) {
   const { roleLabel } = useRoleLookup()
   const { data: deadline } = usePreferenceListDeadline(cycleId, role)
   const setDeadline = useSetPreferenceListDeadline()
+  const closesAt = deadline?.closes_at ? new Date(deadline.closes_at) : null
+  const [now] = useState(() => Date.now())
+  const closed = !!closesAt && closesAt.getTime() <= now
 
   return (
-    <Card
-      variant="flat"
-      padding="none"
-      className="flex flex-wrap items-center gap-2 px-4 py-3 text-sm"
-    >
-      <span className="text-text-muted font-medium">
-        Submission deadline for {roleLabel(role)}:
-      </span>
-      <DateTimePicker
-        value={deadline?.closes_at ? new Date(deadline.closes_at) : undefined}
-        onValueChange={(date) =>
-          setDeadline.mutate({
-            cycleId,
-            roleId: role,
-            closesAt: date.toISOString(),
-          })
-        }
-        placeholder="No deadline set"
-      />
-      {deadline?.closes_at && (
-        <button
-          type="button"
-          onClick={() =>
-            setDeadline.mutate({ cycleId, roleId: role, closesAt: null })
-          }
-          className="text-text-faint hover:text-text-muted inline-flex items-center gap-1 text-xs"
-        >
-          <X size={12} />
-          Clear
-        </button>
-      )}
-      {setDeadline.isError && (
-        <span className="text-xs text-red-600">
-          Couldn&apos;t save the deadline. Try again.
+    <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
+      <div className="flex min-w-0 items-center gap-2">
+        <span className="text-ink truncate font-semibold">
+          {roleLabel(role)}
         </span>
-      )}
-    </Card>
+        <Badge
+          size="sm"
+          className={
+            !closesAt
+              ? 'text-text-muted bg-gray-100'
+              : closed
+                ? 'bg-green-50 text-green-700'
+                : 'bg-blue-50 text-blue-700'
+          }
+        >
+          {!closesAt ? 'Not set' : closed ? 'Closed' : 'Open'}
+        </Badge>
+      </div>
+      <div className="flex items-center gap-2">
+        {setDeadline.isError && (
+          <span className="text-xs text-red-600">Couldn&apos;t save</span>
+        )}
+        <DateTimePicker
+          value={closesAt ?? undefined}
+          onValueChange={(date) =>
+            setDeadline.mutate({
+              cycleId,
+              roleId: role,
+              closesAt: date.toISOString(),
+            })
+          }
+          placeholder="Set a deadline"
+        />
+        {closesAt && (
+          <Button
+            size="icon"
+            variant="ghost"
+            aria-label="Clear deadline"
+            onClick={() =>
+              setDeadline.mutate({ cycleId, roleId: role, closesAt: null })
+            }
+          >
+            <X size={14} />
+          </Button>
+        )}
+      </div>
+    </div>
   )
 }
 
@@ -236,15 +262,14 @@ function CreateListDialog({
       <DialogContent className="sm:max-w-lg">
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <DialogHeader>
-            <DialogTitle>New preference list group</DialogTitle>
+            <DialogTitle>New team</DialogTitle>
             <DialogDescription>
-              Covers every role in the cycle. You&apos;ll be added as its first
-              member. Invite other leads once it&apos;s created.
+              Add people to it once it&apos;s created.
             </DialogDescription>
           </DialogHeader>
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="preference-list-name">Group name</Label>
+            <Label htmlFor="preference-list-name">Team name</Label>
             <Input
               id="preference-list-name"
               autoFocus

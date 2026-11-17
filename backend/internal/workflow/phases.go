@@ -47,7 +47,7 @@ var stepPages = map[models.Step][]Page{
 	models.StepApplications: {PageApplicationForms, PageReviewForms, PageApplicants},
 	models.StepReviews:      {PageAssignReviewers, PageReviewProgress, PageShortlist},
 	models.StepInterviews:   {PageInterviewScript, PageAssignInterviewers, PageInterviewProgress},
-	models.StepDecisions:    {PagePreferenceLists, PageDraft, PageWrapUp},
+	models.StepDecisions:    {PagePreferenceLists, PageDraft},
 	models.StepFeedback:     {PageFeedback, PageWrapUp},
 }
 
@@ -109,12 +109,27 @@ func (f *CycleState) pageLock(pg Page, now time.Time) *string {
 		if !f.releasedAnywhere(models.StepInterviews) {
 			return reason("Opens once you release interviews.")
 		}
+	case PageDraft:
+		if !f.preferenceListsClosed(now) {
+			return reason("Opens once the preference list deadline passes.")
+		}
 	case PageShortlist:
 		if !f.reviewsIn(now) {
 			return reason("Opens once every review is in or the review deadline passes.")
 		}
 	}
 	return nil
+}
+
+// preferenceListsClosed is every opening's preference list deadline set and passed.
+func (f *CycleState) preferenceListsClosed(now time.Time) bool {
+	for _, o := range f.Openings {
+		d, ok := f.Deadline(o.RoleID, models.StepDecisions, models.KindPreferenceList)
+		if !ok || d.DueAt.After(now) {
+			return false
+		}
+	}
+	return len(f.Openings) > 0
 }
 
 func (f *CycleState) releasedAnywhere(s models.Step) bool {

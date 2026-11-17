@@ -119,3 +119,11 @@ func (s *Service) CloseCycle(ctx context.Context, cycleID string) (models.Cycle,
 	}
 	return closeCycle(db, cycleID, c)
 }
+
+func (s *Service) Decide(ctx context.Context, cycleID, roleID string, accepted []string) ([]string, Preview, error) {
+	db, c, err := s.as(ctx, cycleID)
+	if err != nil {
+		return nil, Preview{}, err
+	}
+	return decide(db, cycleID, roleID, accepted, c, s.now())
+}

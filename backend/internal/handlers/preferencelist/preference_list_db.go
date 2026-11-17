@@ -46,6 +46,9 @@ func (p *PreferenceListDB) CreatePreferenceList(ctx context.Context, in Preferen
 		if err := utils.Insert(tx, &list, "cycle_id", "name", "created_by"); err != nil {
 			return err
 		}
+		if !in.Join {
+			return nil
+		}
 		member := models.PreferenceListMember{PreferenceListID: list.ID, LeadNUID: in.CreatedBy, AddedBy: in.CreatedBy}
 		return tx.Select("preference_list_id", "lead_nuid", "added_by").Create(&member).Error
 	})
@@ -220,14 +223,6 @@ func (p *PreferenceListDB) AddPreferenceListMember(ctx context.Context, listID, 
 	member := models.PreferenceListMember{PreferenceListID: listID, LeadNUID: leadNUID, AddedBy: addedBy}
 	err := utils.Insert(p.db.WithContext(ctx), &member, "preference_list_id", "lead_nuid", "added_by")
 	return member, err
-}
-
-// CountPreferenceListMembers backs the handler's member cap, which lives in
-// code rather than a constraint so it's easy to change.
-func (p *PreferenceListDB) CountPreferenceListMembers(ctx context.Context, listID string) (int, error) {
-	var n int64
-	err := p.db.WithContext(ctx).Model(&models.PreferenceListMember{}).Where("preference_list_id = ?", listID).Count(&n).Error
-	return int(n), err
 }
 
 // RemovePreferenceListMember is scoped to the list so a member id from one

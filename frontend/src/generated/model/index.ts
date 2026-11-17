@@ -146,6 +146,7 @@ export * from './draftTeamDetailMemberNames';
 export * from './errorDetail';
 export * from './errorModel';
 export * from './errorModelErrors';
+export * from './finishDraftOutputBody';
 export * from './getApplicationTemplateParams';
 export * from './getDraftBoardParams';
 export * from './getInterviewBoard200';

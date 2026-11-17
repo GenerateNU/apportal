@@ -357,3 +357,19 @@ func TestScenarioShortlistRejectsTheRest(t *testing.T) {
 	f.wantStage(f.apps[0], models.StageLeadReview)
 	f.wantStage(f.apps[1], models.StageLeadReview)
 }
+
+func TestScenarioDecideRejectsTheUndrafted(t *testing.T) {
+	f := newFixture(t)
+	picked := f.application(f.cycleA, f.roleA, models.StageAccepted)
+	left := f.application(f.cycleA, f.roleA, models.StageSelection)
+	f.exec("UPDATE applications SET stage = 'rejected' WHERE id IN ?", f.apps)
+	_, _, err := f.s.workflow.Decide(f.confirmed(f.admin), f.cycleA, f.roleA, nil)
+	f.must(err)
+	f.wantStage(picked, models.StageAccepted)
+	f.wantStage(left, models.StageRejected)
+	var done int64
+	f.must(f.db.Model(&models.CycleStep{}).Where("cycle_id = ? AND step = ? AND completed_at IS NOT NULL", f.cycleA, models.StepDecisions).Count(&done).Error)
+	if done != 1 {
+		t.Fatal("decisions should close once nobody is left in it")
+	}
+}

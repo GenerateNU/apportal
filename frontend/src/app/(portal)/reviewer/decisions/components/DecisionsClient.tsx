@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button'
 import { LoadingText } from '@/components/ui/loading-text'
 import { PageHeader } from '@/components/ui/page-header'
 import { SearchInput } from '@/components/ui/search-input'
+import { SegmentedTabs } from '@/components/ui/segmented-tabs'
+import { EmptyState } from '@/components/ui/empty-state'
 import {
   Select,
   SelectContent,
@@ -14,23 +16,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import type { DecisionKind, DecisionRow, DecisionStatus } from '@/lib/api/types'
+import type { DecisionRow, DecisionStatus } from '@/lib/api/types'
 import { defaultPipelineCycleId } from '@/lib/cycles'
 import { useDecisionTemplates, useDecisions } from '@/lib/queries/decisions'
 import { useStaffCycles } from '@/lib/queries/cycle-staff'
-import { KIND_LABEL, STATUS_LABEL } from './constants'
 import { DecisionListRow } from './DecisionListRow'
 import { TemplateDialog } from './TemplateDialog'
 import { useCopy } from './useCopy'
 import { useCycleRolePicker } from '@/hooks/useRoleSelection'
 
-type KindFilter = DecisionKind | 'all'
 type StatusFilter = DecisionStatus | 'all'
 
-// The chief/admin board: every applicant in the cycle awaiting a message, each
-// one a finished letter to copy out and mark sent. Leads get a queue and a
-// per-applicant writing screen instead — see page.tsx.
-export function DecisionsClient({ currentNUID }: { currentNUID: string }) {
+export function DecisionsClient() {
   const { data: cycles = [] } = useStaffCycles()
 
   const [cycleId, setCycleId] = useState('')
@@ -40,52 +37,47 @@ export function DecisionsClient({ currentNUID }: { currentNUID: string }) {
   }
 
   const { role, setRole, roleIds, roleLabel } = useCycleRolePicker(cycleId)
-  const [kind, setKind] = useState<KindFilter>('all')
   const [status, setStatus] = useState<StatusFilter>('all')
-  // Chiefs see the whole cycle by default; the toggle is for a chief who also
-  // interviewed and wants their own queue.
-  const [mineOnly, setMineOnly] = useState(false)
   const [search, setSearch] = useState('')
   const [editingTemplates, setEditingTemplates] = useState(false)
-  // One row open at a time. Working through these is sequential, and marking
-  // one sent opens the next — an accordion is what makes that read as progress
-  // rather than a growing pile of expanded rows.
   const [openId, setOpenId] = useState<string | null>(null)
 
   const { data: rows = [], isLoading } = useDecisions(cycleId, {
     role_id: role || undefined,
-    kind: kind === 'all' ? undefined : kind,
-    interviewer_nuid: mineOnly ? currentNUID : undefined,
     search: search.trim() || undefined,
   })
   const { data: templates = [] } = useDecisionTemplates(cycleId, role)
 
   const cycleName = cycles.find((c) => c.id === cycleId)?.name ?? ''
 
-  // Status is the one filter applied client-side: it's derived per row rather
-  // than a column, so filtering it server-side would mean re-deriving it in
-  // SQL alongside the Go that already owns the rule.
   const visible = useMemo(
     () => (status === 'all' ? rows : rows.filter((r) => r.status === status)),
     [rows, status]
   )
 
-  const counts = useMemo(
-    () => ({
-      pending: rows.filter((r) => r.status === 'pending').length,
-      ready: rows.filter((r) => r.status === 'ready').length,
-      sent: rows.filter((r) => r.status === 'sent').length,
-    }),
-    [rows]
-  )
+  const count = (s: DecisionStatus) => rows.filter((r) => r.status === s).length
 
   return (
     <PageContainer>
       <PageHeader
         title="Decisions"
-        subtitle="Every applicant getting a rejection, with their message ready to copy. Acceptances are written by hand and don’t appear here."
+        subtitle="Rejection letters, ready to copy and send."
         actions={
           <>
+            {cycles.length > 1 && (
+              <Select value={cycleId} onValueChange={setCycleId}>
+                <SelectTrigger className="h-9 w-40" aria-label="Cycle">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {cycles.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
             <Button
               variant="outline"
               onClick={() => setEditingTemplates(true)}
@@ -94,88 +86,47 @@ export function DecisionsClient({ currentNUID }: { currentNUID: string }) {
               <Pencil size={14} />
               Edit letters
             </Button>
-            <Select value={cycleId} onValueChange={setCycleId}>
-              <SelectTrigger className="w-40" aria-label="Filter by cycle">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {cycles.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </>
         }
       />
 
-      <div className="flex flex-wrap items-center gap-2">
-        <Select value={role} onValueChange={setRole}>
-          <SelectTrigger className="w-48" aria-label="Filter by role">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {roleIds.map((r) => (
-              <SelectItem key={r} value={r}>
-                {roleLabel(r)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select value={kind} onValueChange={(v) => setKind(v as KindFilter)}>
-          <SelectTrigger className="w-44" aria-label="Filter by decision type">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All decisions</SelectItem>
-            <SelectItem value="rejection_post_interview">
-              {KIND_LABEL.rejection_post_interview}
-            </SelectItem>
-            <SelectItem value="rejection_generic">
-              {KIND_LABEL.rejection_generic}
-            </SelectItem>
-          </SelectContent>
-        </Select>
-
-        <Select
-          value={status}
-          onValueChange={(v) => setStatus(v as StatusFilter)}
-        >
-          <SelectTrigger className="w-44" aria-label="Filter by status">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Any status</SelectItem>
-            <SelectItem value="pending">{STATUS_LABEL.pending}</SelectItem>
-            <SelectItem value="ready">{STATUS_LABEL.ready}</SelectItem>
-            <SelectItem value="sent">{STATUS_LABEL.sent}</SelectItem>
-          </SelectContent>
-        </Select>
-
-        <label className="text-text-secondary flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={mineOnly}
-            onChange={(e) => setMineOnly(e.target.checked)}
-            className="accent-ink size-4"
-          />
-          Only applicants I interviewed
-        </label>
-
-        <SearchInput
-          value={search}
-          onChange={setSearch}
-          placeholder="Search name, NUID, or email"
-        />
-      </div>
-
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-text-muted text-sm">
-          {counts.pending} awaiting feedback · {counts.ready} ready to send ·{' '}
-          {counts.sent} sent
-        </p>
+        <div className="flex flex-wrap items-center gap-3">
+          <SegmentedTabs<StatusFilter>
+            className="h-9 w-fit"
+            tabs={[
+              { id: 'all', label: 'All', count: rows.length },
+              {
+                id: 'pending',
+                label: 'Needs feedback',
+                count: count('pending'),
+              },
+              { id: 'ready', label: 'Ready', count: count('ready') },
+              { id: 'sent', label: 'Sent', count: count('sent') },
+            ]}
+            value={status}
+            onChange={setStatus}
+          />
+          {roleIds.length > 1 && (
+            <Select value={role} onValueChange={setRole}>
+              <SelectTrigger className="h-9 w-52" aria-label="Position">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {roleIds.map((r) => (
+                  <SelectItem key={r} value={r}>
+                    {roleLabel(r)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          <SearchInput
+            value={search}
+            onChange={setSearch}
+            placeholder="Search name or email"
+          />
+        </div>
         <CopyAllEmails rows={visible} />
       </div>
 
@@ -183,11 +134,11 @@ export function DecisionsClient({ currentNUID }: { currentNUID: string }) {
         {isLoading ? (
           <LoadingText className="px-1" />
         ) : visible.length === 0 ? (
-          <p className="text-text-faint px-1 text-sm">
-            {mineOnly
-              ? 'You have no applicants awaiting a decision message.'
-              : 'No applicants match these filters.'}
-          </p>
+          <EmptyState
+            title={
+              rows.length === 0 ? 'No one to write to yet' : 'Nothing here'
+            }
+          />
         ) : (
           visible.map((row) => (
             <DecisionListRow
@@ -221,9 +172,6 @@ export function DecisionsClient({ currentNUID }: { currentNUID: string }) {
   )
 }
 
-// After a message goes out, open the next one still waiting rather than
-// leaving the chief on a finished row — sending thirty of these is sequential
-// work, so the page should keep handing over the next one.
 function nextToSend(rows: DecisionRow[], justSentId: string) {
   const from = rows.findIndex((r) => r.application_id === justSentId) + 1
   const next =
@@ -232,10 +180,7 @@ function nextToSend(rows: DecisionRow[], justSentId: string) {
   return next?.application_id ?? null
 }
 
-// Every address in the current view, for one BCC pass. Only offered for the
-// no-interview letters, where the message really is identical apart from the
-// name — the post-interview ones each carry their own feedback and have to go
-// out individually.
+// Only the no-interview letters are identical, so only they can go out as one BCC.
 function CopyAllEmails({ rows }: { rows: { email: string; kind: string }[] }) {
   const { copy, copiedKey } = useCopy()
   const emails = rows
@@ -252,7 +197,7 @@ function CopyAllEmails({ rows }: { rows: { email: string; kind: string }[] }) {
     >
       {copiedKey === 'all-emails' ? <Check size={13} /> : <Copy size={13} />}
       Copy {emails.length} no-interview{' '}
-      {emails.length === 1 ? 'address' : 'addresses'}
+      {emails.length === 1 ? 'email' : 'emails'}
     </Button>
   )
 }

@@ -173,12 +173,29 @@ export function useDeletePreferenceList() {
   })
 }
 
+function invalidateMembers(
+  queryClient: ReturnType<typeof useQueryClient>,
+  vars: { listId: string; cycleId?: string }
+) {
+  queryClient.invalidateQueries({
+    queryKey: queryKeys.preferenceLists.detail(vars.listId),
+  })
+  if (!vars.cycleId) return
+  queryClient.invalidateQueries({
+    queryKey: queryKeys.preferenceLists.allDetails(vars.cycleId),
+  })
+  queryClient.invalidateQueries({
+    queryKey: queryKeys.preferenceLists.list(vars.cycleId),
+  })
+}
+
 export function useAddPreferenceListMember() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (vars: {
       listId: string
       leadNuid: string
+      cycleId?: string
       opts?: RequestOptions
     }) =>
       addPreferenceListMember(
@@ -186,11 +203,7 @@ export function useAddPreferenceListMember() {
         { lead_nuid: vars.leadNuid },
         vars.opts
       ) as Promise<PreferenceListMember>,
-    onSuccess: (_data, vars) => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.preferenceLists.detail(vars.listId),
-      })
-    },
+    onSuccess: (_data, vars) => invalidateMembers(queryClient, vars),
   })
 }
 
@@ -200,13 +213,10 @@ export function useRemovePreferenceListMember() {
     mutationFn: (vars: {
       listId: string
       memberId: string
+      cycleId?: string
       opts?: RequestOptions
     }) => removePreferenceListMember(vars.listId, vars.memberId, vars.opts),
-    onSuccess: (_data, vars) => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.preferenceLists.detail(vars.listId),
-      })
-    },
+    onSuccess: (_data, vars) => invalidateMembers(queryClient, vars),
   })
 }
 

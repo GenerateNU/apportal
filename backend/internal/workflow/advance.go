@@ -276,8 +276,10 @@ func undo(db *gorm.DB, cycleID string, s models.Step, roleID string, caller Call
 				}
 				c.AlreadyUndone = false
 				if to, ok := StepOfStage(r.ToStage); ok {
-					c.From, _ = StepOfStage(r.FromStage)
-					c.To = to
+					if t, _ := TypeOf(to); !t.ByOutcome || c.To == "" {
+						c.From, _ = StepOfStage(r.FromStage)
+						c.To = to
+					}
 				}
 				c.StageChanged = c.StageChanged || r.Stage != r.ToStage
 				if !roles[r.RoleID] {
@@ -361,4 +363,79 @@ func closeCycle(db *gorm.DB, cycleID string, caller Caller) (models.Cycle, Previ
 		},
 	})
 	return cycle, p, err
+}
+
+// decide ends Decisions for an opening: accepted go to accepted, everyone else still deciding is rejected.
+func decide(db *gorm.DB, cycleID, roleID string, accepted []string, caller Caller, now time.Time) ([]string, Preview, error) {
+	var apps []movingApp
+	keep := map[string]bool{}
+	for _, id := range accepted {
+		keep[id] = true
+	}
+	p, err := execute(db, cycleID, change{
+		preview: func(tx *gorm.DB, f *CycleState) (Preview, error) {
+			var p Preview
+			if err := f.RequireEnabled(models.StepDecisions); err != nil {
+				return p, err
+			}
+			if err := tx.Model(&models.Application{}).Select("id, role_id, stage").
+				Where("cycle_id = ? AND role_id = ? AND stage IN ?", cycleID, roleID, Stages(models.StepDecisions)).
+				Clauses(clause.Locking{Strength: "UPDATE"}).Scan(&apps).Error; err != nil {
+				return p, err
+			}
+			p.Require(caller.operation(OpAdvance, models.StepDecisions, roleID))
+			n := 0
+			for _, a := range apps {
+				to := models.StageRejected
+				if keep[a.ID] {
+					to, n = models.StageAccepted, n+1
+				}
+				p.Changes = append(p.Changes, PreviewItem{Kind: "decide", ApplicationID: a.ID, Detail: string(to)})
+			}
+			p.Say(fmt.Sprintf("Accept %d and reject %d for %s", n, len(apps)-n, f.RoleName(roleID)))
+			return p, nil
+		},
+		apply: func(tx *gorm.DB, _ *CycleState, _ Preview) error {
+			if len(apps) == 0 {
+				return nil
+			}
+			batch := uuid.NewString()
+			rows := make([]models.ApplicationMove, 0, len(apps))
+			var in, out []string
+			for _, a := range apps {
+				to := models.StageRejected
+				if keep[a.ID] {
+					to = models.StageAccepted
+					in = append(in, a.ID)
+				} else {
+					out = append(out, a.ID)
+				}
+				rows = append(rows, models.ApplicationMove{BatchID: batch, ApplicationID: a.ID, FromStage: a.Stage, ToStage: to, MovedBy: caller.NUID, MovedAt: now})
+			}
+			if err := tx.Select("batch_id", "application_id", "from_stage", "to_stage", "moved_by", "moved_at").Create(&rows).Error; err != nil {
+				return err
+			}
+			for stage, ids := range map[models.ApplicationStage][]string{models.StageAccepted: in, models.StageRejected: out} {
+				if len(ids) == 0 {
+					continue
+				}
+				if err := tx.Model(&models.Application{}).Where("id IN ?", ids).Update("stage", stage).Error; err != nil {
+					return err
+				}
+			}
+			var left int64
+			if err := tx.Model(&models.Application{}).Where("cycle_id = ? AND stage IN ?", cycleID, Stages(models.StepDecisions)).Count(&left).Error; err != nil {
+				return err
+			}
+			if left == 0 {
+				return tx.Model(&models.CycleStep{}).Where("cycle_id = ? AND step = ?", cycleID, models.StepDecisions).Update("completed_at", now).Error
+			}
+			return nil
+		},
+	})
+	ids := make([]string, 0, len(apps))
+	for _, a := range apps {
+		ids = append(ids, a.ID)
+	}
+	return ids, p, err
 }

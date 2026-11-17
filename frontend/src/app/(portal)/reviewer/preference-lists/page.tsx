@@ -54,8 +54,8 @@ export default async function PreferenceListsPage({
   return (
     <PageContainer>
       <PageHeader
-        title="Preference lists"
-        subtitle="Collaborative, ranked lists of applicants leads want for a cycle and role. Create one and invite whichever other leads you want to work on it with."
+        title="Teams & preference lists"
+        subtitle="Form teams and have each one rank who they want before the draft."
       />
       <HydrationBoundary state={dehydrate(queryClient)}>
         <PreferenceListsPageClient isChief={reviewer.isChief} />

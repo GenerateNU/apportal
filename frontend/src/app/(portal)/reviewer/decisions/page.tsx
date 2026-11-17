@@ -88,11 +88,7 @@ export default async function DecisionsPage() {
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      {reviewer.isChief ? (
-        <DecisionsClient currentNUID={reviewer.nuid} />
-      ) : (
-        <DecisionQueueClient />
-      )}
+      {reviewer.isChief ? <DecisionsClient /> : <DecisionQueueClient />}
     </HydrationBoundary>
   )
 }

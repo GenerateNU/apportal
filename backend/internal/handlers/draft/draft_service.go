@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 
+	"github.com/danielgtaylor/huma/v2"
+
 	"github.com/GenerateNU/apportal/backend/internal/handlers/role"
 	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/utils"
-	"github.com/danielgtaylor/huma/v2"
 
 	"github.com/GenerateNU/apportal/backend/internal/access"
 	"github.com/GenerateNU/apportal/backend/internal/workflow"
@@ -311,4 +312,25 @@ func (s *draftService) drafted(ctx context.Context, in *utils.CycleScopedInput) 
 		return nil, utils.StoreErr(err)
 	}
 	return &DraftedApplicationsOutput{Body: taken}, nil
+}
+
+// finish turns down everyone the draft didn't pick for its position, which closes Decisions once nobody's left.
+func (s *draftService) finish(ctx context.Context, in *DraftIDInput) (*FinishDraftOutput, error) {
+	if err := s.access.CanCycleOf(ctx, access.ManageCycle, "drafts", in.ID); err != nil {
+		return nil, err
+	}
+	draft, err := s.draftDB.GetDraftByID(ctx, in.ID)
+	if err != nil {
+		return nil, utils.StoreErr(err)
+	}
+	if draft.Status != models.DraftComplete {
+		return nil, huma.Error409Conflict("finish the draft before closing out decisions")
+	}
+	rejected, _, err := s.workflow.Decide(ctx, draft.CycleID, draft.RoleID, nil)
+	if err != nil {
+		return nil, workflow.HTTPErr(err)
+	}
+	out := &FinishDraftOutput{}
+	out.Body.Rejected = len(rejected)
+	return out, nil
 }
