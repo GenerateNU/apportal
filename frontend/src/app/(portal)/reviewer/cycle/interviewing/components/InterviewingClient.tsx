@@ -28,6 +28,7 @@ import { useToast } from '@/components/ui/toast'
 import { apiErrorDetail } from '@/lib/api/client'
 import {
   dueAt,
+  released,
   stepConfig,
   useCycleSteps,
   useWorkflow,
@@ -388,6 +389,7 @@ function Everyone({
 }) {
   const { withRecording } = useInterviewSetup(cycleId)
   const due = useDue(cycleId)
+  const { data: workflow } = useWorkflow(cycleId)
   const [picked, setPicked] = useState('')
   const [tab, setTab] = useState<Tab>('interviewers')
   const [expanded, setExpanded] = useState<string | null>(null)
@@ -459,31 +461,53 @@ function Everyone({
 
   if (!roleId) return null
 
+  const tabs = withRows.length > 1 && (
+    <nav className="flex gap-6 overflow-x-auto border-b border-gray-200 px-5">
+      {withRows.map((id) => (
+        <button
+          key={id}
+          type="button"
+          onClick={() => {
+            setPicked(id)
+            setExpanded(null)
+          }}
+          className={cn(
+            '-mb-px shrink-0 border-b-2 py-3 text-sm font-medium transition-colors',
+            id === roleId
+              ? 'border-ink text-ink'
+              : 'text-text-muted hover:text-ink border-transparent'
+          )}
+        >
+          {roleLabel(id)}
+        </button>
+      ))}
+    </nav>
+  )
+
+  if (!released(workflow, 'interviews', roleId)) {
+    return (
+      <Card padding="none">
+        {tabs}
+        <EmptyState
+          className="py-12"
+          title={`Interviews for ${roleLabel(roleId)} aren't out yet`}
+          description="Release them and interviewers' progress shows up here."
+          action={
+            <Button variant="outline" asChild>
+              <Link href="/reviewer/cycle/interviewers">
+                Assign interviewers
+              </Link>
+            </Button>
+          }
+        />
+      </Card>
+    )
+  }
+
   return (
     <>
       <Card padding="none">
-        {withRows.length > 1 && (
-          <nav className="flex gap-6 overflow-x-auto border-b border-gray-200 px-5">
-            {withRows.map((id) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => {
-                  setPicked(id)
-                  setExpanded(null)
-                }}
-                className={cn(
-                  '-mb-px shrink-0 border-b-2 py-3 text-sm font-medium transition-colors',
-                  id === roleId
-                    ? 'border-ink text-ink'
-                    : 'text-text-muted hover:text-ink border-transparent'
-                )}
-              >
-                {roleLabel(id)}
-              </button>
-            ))}
-          </nav>
-        )}
+        {tabs}
 
         <div className="flex flex-wrap items-center justify-between gap-x-8 gap-y-3 px-5 py-4">
           <div className="flex flex-col gap-1">

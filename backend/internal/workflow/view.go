@@ -85,14 +85,7 @@ func loadOverview(db *gorm.DB, cycleID string, c Caller, now time.Time) (Overvie
 		Where("a.cycle_id = ?", cycleID).Scan(&f.Reviews).Error; err != nil {
 		return Overview{}, err
 	}
-	var interviewers int64
-	if err := db.Table("interviewers x").
-		Joins("JOIN interviews i ON i.id = x.interview_id").
-		Joins("JOIN applications a ON a.id = i.application_id").
-		Where("a.cycle_id = ?", cycleID).Count(&interviewers).Error; err != nil {
-		return Overview{}, err
-	}
-	f.InterviewersAssigned = int(interviewers)
+
 	return f.Overview(c, now, late, counts), nil
 }
 

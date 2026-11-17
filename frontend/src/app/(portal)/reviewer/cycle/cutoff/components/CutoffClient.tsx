@@ -161,7 +161,9 @@ function Ranking({ cycleId, roleId }: { cycleId: string; roleId: string }) {
   const inReview = entries.filter((e) => ADVANCEABLE_STAGES.has(e.stage))
   const toAdvance = inReview.filter((e) => e.included)
   const handPicked = inReview.filter((e) => e.override !== undefined).length
-  const movedOn = entries.length - inReview.length
+  const isOut = (stage: string) => stage === 'rejected' || stage === 'withdrawn'
+  const rejected = entries.filter((e) => isOut(e.stage)).length
+  const movedOn = entries.length - inReview.length - rejected
   const ranked = entries.filter((e) => e.rank != null).length
   const aboveCount = entries.filter((e) => e.above_cutoff).length
   const lastAbove = entries.reduce(
@@ -382,7 +384,7 @@ function Ranking({ cycleId, roleId }: { cycleId: string; roleId: string }) {
                         onClick={(ev) => ev.stopPropagation()}
                       >
                         <Checkbox
-                          checked={advanceable ? e.included : true}
+                          checked={advanceable ? e.included : !isOut(e.stage)}
                           disabled={!advanceable || setOverride.isPending}
                           onCheckedChange={() => toggle(e)}
                           aria-label={`Advance ${app?.full_name ?? 'applicant'}`}
@@ -400,9 +402,11 @@ function Ranking({ cycleId, roleId }: { cycleId: string; roleId: string }) {
                       <td
                         className={cn(
                           'px-3 py-2 font-medium',
-                          e.included || !advanceable
-                            ? 'text-ink'
-                            : 'text-text-muted'
+                          isOut(e.stage)
+                            ? 'text-text-subtle'
+                            : e.included || !advanceable
+                              ? 'text-ink'
+                              : 'text-text-muted'
                         )}
                       >
                         <span className="flex items-center gap-2">
@@ -481,10 +485,20 @@ function Ranking({ cycleId, roleId }: { cycleId: string; roleId: string }) {
                   {handPicked > 0 && ` · ${handPicked} changed by hand`}
                 </span>
               </>
-            ) : movedOn > 0 ? (
+            ) : movedOn > 0 || rejected > 0 ? (
               <span className="text-ink inline-flex items-center gap-1.5">
-                <Check size={14} className="text-emerald-600" />
-                {movedOn} moved on
+                {movedOn > 0 && (
+                  <>
+                    <Check size={14} className="text-emerald-600" />
+                    {movedOn} moved on
+                  </>
+                )}
+                {rejected > 0 && (
+                  <span className="text-text-muted">
+                    {movedOn > 0 ? ' · ' : ''}
+                    {rejected} rejected
+                  </span>
+                )}
               </span>
             ) : null}
             <span className="text-text-muted ml-3 text-xs">
@@ -507,8 +521,16 @@ function Ranking({ cycleId, roleId }: { cycleId: string; roleId: string }) {
         open={confirmAdvance}
         onOpenChange={setConfirmAdvance}
         title={`Advance ${toAdvance.length} to ${nextLabel}?`}
-        description="Everyone checked moves on and application review is marked done. Everyone else stays where they are."
-        confirmLabel="Advance"
+        description={
+          inReview.length > toAdvance.length
+            ? `${inReview.length - toAdvance.length} not picked will be rejected, and Reviews is marked done.`
+            : 'Reviews is marked done.'
+        }
+        confirmLabel={
+          inReview.length > toAdvance.length
+            ? 'Advance and reject the rest'
+            : 'Advance'
+        }
         pending={advance.isPending}
         onConfirm={advanceAll}
       />

@@ -330,3 +330,30 @@ func (f *fixture) stateOf(role string) workflow.State {
 	f.must(err)
 	return st.State(role, models.StepApplications, time.Now())
 }
+
+func TestScenarioShortlistRejectsTheRest(t *testing.T) {
+	f := newFixture(t)
+	f.intoReviews()
+	f.deadline(f.roleA, models.StepReviews, models.KindReviewer, f.now.Add(time.Hour))
+	f.assignReviewer(f.apps[0])
+	f.release(f.roleA, models.StepReviews)
+	f.exec("INSERT INTO written_reviews (application_id, reviewer_nuid, submitted_at) VALUES (?, ?, now())", f.apps[0], f.leadA.NUID)
+	admin := f.confirmed(f.admin)
+	_, _, err := f.s.workflow.Advance(admin, workflow.AdvanceInput{
+		CycleID: f.cycleA, Step: models.StepReviews, RoleID: f.roleA,
+		ApplicationIDs: []string{f.apps[0]}, RejectRest: true,
+	})
+	f.must(err)
+	f.wantStage(f.apps[0], models.StageInterview)
+	f.wantStage(f.apps[1], models.StageRejected)
+	var done int64
+	f.must(f.db.Model(&models.CycleStep{}).Where("cycle_id = ? AND step = ? AND completed_at IS NOT NULL", f.cycleA, models.StepReviews).Count(&done).Error)
+	if done != 1 {
+		t.Fatal("reviews should complete once nobody is left in it")
+	}
+
+	_, err = f.s.undo(admin, &UndoInput{ID: f.cycleA, Step: models.StepReviews})
+	f.must(err)
+	f.wantStage(f.apps[0], models.StageLeadReview)
+	f.wantStage(f.apps[1], models.StageLeadReview)
+}

@@ -98,9 +98,18 @@ func (f *CycleState) RequireEnabled(s models.Step) error {
 	return nil
 }
 
+// releaseNeeds is who must be assigned before a step goes out.
+var releaseNeeds = map[models.Step]string{
+	models.StepReviews:    "reviewers",
+	models.StepInterviews: "interviewers",
+}
+
 func (f *CycleState) ReleaseBlock(role string, s models.Step, now time.Time) error {
 	if !f.SetUp() {
 		return conflict("add a position and a recruitment team before releasing %s", Label(s))
+	}
+	if who, staffed := releaseNeeds[s]; staffed && f.Assigned[key{role, s}] == 0 {
+		return conflict("assign %s for %s before releasing %s", who, f.RoleName(role), Label(s))
 	}
 	if k, ok := MainKind(s); ok {
 		d, ok := f.Deadline(role, s, k)

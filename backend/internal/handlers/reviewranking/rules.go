@@ -45,6 +45,7 @@ func (r *workflowRules) Advance(ctx context.Context, cycleID, roleID string, app
 		RoleID:         roleID,
 		ApplicationIDs: appIDs,
 		Verify:         verify,
+		RejectRest:     true,
 	})
 	return moved, err
 }

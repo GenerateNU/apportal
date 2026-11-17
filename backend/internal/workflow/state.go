@@ -69,8 +69,10 @@ type CycleState struct {
 	HasTeam       bool
 	// Reviews is how far written reviews have got, loaded for the overview's page locks.
 	Reviews ReviewProgress
-	// InterviewersAssigned counts interviewer slots filled across the cycle.
-	InterviewersAssigned int
+	// Assigned counts reviewer and interviewer assignments per opening, for the release rule.
+	Assigned map[key]int
+	// Submitted counts finished written reviews per opening.
+	Submitted map[key]int
 }
 
 type ReviewProgress struct {
@@ -88,6 +90,8 @@ func NewCycleState(cycleID string) *CycleState {
 		Releases:    map[key]time.Time{},
 		Deadlines:   map[key]map[models.StepKind]Deadline{},
 		MovedInto:   map[key]bool{},
+		Assigned:    map[key]int{},
+		Submitted:   map[key]int{},
 		Counts:      map[key]int{},
 
 		PeersReleased: map[key]bool{},
@@ -236,11 +240,20 @@ func (f *CycleState) Frozen(role string, s models.Step) bool {
 	return ok && f.Started(role, next)
 }
 
+// Ready is a step being over for an opening: past its deadline, or with nothing left to do.
 func (f *CycleState) Ready(role string, s models.Step, now time.Time) bool {
 	if _, ok := MainKind(s); !ok {
 		return f.Released(role, s)
 	}
-	return f.State(role, s, now) == StateClosed
+	if f.State(role, s, now) == StateClosed {
+		return true
+	}
+	return s == models.StepReviews && f.Released(role, s) && f.allReviewsIn(role)
+}
+
+func (f *CycleState) allReviewsIn(role string) bool {
+	k := key{role, models.StepReviews}
+	return f.Assigned[k] > 0 && f.Submitted[k] >= f.Assigned[k]
 }
 
 func (f *CycleState) Done(s models.Step) bool { return f.CompletedAt[s] != nil }
@@ -335,6 +348,28 @@ func Load(db *gorm.DB, cycleID string) (*CycleState, error) {
 		return nil, err
 	}
 	f.HasTeam = staff > 0
+
+	var assigned []struct {
+		RoleID string
+		Step   models.Step
+		N      int
+		Done   int
+	}
+	if err := db.Raw(`SELECT a.role_id, ? AS step, count(*) AS n, count(w.submitted_at) AS done FROM lead_assignments la
+			JOIN applications a ON a.id = la.application_id
+			LEFT JOIN written_reviews w ON w.application_id = la.application_id AND w.reviewer_nuid = la.lead_nuid
+			WHERE a.cycle_id = ? GROUP BY a.role_id
+		UNION ALL
+		SELECT a.role_id, ? AS step, count(*) AS n, 0 AS done FROM interviewers x
+			JOIN interviews i ON i.id = x.interview_id JOIN applications a ON a.id = i.application_id
+			WHERE a.cycle_id = ? GROUP BY a.role_id`,
+		models.StepReviews, cycleID, models.StepInterviews, cycleID).Scan(&assigned).Error; err != nil {
+		return nil, err
+	}
+	for _, r := range assigned {
+		f.Assigned[key{r.RoleID, r.Step}] = r.N
+		f.Submitted[key{r.RoleID, r.Step}] = r.Done
+	}
 
 	var releases []models.OpeningStep
 	if err := db.Where("cycle_id = ? AND released_at IS NOT NULL", cycleID).Find(&releases).Error; err != nil {

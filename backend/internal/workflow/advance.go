@@ -35,6 +35,8 @@ type AdvanceInput struct {
 	Caller         Caller
 	// Verify runs under the cycle lock, so whatever chose these applicants can't change underneath.
 	Verify func(tx *gorm.DB) error
+	// RejectRest rejects everyone else still in the step for the same openings, in the same batch.
+	RejectRest bool
 }
 
 type movingApp struct {
@@ -48,6 +50,7 @@ func advance(db *gorm.DB, in AdvanceInput, now time.Time) ([]string, Preview, er
 		return nil, Preview{}, invalid("invalid step")
 	}
 	var apps []movingApp
+	var rest []movingApp
 	var entry models.ApplicationStage
 	var moved []string
 	p, err := execute(db, in.CycleID, change{
@@ -105,6 +108,23 @@ func advance(db *gorm.DB, in AdvanceInput, now time.Time) ([]string, Preview, er
 				}
 			}
 			p.Say(fmt.Sprintf("Move %d applicant(s) from %s to %s", len(apps), Label(in.Step), Label(next)))
+			if in.RejectRest && len(byRole) > 0 {
+				roles := make([]string, 0, len(byRole))
+				for r := range byRole {
+					roles = append(roles, r)
+				}
+				if err := tx.Model(&models.Application{}).Select("id, role_id, stage").
+					Where("cycle_id = ? AND role_id IN ? AND stage IN ? AND id NOT IN ?", in.CycleID, roles, Stages(in.Step), in.ApplicationIDs).
+					Clauses(clause.Locking{Strength: "UPDATE"}).Scan(&rest).Error; err != nil {
+					return p, err
+				}
+				for _, a := range rest {
+					p.Changes = append(p.Changes, PreviewItem{Kind: "reject", ApplicationID: a.ID, Detail: string(models.StageRejected)})
+				}
+				if len(rest) > 0 {
+					p.Say(fmt.Sprintf("Reject the %d not moving on", len(rest)))
+				}
+			}
 			return p, nil
 		},
 		apply: func(tx *gorm.DB, _ *CycleState, _ Preview) error {
@@ -114,11 +134,21 @@ func advance(db *gorm.DB, in AdvanceInput, now time.Time) ([]string, Preview, er
 				rows = append(rows, models.ApplicationMove{BatchID: batch, ApplicationID: a.ID, FromStage: a.Stage, ToStage: entry, MovedBy: in.Caller.NUID, MovedAt: now})
 				moved = append(moved, a.ID)
 			}
+			rejected := make([]string, 0, len(rest))
+			for _, a := range rest {
+				rows = append(rows, models.ApplicationMove{BatchID: batch, ApplicationID: a.ID, FromStage: a.Stage, ToStage: models.StageRejected, MovedBy: in.Caller.NUID, MovedAt: now})
+				rejected = append(rejected, a.ID)
+			}
 			if err := tx.Select("batch_id", "application_id", "from_stage", "to_stage", "moved_by", "moved_at").Create(&rows).Error; err != nil {
 				return err
 			}
 			if err := tx.Model(&models.Application{}).Where("id IN ?", moved).Update("stage", entry).Error; err != nil {
 				return err
+			}
+			if len(rejected) > 0 {
+				if err := tx.Model(&models.Application{}).Where("id IN ?", rejected).Update("stage", models.StageRejected).Error; err != nil {
+					return err
+				}
 			}
 			var left int64
 			if err := tx.Model(&models.Application{}).Where("cycle_id = ? AND stage IN ?", in.CycleID, Stages(in.Step)).Count(&left).Error; err != nil {
@@ -245,8 +275,10 @@ func undo(db *gorm.DB, cycleID string, s models.Step, roleID string, caller Call
 					continue
 				}
 				c.AlreadyUndone = false
-				c.From, _ = StepOfStage(r.FromStage)
-				c.To, _ = StepOfStage(r.ToStage)
+				if to, ok := StepOfStage(r.ToStage); ok {
+					c.From, _ = StepOfStage(r.FromStage)
+					c.To = to
+				}
 				c.StageChanged = c.StageChanged || r.Stage != r.ToStage
 				if !roles[r.RoleID] {
 					roles[r.RoleID] = true

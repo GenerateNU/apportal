@@ -102,12 +102,12 @@ func (f *CycleState) pageLock(pg Page, now time.Time) *string {
 			return reason("Opens once you release an application.")
 		}
 	case PageReviewProgress:
-		if f.Reviews.Assigned == 0 {
-			return reason("Assign reviewers first.")
+		if !f.releasedAnywhere(models.StepReviews) {
+			return reason("Opens once you release reviews.")
 		}
 	case PageInterviewProgress:
-		if f.InterviewersAssigned == 0 {
-			return reason("Assign interviewers first.")
+		if !f.releasedAnywhere(models.StepInterviews) {
+			return reason("Opens once you release interviews.")
 		}
 	case PageShortlist:
 		if !f.reviewsIn(now) {
@@ -115,6 +115,15 @@ func (f *CycleState) pageLock(pg Page, now time.Time) *string {
 		}
 	}
 	return nil
+}
+
+func (f *CycleState) releasedAnywhere(s models.Step) bool {
+	for _, o := range f.Openings {
+		if f.Released(o.RoleID, s) {
+			return true
+		}
+	}
+	return false
 }
 
 func (f *CycleState) reviewsIn(now time.Time) bool {

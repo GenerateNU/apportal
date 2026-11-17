@@ -29,7 +29,7 @@ import {
   useInterviewPanelMutations,
   useInterviewPanels,
 } from '@/lib/queries/interview-panels'
-import { useMeetingSlots, useStaffSlots } from '@/lib/queries/meeting-slots'
+import { useStaffSlots } from '@/lib/queries/meeting-slots'
 import {
   dueAt,
   perApplicant,
@@ -134,9 +134,7 @@ function Board({
   const interviewDue = dueAt(workflow, 'interviews', roleId, 'interviewer')
   const editable = !plan && !released
   const { data: days = new Map<string, string>() } = useStaffSlots(cycleId)
-  const { data: meetingSlots = [] } = useMeetingSlots(cycleId)
   const { cycle } = useCycleScope()
-  const slotLabel = labelFor(meetingSlots)
   const matching = !!cycle?.match_by_slot
   const missedDay = new Set(plan?.no_slot_match ?? [])
   const noSharedDay = (r: InterviewEntry) => {
@@ -515,12 +513,6 @@ function Board({
                       locked={r.done || released}
                       canAdd={editable}
                       nameOf={nameOf}
-                      dayOf={
-                        matching
-                          ? (n) =>
-                              days.get(n) ? slotLabel(days.get(n)!) : undefined
-                          : undefined
-                      }
                       options={eligible(r.roleId).filter(
                         (n) =>
                           !off.has(n) &&
@@ -738,14 +730,12 @@ function Chips({
   options,
   panelOptions = [],
   teams = [],
-  dayOf,
   label,
   onAdd,
   onRemove,
 }: {
   panelOptions?: { value: string; label: string }[]
   teams?: Team[]
-  dayOf?: (nuid: string) => string | undefined
   people: Person[]
   proposed: string[]
   need: number
@@ -798,9 +788,6 @@ function Chips({
             <Check size={11} strokeWidth={3} className="text-emerald-600" />
           )}
           {x.name.split(' ')[0]}
-          {dayOf?.(x.nuid) && (
-            <span className="text-text-subtle">· {dayOf(x.nuid)}</span>
-          )}
           {!x.done && !locked && (
             <button
               type="button"
@@ -844,7 +831,7 @@ function Chips({
             ...panelOptions,
             ...options.map((n) => ({
               value: n,
-              label: dayOf?.(n) ? `${nameOf(n)} · ${dayOf(n)}` : nameOf(n),
+              label: nameOf(n),
             })),
           ]}
           onValueChange={onAdd}
@@ -1154,10 +1141,6 @@ function ReleaseInterviews({
       />
     </>
   )
-}
-
-function labelFor(slots: { id: string; label: string }[]) {
-  return (id: string) => slots.find((s) => s.id === id)?.label ?? id
 }
 
 function ColumnHead({

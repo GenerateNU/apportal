@@ -64,17 +64,17 @@ func TestPhasesLockUntilSetUp(t *testing.T) {
 
 	f.CompletedAt[models.StepApplications] = &past
 	reviews := string(models.StepReviews)
-	if r, _ := pageLock(f.Phases(now), reviews, PageReviewProgress); r != "Assign reviewers first." {
-		t.Fatalf("progress before anyone is assigned: %q", r)
-	}
 	f.Reviews = ReviewProgress{Assigned: 2, Submitted: 1}
-	if r, _ := pageLock(f.Phases(now), reviews, PageReviewProgress); r != "" {
-		t.Fatalf("progress once assigned: %q", r)
+	if r, _ := pageLock(f.Phases(now), reviews, PageReviewProgress); r != "Opens once you release reviews." {
+		t.Fatalf("progress before reviews are released: %q", r)
 	}
 	if r, _ := pageLock(f.Phases(now), reviews, PageShortlist); r == "" {
 		t.Fatal("shortlist waits on the last review")
 	}
 	f.SetRelease(swe, models.StepReviews, past)
+	if r, _ := pageLock(f.Phases(now), reviews, PageReviewProgress); r != "" {
+		t.Fatalf("progress once reviews are released: %q", r)
+	}
 	f.SetDeadline(swe, models.StepReviews, Deadline{Kind: models.KindReviewer, DueAt: past})
 	if r, _ := pageLock(f.Phases(now), reviews, PageShortlist); r != "" {
 		t.Fatalf("shortlist once the review deadline passes: %q", r)
@@ -87,11 +87,11 @@ func TestPhasesLockUntilSetUp(t *testing.T) {
 
 	f.CompletedAt[models.StepReviews] = &past
 	interviews := string(models.StepInterviews)
-	if r, _ := pageLock(f.Phases(now), interviews, PageInterviewProgress); r != "Assign interviewers first." {
-		t.Fatalf("interview progress before anyone is assigned: %q", r)
+	if r, _ := pageLock(f.Phases(now), interviews, PageInterviewProgress); r != "Opens once you release interviews." {
+		t.Fatalf("interview progress before release: %q", r)
 	}
-	f.InterviewersAssigned = 1
+	f.SetRelease(swe, models.StepInterviews, past)
 	if r, _ := pageLock(f.Phases(now), interviews, PageInterviewProgress); r != "" {
-		t.Fatalf("interview progress once assigned: %q", r)
+		t.Fatalf("interview progress once released: %q", r)
 	}
 }
