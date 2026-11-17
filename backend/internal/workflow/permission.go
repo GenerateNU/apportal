@@ -143,7 +143,7 @@ func (f *CycleState) EnforcePermission(a Operation) error {
 	return huma.Error403Forbidden(d.Reason)
 }
 
-func recordOverride(tx *gorm.DB, cycleID string, a Operation, d PermissionResult, plan *Preview) error {
+func overrideRow(cycleID string, a Operation, d PermissionResult, plan *Preview) models.WorkflowOverride {
 	row := models.WorkflowOverride{
 		CycleID: cycleID, RoleID: nullable(a.RoleID), Step: a.Step, Op: string(a.Op),
 		Level: string(d.Level), ActorNUID: a.Caller.NUID, Reason: d.Reason,
@@ -151,7 +151,14 @@ func recordOverride(tx *gorm.DB, cycleID string, a Operation, d PermissionResult
 	if plan != nil {
 		row.Plan = plan.json()
 	}
-	return tx.Create(&row).Error
+	return row
+}
+
+func insertOverrides(tx *gorm.DB, rows []models.WorkflowOverride) error {
+	if len(rows) == 0 {
+		return nil
+	}
+	return tx.Create(&rows).Error
 }
 
 func overrideRequired(d PermissionResult) error {

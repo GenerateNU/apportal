@@ -108,12 +108,11 @@ func (s *staffGroupService) editMembers(ctx context.Context, cycleID, groupID st
 	if err != nil {
 		return utils.StoreErr(err)
 	}
-	for _, t := range teams {
-		if err := s.workflow.RequireSetupEditable(ctx, cycleID, t.RoleID, staffing.TeamOf(t.Kind)); err != nil {
-			return err
-		}
+	targets := make([]workflow.SetupTarget, len(teams))
+	for i, t := range teams {
+		targets[i] = workflow.SetupTarget{RoleID: t.RoleID, Work: staffing.TeamOf(t.Kind)}
 	}
-	return nil
+	return s.workflow.RequireSetupsEditable(ctx, cycleID, targets...)
 }
 
 func (s *staffGroupService) remove(ctx context.Context, in *GroupPathInput) (*struct{}, error) {

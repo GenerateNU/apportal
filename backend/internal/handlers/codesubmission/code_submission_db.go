@@ -18,6 +18,18 @@ func NewCodeSubmissionDB(db *gorm.DB) *CodeSubmissionDB {
 	return &CodeSubmissionDB{db: db}
 }
 
+// StageForChallenge is the application's stage when the challenge belongs to its cycle and role.
+func (c *CodeSubmissionDB) StageForChallenge(ctx context.Context, applicationID, challengeID string) (models.ApplicationStage, bool, error) {
+	var stages []models.ApplicationStage
+	err := c.db.WithContext(ctx).Table("applications a").Select("a.stage").
+		Joins("JOIN code_challenges ch ON ch.id = ? AND ch.cycle_id = a.cycle_id AND ch.role_id = a.role_id", challengeID).
+		Where("a.id = ?", applicationID).Pluck("a.stage", &stages).Error
+	if err != nil || len(stages) == 0 {
+		return "", false, err
+	}
+	return stages[0], true, nil
+}
+
 // UpsertCodeSubmission records or replaces the link for an application's
 // challenge. Scores are filled in externally and left alone here.
 func (c *CodeSubmissionDB) UpsertCodeSubmission(ctx context.Context, applicationID, challengeID, submissionURL string) (models.CodeSubmission, error) {

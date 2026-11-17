@@ -23,7 +23,7 @@ type LeadAssignment struct {
 type WrittenReview struct {
 	ID            string      `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
 	ApplicationID string      `json:"application_id" gorm:"type:uuid;not null;index:idx_written_reviews_app;uniqueIndex:written_reviews_application_id_reviewer_nuid_key,priority:1"`
-	ReviewerNUID  string      `json:"reviewer_nuid" gorm:"not null;uniqueIndex:written_reviews_application_id_reviewer_nuid_key,priority:2"`
+	ReviewerNUID  string      `json:"reviewer_nuid" gorm:"not null;uniqueIndex:written_reviews_application_id_reviewer_nuid_key,priority:2;index:idx_written_reviews_reviewer"`
 	SubmittedAt   *time.Time  `json:"submitted_at,omitempty"`
 	CreatedAt     time.Time   `json:"created_at" gorm:"not null;default:now()"`
 	UpdatedAt     time.Time   `json:"updated_at" gorm:"not null;default:now()"`
@@ -37,8 +37,8 @@ type WrittenReview struct {
 // and plus Description.
 type ReviewQuestion struct {
 	ID           string          `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
-	CycleID      string          `json:"cycle_id" gorm:"type:uuid;not null"`
-	RoleID       *string         `json:"role_id,omitempty" gorm:"type:uuid"`
+	CycleID      string          `json:"cycle_id" gorm:"type:uuid;not null;index:idx_review_questions_cycle_role,priority:1"`
+	RoleID       *string         `json:"role_id,omitempty" gorm:"type:uuid;index:idx_review_questions_cycle_role,priority:2"`
 	QuestionText string          `json:"question_text" gorm:"not null"`
 	QuestionType QuestionType    `json:"question_type" gorm:"type:question_type;not null;default:long_answer"`
 	IsRequired   bool            `json:"is_required" gorm:"not null;default:true"`

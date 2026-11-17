@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { ensureProfile } from '@/lib/auth/ensure-profile'
 
 export default function LoginForm() {
   const router = useRouter()
@@ -22,13 +23,21 @@ export default function LoginForm() {
     setIsSubmitting(true)
 
     const supabase = createClient()
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     })
 
     if (error) {
       setError(error.message)
+      setIsSubmitting(false)
+      return
+    }
+
+    try {
+      await ensureProfile(data.session)
+    } catch {
+      setError("Signed in, but we couldn't finish setting up your profile.")
       setIsSubmitting(false)
       return
     }

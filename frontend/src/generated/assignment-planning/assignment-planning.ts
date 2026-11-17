@@ -32,10 +32,10 @@ import type {
   AutoAssignPlan,
   AutoAssignReviewersParams,
   ErrorModel,
-  GetReviewBoard200,
   GetReviewBoardParams,
   ListReviewConflicts200,
-  RemoveReviewConflict200
+  RemoveReviewConflict200,
+  ReviewBoardOutputBody
 } from '.././model';
 
 import { customInstance } from '../../lib/api/orval-mutator';
@@ -151,7 +151,7 @@ export const getReviewBoard = (
 ) => {
       
       
-      return customInstance<GetReviewBoard200>(
+      return customInstance<ReviewBoardOutputBody>(
       {url: `/cycles/${id}/review-board`, method: 'GET',
         params, signal
     },

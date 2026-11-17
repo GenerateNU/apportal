@@ -69,7 +69,7 @@ type PreferenceListMember struct {
 type PreferenceListEntry struct {
 	ID               string         `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
 	PreferenceListID string         `json:"preference_list_id" gorm:"type:uuid;not null;index:idx_preference_list_entries_list;uniqueIndex:preference_list_entries_preference_list_id_application_id_key,priority:1"`
-	ApplicationID    string         `json:"application_id" gorm:"type:uuid;not null;uniqueIndex:preference_list_entries_preference_list_id_application_id_key,priority:2"`
+	ApplicationID    string         `json:"application_id" gorm:"type:uuid;not null;uniqueIndex:preference_list_entries_preference_list_id_application_id_key,priority:2;index:idx_preference_list_entries_application"`
 	Rank             int            `json:"rank" gorm:"type:integer;not null"`
 	Reasoning        *string        `json:"reasoning,omitempty"`
 	UpdatedBy        string         `json:"updated_by" gorm:"not null"`
@@ -103,7 +103,7 @@ type PreferenceListPersonalEntry struct {
 	ID               string         `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
 	PreferenceListID string         `json:"preference_list_id" gorm:"type:uuid;not null;index:idx_preference_list_personal_entries_list_owner,priority:1;uniqueIndex:preference_list_personal_entr_preference_list_id_owner_nuid_key,priority:1"`
 	OwnerNUID        string         `json:"owner_nuid" gorm:"not null;index:idx_preference_list_personal_entries_list_owner,priority:2;uniqueIndex:preference_list_personal_entr_preference_list_id_owner_nuid_key,priority:2"`
-	ApplicationID    string         `json:"application_id" gorm:"type:uuid;not null;uniqueIndex:preference_list_personal_entr_preference_list_id_owner_nuid_key,priority:3"`
+	ApplicationID    string         `json:"application_id" gorm:"type:uuid;not null;uniqueIndex:preference_list_personal_entr_preference_list_id_owner_nuid_key,priority:3;index:idx_preference_list_personal_entries_application"`
 	Rank             int            `json:"rank" gorm:"type:integer;not null"`
 	Reasoning        *string        `json:"reasoning,omitempty"`
 	CreatedAt        time.Time      `json:"created_at" gorm:"not null;default:now()"`
@@ -128,7 +128,7 @@ type PreferenceListPersonalEntryDetail struct {
 type PreferenceListComment struct {
 	ID               string         `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
 	PreferenceListID string         `json:"preference_list_id" gorm:"type:uuid;not null;index:idx_preference_list_comments_list"`
-	ApplicationID    *string        `json:"application_id,omitempty" gorm:"type:uuid"`
+	ApplicationID    *string        `json:"application_id,omitempty" gorm:"type:uuid;index:idx_preference_list_comments_application"`
 	AuthorNUID       string         `json:"author_nuid" gorm:"not null"`
 	Body             string         `json:"body" gorm:"not null"`
 	CreatedAt        time.Time      `json:"created_at" gorm:"not null;default:now()"`

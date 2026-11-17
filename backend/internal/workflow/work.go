@@ -157,6 +157,13 @@ func (f *CycleState) AssignmentOp(c Caller, w Work, roleID string, remove bool) 
 }
 
 func (s *Service) RequireAssignmentChange(ctx context.Context, cycleID, roleID string, w Work, remove bool) error {
+	return s.RequireAssignmentChanges(ctx, cycleID, []string{roleID}, w, remove)
+}
+
+func (s *Service) RequireAssignmentChanges(ctx context.Context, cycleID string, roleIDs []string, w Work, remove bool) error {
+	if len(roleIDs) == 0 {
+		return nil
+	}
 	db := s.db.WithContext(ctx)
 	f, err := Load(db, cycleID)
 	if err != nil {
@@ -166,7 +173,11 @@ func (s *Service) RequireAssignmentChange(ctx context.Context, cycleID, roleID s
 	if err != nil {
 		return utils.StoreErr(err)
 	}
-	return authorizeOnSuccess(ctx, db, f, f.AssignmentOp(caller, w, roleID, remove))
+	ops := make([]Operation, len(roleIDs))
+	for i, r := range roleIDs {
+		ops[i] = f.AssignmentOp(caller, w, r, remove)
+	}
+	return authorizeOnSuccess(ctx, db, f, ops...)
 }
 
 func (s *Service) AssignmentPermissions(ctx context.Context, cycleID string, w Work) (map[string]error, error) {
@@ -189,6 +200,18 @@ func (s *Service) AssignmentPermissions(ctx context.Context, cycleID string, w W
 // RequireSetupEditable lets chiefs edit a step's setup freely until it is released for an opening (any opening when roleID
 // is empty); after that people may have seen it, so an edit is an override. A step the cycle doesn't run has no setup.
 func (s *Service) RequireSetupEditable(ctx context.Context, cycleID, roleID string, w Work) error {
+	return s.RequireSetupsEditable(ctx, cycleID, SetupTarget{RoleID: roleID, Work: w})
+}
+
+type SetupTarget struct {
+	RoleID string
+	Work   Work
+}
+
+func (s *Service) RequireSetupsEditable(ctx context.Context, cycleID string, targets ...SetupTarget) error {
+	if len(targets) == 0 {
+		return nil
+	}
 	db := s.db.WithContext(ctx)
 	f, err := Load(db, cycleID)
 	if err != nil {
@@ -198,9 +221,13 @@ func (s *Service) RequireSetupEditable(ctx context.Context, cycleID, roleID stri
 	if err != nil {
 		return utils.StoreErr(err)
 	}
-	ops, err := f.setupOps(caller, w, roleID)
-	if err != nil {
-		return err
+	var ops []Operation
+	for _, t := range targets {
+		more, err := f.setupOps(caller, t.Work, t.RoleID)
+		if err != nil {
+			return err
+		}
+		ops = append(ops, more...)
 	}
 	return authorizeOnSuccess(ctx, db, f, ops...)
 }

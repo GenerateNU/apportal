@@ -98,13 +98,13 @@ func TestReviewBoardGroupsReviewersByApplicant(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(out.Body) != 2 {
-		t.Fatalf("only review stages belong on the board: %+v", out.Body)
+	if len(out.Body.Rows) != 2 {
+		t.Fatalf("only review stages belong on the board: %+v", out.Body.Rows)
 	}
-	if out.Body[0].Reviewers == nil || len(out.Body[0].Reviewers) != 0 {
-		t.Errorf("no reviewers should be an empty list: %+v", out.Body[0])
+	if out.Body.Rows[0].Reviewers == nil || len(out.Body.Rows[0].Reviewers) != 0 {
+		t.Errorf("no reviewers should be an empty list: %+v", out.Body.Rows[0])
 	}
-	r := out.Body[1].Reviewers
+	r := out.Body.Rows[1].Reviewers
 	if len(r) != 2 || !r[0].Submitted || r[1].Submitted || !r[1].Started || r[0].AssignmentID != "r1" {
 		t.Errorf("reviewers: %+v", r)
 	}
@@ -112,8 +112,15 @@ func TestReviewBoardGroupsReviewersByApplicant(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(all.Body) != 3 {
-		t.Fatalf("history keeps a3, reviewed and since moved on: %+v", all.Body)
+	if len(all.Body.Rows) != 3 {
+		t.Fatalf("history keeps a3, reviewed and since moved on: %+v", all.Body.Rows)
+	}
+	paged, err := newReviewService(store, fakeRules{}).reviewBoard(chief(), &ReviewBoardInput{ID: accesstest.CycleID, Limit: 10})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(paged.Body.Rows) != 2 || len(paged.Body.Rows[1].Reviewers) != 2 {
+		t.Fatalf("a page carries its own reviewers: %+v", paged.Body.Rows)
 	}
 }
 

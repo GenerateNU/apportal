@@ -30,7 +30,10 @@ type BoardRow struct {
 }
 
 type ReviewBoardOutput struct {
-	Body []BoardRow
+	Body struct {
+		Rows       []BoardRow `json:"rows"`
+		NextCursor string     `json:"next_cursor,omitempty"`
+	}
 }
 
 var boardStages = []models.ApplicationStage{models.StageSubmitted, models.StageLeadReview, models.StageChiefReview}
@@ -38,22 +41,38 @@ var boardStages = []models.ApplicationStage{models.StageSubmitted, models.StageL
 type ReviewBoardInput struct {
 	ID string `path:"id" doc:"Cycle ID"`
 	// History keeps everyone who was reviewed, after they move on or are turned down.
-	History bool `query:"history" doc:"Also list everyone with reviewers assigned, whatever their stage now"`
+	History bool   `query:"history" doc:"Also list everyone with reviewers assigned, whatever their stage now"`
+	Limit   int    `query:"limit" doc:"Max rows per page; omit (or 0) to return every match" minimum:"0" maximum:"200"`
+	Cursor  string `query:"cursor" doc:"next_cursor from the previous page; omit for the first page"`
 }
 
 func (s *reviewService) reviewBoard(ctx context.Context, in *ReviewBoardInput) (*ReviewBoardOutput, error) {
 	if err := s.manage(ctx, in.ID); err != nil {
 		return nil, err
 	}
+	after, err := utils.ParseCursor(in.Cursor)
+	if err != nil {
+		return nil, err
+	}
 	stages := boardStages
 	if in.History {
 		stages = nil
 	}
-	apps, err := s.store.Applications(ctx, in.ID, stages)
+	out := &ReviewBoardOutput{}
+	apps, next, err := s.store.ApplicationsPage(ctx, in.ID, stages, in.Limit, after)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
-	reviewers, err := s.store.Reviewers(ctx, in.ID, stages)
+	var reviewers []assignedReviewer
+	if in.Limit > 0 {
+		ids := make([]string, len(apps))
+		for i, a := range apps {
+			ids[i] = a.ID
+		}
+		reviewers, err = s.store.ReviewersFor(ctx, ids)
+	} else {
+		reviewers, err = s.store.Reviewers(ctx, in.ID, stages)
+	}
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
@@ -67,7 +86,8 @@ func (s *reviewService) reviewBoard(ctx context.Context, in *ReviewBoardInput) (
 		}
 		board = kept
 	}
-	return &ReviewBoardOutput{Body: board}, nil
+	out.Body.Rows, out.Body.NextCursor = board, next
+	return out, nil
 }
 
 func buildBoard(apps []models.ApplicationSummary, reviewers []assignedReviewer) []BoardRow {

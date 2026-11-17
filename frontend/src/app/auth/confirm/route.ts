@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { type EmailOtpType } from '@supabase/supabase-js'
 import { NextResponse, type NextRequest } from 'next/server'
+import { ensureProfile } from '@/lib/auth/ensure-profile'
 
 // Redeems the one-time token from an emailed auth link (password recovery,
 // email confirmation) and turns it into a session, then forwards to `next`.
@@ -39,20 +40,27 @@ export async function GET(request: NextRequest) {
 
   // Templates using {{ .TokenHash }} land here; templates using the default
   // {{ .ConfirmationURL }} come back through Supabase as a PKCE ?code=.
-  const { error } = tokenHash
+  const { data, error } = tokenHash
     ? await supabase.auth.verifyOtp({
         type: type ?? 'recovery',
         token_hash: tokenHash,
       })
     : code
       ? await supabase.auth.exchangeCodeForSession(code)
-      : { error: { message: 'Reset link was missing its token' } }
+      : {
+          data: { session: null },
+          error: { message: 'Reset link was missing its token' },
+        }
 
   if (error) {
     const failed = new URL('/forgot-password', request.url)
     failed.searchParams.set('error', 'invalid_link')
     failed.searchParams.set('reason', error.message)
     return NextResponse.redirect(failed)
+  }
+
+  if (data.session) {
+    await ensureProfile(data.session).catch(() => undefined)
   }
 
   return response

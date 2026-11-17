@@ -88,19 +88,12 @@ export function useApplicationFilters({
     () => (cycleId ? roles.map((roleId) => ({ cycleId, roleId })) : []),
     [cycleId, roles]
   )
-  const questionQueries = useQuestionsByCycleRoles(pairs)
+  const { byCycleRole: questionsByCycleRole, loaded: questionsFetched } =
+    useQuestionsByCycleRoles(pairs)
 
   // The Tag chip lists names; the API takes ids.
   const { data: cycleTags = [] } = useCycleTags(cycleId)
   const tagNames = useMemo(() => cycleTags.map((t) => t.name), [cycleTags])
-  const questionsByCycleRole = useMemo(() => {
-    const map: Record<string, Question[]> = {}
-    pairs.forEach((pair, i) => {
-      const data = questionQueries[i]?.data
-      if (data) map[`${pair.cycleId}:${pair.roleId}`] = data
-    })
-    return map
-  }, [pairs, questionQueries])
 
   // One column per distinct question across the visible rows' cycle/role
   // combinations, ordered the same way the application form displays them.
@@ -151,8 +144,7 @@ export function useApplicationFilters({
   // doing it while they're pending would drop every chip. Specials are
   // synthetic questions (__rating__ and friends) and always apply, except
   // availability, which needs a question in view to expand against.
-  const questionsLoaded =
-    pairs.length > 0 && questionQueries.every((q) => q.isSuccess)
+  const questionsLoaded = pairs.length > 0 && questionsFetched
   // Joined into a string so the effect below re-runs on a real change rather
   // than on every render's fresh Map.
   const knownQuestionTexts = useMemo(

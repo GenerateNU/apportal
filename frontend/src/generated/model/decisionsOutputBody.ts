@@ -13,6 +13,7 @@ import type { DecisionsOutputBodyStatusCounts } from './decisionsOutputBodyStatu
 export interface DecisionsOutputBody {
   /** A URL to the JSON Schema for this object. */
   readonly $schema?: string;
+  next_cursor?: string;
   rows: DecisionsOutputBodyRows;
   status_counts: DecisionsOutputBodyStatusCounts;
   total: number;

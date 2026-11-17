@@ -1,9 +1,4 @@
-import {
-  useMutation,
-  useQueries,
-  useQuery,
-  useQueryClient,
-} from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   getApplicationTemplate,
   listCycleApplicationTemplates,
@@ -63,26 +58,6 @@ export function useApplicationTemplate(
         opts
       ) as Promise<ApplicationTemplate>,
     enabled: !!cycleId && !!roleId,
-  })
-}
-
-// Fetches the template for each (cycle, role) pair, e.g. to show each role's
-// real application title on the admin applications board.
-export function useApplicationTemplatesByCycleRoles(
-  pairs: { cycleId: string; roleId: string }[],
-  opts?: RequestOptions
-) {
-  return useQueries({
-    queries: pairs.map(({ cycleId, roleId }) => ({
-      queryKey: queryKeys.applicationTemplates.detail(cycleId, roleId),
-      queryFn: () =>
-        getApplicationTemplate(
-          cycleId,
-          { role_id: roleId },
-          opts
-        ) as Promise<ApplicationTemplate>,
-      enabled: !!cycleId && !!roleId,
-    })),
   })
 }
 

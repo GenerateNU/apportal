@@ -13,4 +13,14 @@ export type ListCycleSelectionsParams = {
  * Optional lead filter
  */
 lead_nuid?: string;
+/**
+ * Max results per page; omit (or 0) to return every match
+ * @minimum 0
+ * @maximum 200
+ */
+limit?: number;
+/**
+ * next_cursor from the previous page; omit for the first page
+ */
+cursor?: string;
 };

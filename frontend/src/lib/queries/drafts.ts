@@ -1,13 +1,8 @@
-import {
-  useMutation,
-  useQueries,
-  useQuery,
-  useQueryClient,
-  type QueryObserverResult,
-} from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   deleteDraft,
   getDraftBoard,
+  listDraftBoards,
   listDraftedApplications,
   makeDraftPick,
   openDraft,
@@ -50,21 +45,34 @@ export function useDraftBoard(
   })
 }
 
-export function useDraftBoards<T = QueryObserverResult<DraftBoard>[]>(
+export function useDraftBoards(
   cycleId: string,
   roleIds: string[],
-  combine?: (results: QueryObserverResult<DraftBoard>[]) => T,
-  { poll = false }: { poll?: boolean } = {}
-): T {
-  return useQueries({
-    queries: roleIds.map((roleId) => ({
-      ...draftBoardQuery(cycleId, roleId),
-      enabled: !!cycleId,
-      refetchInterval: poll ? DRAFT_POLL_MS : false,
-    })),
-    combine: combine as
-      ((results: QueryObserverResult<unknown>[]) => T) | undefined,
-  }) as T
+  { poll = false }: { poll?: boolean } = {},
+  opts?: RequestOptions
+) {
+  const queryClient = useQueryClient()
+  return useQuery({
+    queryKey: queryKeys.drafts.boards(cycleId, roleIds),
+    queryFn: async () => {
+      const boards = ((await listDraftBoards(
+        cycleId,
+        { role_ids: roleIds.join(',') },
+        opts
+      )) ?? []) as DraftBoard[]
+      const byRole: Record<string, DraftBoard> = {}
+      for (const board of boards) {
+        byRole[board.role_id] = board
+        queryClient.setQueryData(
+          queryKeys.drafts.board(cycleId, board.role_id),
+          board
+        )
+      }
+      return byRole
+    },
+    enabled: !!cycleId && roleIds.length > 0,
+    refetchInterval: poll ? DRAFT_POLL_MS : false,
+  })
 }
 
 // Application id -> the name of the team that took them, across every board in

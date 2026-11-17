@@ -4,7 +4,8 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { upsertApplicant } from '@/generated/applicants/applicants'
+import { APIError } from '@/lib/api/client'
+import { ensureProfile } from '@/lib/auth/ensure-profile'
 
 export default function SignupForm() {
   const router = useRouter()
@@ -16,6 +17,7 @@ export default function SignupForm() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [confirmEmail, setConfirmEmail] = useState<string | null>(null)
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -34,9 +36,13 @@ export default function SignupForm() {
     setIsSubmitting(true)
 
     const supabase = createClient()
-    const { error: signUpError } = await supabase.auth.signUp({
+    const { data, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        data: { nuid: nuid.trim(), full_name: fullName.trim() },
+        emailRedirectTo: `${window.location.origin}/auth/confirm?next=/`,
+      },
     })
 
     if (signUpError) {
@@ -45,13 +51,19 @@ export default function SignupForm() {
       return
     }
 
-    // Every new account starts as an applicant — upsertApplicant never sets
-    // roles, so the users table default of {applicant} applies.
+    if (!data.session) {
+      setConfirmEmail(email)
+      setIsSubmitting(false)
+      return
+    }
+
     try {
-      await upsertApplicant({ nuid, email, full_name: fullName })
-    } catch {
+      await ensureProfile(data.session)
+    } catch (err) {
       setError(
-        'Account created, but saving your profile failed. Try again from your dashboard.'
+        err instanceof APIError && err.status === 409
+          ? 'That NUID is already registered.'
+          : 'Account created, but saving your profile failed. Sign in to try again.'
       )
       setIsSubmitting(false)
       return
@@ -59,6 +71,21 @@ export default function SignupForm() {
 
     router.push('/')
     router.refresh()
+  }
+
+  if (confirmEmail) {
+    return (
+      <div className="flex w-full flex-col gap-3 text-center">
+        <p className="text-ink font-semibold">Check your email</p>
+        <p className="text-text-muted text-sm">
+          We sent a confirmation link to {confirmEmail}. Open it to finish
+          creating your account.
+        </p>
+        <Link href="/login" className="text-ink text-sm underline">
+          Back to sign in
+        </Link>
+      </div>
+    )
   }
 
   return (

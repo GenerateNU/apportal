@@ -78,6 +78,11 @@ func (s *applicationService) get(ctx context.Context, in *ApplicationIDInput) (*
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
+	if actor, ok := middleware.ActorFrom(ctx); ok && actor.NUID == app.UserNUID {
+		if err := s.ownerView(ctx, &app); err != nil {
+			return nil, utils.StoreErr(err)
+		}
+	}
 	return &ApplicationOutput{Body: app}, nil
 }
 
@@ -90,7 +95,11 @@ func (s *applicationService) list(ctx context.Context, in *ListApplicationsInput
 	actor, _ := middleware.ActorFrom(ctx)
 	own := in.UserNUID == actor.NUID
 	var visible *gorm.DB
-	if !own {
+	if own {
+		if err := staffOnlyFilters(in); err != nil {
+			return nil, err
+		}
+	} else {
 		if err := s.access.RequireAnyCycle(ctx, access.Review); err != nil {
 			return nil, err
 		}
@@ -174,6 +183,16 @@ func (s *applicationService) list(ctx context.Context, in *ListApplicationsInput
 	out.Body.Total = page.Total
 	out.Body.NextCursor = page.NextCursor
 	out.Body.StageCounts = make(map[string]int, len(page.StageCounts))
+	if own {
+		mine := make([]*models.Application, len(out.Body.Applications))
+		for i := range out.Body.Applications {
+			mine[i] = &out.Body.Applications[i].Application
+		}
+		if err := s.ownerView(ctx, mine...); err != nil {
+			return nil, utils.StoreErr(err)
+		}
+		return out, nil
+	}
 	for stage, n := range page.StageCounts {
 		out.Body.StageCounts[string(stage)] = n
 	}

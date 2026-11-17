@@ -83,6 +83,13 @@ func insertMembers(tx *gorm.DB, cycleID, panelID string, nuids []string) error {
 	for i, n := range nuids {
 		rows[i] = models.InterviewPanelMember{PanelID: panelID, CycleID: cycleID, UserNUID: n}
 	}
+	return createMembers(tx, rows)
+}
+
+func createMembers(tx *gorm.DB, rows []models.InterviewPanelMember) error {
+	if len(rows) == 0 {
+		return nil
+	}
 	err := tx.Select("panel_id", "cycle_id", "user_nuid").Create(&rows).Error
 	if utils.UniqueViolation(err) {
 		return errOnAnotherPanel
@@ -166,20 +173,31 @@ func (d *InterviewPanelDB) AutoCreate(ctx context.Context, cycleID, roleID, by s
 		if err := tx.Model(&models.InterviewPanel{}).Where("cycle_id = ?", cycleID).Pluck("name", &names).Error; err != nil {
 			return err
 		}
+		groups := interviewplan.Panels(pool, slotOf, size)
+		if len(groups) == 0 {
+			return nil
+		}
+		panels := make([]models.InterviewPanel, len(groups))
 		next := 1
-		for _, members := range interviewplan.Panels(pool, slotOf, size) {
+		for i := range groups {
 			name := ""
 			for name == "" || slices.Contains(names, name) {
 				name = fmt.Sprintf("Panel %d", next)
 				next++
 			}
-			id, err := insertPanel(tx, cycleID, name, by, members)
-			if err != nil {
-				return err
-			}
-			ids = append(ids, id)
+			panels[i] = models.InterviewPanel{CycleID: cycleID, Name: name, CreatedBy: by}
 		}
-		return nil
+		if err := utils.Insert(tx, &panels, "cycle_id", "name", "created_by"); err != nil {
+			return err
+		}
+		var members []models.InterviewPanelMember
+		for i, group := range groups {
+			ids = append(ids, panels[i].ID)
+			for _, n := range group {
+				members = append(members, models.InterviewPanelMember{PanelID: panels[i].ID, CycleID: cycleID, UserNUID: n})
+			}
+		}
+		return createMembers(tx, members)
 	})
 	return ids, utils.DBErr(err)
 }

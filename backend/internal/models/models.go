@@ -114,8 +114,8 @@ type Question struct {
 
 type CodeChallenge struct {
 	ID           string     `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
-	CycleID      string     `json:"cycle_id" gorm:"type:uuid;not null"`
-	RoleID       string     `json:"role_id" gorm:"type:uuid;not null"`
+	CycleID      string     `json:"cycle_id" gorm:"type:uuid;not null;index:idx_code_challenges_cycle_role,priority:1"`
+	RoleID       string     `json:"role_id" gorm:"type:uuid;not null;index:idx_code_challenges_cycle_role,priority:2"`
 	Name         string     `json:"name" gorm:"not null"`
 	ChallengeURL *string    `json:"challenge_url,omitempty"`
 	Instructions *string    `json:"instructions,omitempty"`
@@ -159,10 +159,10 @@ func (Applicant) TableName() string { return "users" }
 
 type Application struct {
 	ID           string           `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
-	CycleID      string           `json:"cycle_id" gorm:"type:uuid;not null;index:idx_applications_cycle;uniqueIndex:applications_cycle_id_user_nuid_role_key,priority:1"`
+	CycleID      string           `json:"cycle_id" gorm:"type:uuid;not null;index:idx_applications_cycle;uniqueIndex:applications_cycle_id_user_nuid_role_key,priority:1;index:idx_applications_cycle_role_stage,priority:1"`
 	UserNUID     string           `json:"user_nuid" gorm:"not null;index:idx_applications_user;uniqueIndex:applications_cycle_id_user_nuid_role_key,priority:2"`
-	RoleID       string           `json:"role_id" gorm:"type:uuid;not null;uniqueIndex:applications_cycle_id_user_nuid_role_key,priority:3"`
-	Stage        ApplicationStage `json:"stage" gorm:"type:application_stage;not null;default:draft;index:idx_applications_stage"`
+	RoleID       string           `json:"role_id" gorm:"type:uuid;not null;uniqueIndex:applications_cycle_id_user_nuid_role_key,priority:3;index:idx_applications_cycle_role_stage,priority:2"`
+	Stage        ApplicationStage `json:"stage" gorm:"type:application_stage;not null;default:draft;index:idx_applications_stage;index:idx_applications_cycle_role_stage,priority:3"`
 	Availability json.RawMessage  `json:"availability,omitempty" gorm:"serializer:jsonb;type:jsonb"`
 	ResumeURL    *string          `json:"resume_url,omitempty"`
 	// SubmittedAt is nil until the applicant actually submits (draft ->

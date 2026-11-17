@@ -11,6 +11,7 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/handlers/leadassignment"
 	"github.com/GenerateNU/apportal/backend/internal/models"
 	"github.com/GenerateNU/apportal/backend/internal/staffing"
+	"github.com/GenerateNU/apportal/backend/internal/utils"
 	"github.com/GenerateNU/apportal/backend/internal/workflow"
 )
 
@@ -23,6 +24,8 @@ type reviewStore interface {
 	Staff(ctx context.Context, cycleID string) ([]models.CycleStaffMember, error)
 	Applications(ctx context.Context, cycleID string, stages []models.ApplicationStage) ([]models.ApplicationSummary, error)
 	Reviewers(ctx context.Context, cycleID string, stages []models.ApplicationStage) ([]assignedReviewer, error)
+	ApplicationsPage(ctx context.Context, cycleID string, stages []models.ApplicationStage, limit int, after *utils.Cursor) ([]models.ApplicationSummary, string, error)
+	ReviewersFor(ctx context.Context, applicationIDs []string) ([]assignedReviewer, error)
 	SaveAssignments(ctx context.Context, pairs []assign.Pair, assignedBy string) (int, error)
 	Locked(ctx context.Context, cycleID string, fn func(reviewStore) error) error
 
@@ -76,6 +79,24 @@ func (r *ReviewDB) Reviewers(ctx context.Context, cycleID string, stages []model
 	return rows, err
 }
 
+func (r *ReviewDB) ApplicationsPage(ctx context.Context, cycleID string, stages []models.ApplicationStage, limit int, after *utils.Cursor) ([]models.ApplicationSummary, string, error) {
+	f := application.ApplicationFilter{CycleID: cycleID, Stages: stages}
+	if limit > 0 {
+		f.Limit, f.After = &limit, after
+	}
+	page, err := application.NewApplicationDB(r.db).ListApplicationsPage(ctx, f, false)
+	return page.Items, page.NextCursor, err
+}
+
+func (r *ReviewDB) ReviewersFor(ctx context.Context, applicationIDs []string) ([]assignedReviewer, error) {
+	rows := []assignedReviewer{}
+	if len(applicationIDs) == 0 {
+		return rows, nil
+	}
+	err := reviewersQuery(r.db.WithContext(ctx), "", nil).Where("la.application_id IN ?", applicationIDs).Scan(&rows).Error
+	return rows, err
+}
+
 func reviewersQuery(db *gorm.DB, cycleID string, stages []models.ApplicationStage) *gorm.DB {
 	return db.Table("lead_assignments la").
 		Select(`la.id, la.application_id, la.lead_nuid, COALESCE(u.full_name, la.lead_nuid) AS full_name,
@@ -83,7 +104,12 @@ func reviewersQuery(db *gorm.DB, cycleID string, stages []models.ApplicationStag
 		Joins("JOIN applications a ON a.id = la.application_id").
 		Joins("LEFT JOIN users u ON u.nuid = la.lead_nuid").
 		Joins("LEFT JOIN written_reviews wr ON wr.application_id = la.application_id AND wr.reviewer_nuid = la.lead_nuid").
-		Where("a.cycle_id = ?", cycleID).
+		Scopes(func(q *gorm.DB) *gorm.DB {
+			if cycleID == "" {
+				return q
+			}
+			return q.Where("a.cycle_id = ?", cycleID)
+		}).
 		Scopes(func(q *gorm.DB) *gorm.DB {
 			if len(stages) == 0 {
 				return q

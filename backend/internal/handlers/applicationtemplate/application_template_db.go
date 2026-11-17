@@ -57,7 +57,10 @@ func (a *ApplicationTemplateDB) ListCycleApplicationTemplates(ctx context.Contex
 		if err := createMissingCycleTemplates(tx, cycleID).Error; err != nil {
 			return err
 		}
-		return cycleTemplatesQuery(tx, cycleID).Find(&templates).Error
+		if err := cycleTemplatesQuery(tx, cycleID).Find(&templates).Error; err != nil {
+			return err
+		}
+		return workflow.FillTemplates(tx, templates, time.Now())
 	})
 	return templates, err
 }

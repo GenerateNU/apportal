@@ -274,6 +274,8 @@ export const queryKeys = {
     all: ['drafts'] as const,
     board: (cycleId: string, roleId: string) =>
       [...queryKeys.drafts.all, 'board', cycleId, roleId] as const,
+    boards: (cycleId: string, roleIds: string[]) =>
+      [...queryKeys.drafts.all, 'boards', cycleId, ...roleIds] as const,
     // Every board in the cycle at once — what marks an applicant as taken
     // wherever they're still listed.
     drafted: (cycleId: string) =>

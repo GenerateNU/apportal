@@ -78,13 +78,14 @@ func (s *reviewService) autoAssign(ctx context.Context, in *AutoAssignInput) (*A
 		if dryRun || len(pairs) == 0 {
 			return nil
 		}
+		var added []string
 		for _, pos := range p.Positions {
-			if pos.Added == 0 {
-				continue
+			if pos.Added > 0 {
+				added = append(added, pos.RoleID)
 			}
-			if err := s.staff.RequireAdd(ctx, in.ID, pos.RoleID, models.KindReviewer); err != nil {
-				return err
-			}
+		}
+		if err := s.staff.RequireAdd(ctx, in.ID, added, models.KindReviewer); err != nil {
+			return err
 		}
 		if _, err := store.SaveAssignments(ctx, pairs, utils.CurrentActor(ctx).NUID); err != nil {
 			return utils.StoreErr(err)

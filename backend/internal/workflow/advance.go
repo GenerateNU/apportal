@@ -90,20 +90,22 @@ func advance(db *gorm.DB, in AdvanceInput, now time.Time) ([]string, Preview, er
 				byRole[a.RoleID] = append(byRole[a.RoleID], a.ID)
 				p.Changes = append(p.Changes, PreviewItem{Kind: "advance", ApplicationID: a.ID, Detail: string(entry)})
 			}
+			pending := map[string][]string{}
 			for _, o := range f.Openings {
-				ids, ok := byRole[o.RoleID]
-				if !ok {
+				if ids, ok := byRole[o.RoleID]; ok && !f.Ready(o.RoleID, in.Step, now) {
+					pending[o.RoleID] = ids
+				}
+			}
+			complete, err := completeByRole(tx, f, in.Step, pending)
+			if err != nil {
+				return p, err
+			}
+			for _, o := range f.Openings {
+				if _, ok := byRole[o.RoleID]; !ok {
 					continue
 				}
 				p.Require(in.Caller.operation(OpAdvance, in.Step, o.RoleID))
-				complete := false
-				if !f.Ready(o.RoleID, in.Step, now) {
-					var err error
-					if complete, err = workComplete(tx, f, in.Step, ids); err != nil {
-						return p, err
-					}
-				}
-				if err := f.AdvanceBlock(o.RoleID, in.Step, now, complete); err != nil {
+				if err := f.AdvanceBlock(o.RoleID, in.Step, now, complete[o.RoleID]); err != nil {
 					return p, err
 				}
 			}
@@ -195,19 +197,53 @@ func reviewsIn(db *gorm.DB, cycleID, roleID string, now time.Time) (bool, error)
 }
 
 func workComplete(tx *gorm.DB, f *CycleState, s models.Step, ids []string) (bool, error) {
+	q, ok := shortOfWork(tx, f, s, ids)
+	if !ok {
+		return false, nil
+	}
 	var short int64
+	if err := q.Count(&short).Error; err != nil {
+		return false, err
+	}
+	return short == 0, nil
+}
+
+func completeByRole(tx *gorm.DB, f *CycleState, s models.Step, byRole map[string][]string) (map[string]bool, error) {
+	out := map[string]bool{}
+	var ids []string
+	for _, r := range byRole {
+		ids = append(ids, r...)
+	}
+	q, ok := shortOfWork(tx, f, s, ids)
+	if !ok || len(ids) == 0 {
+		return out, nil
+	}
+	var short []string
+	if err := q.Distinct().Pluck("a.role_id", &short).Error; err != nil {
+		return nil, err
+	}
+	for r := range byRole {
+		out[r] = true
+	}
+	for _, r := range short {
+		out[r] = false
+	}
+	return out, nil
+}
+
+func shortOfWork(tx *gorm.DB, f *CycleState, s models.Step, ids []string) (*gorm.DB, bool) {
 	q := tx.Table("applications a").Where("a.id IN ?", ids)
 	switch s {
 	case models.StepReviews:
 		n := f.Assignments[s][models.KindReviewer]
 		if n == 0 {
-			return false, nil
+			return nil, false
 		}
-		q = q.Where("(SELECT count(*) FROM written_reviews w WHERE w.application_id = a.id AND w.submitted_at IS NOT NULL) < ?", n)
+		return q.Where("(SELECT count(*) FROM written_reviews w WHERE w.application_id = a.id AND w.submitted_at IS NOT NULL) < ?", n), true
 	case models.StepInterviews:
 		iv, rec := f.Assignments[s][models.KindInterviewer], f.Assignments[s][models.KindRecordingReviewer]
 		if iv == 0 && rec == 0 {
-			return false, nil
+			return nil, false
 		}
 		conds := tx.Where("FALSE")
 		if iv > 0 {
@@ -216,14 +252,9 @@ func workComplete(tx *gorm.DB, f *CycleState, s models.Step, ids []string) (bool
 		if rec > 0 {
 			conds = conds.Or("(SELECT count(*) FROM interview_reviewers r JOIN interviews i ON i.id = r.interview_id WHERE i.application_id = a.id AND r.writeup_submitted_at IS NOT NULL) < ?", rec)
 		}
-		q = q.Where(conds)
-	default:
-		return false, nil
+		return q.Where(conds), true
 	}
-	if err := q.Count(&short).Error; err != nil {
-		return false, err
-	}
-	return short == 0, nil
+	return nil, false
 }
 
 type undoRow struct {

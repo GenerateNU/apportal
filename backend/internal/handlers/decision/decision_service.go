@@ -92,8 +92,12 @@ func (s *decisionService) list(ctx context.Context, in *ListDecisionsInput) (*De
 		InterviewerNUID: in.InterviewerNUID,
 		Search:          in.Search,
 		Limit:           in.Limit,
-		Offset:          in.Offset,
 	}
+	after, err := utils.ParseCursor(in.Cursor)
+	if err != nil {
+		return nil, err
+	}
+	filter.After = after
 	if in.Status != "" {
 		st := models.DecisionStatus(in.Status)
 		filter.Status = &st
@@ -129,6 +133,7 @@ func (s *decisionService) list(ctx context.Context, in *ListDecisionsInput) (*De
 	}
 	out := &DecisionsOutput{}
 	out.Body.Rows, out.Body.Total, out.Body.StatusCounts = page.Rows, page.Total, page.StatusCounts
+	out.Body.NextCursor = page.NextCursor
 	return out, nil
 }
 

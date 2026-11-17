@@ -75,6 +75,7 @@ type decisionRow struct {
 	SentAt           *time.Time
 	SentBy           *string
 	UpdatedAt        *time.Time
+	SubmittedAt      *time.Time
 }
 
 // GetOrCreateDecisionTemplates returns both of a (cycle, role)'s letters,
@@ -119,7 +120,11 @@ const decisionStatusExpr = `CASE
 		ELSE 'pending'
 	END`
 
-const decisionRowColumns = `a.id AS application_id, a.cycle_id, a.role_id, a.user_nuid AS applicant_nuid,
+const decisionWrittenExpr = `CASE WHEN COALESCE(dd.feedback, '') = '' THEN 0 ELSE 1 END`
+
+const decisionWaitingExpr = `COALESCE(a.submitted_at, 'infinity')`
+
+const decisionRowColumns = `a.id AS application_id, a.cycle_id, a.role_id, a.user_nuid AS applicant_nuid, a.submitted_at,
 	u.full_name, u.email, a.stage, ` + decisionKindExpr + ` AS kind, ` + decisionStatusExpr + ` AS status,
 	ivs.nuids AS interviewer_nuids, ivs.names AS interviewer_names,
 	dd.feedback, dd.compliments, dd.body_override, dd.author_nuid, au.full_name AS author_name,
@@ -192,19 +197,32 @@ func (d *DecisionDB) ListDecisions(ctx context.Context, f DecisionFilter) (Decis
 		q = q.Where(decisionStatusExpr+" = ?", *f.Status)
 	}
 	// Unwritten feedback first, then the longest-waiting applicants.
-	q = q.Order("(dd.feedback IS NULL OR dd.feedback = '') DESC").
-		Order("a.submitted_at ASC NULLS LAST").
+	q = q.Order(decisionWrittenExpr).
+		Order(decisionWaitingExpr).
 		Order("u.full_name ASC").
 		Order("a.id")
 	if f.Limit > 0 {
-		q = q.Limit(f.Limit).Offset(f.Offset)
+		if c := f.After; c != nil {
+			q = q.Where("("+decisionWrittenExpr+", "+decisionWaitingExpr+", u.full_name, a.id) > (?, COALESCE(?::timestamptz, 'infinity'), ?, ?::uuid)",
+				c.Rank, c.At, c.Text, c.ID)
+		}
+		q = q.Limit(f.Limit + 1)
 	}
 	var rows []decisionRow
 	if err := q.Scan(&rows).Error; err != nil {
 		return page, err
 	}
+	rows, more := utils.TrimPage(rows, f.Limit)
 	for _, r := range rows {
 		page.Rows = append(page.Rows, toDecisionRow(r))
+	}
+	if more {
+		last := rows[len(rows)-1]
+		c := utils.Cursor{At: last.SubmittedAt, Text: last.FullName, ID: last.ApplicationID}
+		if last.Feedback != nil && *last.Feedback != "" {
+			c.Rank = 1
+		}
+		page.NextCursor = c.Encode()
 	}
 	return page, nil
 }

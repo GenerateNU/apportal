@@ -1,14 +1,11 @@
 'use client'
 
 import { useMemo } from 'react'
-import { useQueries } from '@tanstack/react-query'
-import { getDraftBoard } from '@/generated/draft/draft'
-import type { DraftBoard } from '@/lib/api/types'
-import { queryKeys } from '@/lib/queries/keys'
 import { useCycleScope } from '@/hooks/useCycleScope'
 import { useMyWork } from '@/lib/queries/my-work'
 import { useApplications } from '@/lib/queries/applications'
 import { useDecisions } from '@/lib/queries/decisions'
+import { useDraftBoards } from '@/lib/queries/drafts'
 import { useInterviewReviewersBulk } from '@/lib/queries/interview-assignments'
 import {
   interviewSubmitted,
@@ -121,17 +118,11 @@ export function useLeadWork() {
   const { roleIds } = useCycleRoles(cycleId)
   const { data: decisions = [], isPending: decisionsPending } =
     useDecisions(cycleId)
-  const boards = useQueries({
-    queries: roleIds.map((roleId) => ({
-      queryKey: queryKeys.drafts.board(cycleId, roleId),
-      queryFn: () =>
-        getDraftBoard(cycleId, { role_id: roleId }) as Promise<DraftBoard>,
-      enabled: !!cycleId,
-      retry: false,
-    })),
-    combine: (results) =>
-      results.map((q) => q.data).filter((b): b is DraftBoard => !!b),
-  })
+  const { data: boardsByRole } = useDraftBoards(cycleId, roleIds)
+  const boards = useMemo(
+    () => Object.values(boardsByRole ?? {}),
+    [boardsByRole]
+  )
 
   const phases: Phase[] = useMemo(() => {
     const reviewTasks: Task[] = reviewApps.map((app, i) => {

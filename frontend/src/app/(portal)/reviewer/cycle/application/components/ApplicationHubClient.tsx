@@ -16,10 +16,7 @@ import { useToast } from '@/components/ui/toast'
 import { useCycleScope } from '@/hooks/useCycleScope'
 import { apiErrorDetail } from '@/lib/api/client'
 import type { ApplicationTemplate } from '@/lib/api/types'
-import {
-  useApplicationTemplate,
-  useApplicationTemplatesByCycleRoles,
-} from '@/lib/queries/application-templates'
+import { useCycleApplicationTemplates } from '@/lib/queries/application-templates'
 import { useCycleTemplateSummary } from '@/lib/queries/cycles'
 import { useSetOpeningStep } from '@/lib/queries/workflow'
 import type { CycleStatus } from '@/lib/api/types'
@@ -57,16 +54,12 @@ export function ApplicationHubClient() {
   const summary = (roleId: string) =>
     summaries.find((s) => s.role_id === roleId)
   const roleIds = scope.roles.roleIds
-  const templates = useApplicationTemplatesByCycleRoles(
-    roleIds.map((roleId) => ({ cycleId: scope.cycleId, roleId }))
-  )
-  const drafts = roleIds.filter(
-    (_, i) => templates[i]?.data?.status === 'draft'
-  )
+  const { data: templates = [] } = useCycleApplicationTemplates(scope.cycleId)
+  const templateFor = (roleId: string) =>
+    templates.find((t) => t.role_id === roleId)
+  const drafts = roleIds.filter((r) => templateFor(r)?.status === 'draft')
   const releasable = drafts.filter(
-    (r) =>
-      (summary(r)?.question_count ?? 0) > 0 &&
-      !!templates[roleIds.indexOf(r)]?.data?.closes_at
+    (r) => (summary(r)?.question_count ?? 0) > 0 && !!templateFor(r)?.closes_at
   )
   const setStep = useSetOpeningStep()
   const toast = useToast()
@@ -153,13 +146,14 @@ export function ApplicationHubClient() {
                 key={roleId}
                 cycleId={scope.cycleId}
                 roleId={roleId}
+                template={templateFor(roleId)}
                 roleName={scope.roles.roleLabel(roleId)}
                 questions={summary(roleId)?.question_count ?? 0}
                 applicants={summary(roleId)?.submission_count ?? 0}
               />
             ))
           )}
-          {templates.some((t) => t.data?.status === 'closed') && (
+          {roleIds.some((r) => templateFor(r)?.status === 'closed') && (
             <Link
               href="/reviewer/cycle/reviews"
               className="text-ink flex items-center justify-between border-t border-gray-100 px-5 py-3 text-sm font-medium hover:bg-gray-50"
@@ -177,17 +171,18 @@ export function ApplicationHubClient() {
 function PositionRelease({
   cycleId,
   roleId,
+  template,
   roleName,
   questions,
   applicants,
 }: {
   cycleId: string
   roleId: string
+  template: ApplicationTemplate | undefined
   roleName: string
   questions: number
   applicants: number
 }) {
-  const { data: template } = useApplicationTemplate(cycleId, roleId)
   const setStep = useSetOpeningStep()
   const { cycle } = useCycleScope()
   const toast = useToast()

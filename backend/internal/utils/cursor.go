@@ -11,6 +11,7 @@ import (
 type Cursor struct {
 	At   *time.Time `json:"t,omitempty"`
 	Text string     `json:"s,omitempty"`
+	Rank int        `json:"r,omitempty"`
 	ID   string     `json:"id"`
 }
 
@@ -32,4 +33,11 @@ func ParseCursor(raw string) (*Cursor, error) {
 		return nil, huma.Error422UnprocessableEntity("cursor is malformed")
 	}
 	return &c, nil
+}
+
+func TrimPage[T any](rows []T, limit int) ([]T, bool) {
+	if limit > 0 && len(rows) > limit {
+		return rows[:limit], true
+	}
+	return rows, false
 }

@@ -48,7 +48,11 @@ func (s *selectionService) list(ctx context.Context, in *ListSelectionsInput) (*
 	if err := s.access.CanCycle(ctx, access.ReviewCycle, in.ID); err != nil {
 		return nil, err
 	}
-	items, err := s.selectionDB.ListSelections(ctx, in.ID, in.LeadNUID)
+	after, err := utils.ParseCursor(in.Cursor)
+	if err != nil {
+		return nil, err
+	}
+	items, next, err := s.selectionDB.ListSelections(ctx, in.ID, in.LeadNUID, in.Limit, after)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
@@ -66,5 +70,7 @@ func (s *selectionService) list(ctx context.Context, in *ListSelectionsInput) (*
 			kept = append(kept, it)
 		}
 	}
-	return &SelectionsOutput{Body: kept}, nil
+	out := &SelectionsOutput{}
+	out.Body.Selections, out.Body.NextCursor = kept, next
+	return out, nil
 }

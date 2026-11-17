@@ -8,6 +8,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/GenerateNU/apportal/backend/internal/middleware"
+	"github.com/GenerateNU/apportal/backend/internal/models"
 )
 
 type PreviewItem struct {
@@ -135,15 +136,14 @@ func (p *Preview) enforce(tx *gorm.DB, f *CycleState) error {
 			return err
 		}
 	}
+	var rows []models.WorkflowOverride
 	for _, op := range p.ops {
 		op = p.withLevel(op)
 		if d := f.CheckPermission(op); d.Level != LevelNormal {
-			if err := recordOverride(tx, f.CycleID, op, d, p); err != nil {
-				return err
-			}
+			rows = append(rows, overrideRow(f.CycleID, op, d, p))
 		}
 	}
-	return nil
+	return insertOverrides(tx, rows)
 }
 
 // Authorize enforces each operation and records, in tx, the ones that went through as a confirmed override.
@@ -177,17 +177,16 @@ func enforceAll(f *CycleState, ops []Operation) error {
 
 func recordAll(tx *gorm.DB, f *CycleState, ops []Operation) error {
 	seen := map[Operation]bool{}
+	var rows []models.WorkflowOverride
 	for _, op := range ops {
 		d := f.CheckPermission(op)
 		if d.Level == LevelNormal || seen[op] {
 			continue
 		}
 		seen[op] = true
-		if err := recordOverride(tx, f.CycleID, op, d, nil); err != nil {
-			return err
-		}
+		rows = append(rows, overrideRow(f.CycleID, op, d, nil))
 	}
-	return nil
+	return insertOverrides(tx, rows)
 }
 
 func orEmpty(s []string) []string {

@@ -38,8 +38,7 @@ status?: ListDecisionsStatus;
  */
 limit?: number;
 /**
- * Rows to skip, for the next page
- * @minimum 0
+ * next_cursor from the previous page; omit for the first page
  */
-offset?: number;
+cursor?: string;
 };

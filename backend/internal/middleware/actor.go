@@ -42,6 +42,22 @@ type contextKey struct{}
 
 var actorKey contextKey
 
+type emailContextKey struct{}
+
+var emailKey emailContextKey
+
+// VerifiedEmailFrom is the email on a verified session, set even before the
+// caller has a users row.
+func VerifiedEmailFrom(ctx context.Context) (string, bool) {
+	email, ok := ctx.Value(emailKey).(string)
+	return email, ok && email != ""
+}
+
+// ContextWithVerifiedEmail is for tests and callers building a context by hand.
+func ContextWithVerifiedEmail(ctx context.Context, email string) context.Context {
+	return context.WithValue(ctx, emailKey, email)
+}
+
 // WithActor verifies the request's bearer token against Supabase and, when it
 // belongs to a known user, stores their real Actor (NUID and roles read from
 // the users table, not the request) on the request's context. A missing or
@@ -54,6 +70,7 @@ func WithActor(verifier *SupabaseVerifier, userByEmail func(ctx context.Context,
 
 		if token := bearerToken(c.Get("Authorization")); token != "" {
 			if email, err := verifier.Verify(ctx, token); err == nil {
+				ctx = context.WithValue(ctx, emailKey, email)
 				if user, err := userByEmail(ctx, email); err == nil {
 					ctx = ContextWithActor(ctx, Actor{NUID: user.NUID, Roles: user.Roles})
 				}

@@ -19,7 +19,7 @@ func Route(api huma.API, db *gorm.DB) {
 		Method:      http.MethodPut,
 		Path:        "/applications/{id}/written-review",
 		Summary:     "Submit or update your written review",
-		Description: "Reviewer only; upserts the calling reviewer's review-question answers.",
+		Description: "A lead assigned to review this application, or a chief; upserts the caller's own review-question answers.",
 		Tags:        []string{"Written reviews"},
 		Errors:      []int{http.StatusUnauthorized},
 	}, s.upsert)

@@ -4,6 +4,7 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query'
+import { useMemo } from 'react'
 import {
   createQuestion,
   deleteQuestion,
@@ -28,22 +29,50 @@ export function useQuestions(
   })
 }
 
-// Fetches a batch of (cycle, role) question sets, e.g. to preview an
-// applications list spanning several cycle/role combinations at once. Each
-// pair gets its own cache entry, shared with useQuestions.
 export function useQuestionsByCycleRoles(
   pairs: { cycleId: string; roleId: string }[],
   opts?: RequestOptions
 ) {
-  return useQueries({
-    queries: pairs.map(({ cycleId, roleId }) => ({
-      queryKey: queryKeys.questions.list(cycleId, roleId),
-      queryFn: async () =>
-        ((await listCycleQuestions(cycleId, { role_id: roleId }, opts)) ??
-          []) as Question[],
-      enabled: !!cycleId,
+  const queryClient = useQueryClient()
+  const cycles = useMemo(() => {
+    const byCycle = new Map<string, string[]>()
+    for (const { cycleId, roleId } of pairs) {
+      if (!cycleId) continue
+      byCycle.set(cycleId, [...(byCycle.get(cycleId) ?? []), roleId])
+    }
+    return [...byCycle.entries()]
+  }, [pairs])
+  const queries = useQueries({
+    queries: cycles.map(([cycleId, roleIds]) => ({
+      queryKey: queryKeys.questions.list(cycleId),
+      queryFn: async () => {
+        const all = ((await listCycleQuestions(cycleId, undefined, opts)) ??
+          []) as Question[]
+        for (const roleId of roleIds) {
+          queryClient.setQueryData(
+            queryKeys.questions.list(cycleId, roleId),
+            forRole(all, roleId)
+          )
+        }
+        return all
+      },
     })),
   })
+  return useMemo(() => {
+    const byCycleRole: Record<string, Question[]> = {}
+    cycles.forEach(([cycleId, roleIds], i) => {
+      const all = queries[i]?.data
+      if (!all) return
+      for (const roleId of roleIds) {
+        byCycleRole[`${cycleId}:${roleId}`] = forRole(all, roleId)
+      }
+    })
+    return { byCycleRole, loaded: queries.every((q) => q.isSuccess) }
+  }, [cycles, queries])
+}
+
+function forRole(questions: Question[], roleId: string) {
+  return questions.filter((q) => !q.role_id || q.role_id === roleId)
 }
 
 export function useCreateQuestion() {

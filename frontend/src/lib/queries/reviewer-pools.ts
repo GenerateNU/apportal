@@ -230,8 +230,8 @@ export function useReviewBoard(
       : queryKeys.reviewBoard.detail(cycleId),
     queryFn: async () =>
       (
-        ((await getReviewBoard(cycleId, history ? { history } : undefined)) ??
-          []) as BoardRow[]
+        ((await getReviewBoard(cycleId, history ? { history } : undefined))
+          ?.rows ?? []) as BoardRow[]
       ).map((r): BoardEntry => ({
         applicationId: r.application_id,
         applicantNuid: r.applicant_nuid,
