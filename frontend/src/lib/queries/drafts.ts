@@ -29,6 +29,7 @@ function draftBoardQuery(
     queryFn: () =>
       getDraftBoard(cycleId, { role_id: roleId }, opts) as Promise<DraftBoard>,
     retry: false,
+    meta: { missingIsNormal: true },
   }
 }
 

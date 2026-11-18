@@ -266,3 +266,14 @@ func (s *Service) RequireSetupVisible(ctx context.Context, cycleID string, w Wor
 	}
 	return nil
 }
+
+func (s *Service) RequirePreferenceListClosed(ctx context.Context, cycleID, roleID string) error {
+	f, err := Load(s.db.WithContext(ctx), cycleID)
+	if err != nil {
+		return utils.StoreErr(err)
+	}
+	if !f.preferenceListClosed(roleID, s.now()) {
+		return huma.Error409Conflict("the preference list deadline for " + f.RoleName(roleID) + " hasn't passed yet")
+	}
+	return nil
+}

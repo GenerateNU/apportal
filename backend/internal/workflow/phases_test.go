@@ -98,7 +98,7 @@ func TestPhasesLockUntilSetUp(t *testing.T) {
 
 	f.CompletedAt[models.StepInterviews] = &past
 	decisions := string(models.StepDecisions)
-	if r, _ := pageLock(f.Phases(now), decisions, PageDraft); r != "Opens once the preference list deadline passes." {
+	if r, _ := pageLock(f.Phases(now), decisions, PageDraft); r != "Opens once a preference list deadline passes." {
 		t.Fatalf("draft before the deadline: %q", r)
 	}
 	f.SetDeadline(swe, models.StepDecisions, Deadline{Kind: models.KindPreferenceList, DueAt: past})

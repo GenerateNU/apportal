@@ -407,7 +407,7 @@ func TestStepStatusAndCurrent(t *testing.T) {
 	}
 }
 
-func TestNextStepOpensOnceApplicationsCloseEverywhere(t *testing.T) {
+func TestReviewsOpenOnceAnyPositionCloses(t *testing.T) {
 	f := newTestFacts()
 	f.Openings = append(f.Openings, Opening{RoleID: "sd", Name: "Software Designer"})
 	for _, r := range []string{swe, "sd"} {
@@ -415,13 +415,13 @@ func TestNextStepOpensOnceApplicationsCloseEverywhere(t *testing.T) {
 	}
 	f.SetDeadline(swe, models.StepApplications, Deadline{Kind: models.KindApplicant, DueAt: past})
 	f.SetDeadline("sd", models.StepApplications, Deadline{Kind: models.KindApplicant, DueAt: now.Add(time.Hour)})
-	if got := f.StepStatus(models.StepReviews, now); got != StatusLocked {
-		t.Fatalf("one position still taking applications: got %s, want locked", got)
+	if got := f.StepStatus(models.StepReviews, now); got != StatusOpen {
+		t.Fatalf("one position closed: got %s, want open", got)
+	}
+	if err := f.ReleaseBlock("sd", models.StepReviews, now); statusOf(err) != http.StatusConflict {
+		t.Fatalf("releasing reviews for the position still open: got %v, want 409", err)
 	}
 	f.SetDeadline("sd", models.StepApplications, Deadline{Kind: models.KindApplicant, DueAt: past})
-	if got := f.StepStatus(models.StepReviews, now); got != StatusOpen {
-		t.Fatalf("every position closed: got %s, want open", got)
-	}
 	if got := f.StepStatus(models.StepInterviews, now); got != StatusLocked {
 		t.Fatalf("interviews before reviews start: got %s, want locked", got)
 	}

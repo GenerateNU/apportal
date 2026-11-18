@@ -4,10 +4,10 @@
 // throws, so it must render its own <html> and <body>.
 export default function GlobalError({
   error,
-  unstable_retry,
+  retry,
 }: {
   error: Error & { digest?: string }
-  unstable_retry: () => void
+  retry: () => void
 }) {
   return (
     <html lang="en">
@@ -26,7 +26,7 @@ export default function GlobalError({
             </p>
           )}
           <button
-            onClick={() => unstable_retry()}
+            onClick={() => retry()}
             className="inline-flex h-8 items-center justify-center bg-[#111111] px-3 text-sm font-medium text-white transition-colors hover:bg-[#111111]/85"
           >
             Try again

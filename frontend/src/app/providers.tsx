@@ -9,6 +9,7 @@ import {
 } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { ToastProvider } from '@/components/ui/toast'
+import { AccessWatcher } from '@/components/AccessWatcher'
 import { OverrideConfirmProvider } from '@/components/workflow/OverrideConfirmProvider'
 import { APIError } from '@/lib/api/client'
 import type { User } from '@supabase/supabase-js'
@@ -54,6 +55,9 @@ function makeQueryClient() {
       queries: {
         // Avoid an immediate refetch on the client right after SSR hands off
         staleTime: 30 * 1000,
+        retry: (count, err) =>
+          !(err instanceof APIError && [401, 403, 404].includes(err.status)) &&
+          count < 3,
       },
     },
     queryCache: new QueryCache({ onError: handleQueryError }),
@@ -92,6 +96,7 @@ export function Providers({
     <AuthProvider initialUser={initialUser}>
       <QueryClientProvider client={queryClient}>
         <ToastProvider>
+          <AccessWatcher />
           <OverrideConfirmProvider>{children}</OverrideConfirmProvider>
         </ToastProvider>
         {showDevtools && <ReactQueryDevtools initialIsOpen={false} />}

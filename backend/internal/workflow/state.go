@@ -290,19 +290,19 @@ func (f *CycleState) StepStatus(s models.Step, now time.Time) Status {
 	if cur, ok := f.Current(); (ok && cur == s) || (!t.ByOutcome && f.StartedAnywhere(s)) {
 		return StatusOpen
 	}
-	if prev, ok := f.Prev(s); ok && prev == models.StepApplications && f.overEverywhere(prev, now) {
+	if prev, ok := f.Prev(s); ok && prev == models.StepApplications && f.overAnywhere(prev, now) {
 		return StatusOpen
 	}
 	return StatusLocked
 }
 
-func (f *CycleState) overEverywhere(s models.Step, now time.Time) bool {
+func (f *CycleState) overAnywhere(s models.Step, now time.Time) bool {
 	for _, o := range f.Openings {
-		if !f.Started(o.RoleID, s) || !f.Ready(o.RoleID, s, now) {
-			return false
+		if f.Started(o.RoleID, s) && f.Ready(o.RoleID, s, now) {
+			return true
 		}
 	}
-	return len(f.Openings) > 0
+	return false
 }
 
 func (f *CycleState) AllDone() bool {

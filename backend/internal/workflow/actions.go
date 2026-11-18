@@ -242,7 +242,7 @@ func (f *CycleState) Tasks(counts []TaskCount, now time.Time) []Task {
 		}
 		open, reason := f.taskOpen(c.Kind, c.RoleID)
 		t.Status = taskStatus(open, c.Done, c.Total)
-		if c.Kind == TaskPreferenceList && open && f.preferenceListsClosed(now) {
+		if c.Kind == TaskPreferenceList && open && f.preferenceListDone(c.RoleID, now) {
 			t.Status = StatusDone
 		}
 		if !open {
