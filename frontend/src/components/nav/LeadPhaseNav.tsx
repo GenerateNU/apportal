@@ -49,7 +49,7 @@ export function LeadPhaseNav({ collapsed }: { collapsed?: boolean }) {
   if (collapsed) {
     return (
       <div className="flex flex-col items-center gap-1">
-        <Tooltip side="right" label="Applicants">
+        <Tooltip label="Applicants">
           <Link
             href={applicantsHref}
             aria-label="Applicants"
@@ -67,7 +67,6 @@ export function LeadPhaseNav({ collapsed }: { collapsed?: boolean }) {
           const locked = p.status === 'locked'
           return (
             <Tooltip
-              side="right"
               key={p.id}
               label={locked ? (p.locked_reason ?? p.label) : p.label}
             >
@@ -158,7 +157,7 @@ export function LeadPhaseNav({ collapsed }: { collapsed?: boolean }) {
             return (
               <li key={p.id}>
                 {locked ? (
-                  <Tooltip side="right" label={p.locked_reason ?? ''}>
+                  <Tooltip label={p.locked_reason ?? ''}>
                     <span className="block cursor-not-allowed">{row}</span>
                   </Tooltip>
                 ) : (

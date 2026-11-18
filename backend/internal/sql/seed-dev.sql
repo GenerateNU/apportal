@@ -167,9 +167,9 @@ BEGIN
   FROM unnest(ARRAY[swe, sd]) r,
        unnest(ARRAY['rejection_post_interview', 'rejection_generic']::decision_kind[]) k;
 
-  INSERT INTO preference_list_deadlines (cycle_id, role_id, closes_at, updated_by) VALUES
-    (cur, swe, now() + interval '10 days', chief1),
-    (cur, sd, now() + interval '10 days', chief1);
+  INSERT INTO opening_deadlines (cycle_id, role_id, step, kind, due_at, hard) VALUES
+    (cur, swe, 'decisions', 'preference_list', now() + interval '10 days', true),
+    (cur, sd, 'decisions', 'preference_list', now() + interval '10 days', true);
 
   INSERT INTO review_releases (cycle_id, role_id, review_kind, released_by) VALUES
     (cur, swe, 'written', chief1);
