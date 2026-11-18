@@ -375,6 +375,30 @@ func TestReleasingApplicationsNeedsAFilledOutForm(t *testing.T) {
 	f.must(release())
 }
 
+func TestDecisionsCloseWhenTheLastPositionHasNoOneLeftToReject(t *testing.T) {
+	f := newFixture(t)
+	designer := f.application(f.cycleA, f.roleA, models.StageSelection)
+	engineer := f.application(f.cycleA, f.roleA2, models.StageSelection)
+	f.exec("DELETE FROM applications WHERE id IN ?", f.apps)
+	ctx := f.confirmed(f.admin)
+	done := func() bool {
+		var n int64
+		f.must(f.db.Model(&models.CycleStep{}).Where("cycle_id = ? AND step = ? AND completed_at IS NOT NULL", f.cycleA, models.StepDecisions).Count(&n).Error)
+		return n == 1
+	}
+	_, _, err := f.s.workflow.Decide(ctx, f.cycleA, f.roleA, []string{designer})
+	f.must(err)
+	if done() {
+		t.Fatal("decisions closed while the other position still has someone in it")
+	}
+	f.exec("UPDATE applications SET stage = 'accepted' WHERE id = ?", engineer)
+	_, _, err = f.s.workflow.Decide(ctx, f.cycleA, f.roleA2, nil)
+	f.must(err)
+	if !done() {
+		t.Fatal("decisions should close once nobody is left, even when the last position had no one to reject")
+	}
+}
+
 func TestReleasingReviewsBringsInSubmittedApplicants(t *testing.T) {
 	f := newFixture(t)
 	f.closeApplications()

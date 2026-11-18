@@ -271,19 +271,18 @@ func enterFromApplications(tx *gorm.DB, cycleID, roleID string, s models.Step, c
 		Clauses(clause.Locking{Strength: "UPDATE"}).Pluck("id", &ids).Error; err != nil {
 		return err
 	}
-	if len(ids) == 0 {
-		return nil
-	}
-	batch := uuid.NewString()
-	moves := make([]models.ApplicationMove, len(ids))
-	for i, id := range ids {
-		moves[i] = models.ApplicationMove{BatchID: batch, ApplicationID: id, FromStage: models.StageSubmitted, ToStage: entry, MovedBy: caller.NUID, MovedAt: now}
-	}
-	if err := tx.Create(&moves).Error; err != nil {
-		return err
-	}
-	if err := tx.Model(&models.Application{}).Where("id IN ?", ids).Update("stage", entry).Error; err != nil {
-		return err
+	if len(ids) > 0 {
+		batch := uuid.NewString()
+		moves := make([]models.ApplicationMove, len(ids))
+		for i, id := range ids {
+			moves[i] = models.ApplicationMove{BatchID: batch, ApplicationID: id, FromStage: models.StageSubmitted, ToStage: entry, MovedBy: caller.NUID, MovedAt: now}
+		}
+		if err := tx.Create(&moves).Error; err != nil {
+			return err
+		}
+		if err := tx.Model(&models.Application{}).Where("id IN ?", ids).Update("stage", entry).Error; err != nil {
+			return err
+		}
 	}
 	var left int64
 	if err := tx.Model(&models.Application{}).Where("cycle_id = ? AND stage IN ?", cycleID, Stages(models.StepApplications)).Count(&left).Error; err != nil {
