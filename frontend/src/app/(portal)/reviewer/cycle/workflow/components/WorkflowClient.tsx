@@ -88,8 +88,8 @@ export function TeamClient() {
             cycleId={scope.cycleId}
             header={
               <Subheading
-                title="Groups"
-                hint="Group chiefs and leads by what they're responsible for. Keep everyone in one group, or split into groups like Design Chiefs or Engineering TLs."
+                title="Staff groups"
+                hint="Create staff groups, then assign each group to review and interview candidates for each opening."
               />
             }
           />
@@ -97,7 +97,7 @@ export function TeamClient() {
             <section className="flex flex-col gap-3">
               <Subheading
                 title="Who reviews and interviews"
-                hint="Choose which groups review and interview each opening. If none are picked, the whole team is included. Auto-assign uses this too."
+                hint="Choose which staff groups review and interview each opening. If none are picked, the whole team is included. Auto-assign uses this too."
               />
               <Card padding="none">
                 <StaffingTable cycleId={scope.cycleId} roles={rolesOf(scope)} />

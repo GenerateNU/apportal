@@ -86,7 +86,7 @@ export function ApplicationHubClient() {
     <div className={PAGE_SHELL}>
       <PageHeader
         title="Application forms"
-        subtitle="Write each position's application, set when it closes, then release it."
+        subtitle="Create and publish applications for each position, including their closing dates."
         actions={
           drafts.length > 1 &&
           releasable.length > 0 && (

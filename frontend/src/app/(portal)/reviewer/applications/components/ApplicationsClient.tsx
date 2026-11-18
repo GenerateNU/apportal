@@ -286,17 +286,7 @@ export function ApplicationsClient({
       <PageHeader
         back={back}
         title="Applicants"
-        subtitle="Browse everyone who applied, filter by stage, role or answers, and open anyone to see their application and reviews."
-        actions={
-          <div className="flex flex-wrap items-center gap-3">
-            <SearchInput
-              value={search}
-              onChange={setSearch}
-              placeholder="Search name or NUID..."
-              className="sm:w-60"
-            />
-          </div>
-        }
+        subtitle="View all applicants, filter by stage, role, or answers, and open applications to see their details and reviews."
       />
 
       {inApplications && summary.length > 0 && (
@@ -329,6 +319,15 @@ export function ApplicationsClient({
           hasMore={hasNextPage}
           loadingMore={isFetchingNextPage}
           onLoadMore={fetchNextPage}
+          search={
+            <SearchInput
+              value={search}
+              onChange={setSearch}
+              placeholder="Search name or NUID..."
+              size="sm"
+              className="sm:w-60"
+            />
+          }
         />
       </div>
 

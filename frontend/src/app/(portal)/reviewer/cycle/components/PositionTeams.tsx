@@ -7,6 +7,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
+import { Button } from '@/components/ui/button'
+import { EmptyState } from '@/components/ui/empty-state'
 import { LoadingText } from '@/components/ui/loading-text'
 import { SearchableSelect } from '@/components/ui/searchable-select'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -86,22 +88,33 @@ export function GroupsGrid({
     if (name) await run(m.createCategory.mutateAsync(name))
   }
 
+  const empty = !isLoading && groups.length === 0 && !adding
+
   return (
     <section className="flex flex-col gap-3">
       <div className="flex items-start justify-between gap-4">
         {header}
-        {!adding && (
+        {!adding && !empty && (
           <button
             type="button"
             onClick={() => setAdding(true)}
             className="text-text-muted hover:text-ink hover:border-ink flex shrink-0 items-center gap-1 border border-gray-300 bg-white px-2.5 py-1 text-sm font-medium transition-colors"
           >
-            <Plus size={14} /> New group
+            <Plus size={14} /> New staff group
           </button>
         )}
       </div>
-      {!isLoading && groups.length === 0 && !adding && (
-        <p className="text-text-subtle text-sm">No groups yet.</p>
+      {empty && (
+        <EmptyState
+          size="sm"
+          title="No staff groups yet"
+          description="Until then, all staff review and interview every opening."
+          action={
+            <Button variant="outline" size="sm" onClick={() => setAdding(true)}>
+              <Plus size={14} /> New staff group
+            </Button>
+          }
+        />
       )}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {isLoading &&
@@ -209,7 +222,7 @@ export function GroupsGrid({
                   setAdding(false)
                 }
               }}
-              placeholder="Group name"
+              placeholder="Staff group name"
               className="text-ink placeholder:text-text-faint border-b border-gray-200 bg-transparent pb-1 font-semibold outline-none focus:border-gray-400"
             />
             <span className="text-text-subtle text-xs">
@@ -343,7 +356,7 @@ function GroupPicker({
         <PopoverContent className="w-60 p-1" align="start">
           {groups.length === 0 ? (
             <p className="text-text-subtle px-2 py-1.5 text-sm">
-              Make a group above first.
+              Make a staff group above first.
             </p>
           ) : (
             groups.map((g) => {
@@ -372,7 +385,7 @@ function GroupPicker({
           )}
           <div className="mt-1 border-t border-gray-100 pt-1">
             <p className="text-text-subtle px-2 pb-1 text-xs">
-              No group picked means everyone.
+              No staff group picked means everyone.
             </p>
           </div>
         </PopoverContent>

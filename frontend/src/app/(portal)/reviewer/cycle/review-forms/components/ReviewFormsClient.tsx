@@ -27,7 +27,7 @@ export function ReviewFormsClient() {
     <div className={PAGE_SHELL}>
       <PageHeader
         title="Review forms"
-        subtitle="Reviewers use this form to evaluate each position's applicants. Write it any time before reviews start."
+        subtitle="Create the form reviewers use to score each position's applicants. Finish it before reviews start."
       />
       {!scope.cycleId ? (
         scope.isLoading ? (
