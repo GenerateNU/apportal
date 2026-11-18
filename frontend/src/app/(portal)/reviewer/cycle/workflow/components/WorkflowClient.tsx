@@ -97,7 +97,7 @@ export function TeamClient() {
             <section className="flex flex-col gap-3">
               <Subheading
                 title="Who reviews and interviews"
-                hint="Choose which staff groups review and interview each opening. If none are picked, the whole team is included. Auto-assign uses this too."
+                hint="Choose which staff groups review and interview each opening. If none are picked, the whole team is included. Auto-assign only picks reviewers and interviewers from these groups."
               />
               <Card padding="none">
                 <StaffingTable cycleId={scope.cycleId} roles={rolesOf(scope)} />
