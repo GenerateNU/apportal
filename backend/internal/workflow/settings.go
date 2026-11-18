@@ -211,8 +211,13 @@ func release(db *gorm.DB, cycleID, roleID string, s models.Step, caller Caller, 
 		return Preview{}, invalid("invalid step")
 	}
 	return execute(db, cycleID, change{
-		preview: func(_ *gorm.DB, f *CycleState) (Preview, error) { return previewRelease(f, roleID, s, caller, now) },
-		apply:   func(tx *gorm.DB, f *CycleState, _ Preview) error { return applyRelease(tx, f, roleID, s, caller, now) },
+		preview: func(tx *gorm.DB, f *CycleState) (Preview, error) {
+			if err := f.LoadSetup(tx); err != nil {
+				return Preview{}, err
+			}
+			return previewRelease(f, roleID, s, caller, now)
+		},
+		apply: func(tx *gorm.DB, f *CycleState, _ Preview) error { return applyRelease(tx, f, roleID, s, caller, now) },
 	})
 }
 

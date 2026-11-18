@@ -117,6 +117,13 @@ func (f *CycleState) ReleaseBlock(role string, s models.Step, now time.Time) err
 			return invalid("set a future %s deadline before releasing %s", k, Label(s))
 		}
 	}
+	if s == models.StepApplications {
+		for _, m := range f.Missing[key{role, s}] {
+			if m.work == SetupApplicationForm {
+				return conflict("add application questions for %s before releasing %s", f.RoleName(role), Label(s))
+			}
+		}
+	}
 	if prev, ok := f.Prev(s); ok && !f.Ready(role, prev, now) {
 		return conflict("%s must close for %s before %s is released", Label(prev), f.RoleName(role), Label(s))
 	}

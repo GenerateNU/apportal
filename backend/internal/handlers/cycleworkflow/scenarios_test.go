@@ -201,6 +201,7 @@ func TestScenarioPeerReviewRelease(t *testing.T) {
 
 func TestScenarioEachTierGetsItsLayer(t *testing.T) {
 	f := newFixture(t)
+	f.exec("DELETE FROM questions WHERE cycle_id = ?", f.cycleA)
 	f.deadline(f.roleA, models.StepApplications, models.KindApplicant, f.now.Add(time.Hour))
 	view := func(a middleware.Actor) workflow.Overview {
 		out, err := f.s.getWorkflow(f.as(a), &CycleInput{ID: f.cycleA})

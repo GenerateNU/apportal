@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { releaseBlocker } from '@/app/(portal)/admin/applications/[cycleId]/[role]/builder/lib/status'
 import { useRouter } from 'next/navigation'
 import { ArrowRight } from 'lucide-react'
 import { PAGE_SHELL } from '@/components/ui/page-shell'
@@ -28,13 +29,6 @@ import { cn } from '@/lib/utils'
 import { FormStatusBadge } from '../../components/FormStatusBadge'
 
 type Status = ApplicationTemplate['status']
-
-export function releaseBlocker(hasForm: boolean, hasDeadline: boolean) {
-  if (!hasForm && !hasDeadline) return 'Write the form and set a deadline first'
-  if (!hasForm) return 'Write the application form first'
-  if (!hasDeadline) return 'Set a deadline first'
-  return undefined
-}
 
 const ROW =
   'grid items-center gap-3 px-5 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1.3fr)_minmax(0,1fr)_7rem] md:gap-4'

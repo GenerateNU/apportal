@@ -60,6 +60,8 @@ func newFixture(t *testing.T) *fixture {
 	f.roleA, f.roleA2, f.roleB = id(), id(), id()
 	f.exec("INSERT INTO roles (id, cycle_id, name) VALUES (?, ?, 'Engineer'), (?, ?, 'Designer'), (?, ?, 'Engineer')",
 		f.roleA, f.cycleA, f.roleA2, f.cycleA, f.roleB, f.cycleB)
+	testutil.FillOutForm(t, db, f.cycleA, f.roleA, f.roleA2)
+	testutil.FillOutForm(t, db, f.cycleB, f.roleB)
 	f.exec("INSERT INTO cycle_staff (cycle_id, user_nuid, role) VALUES (?, ?, 'chief'), (?, ?, 'chief'), (?, ?, 'lead'), (?, ?, 'lead')",
 		f.cycleA, f.chiefA.NUID, f.cycleB, f.chiefB.NUID, f.cycleA, f.leadA.NUID, f.cycleB, f.leadB.NUID)
 	for i := 0; i < 2; i++ {
@@ -354,6 +356,23 @@ func TestReleaseRules(t *testing.T) {
 	rec.Body.DueAt = f.now.Add(4 * time.Hour)
 	_, err = f.s.setDeadline(chief, rec)
 	f.must(err)
+}
+
+func TestReleasingApplicationsNeedsAFilledOutForm(t *testing.T) {
+	f := newFixture(t)
+	chief := f.as(f.chiefA)
+	release := func() error {
+		_, err := f.s.release(chief, &OpeningStepInput{ID: f.cycleA, RoleID: f.roleA, Step: models.StepApplications})
+		return err
+	}
+	f.deadline(f.roleA, models.StepApplications, models.KindApplicant, f.now.Add(time.Hour))
+	f.exec("DELETE FROM questions WHERE cycle_id = ?", f.cycleA)
+	testutil.WantStatus(t, release(), 409)
+	f.exec("INSERT INTO questions (cycle_id, role_id, question_text) VALUES (?, ?, 'Why?')", f.cycleA, f.roleA)
+	f.exec("DELETE FROM application_templates WHERE cycle_id = ? AND role_id = ?", f.cycleA, f.roleA)
+	testutil.WantStatus(t, release(), 409)
+	f.exec("INSERT INTO application_templates (cycle_id, role_id, title) VALUES (?, ?, 'Form')", f.cycleA, f.roleA)
+	f.must(release())
 }
 
 func TestReleasingReviewsBringsInSubmittedApplicants(t *testing.T) {
