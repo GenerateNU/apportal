@@ -5,6 +5,7 @@ import (
 	"maps"
 	"time"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
@@ -245,8 +246,48 @@ func applyRelease(tx *gorm.DB, f *CycleState, roleID string, s models.Step, call
 			return err
 		}
 	}
+	if prev, ok := f.Prev(s); ok && prev == models.StepApplications {
+		if err := enterFromApplications(tx, f.CycleID, roleID, s, caller, now); err != nil {
+			return err
+		}
+	}
 	f.SetRelease(roleID, s, now)
 	return nil
+}
+
+func enterFromApplications(tx *gorm.DB, cycleID, roleID string, s models.Step, caller Caller, now time.Time) error {
+	entry, ok := EntryStage(s)
+	if !ok {
+		return nil
+	}
+	var ids []string
+	if err := tx.Model(&models.Application{}).
+		Where("cycle_id = ? AND role_id = ? AND stage IN ?", cycleID, roleID, Stages(models.StepApplications)).
+		Clauses(clause.Locking{Strength: "UPDATE"}).Pluck("id", &ids).Error; err != nil {
+		return err
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	batch := uuid.NewString()
+	moves := make([]models.ApplicationMove, len(ids))
+	for i, id := range ids {
+		moves[i] = models.ApplicationMove{BatchID: batch, ApplicationID: id, FromStage: models.StageSubmitted, ToStage: entry, MovedBy: caller.NUID, MovedAt: now}
+	}
+	if err := tx.Create(&moves).Error; err != nil {
+		return err
+	}
+	if err := tx.Model(&models.Application{}).Where("id IN ?", ids).Update("stage", entry).Error; err != nil {
+		return err
+	}
+	var left int64
+	if err := tx.Model(&models.Application{}).Where("cycle_id = ? AND stage IN ?", cycleID, Stages(models.StepApplications)).Count(&left).Error; err != nil {
+		return err
+	}
+	if left > 0 {
+		return nil
+	}
+	return tx.Model(&models.CycleStep{}).Where("cycle_id = ? AND step = ? AND completed_at IS NULL", cycleID, models.StepApplications).Update("completed_at", now).Error
 }
 
 func unrelease(db *gorm.DB, cycleID, roleID string, s models.Step, caller Caller) (Preview, error) {

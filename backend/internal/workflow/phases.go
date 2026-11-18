@@ -77,7 +77,7 @@ func (f *CycleState) Phases(now time.Time) []PhaseView {
 	}
 	out := []PhaseView{setup}
 	for _, s := range f.EnabledSteps() {
-		p := PhaseView{Key: string(s), Label: Label(s), Status: f.StepStatus(s), ApplicantCount: f.StepCount(s), Pages: []PageView{}}
+		p := PhaseView{Key: string(s), Label: Label(s), Status: f.StepStatus(s, now), ApplicantCount: f.StepCount(s), Pages: []PageView{}}
 		if p.Status == StatusLocked {
 			p.LockedReason = f.lockedBecause()
 		}

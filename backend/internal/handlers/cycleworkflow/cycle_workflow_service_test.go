@@ -356,6 +356,32 @@ func TestReleaseRules(t *testing.T) {
 	f.must(err)
 }
 
+func TestReleasingReviewsBringsInSubmittedApplicants(t *testing.T) {
+	f := newFixture(t)
+	f.closeApplications()
+	f.deadline(f.roleA, models.StepReviews, models.KindReviewer, f.now.Add(2*time.Hour))
+	f.assignReviewer(f.apps[0])
+	f.release(f.roleA, models.StepReviews)
+	for _, app := range f.apps {
+		if got := f.stage(app); got != models.StageLeadReview {
+			t.Fatalf("application %s: got %s, want lead_review", app, got)
+		}
+	}
+	if got := f.stage(f.appB); got != models.StageSubmitted {
+		t.Fatalf("other cycle's application moved: %s", got)
+	}
+	var done int64
+	f.must(f.db.Model(&models.CycleStep{}).Where("cycle_id = ? AND step = ? AND completed_at IS NOT NULL", f.cycleA, models.StepApplications).Count(&done).Error)
+	if done != 1 {
+		t.Fatal("applications should be complete once no one is left in it")
+	}
+	var moves int64
+	f.must(f.db.Model(&models.ApplicationMove{}).Where("application_id IN ?", f.apps).Count(&moves).Error)
+	if moves != int64(len(f.apps)) {
+		t.Fatalf("got %d recorded moves, want %d", moves, len(f.apps))
+	}
+}
+
 func TestAdvanceAndUndo(t *testing.T) {
 	f := newFixture(t)
 	chief := f.as(f.chiefA)

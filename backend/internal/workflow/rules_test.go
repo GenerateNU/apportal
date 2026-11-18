@@ -398,7 +398,7 @@ func TestStepStatusAndCurrent(t *testing.T) {
 		models.StepDecisions:    StatusLocked,
 	}
 	for s, w := range want {
-		if got := f.StepStatus(s); got != w {
+		if got := f.StepStatus(s, now); got != w {
 			t.Errorf("%s: got %s, want %s", s, got, w)
 		}
 	}
@@ -407,11 +407,40 @@ func TestStepStatusAndCurrent(t *testing.T) {
 	}
 }
 
+func TestNextStepOpensOnceApplicationsCloseEverywhere(t *testing.T) {
+	f := newTestFacts()
+	f.Openings = append(f.Openings, Opening{RoleID: "sd", Name: "Software Designer"})
+	for _, r := range []string{swe, "sd"} {
+		f.SetRelease(r, models.StepApplications, past)
+	}
+	f.SetDeadline(swe, models.StepApplications, Deadline{Kind: models.KindApplicant, DueAt: past})
+	f.SetDeadline("sd", models.StepApplications, Deadline{Kind: models.KindApplicant, DueAt: now.Add(time.Hour)})
+	if got := f.StepStatus(models.StepReviews, now); got != StatusLocked {
+		t.Fatalf("one position still taking applications: got %s, want locked", got)
+	}
+	f.SetDeadline("sd", models.StepApplications, Deadline{Kind: models.KindApplicant, DueAt: past})
+	if got := f.StepStatus(models.StepReviews, now); got != StatusOpen {
+		t.Fatalf("every position closed: got %s, want open", got)
+	}
+	if got := f.StepStatus(models.StepInterviews, now); got != StatusLocked {
+		t.Fatalf("interviews before reviews start: got %s, want locked", got)
+	}
+	f.SetRelease(swe, models.StepReviews, past)
+	f.SetRelease("sd", models.StepReviews, past)
+	for _, r := range []string{swe, "sd"} {
+		f.Assigned[key{r, models.StepReviews}] = 1
+		f.Submitted[key{r, models.StepReviews}] = 1
+	}
+	if got := f.StepStatus(models.StepInterviews, now); got != StatusLocked {
+		t.Fatalf("every review in but no one advanced: got %s, want locked", got)
+	}
+}
+
 func TestStepsLockedWithoutPositions(t *testing.T) {
 	f := newTestFacts()
 	f.Openings = nil
 	for _, s := range f.EnabledSteps() {
-		if got := f.StepStatus(s); got != StatusLocked {
+		if got := f.StepStatus(s, now); got != StatusLocked {
 			t.Errorf("%s: got %s, want locked", s, got)
 		}
 	}
@@ -425,7 +454,7 @@ func TestStepsWaitOnSetup(t *testing.T) {
 		f := newTestFacts()
 		unset(f)
 		for _, s := range f.EnabledSteps() {
-			if got := f.StepStatus(s); got != StatusLocked {
+			if got := f.StepStatus(s, now); got != StatusLocked {
 				t.Errorf("%s, %s: got %s, want locked", name, s, got)
 			}
 		}
@@ -474,12 +503,12 @@ func TestFeedbackWaitsForDecisionsDespiteRejections(t *testing.T) {
 	f.CompletedAt[models.StepApplications] = &past
 	f.CompletedAt[models.StepReviews] = &past
 	f.AddMove(swe, models.StageRejected)
-	if got := f.StepStatus(models.StepFeedback); got != StatusLocked {
+	if got := f.StepStatus(models.StepFeedback, now); got != StatusLocked {
 		t.Fatalf("feedback with a rejection mid-cycle: got %s, want locked", got)
 	}
 	f.CompletedAt[models.StepInterviews] = &past
 	f.CompletedAt[models.StepDecisions] = &past
-	if got := f.StepStatus(models.StepFeedback); got != StatusOpen {
+	if got := f.StepStatus(models.StepFeedback, now); got != StatusOpen {
 		t.Fatalf("feedback once decisions are done: got %s, want open", got)
 	}
 }
