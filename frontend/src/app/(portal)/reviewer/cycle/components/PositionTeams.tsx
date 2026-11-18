@@ -20,6 +20,7 @@ import { cn } from '@/lib/utils'
 import {
   useReviewConflicts,
   useSetConflict,
+  useStaffGroupCandidates,
   useStaffing,
   useStaffingMutations,
 } from '@/lib/queries/reviewer-pools'
@@ -29,14 +30,15 @@ export type Lead = { nuid: string; name: string }
 type Person = { nuid: string; name: string; chief: boolean }
 
 function useTeam(cycleId: string) {
-  const { data: staff = [] } = useCycleStaff(cycleId)
+  const { data: candidates = [] } = useStaffGroupCandidates(cycleId)
   const { data: users = [] } = useUsers()
   const { data, isLoading } = useStaffing(cycleId)
   const m = useStaffingMutations(cycleId)
   const toast = useToast()
   const chiefs = new Set(
-    staff.filter((s) => s.role === 'chief').map((s) => s.user_nuid)
+    candidates.filter((c) => c.role === 'chief').map((c) => c.user_nuid)
   )
+  const onStaff = new Set(candidates.map((c) => c.user_nuid))
   const people: Person[] = users.map((u) => ({
     nuid: u.nuid,
     name: u.full_name,
@@ -58,6 +60,7 @@ function useTeam(cycleId: string) {
     positions: data?.positions ?? [],
     isLoading,
     people,
+    onStaff,
     label,
     m,
     run,
@@ -71,7 +74,7 @@ export function GroupsGrid({
   cycleId: string
   header: React.ReactNode
 }) {
-  const { groups, isLoading, people, label, m, run } = useTeam(cycleId)
+  const { groups, isLoading, people, onStaff, label, m, run } = useTeam(cycleId)
   const [adding, setAdding] = useState(false)
   const [newName, setNewName] = useState('')
   const personOf = (nuid: string) => people.find((p) => p.nuid === nuid)
@@ -108,7 +111,7 @@ export function GroupsGrid({
         {groups.map((g) => (
           <div
             key={g.id}
-            className="group flex flex-col border border-gray-200 bg-white"
+            className="flex flex-col border border-gray-200 bg-white"
           >
             <div className="flex items-center justify-between gap-2 border-b border-gray-100 px-4 py-2.5">
               <span className="text-ink truncate font-semibold">{g.name}</span>
@@ -120,7 +123,7 @@ export function GroupsGrid({
                   type="button"
                   aria-label={`Delete ${g.name}`}
                   onClick={() => run(m.deleteCategory.mutateAsync(g.id))}
-                  className="text-text-faint hover:text-ink p-1 opacity-0 group-hover:opacity-100 focus:opacity-100"
+                  className="text-text-faint hover:text-ink p-1"
                 >
                   <Trash2 size={13} />
                 </button>
@@ -135,7 +138,7 @@ export function GroupsGrid({
                 return (
                   <div
                     key={n}
-                    className="group/row flex items-center gap-2.5 py-0.5 text-sm"
+                    className="flex items-center gap-2.5 py-0.5 text-sm"
                   >
                     <span className="text-ink flex size-6 shrink-0 items-center justify-center rounded-full bg-gray-100 text-[10px] font-semibold">
                       {initialsOf(p?.name ?? n)}
@@ -159,7 +162,7 @@ export function GroupsGrid({
                           })
                         )
                       }
-                      className="text-text-faint hover:text-ink p-0.5 opacity-0 group-hover/row:opacity-100 focus:opacity-100"
+                      className="text-text-faint hover:text-ink p-0.5"
                     >
                       <X size={13} />
                     </button>
@@ -170,7 +173,10 @@ export function GroupsGrid({
                 key={g.member_nuids.length}
                 variant="link"
                 options={people
-                  .filter((p) => !g.member_nuids.includes(p.nuid))
+                  .filter(
+                    (p) =>
+                      onStaff.has(p.nuid) && !g.member_nuids.includes(p.nuid)
+                  )
                   .map((p) => ({ value: p.nuid, label: label(p.nuid) }))}
                 onValueChange={(nuid) =>
                   run(

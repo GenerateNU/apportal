@@ -55,6 +55,17 @@ func (s *staffGroupService) list(ctx context.Context, in *utils.CycleScopedInput
 	return &GroupsOutput{Body: groups}, nil
 }
 
+func (s *staffGroupService) candidates(ctx context.Context, in *utils.CycleScopedInput) (*CandidatesOutput, error) {
+	if err := s.manage(ctx, in.ID); err != nil {
+		return nil, err
+	}
+	members, err := workflow.PoolMembers(ctx, s.db, in.ID)
+	if err != nil {
+		return nil, utils.StoreErr(err)
+	}
+	return &CandidatesOutput{Body: members}, nil
+}
+
 func (s *staffGroupService) create(ctx context.Context, in *CreateGroupInput) (*GroupOutput, error) {
 	if err := s.manage(ctx, in.ID); err != nil {
 		return nil, err

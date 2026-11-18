@@ -14,6 +14,7 @@ import { APIError } from '@/lib/api/client'
 import type { User } from '@supabase/supabase-js'
 import { AuthProvider } from '@/lib/auth/auth-context'
 import { createClient } from '@/lib/supabase/client'
+import { queryKeys } from '@/lib/queries/keys'
 
 // Ship the devtools only in development so they aren't bundled into production.
 const showDevtools = process.env.NODE_ENV !== 'production'
@@ -48,7 +49,7 @@ function handleQueryError(error: unknown) {
 }
 
 function makeQueryClient() {
-  return new QueryClient({
+  const client: QueryClient = new QueryClient({
     defaultOptions: {
       queries: {
         // Avoid an immediate refetch on the client right after SSR hands off
@@ -56,8 +57,14 @@ function makeQueryClient() {
       },
     },
     queryCache: new QueryCache({ onError: handleQueryError }),
-    mutationCache: new MutationCache({ onError: handleQueryError }),
+    mutationCache: new MutationCache({
+      onError: handleQueryError,
+      onSuccess: () => {
+        void client.invalidateQueries({ queryKey: queryKeys.workflow.all })
+      },
+    }),
   })
+  return client
 }
 
 let browserQueryClient: QueryClient | undefined

@@ -30,6 +30,7 @@ import type {
   CreateGroupInputBody,
   ErrorModel,
   ListOpeningTeams200,
+  ListStaffGroupCandidates200,
   ListStaffGroups200,
   OpeningTeam,
   RenameGroupInputBody,
@@ -389,6 +390,98 @@ export const useCreateStaffGroup = <TError = ErrorModel | ErrorModel | ErrorMode
       return useMutation(mutationOptions, queryClient);
     }
     /**
+ * Chief or admin. The cycle's staff, or every admin on a chief cycle.
+ * @summary List who can be added to a cycle's staff groups
+ */
+export const listStaffGroupCandidates = (
+    id: string,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<ListStaffGroupCandidates200>(
+      {url: `/cycles/${id}/staff-groups/candidates`, method: 'GET', signal
+    },
+      options);
+    }
+  
+
+
+
+export const getListStaffGroupCandidatesQueryKey = (id?: string,) => {
+    return [
+    `/cycles/${id}/staff-groups/candidates`
+    ] as const;
+    }
+
+    
+export const getListStaffGroupCandidatesQueryOptions = <TData = Awaited<ReturnType<typeof listStaffGroupCandidates>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listStaffGroupCandidates>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListStaffGroupCandidatesQueryKey(id);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listStaffGroupCandidates>>> = ({ signal }) => listStaffGroupCandidates(id, requestOptions, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listStaffGroupCandidates>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListStaffGroupCandidatesQueryResult = NonNullable<Awaited<ReturnType<typeof listStaffGroupCandidates>>>
+export type ListStaffGroupCandidatesQueryError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel
+
+
+export function useListStaffGroupCandidates<TData = Awaited<ReturnType<typeof listStaffGroupCandidates>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
+ id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listStaffGroupCandidates>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listStaffGroupCandidates>>,
+          TError,
+          Awaited<ReturnType<typeof listStaffGroupCandidates>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListStaffGroupCandidates<TData = Awaited<ReturnType<typeof listStaffGroupCandidates>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listStaffGroupCandidates>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listStaffGroupCandidates>>,
+          TError,
+          Awaited<ReturnType<typeof listStaffGroupCandidates>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListStaffGroupCandidates<TData = Awaited<ReturnType<typeof listStaffGroupCandidates>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listStaffGroupCandidates>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List who can be added to a cycle's staff groups
+ */
+
+export function useListStaffGroupCandidates<TData = Awaited<ReturnType<typeof listStaffGroupCandidates>>, TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listStaffGroupCandidates>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListStaffGroupCandidatesQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+/**
  * Chief or admin. Also removes it from any opening team.
  * @summary Delete a staff group
  */

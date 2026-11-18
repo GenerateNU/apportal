@@ -2,7 +2,9 @@
 
 import { MeetingTimes } from '../../components/MeetingTimes'
 import { useState } from 'react'
-import { Plus, X } from 'lucide-react'
+import Link from 'next/link'
+import { Plus, UserPlus, X } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { EmptyState } from '@/components/ui/empty-state'
 import { LoadingText } from '@/components/ui/loading-text'
@@ -13,6 +15,7 @@ import { PAGE_SHELL } from '@/components/ui/page-shell'
 import { useToast } from '@/components/ui/toast'
 import { type CycleScope, useCycleScope } from '@/hooks/useCycleScope'
 import { apiErrorDetail } from '@/lib/api/client'
+import { useStaffAccess } from '@/lib/queries/cycle-staff'
 import {
   perApplicant,
   type StepName,
@@ -34,17 +37,23 @@ import {
 function SetupShell({
   title,
   subtitle,
+  actions,
   children,
 }: {
   title: string
   subtitle: string
+  actions?: (scope: CycleScope) => React.ReactNode
   children: (scope: CycleScope) => React.ReactNode
 }) {
   const scope = useCycleScope()
   if (!scope.cycleId && !scope.isLoading) return <NoCycle />
   return (
     <div className={PAGE_SHELL}>
-      <PageHeader title={title} subtitle={subtitle} />
+      <PageHeader
+        title={title}
+        subtitle={subtitle}
+        actions={scope.cycleId ? actions?.(scope) : undefined}
+      />
       {!scope.cycleId ? <LoadingText /> : children(scope)}
     </div>
   )
@@ -54,10 +63,24 @@ const rolesOf = (scope: CycleScope) =>
   scope.roles.roleIds.map((id) => ({ id, name: scope.roles.roleLabel(id) }))
 
 export function TeamClient() {
+  const { isAdmin } = useStaffAccess()
   return (
     <SetupShell
       title="Recruitment team"
       subtitle="Who's involved in recruitment, and which openings they handle."
+      actions={(scope) =>
+        isAdmin &&
+        scope.cycle && (
+          <Button asChild>
+            <Link
+              href={`/admin/branches/${scope.cycle.branch_id}/cycles/${scope.cycleId}/team`}
+            >
+              <UserPlus className="h-4 w-4" />
+              Add staff
+            </Link>
+          </Button>
+        )
+      }
     >
       {(scope) => (
         <>
