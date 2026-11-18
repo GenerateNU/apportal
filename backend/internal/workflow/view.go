@@ -119,7 +119,7 @@ func (f *CycleState) Overview(c Caller, now time.Time, late LateCounts, counts [
 		v.CurrentStep = &cur
 	}
 	for _, s := range f.EnabledSteps() {
-		sv := StepView{Step: s, Label: Label(s), Status: f.StepStatus(s), CompletedAt: f.CompletedAt[s], ApplicantCount: f.StepCount(s), Assignments: f.assignmentViews(s), Openings: []OpeningView{}}
+		sv := StepView{Step: s, Label: Label(s), Status: f.StepStatus(s, now), CompletedAt: f.CompletedAt[s], ApplicantCount: f.StepCount(s), Assignments: f.assignmentViews(s), Openings: []OpeningView{}}
 		for _, o := range f.Openings {
 			ov := OpeningView{RoleID: o.RoleID, RoleName: o.Name, State: f.State(o.RoleID, s, now), ApplicantCount: f.Count(o.RoleID, s), Deadlines: []DeadlineView{}}
 			if at, ok := f.ReleasedAt(o.RoleID, s); ok {

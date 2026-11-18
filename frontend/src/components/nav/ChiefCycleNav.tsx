@@ -38,7 +38,7 @@ export function ChiefCycleNav({ collapsed }: { collapsed?: boolean }) {
     return (
       <div className="flex flex-col items-center gap-1">
         {phases.map((p, i) => (
-          <Tooltip side="right" key={p.key} label={p.label}>
+          <Tooltip key={p.key} label={p.label}>
             <Link
               href={p.status === 'locked' ? '#' : (p.steps[0]?.href ?? '#')}
               aria-disabled={p.status === 'locked'}
@@ -141,9 +141,7 @@ function PhaseRow({
   return (
     <li className="flex flex-col">
       {locked && phase.lockedReason ? (
-        <Tooltip side="right" label={phase.lockedReason}>
-          {header}
-        </Tooltip>
+        <Tooltip label={phase.lockedReason}>{header}</Tooltip>
       ) : (
         header
       )}
@@ -175,10 +173,7 @@ function PhaseRow({
             return (
               <li key={step.href}>
                 {disabled ? (
-                  <Tooltip
-                    side="right"
-                    label={step.locked ?? phase.lockedReason ?? ''}
-                  >
+                  <Tooltip label={step.locked ?? phase.lockedReason ?? ''}>
                     <span className="block cursor-not-allowed">{label}</span>
                   </Tooltip>
                 ) : (

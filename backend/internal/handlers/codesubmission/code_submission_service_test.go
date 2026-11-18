@@ -37,6 +37,7 @@ func TestCodeSubmissionsNeedTheOwner(t *testing.T) {
 	must(db.Exec("INSERT INTO cycles (id, branch_id, name, status, application_type) VALUES (?, ?, 'Test', 'open', 'member')", cycle, branch).Error)
 	must(workflow.EnsureSteps(db, cycle))
 	must(db.Exec("INSERT INTO roles (id, cycle_id, name) VALUES (?, ?, 'Engineer'), (?, ?, 'Designer')", role, cycle, otherRole, cycle).Error)
+	testutil.FillOutForm(t, db, cycle, role, otherRole)
 	chief := nuid()
 	must(db.Exec("INSERT INTO users (nuid, email, full_name) VALUES (?, ?, 'Chief')", chief, chief+"@northeastern.edu").Error)
 	must(db.Exec("INSERT INTO cycle_staff (cycle_id, user_nuid, role) VALUES (?, ?, 'chief')", cycle, chief).Error)

@@ -224,7 +224,11 @@ function FormBuilder({
                       const blocked = statusBlockedReason(
                         mode,
                         s,
-                        template.status
+                        template.status,
+                        {
+                          hasQuestions: questions.length > 0,
+                          hasDeadline: !!closesAt,
+                        }
                       )
                       return (
                         <SelectItem key={s} value={s} disabled={!!blocked}>

@@ -52,6 +52,7 @@ export function TableView({
   hasMore,
   loadingMore,
   onLoadMore,
+  search,
 }: {
   applicants: ApplicantApplication[]
   // Counted server-side over the whole match, not the page — a page's worth of
@@ -76,6 +77,7 @@ export function TableView({
   loading?: boolean
   showStages?: boolean
   fullPageHref?: (applicationId: string) => string
+  search?: React.ReactNode
   hasMore?: boolean
   loadingMore?: boolean
   onLoadMore?: () => void
@@ -145,6 +147,7 @@ export function TableView({
   return (
     <div className={cn(TABLE_FRAME, 'flex min-h-0 flex-1 flex-col')}>
       <div className="flex flex-wrap items-center gap-3 border-b border-gray-100 px-4 py-3">
+        {search}
         {showStages && (
           <Select
             value={activeStage}

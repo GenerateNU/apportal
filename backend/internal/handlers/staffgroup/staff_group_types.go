@@ -30,6 +30,10 @@ type GroupOutput struct {
 	Body StaffGroup
 }
 
+type CandidatesOutput struct {
+	Body []models.CycleStaffMember
+}
+
 type CreateGroupInput struct {
 	ID   string `path:"id" doc:"Cycle ID"`
 	Body struct {

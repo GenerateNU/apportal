@@ -336,6 +336,8 @@ export const queryKeys = {
   staffing: {
     all: ['staffing'] as const,
     detail: (cycleId: string) => [...queryKeys.staffing.all, cycleId] as const,
+    candidates: (cycleId: string) =>
+      [...queryKeys.staffing.detail(cycleId), 'candidates'] as const,
   },
   reviewRanking: {
     all: ['review-ranking'] as const,

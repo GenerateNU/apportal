@@ -20,6 +20,7 @@ type setupCheck struct {
 // setupChecks select, per cycle, the openings whose setup for that work is in place.
 var setupChecks = []setupCheck{
 	{SetupApplicationForm, "Add application questions", `SELECT r.id FROM roles r WHERE r.cycle_id = ?
+		AND EXISTS (SELECT 1 FROM application_templates t WHERE t.cycle_id = r.cycle_id AND t.role_id = r.id)
 		AND EXISTS (SELECT 1 FROM questions q WHERE q.cycle_id = r.cycle_id AND (q.role_id = r.id OR q.role_id IS NULL))`},
 	{SetupReviewRubric, "Add review questions", `SELECT r.id FROM roles r WHERE r.cycle_id = ?
 		AND EXISTS (SELECT 1 FROM review_questions q WHERE q.cycle_id = r.cycle_id AND (q.role_id = r.id OR q.role_id IS NULL))`},

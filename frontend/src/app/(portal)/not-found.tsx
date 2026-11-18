@@ -1,8 +1,4 @@
-import Link from 'next/link'
-import { PageContainer } from '@/components/PageContainer'
-import { buttonVariants } from '@/components/ui/button'
-import { EmptyState } from '@/components/ui/empty-state'
-import { PageHeader } from '@/components/ui/page-header'
+import { ErrorScreen } from '@/components/ErrorScreen'
 import {
   getServerCurrentUser,
   getServerStaffAccess,
@@ -22,18 +18,12 @@ async function homeHref(): Promise<string> {
 }
 
 export default async function PortalNotFound() {
-  const home = await homeHref()
   return (
-    <PageContainer>
-      <PageHeader title="Page not found" />
-      <EmptyState
-        title="This page doesn't exist, or you don't have access to it."
-        action={
-          <Link href={home} className={buttonVariants()}>
-            Back to home
-          </Link>
-        }
-      />
-    </PageContainer>
+    <ErrorScreen
+      code="404"
+      title="Page not found"
+      message="This page doesn't exist, or you don't have access to it."
+      homeHref={await homeHref()}
+    />
   )
 }

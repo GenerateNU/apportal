@@ -251,14 +251,17 @@ func TestLiveEdges(t *testing.T) {
 		t.Logf("unsubmitted list: task done once closed, lead edits refused with 403")
 	})
 
-	t.Run("09 draft waits on every position's deadline", func(t *testing.T) {
+	t.Run("09 draft opens per position", func(t *testing.T) {
 		f := newFixture(t)
 		f.toDecisions(true)
-		f.closeLists(f.roleA)
 		f.wantPage(workflow.PageDraft, false)
-		f.closeLists(f.roleA2)
+		f.closeLists(f.roleA)
 		f.wantPage(workflow.PageDraft, true)
-		t.Logf("one deadline passed: draft locked; both passed: open")
+		f.must(f.s.workflow.RequirePreferenceListClosed(f.as(f.chiefA), f.cycleA, f.roleA))
+		testutil.WantStatus(t, f.s.workflow.RequirePreferenceListClosed(f.as(f.chiefA), f.cycleA, f.roleA2), http.StatusConflict)
+		f.closeLists(f.roleA2)
+		f.must(f.s.workflow.RequirePreferenceListClosed(f.as(f.chiefA), f.cycleA, f.roleA2))
+		t.Logf("one deadline passed: draft page opens, but only that position's board can be opened")
 	})
 
 	t.Run("10 a board in setup is hidden from leads", func(t *testing.T) {

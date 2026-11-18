@@ -104,9 +104,9 @@ BEGIN
 
   -- Current cycle setup
   INSERT INTO application_templates (cycle_id, role_id, title, description, instructions) VALUES
-    (cur, swe, 'Software Engineer — Spring 2027', 'Build full-stack products for Boston nonprofits and startups.',
+    (cur, swe, 'Software Engineer, Spring 2027', 'Build full-stack products for Boston nonprofits and startups.',
      'Answer every question and finish the code challenge before the deadline.'),
-    (cur, sd, 'Software Designer — Spring 2027', 'Design end-to-end product experiences with our engineering teams.',
+    (cur, sd, 'Software Designer, Spring 2027', 'Design end-to-end product experiences with our engineering teams.',
      'Share a portfolio and answer every question.');
 
   INSERT INTO cycle_steps (cycle_id, step, enabled)
@@ -167,9 +167,9 @@ BEGIN
   FROM unnest(ARRAY[swe, sd]) r,
        unnest(ARRAY['rejection_post_interview', 'rejection_generic']::decision_kind[]) k;
 
-  INSERT INTO preference_list_deadlines (cycle_id, role_id, closes_at, updated_by) VALUES
-    (cur, swe, now() + interval '10 days', chief1),
-    (cur, sd, now() + interval '10 days', chief1);
+  INSERT INTO opening_deadlines (cycle_id, role_id, step, kind, due_at, hard) VALUES
+    (cur, swe, 'decisions', 'preference_list', now() + interval '10 days', true),
+    (cur, sd, 'decisions', 'preference_list', now() + interval '10 days', true);
 
   INSERT INTO review_releases (cycle_id, role_id, review_kind, released_by) VALUES
     (cur, swe, 'written', chief1);
@@ -353,8 +353,8 @@ BEGIN
 
   -- Past cycle: a finished cycle with a handful of outcomes.
   INSERT INTO application_templates (cycle_id, role_id, title)
-  VALUES (past, past_swe, 'Software Engineer — Fall 2025'),
-         (past, past_sd, 'Software Designer — Fall 2025');
+  VALUES (past, past_swe, 'Software Engineer, Fall 2025'),
+         (past, past_sd, 'Software Designer, Fall 2025');
   INSERT INTO opening_steps (cycle_id, role_id, step, released_at)
   SELECT past, r, s, now() - interval '400 days' FROM unnest(ARRAY[past_swe, past_sd]) r CROSS JOIN unnest(ARRAY['applications', 'reviews']) s;
   INSERT INTO opening_deadlines (cycle_id, role_id, step, kind, due_at, hard)
@@ -376,8 +376,8 @@ BEGIN
 
   -- Lead cycle and the Design branch's first cycle, both still drafts.
   INSERT INTO application_templates (cycle_id, role_id, title)
-  VALUES (leads_cycle, tech_lead, 'Tech Lead — Spring 2027'),
-         (design_cycle, ux, 'Designer — Spring 2027');
+  VALUES (leads_cycle, tech_lead, 'Tech Lead, Spring 2027'),
+         (design_cycle, ux, 'Designer, Spring 2027');
   INSERT INTO questions (cycle_id, question_text, question_type, display_order)
   VALUES (leads_cycle, 'How would you run your team''s first week?', 'long_answer', 1),
          (design_cycle, 'Link to your portfolio', 'url', 1);

@@ -9,11 +9,13 @@ import {
 } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { ToastProvider } from '@/components/ui/toast'
+import { AccessWatcher } from '@/components/AccessWatcher'
 import { OverrideConfirmProvider } from '@/components/workflow/OverrideConfirmProvider'
 import { APIError } from '@/lib/api/client'
 import type { User } from '@supabase/supabase-js'
 import { AuthProvider } from '@/lib/auth/auth-context'
 import { createClient } from '@/lib/supabase/client'
+import { queryKeys } from '@/lib/queries/keys'
 
 // Ship the devtools only in development so they aren't bundled into production.
 const showDevtools = process.env.NODE_ENV !== 'production'
@@ -48,16 +50,25 @@ function handleQueryError(error: unknown) {
 }
 
 function makeQueryClient() {
-  return new QueryClient({
+  const client: QueryClient = new QueryClient({
     defaultOptions: {
       queries: {
         // Avoid an immediate refetch on the client right after SSR hands off
         staleTime: 30 * 1000,
+        retry: (count, err) =>
+          !(err instanceof APIError && [401, 403, 404].includes(err.status)) &&
+          count < 3,
       },
     },
     queryCache: new QueryCache({ onError: handleQueryError }),
-    mutationCache: new MutationCache({ onError: handleQueryError }),
+    mutationCache: new MutationCache({
+      onError: handleQueryError,
+      onSuccess: () => {
+        void client.invalidateQueries({ queryKey: queryKeys.workflow.all })
+      },
+    }),
   })
+  return client
 }
 
 let browserQueryClient: QueryClient | undefined
@@ -85,6 +96,7 @@ export function Providers({
     <AuthProvider initialUser={initialUser}>
       <QueryClientProvider client={queryClient}>
         <ToastProvider>
+          <AccessWatcher />
           <OverrideConfirmProvider>{children}</OverrideConfirmProvider>
         </ToastProvider>
         {showDevtools && <ReactQueryDevtools initialIsOpen={false} />}

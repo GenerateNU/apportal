@@ -95,6 +95,9 @@ func (s *draftService) open(ctx context.Context, in *OpenDraftInput) (*DraftOutp
 	if err := s.workflow.RequireOpeningWorkEditable(ctx, in.ID, in.Body.RoleID, workflow.WorkDraft); err != nil {
 		return nil, err
 	}
+	if err := s.workflow.RequirePreferenceListClosed(ctx, in.ID, in.Body.RoleID); err != nil {
+		return nil, err
+	}
 	rounds := in.Body.Rounds
 	if rounds == 0 {
 		rounds = 1

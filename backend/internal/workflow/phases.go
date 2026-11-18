@@ -77,7 +77,7 @@ func (f *CycleState) Phases(now time.Time) []PhaseView {
 	}
 	out := []PhaseView{setup}
 	for _, s := range f.EnabledSteps() {
-		p := PhaseView{Key: string(s), Label: Label(s), Status: f.StepStatus(s), ApplicantCount: f.StepCount(s), Pages: []PageView{}}
+		p := PhaseView{Key: string(s), Label: Label(s), Status: f.StepStatus(s, now), ApplicantCount: f.StepCount(s), Pages: []PageView{}}
 		if p.Status == StatusLocked {
 			p.LockedReason = f.lockedBecause()
 		}
@@ -109,8 +109,8 @@ func (f *CycleState) pageLock(pg Page, now time.Time) *string {
 			return reason("Opens once you release interviews.")
 		}
 	case PageDraft:
-		if !f.preferenceListsClosed(now) {
-			return reason("Opens once the preference list deadline passes.")
+		if !f.preferenceListClosedAnywhere(now) {
+			return reason("Opens once a preference list deadline passes.")
 		}
 	case PageFeedback:
 		if !f.releasedAnywhere(models.StepFeedback) {
@@ -124,15 +124,18 @@ func (f *CycleState) pageLock(pg Page, now time.Time) *string {
 	return nil
 }
 
-// preferenceListsClosed is every opening's preference list deadline set and passed.
-func (f *CycleState) preferenceListsClosed(now time.Time) bool {
+func (f *CycleState) preferenceListClosed(role string, now time.Time) bool {
+	d, ok := f.Deadline(role, models.StepDecisions, models.KindPreferenceList)
+	return ok && !d.DueAt.After(now)
+}
+
+func (f *CycleState) preferenceListClosedAnywhere(now time.Time) bool {
 	for _, o := range f.Openings {
-		d, ok := f.Deadline(o.RoleID, models.StepDecisions, models.KindPreferenceList)
-		if !ok || d.DueAt.After(now) {
-			return false
+		if f.preferenceListClosed(o.RoleID, now) {
+			return true
 		}
 	}
-	return len(f.Openings) > 0
+	return false
 }
 
 func (f *CycleState) releasedAnywhere(s models.Step) bool {
@@ -167,4 +170,16 @@ func (f *CycleState) lockedBecause() *string {
 		return reason("Finish " + Label(cur) + " first.")
 	}
 	return nil
+}
+
+func (f *CycleState) preferenceListDone(role string, now time.Time) bool {
+	if role != "" {
+		return f.preferenceListClosed(role, now)
+	}
+	for _, o := range f.Openings {
+		if !f.preferenceListClosed(o.RoleID, now) {
+			return false
+		}
+	}
+	return len(f.Openings) > 0
 }

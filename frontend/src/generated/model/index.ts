@@ -253,6 +253,7 @@ export * from './listReviewerProgress200';
 export * from './listReviewerProgressParams';
 export * from './listRoles200';
 export * from './listRolesParams';
+export * from './listStaffGroupCandidates200';
 export * from './listStaffGroups200';
 export * from './listStaffSlots200';
 export * from './listUsersParams';

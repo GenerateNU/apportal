@@ -24,6 +24,11 @@ func register(api huma.API, s *staffGroupService) {
 		Tags: tags, Errors: read,
 	}, s.list)
 	huma.Register(api, huma.Operation{
+		OperationID: "list-staff-group-candidates", Method: http.MethodGet, Path: "/cycles/{id}/staff-groups/candidates",
+		Summary: "List who can be added to a cycle's staff groups", Description: "Chief or admin. The cycle's staff, or every admin on a chief cycle.",
+		Tags: tags, Errors: read,
+	}, s.candidates)
+	huma.Register(api, huma.Operation{
 		OperationID: "create-staff-group", Method: http.MethodPost, Path: "/cycles/{id}/staff-groups",
 		Summary:     "Create a staff group",
 		Description: "Chief or admin. Members must already be on the cycle's staff; groups never add or remove staff.",

@@ -7,6 +7,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
+import { Button } from '@/components/ui/button'
+import { EmptyState } from '@/components/ui/empty-state'
 import { LoadingText } from '@/components/ui/loading-text'
 import { SearchableSelect } from '@/components/ui/searchable-select'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -20,6 +22,7 @@ import { cn } from '@/lib/utils'
 import {
   useReviewConflicts,
   useSetConflict,
+  useStaffGroupCandidates,
   useStaffing,
   useStaffingMutations,
 } from '@/lib/queries/reviewer-pools'
@@ -29,14 +32,15 @@ export type Lead = { nuid: string; name: string }
 type Person = { nuid: string; name: string; chief: boolean }
 
 function useTeam(cycleId: string) {
-  const { data: staff = [] } = useCycleStaff(cycleId)
+  const { data: candidates = [] } = useStaffGroupCandidates(cycleId)
   const { data: users = [] } = useUsers()
   const { data, isLoading } = useStaffing(cycleId)
   const m = useStaffingMutations(cycleId)
   const toast = useToast()
   const chiefs = new Set(
-    staff.filter((s) => s.role === 'chief').map((s) => s.user_nuid)
+    candidates.filter((c) => c.role === 'chief').map((c) => c.user_nuid)
   )
+  const onStaff = new Set(candidates.map((c) => c.user_nuid))
   const people: Person[] = users.map((u) => ({
     nuid: u.nuid,
     name: u.full_name,
@@ -58,6 +62,7 @@ function useTeam(cycleId: string) {
     positions: data?.positions ?? [],
     isLoading,
     people,
+    onStaff,
     label,
     m,
     run,
@@ -71,7 +76,7 @@ export function GroupsGrid({
   cycleId: string
   header: React.ReactNode
 }) {
-  const { groups, isLoading, people, label, m, run } = useTeam(cycleId)
+  const { groups, isLoading, people, onStaff, label, m, run } = useTeam(cycleId)
   const [adding, setAdding] = useState(false)
   const [newName, setNewName] = useState('')
   const personOf = (nuid: string) => people.find((p) => p.nuid === nuid)
@@ -83,22 +88,33 @@ export function GroupsGrid({
     if (name) await run(m.createCategory.mutateAsync(name))
   }
 
+  const empty = !isLoading && groups.length === 0 && !adding
+
   return (
     <section className="flex flex-col gap-3">
       <div className="flex items-start justify-between gap-4">
         {header}
-        {!adding && (
+        {!adding && !empty && (
           <button
             type="button"
             onClick={() => setAdding(true)}
             className="text-text-muted hover:text-ink hover:border-ink flex shrink-0 items-center gap-1 border border-gray-300 bg-white px-2.5 py-1 text-sm font-medium transition-colors"
           >
-            <Plus size={14} /> New group
+            <Plus size={14} /> New staff group
           </button>
         )}
       </div>
-      {!isLoading && groups.length === 0 && !adding && (
-        <p className="text-text-subtle text-sm">No groups yet.</p>
+      {empty && (
+        <EmptyState
+          size="sm"
+          title="No staff groups yet"
+          description="Until then, all staff review and interview every opening."
+          action={
+            <Button variant="outline" size="sm" onClick={() => setAdding(true)}>
+              <Plus size={14} /> New staff group
+            </Button>
+          }
+        />
       )}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {isLoading &&
@@ -108,7 +124,7 @@ export function GroupsGrid({
         {groups.map((g) => (
           <div
             key={g.id}
-            className="group flex flex-col border border-gray-200 bg-white"
+            className="flex flex-col border border-gray-200 bg-white"
           >
             <div className="flex items-center justify-between gap-2 border-b border-gray-100 px-4 py-2.5">
               <span className="text-ink truncate font-semibold">{g.name}</span>
@@ -120,7 +136,7 @@ export function GroupsGrid({
                   type="button"
                   aria-label={`Delete ${g.name}`}
                   onClick={() => run(m.deleteCategory.mutateAsync(g.id))}
-                  className="text-text-faint hover:text-ink p-1 opacity-0 group-hover:opacity-100 focus:opacity-100"
+                  className="text-text-faint hover:text-ink p-1"
                 >
                   <Trash2 size={13} />
                 </button>
@@ -135,7 +151,7 @@ export function GroupsGrid({
                 return (
                   <div
                     key={n}
-                    className="group/row flex items-center gap-2.5 py-0.5 text-sm"
+                    className="flex items-center gap-2.5 py-0.5 text-sm"
                   >
                     <span className="text-ink flex size-6 shrink-0 items-center justify-center rounded-full bg-gray-100 text-[10px] font-semibold">
                       {initialsOf(p?.name ?? n)}
@@ -159,7 +175,7 @@ export function GroupsGrid({
                           })
                         )
                       }
-                      className="text-text-faint hover:text-ink p-0.5 opacity-0 group-hover/row:opacity-100 focus:opacity-100"
+                      className="text-text-faint hover:text-ink p-0.5"
                     >
                       <X size={13} />
                     </button>
@@ -170,7 +186,10 @@ export function GroupsGrid({
                 key={g.member_nuids.length}
                 variant="link"
                 options={people
-                  .filter((p) => !g.member_nuids.includes(p.nuid))
+                  .filter(
+                    (p) =>
+                      onStaff.has(p.nuid) && !g.member_nuids.includes(p.nuid)
+                  )
                   .map((p) => ({ value: p.nuid, label: label(p.nuid) }))}
                 onValueChange={(nuid) =>
                   run(
@@ -203,7 +222,7 @@ export function GroupsGrid({
                   setAdding(false)
                 }
               }}
-              placeholder="Group name"
+              placeholder="Staff group name"
               className="text-ink placeholder:text-text-faint border-b border-gray-200 bg-transparent pb-1 font-semibold outline-none focus:border-gray-400"
             />
             <span className="text-text-subtle text-xs">
@@ -337,7 +356,7 @@ function GroupPicker({
         <PopoverContent className="w-60 p-1" align="start">
           {groups.length === 0 ? (
             <p className="text-text-subtle px-2 py-1.5 text-sm">
-              Make a group above first.
+              Make a staff group above first.
             </p>
           ) : (
             groups.map((g) => {
@@ -366,7 +385,7 @@ function GroupPicker({
           )}
           <div className="mt-1 border-t border-gray-100 pt-1">
             <p className="text-text-subtle px-2 pb-1 text-xs">
-              No group picked means everyone.
+              No staff group picked means everyone.
             </p>
           </div>
         </PopoverContent>

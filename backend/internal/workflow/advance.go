@@ -427,32 +427,8 @@ func decide(db *gorm.DB, cycleID, roleID string, accepted []string, caller Calle
 			return p, nil
 		},
 		apply: func(tx *gorm.DB, _ *CycleState, _ Preview) error {
-			if len(apps) == 0 {
-				return nil
-			}
-			batch := uuid.NewString()
-			rows := make([]models.ApplicationMove, 0, len(apps))
-			var in, out []string
-			for _, a := range apps {
-				to := models.StageRejected
-				if keep[a.ID] {
-					to = models.StageAccepted
-					in = append(in, a.ID)
-				} else {
-					out = append(out, a.ID)
-				}
-				rows = append(rows, models.ApplicationMove{BatchID: batch, ApplicationID: a.ID, FromStage: a.Stage, ToStage: to, MovedBy: caller.NUID, MovedAt: now})
-			}
-			if err := tx.Select("batch_id", "application_id", "from_stage", "to_stage", "moved_by", "moved_at").Create(&rows).Error; err != nil {
+			if err := applyDecisions(tx, apps, keep, caller, now); err != nil {
 				return err
-			}
-			for stage, ids := range map[models.ApplicationStage][]string{models.StageAccepted: in, models.StageRejected: out} {
-				if len(ids) == 0 {
-					continue
-				}
-				if err := tx.Model(&models.Application{}).Where("id IN ?", ids).Update("stage", stage).Error; err != nil {
-					return err
-				}
 			}
 			var left int64
 			if err := tx.Model(&models.Application{}).Where("cycle_id = ? AND stage IN ?", cycleID, Stages(models.StepDecisions)).Count(&left).Error; err != nil {
@@ -469,4 +445,35 @@ func decide(db *gorm.DB, cycleID, roleID string, accepted []string, caller Calle
 		ids = append(ids, a.ID)
 	}
 	return ids, p, err
+}
+
+func applyDecisions(tx *gorm.DB, apps []movingApp, keep map[string]bool, caller Caller, now time.Time) error {
+	if len(apps) == 0 {
+		return nil
+	}
+	batch := uuid.NewString()
+	rows := make([]models.ApplicationMove, 0, len(apps))
+	var in, out []string
+	for _, a := range apps {
+		to := models.StageRejected
+		if keep[a.ID] {
+			to = models.StageAccepted
+			in = append(in, a.ID)
+		} else {
+			out = append(out, a.ID)
+		}
+		rows = append(rows, models.ApplicationMove{BatchID: batch, ApplicationID: a.ID, FromStage: a.Stage, ToStage: to, MovedBy: caller.NUID, MovedAt: now})
+	}
+	if err := tx.Select("batch_id", "application_id", "from_stage", "to_stage", "moved_by", "moved_at").Create(&rows).Error; err != nil {
+		return err
+	}
+	for stage, ids := range map[models.ApplicationStage][]string{models.StageAccepted: in, models.StageRejected: out} {
+		if len(ids) == 0 {
+			continue
+		}
+		if err := tx.Model(&models.Application{}).Where("id IN ?", ids).Update("stage", stage).Error; err != nil {
+			return err
+		}
+	}
+	return nil
 }

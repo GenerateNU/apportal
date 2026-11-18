@@ -52,3 +52,15 @@ func TestDB(t *testing.T) *gorm.DB {
 	})
 	return tx
 }
+
+func FillOutForm(t *testing.T, db *gorm.DB, cycleID string, roleIDs ...string) {
+	t.Helper()
+	for _, r := range roleIDs {
+		if err := db.Exec("INSERT INTO application_templates (cycle_id, role_id, title) VALUES (?, ?, 'Application')", cycleID, r).Error; err != nil {
+			t.Fatal(err)
+		}
+		if err := db.Exec("INSERT INTO questions (cycle_id, role_id, question_text) VALUES (?, ?, 'Why?')", cycleID, r).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+}

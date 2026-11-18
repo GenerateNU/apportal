@@ -20,6 +20,10 @@ func TestPermissions(t *testing.T) {
 			_, err := s.list(ctx, &utils.CycleScopedInput{ID: cycle})
 			return err
 		},
+		"candidates": func(ctx context.Context, s *staffGroupService) error {
+			_, err := s.candidates(ctx, &utils.CycleScopedInput{ID: cycle})
+			return err
+		},
 		"create": func(ctx context.Context, s *staffGroupService) error {
 			in := &CreateGroupInput{ID: cycle}
 			in.Body.Name = "Design"

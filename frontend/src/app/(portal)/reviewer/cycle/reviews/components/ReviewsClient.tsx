@@ -343,7 +343,7 @@ function AssignBoard({
         const stuck = (result.positions ?? []).reduce((n, p) => n + p.short, 0)
         return toast(
           stuck
-            ? `Auto-assign can't fill the last ${stuck}. Check groups and conflicts, or add by hand.`
+            ? `Auto-assign can't fill the last ${stuck}. Check staff groups and conflicts, or add by hand.`
             : 'Everyone already has enough reviewers.'
         )
       }

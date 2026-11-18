@@ -16,6 +16,7 @@ import {
   createStaffGroup,
   deleteStaffGroup,
   listOpeningTeams,
+  listStaffGroupCandidates,
   listStaffGroups,
   removeStaffGroupMember,
   renameStaffGroup,
@@ -88,6 +89,15 @@ export function useStaffing(cycleId: string) {
   return useQuery({
     queryKey: queryKeys.staffing.detail(cycleId),
     queryFn: () => fetchStaffing(cycleId),
+    enabled: !!cycleId,
+  })
+}
+
+export function useStaffGroupCandidates(cycleId: string) {
+  return useQuery({
+    queryKey: queryKeys.staffing.candidates(cycleId),
+    queryFn: async () =>
+      ((await listStaffGroupCandidates(cycleId)) ?? []) as CycleStaffMember[],
     enabled: !!cycleId,
   })
 }
