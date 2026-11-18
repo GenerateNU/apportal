@@ -2,6 +2,7 @@ package role
 
 import (
 	"context"
+	"errors"
 
 	"gorm.io/gorm"
 
@@ -100,17 +101,40 @@ func (r *RoleDB) UpdateRole(ctx context.Context, id string, in RoleUpdate) (mode
 	return role, err
 }
 
-// DeleteRole returns ErrConflict while anything still references the role.
+var ErrHasApplications = errors.New("role has applications")
+
+var roleSetupTables = []string{
+	"questions", "review_questions", "code_challenges", "decision_templates", "drafts",
+	"interview_script", "review_releases", "review_cutoffs", "application_templates",
+}
+
 func (r *RoleDB) DeleteRole(ctx context.Context, id string) error {
-	res := r.db.WithContext(ctx).Where("id = ?", id).Delete(&models.Role{})
-	if utils.ForeignKeyViolation(res.Error) {
-		return utils.ErrConflict
-	}
-	if res.Error != nil {
-		return res.Error
-	}
-	if res.RowsAffected == 0 {
-		return utils.ErrNotFound
-	}
-	return nil
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var applied int64
+		if err := tx.Model(&models.Application{}).Where("role_id = ?", id).Count(&applied).Error; err != nil {
+			return err
+		}
+		if applied > 0 {
+			return ErrHasApplications
+		}
+		for _, table := range roleSetupTables {
+			if err := tx.Exec("DELETE FROM "+table+" WHERE role_id = ?", id).Error; err != nil {
+				if utils.ForeignKeyViolation(err) {
+					return ErrHasApplications
+				}
+				return err
+			}
+		}
+		res := tx.Where("id = ?", id).Delete(&models.Role{})
+		if utils.ForeignKeyViolation(res.Error) {
+			return ErrHasApplications
+		}
+		if res.Error != nil {
+			return res.Error
+		}
+		if res.RowsAffected == 0 {
+			return utils.ErrNotFound
+		}
+		return nil
+	})
 }

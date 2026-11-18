@@ -2,6 +2,7 @@ package role
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/google/uuid"
@@ -42,5 +43,36 @@ func TestRenameRoleRenamesDefaultFormTitle(t *testing.T) {
 	}
 	if got := title(custom); got != "Join us" {
 		t.Errorf("custom title should stay, got %q", got)
+	}
+}
+
+func TestDeleteRoleClearsSetupButKeepsApplied(t *testing.T) {
+	db := testutil.TestDB(t)
+	exec := func(sql string, args ...any) {
+		t.Helper()
+		if err := db.Exec(sql, args...).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	branch, cycle, fresh, applied, person := uuid.NewString(), uuid.NewString(), uuid.NewString(), uuid.NewString(), uuid.NewString()[:9]
+	exec("INSERT INTO branches (id, name) VALUES (?, ?)", branch, "test-"+branch)
+	exec("INSERT INTO cycles (id, branch_id, name, status, application_type) VALUES (?, ?, 'Test', 'draft', 'member')", cycle, branch)
+	exec("INSERT INTO roles (id, cycle_id, name) VALUES (?, ?, 'Fresh'), (?, ?, 'Applied')", fresh, cycle, applied, cycle)
+	testutil.FillOutForm(t, db, cycle, fresh, applied)
+	exec("INSERT INTO review_questions (cycle_id, role_id, question_text) VALUES (?, ?, 'Fit?')", cycle, fresh)
+	exec("INSERT INTO users (nuid, email, full_name) VALUES (?, ?, 'A')", person, person+"@test.example")
+	exec("INSERT INTO applications (cycle_id, user_nuid, role_id, stage) VALUES (?, ?, ?, 'draft')", cycle, person, applied)
+
+	store := NewRoleDB(db)
+	if err := store.DeleteRole(context.Background(), fresh); err != nil {
+		t.Fatalf("a position with only setup should delete, got %v", err)
+	}
+	if err := store.DeleteRole(context.Background(), applied); !errors.Is(err, ErrHasApplications) {
+		t.Fatalf("want ErrHasApplications, got %v", err)
+	}
+	var left int64
+	db.Raw("SELECT count(*) FROM roles WHERE id IN (?, ?)", fresh, applied).Scan(&left)
+	if left != 1 {
+		t.Errorf("want only the applied position left, got %d", left)
 	}
 }

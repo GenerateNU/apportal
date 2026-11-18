@@ -2,6 +2,7 @@ package role
 
 import (
 	"context"
+	"errors"
 	"strings"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -103,6 +104,9 @@ func (s *roleService) delete(ctx context.Context, in *RoleIDInput) (*struct{}, e
 		return nil, err
 	}
 	if err := s.roleDB.DeleteRole(ctx, in.ID); err != nil {
+		if errors.Is(err, ErrHasApplications) {
+			return nil, huma.Error409Conflict("People have already applied to this position, so it can't be deleted.")
+		}
 		return nil, utils.StoreErr(err)
 	}
 	return nil, nil
