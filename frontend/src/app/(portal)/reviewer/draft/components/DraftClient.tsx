@@ -58,8 +58,7 @@ import {
 } from '@/components/ui/select'
 import { APIError } from '@/lib/api/client'
 import { useApplications } from '@/lib/queries/applications'
-import { pickDefaultCycleId } from '@/lib/queries/cycles'
-import { useStaffCycles } from '@/lib/queries/cycle-staff'
+import { useCycleScope } from '@/hooks/useCycleScope'
 import {
   useDeleteDraft,
   useDraftBoard,
@@ -87,12 +86,7 @@ import { ReorderTeamsDialog } from './ReorderTeamsDialog'
 export function DraftClient() {
   const isChief = useIsChief()
 
-  const { data: cycles = [] } = useStaffCycles()
-  const [cycleId, setCycleId] = useState('')
-  if (!cycleId && cycles.length > 0) {
-    const defaultId = pickDefaultCycleId(cycles)
-    if (defaultId) setCycleId(defaultId)
-  }
+  const { cycleId } = useCycleScope(isChief ? 'chief' : 'lead')
   // Separate boards per role, switched here — engineers and designers draft
   // independently, the same way their preference ranks are scoped.
   const { role, setRole, roleIds, roleLabel } = useCycleRolePicker(cycleId)

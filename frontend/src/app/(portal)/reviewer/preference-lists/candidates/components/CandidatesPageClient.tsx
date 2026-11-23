@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useSearchParams } from 'next/navigation'
 import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import { EmptyState } from '@/components/ui/empty-state'
 import { PageHeader } from '@/components/ui/page-header'
@@ -12,17 +11,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { pickDefaultCycleId } from '@/lib/queries/cycles'
-import { useStaffCycles } from '@/lib/queries/cycle-staff'
+import { useCycleScope } from '@/hooks/useCycleScope'
+import { useIsChief } from '@/lib/queries/cycle-staff'
 import { useCycleRoles } from '@/lib/queries/roles'
 import { CandidatesBoard } from '../../components/CandidatesBoard'
 import { CompareTable } from '../../components/CompareTable'
 import { SegmentedTabs } from '@/components/ui/segmented-tabs'
 
 export function CandidatesPageClient() {
-  const searchParams = useSearchParams()
-  const { data: cycles = [] } = useStaffCycles()
-  const cycleId = searchParams.get('cycle') || pickDefaultCycleId(cycles) || ''
+  const { cycleId } = useCycleScope(useIsChief() ? 'chief' : 'lead')
   const { roleIds, roleLabel } = useCycleRoles(cycleId)
   const [role, setRole] = useState('')
   const [view, setView] = useState<'board' | 'compare'>('board')

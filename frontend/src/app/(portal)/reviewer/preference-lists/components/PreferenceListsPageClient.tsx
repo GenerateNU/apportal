@@ -8,7 +8,8 @@ import { PageHeader } from '@/components/ui/page-header'
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
+import { useCycleScope } from '@/hooks/useCycleScope'
 import { useWorkflow } from '@/lib/queries/workflow'
 import { ArrowRight, Plus, Users, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -25,8 +26,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { DateTimePicker } from '@/components/ui/datetime-picker'
 import { cn } from '@/lib/utils'
-import { pickDefaultCycleId } from '@/lib/queries/cycles'
-import { useStaffCycles } from '@/lib/queries/cycle-staff'
 import { TeamCard } from './TeamCard'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import {
@@ -39,14 +38,7 @@ import {
 import { useCycleRoles, useRoleLookup } from '@/lib/queries/roles'
 
 export function PreferenceListsPageClient({ isChief }: { isChief: boolean }) {
-  const searchParams = useSearchParams()
-  const { data: cycles = [] } = useStaffCycles()
-
-  const [cycleId, setCycleId] = useState(searchParams.get('cycle') ?? '')
-  if (!cycleId && cycles.length > 0) {
-    const defaultId = pickDefaultCycleId(cycles)
-    if (defaultId) setCycleId(defaultId)
-  }
+  const { cycleId } = useCycleScope(isChief ? 'chief' : 'lead')
 
   const { roleIds, roleLabel } = useCycleRoles(cycleId)
   const { data: details = [], isLoading: detailsLoading } =
