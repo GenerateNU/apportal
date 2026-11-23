@@ -19,8 +19,8 @@ import {
 import { useToast } from '@/components/ui/toast'
 import { useCycleRolePicker } from '@/hooks/useRoleSelection'
 import type { DecisionKind, DecisionTemplate } from '@/lib/api/types'
-import { defaultPipelineCycleId } from '@/lib/cycles'
-import { useStaffCycles } from '@/lib/queries/cycle-staff'
+import { useCycleScope } from '@/hooks/useCycleScope'
+import { useIsChief } from '@/lib/queries/cycle-staff'
 import {
   useDecisionTemplates,
   useUpdateDecisionTemplate,
@@ -40,8 +40,7 @@ const PLACEHOLDERS = [
 
 export function LetterTemplatesClient() {
   const searchParams = useSearchParams()
-  const { data: cycles = [] } = useStaffCycles()
-  const cycleId = defaultPipelineCycleId(cycles) ?? ''
+  const { cycleId } = useCycleScope(useIsChief() ? 'chief' : 'lead')
   const { role, setRole, roleIds, roleLabel } = useCycleRolePicker(
     cycleId,
     searchParams.get('role')

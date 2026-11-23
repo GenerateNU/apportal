@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { PageContainer } from '@/components/PageContainer'
@@ -18,8 +18,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import type { DecisionRow } from '@/lib/api/types'
-import { defaultPipelineCycleId } from '@/lib/cycles'
-import { useStaffCycles } from '@/lib/queries/cycle-staff'
+import { useCycleScope } from '@/hooks/useCycleScope'
+import { useIsChief } from '@/lib/queries/cycle-staff'
 import { useDecisions } from '@/lib/queries/decisions'
 import { ReviewRow } from '../../my-reviews/components/ReviewRow'
 import { feedbackState, FEEDBACK_STATE_LABEL } from './constants'
@@ -29,13 +29,8 @@ import { useCycleRoles } from '@/lib/queries/roles'
 // everyone assigned to them, unfinished on top, one click into the applicant.
 // The list is scoped server-side to applicants they interviewed.
 export function DecisionQueueClient() {
-  const { data: cycles = [] } = useStaffCycles()
-
-  const [cycleId, setCycleId] = useState('')
-  if (!cycleId && cycles.length > 0) {
-    const defaultId = defaultPipelineCycleId(cycles)
-    if (defaultId) setCycleId(defaultId)
-  }
+  const scope = useCycleScope(useIsChief() ? 'chief' : 'lead')
+  const { cycleId, setCycleId, cycles } = scope
 
   const { data: rows = [], isLoading } = useDecisions(cycleId)
   const { roleIds, roleLabel } = useCycleRoles(cycleId)

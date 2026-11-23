@@ -20,8 +20,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useApplications } from '@/lib/queries/applications'
-import { DEFAULT_CYCLE_ID } from '@/lib/queries/cycles'
-import { useStaffCycles } from '@/lib/queries/cycle-staff'
+import { useCycleFilter } from '@/hooks/useCycleScope'
+import { useIsChief } from '@/lib/queries/cycle-staff'
 import { useCurrentUser } from '@/lib/queries/users'
 import { useWrittenReviewsByApplicationIds } from '@/lib/queries/written-reviews'
 import type { ReviewState } from '../constants'
@@ -36,21 +36,9 @@ const SEARCH_DEBOUNCE_MS = 250
 export function ReviewQueueClient() {
   const [scope, setScope] = useState<Scope>('mine')
   const { data: currentUser } = useCurrentUser()
-  const { data: cycles = [] } = useStaffCycles()
 
-  // Unlike the chief-only pipeline pages, this is a personal task queue, so
-  // role stays "all" rather than forcing a single pick — narrowing is
-  // optional, not required to see your work. Cycle defaults to the pinned
-  // cycle (falling back to "all" if it isn't in the list) but can still be
-  // switched back to "all cycles".
-  const [cycleId, setCycleId] = useState<string>('all')
-  const [cycleDefaulted, setCycleDefaulted] = useState(false)
-  if (!cycleDefaulted && cycles.length > 0) {
-    if (cycles.some((c) => c.id === DEFAULT_CYCLE_ID)) {
-      setCycleId(DEFAULT_CYCLE_ID)
-    }
-    setCycleDefaulted(true)
-  }
+  const filter = useCycleFilter(useIsChief() ? 'chief' : 'lead')
+  const { cycleId, setCycleId } = filter
   // A role ID, or 'all'.
   const { activeRole, setActiveRole, roleIds, roleLabel } =
     useCycleRoleFilter(cycleId)
@@ -171,7 +159,7 @@ export function ReviewQueueClient() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All cycles</SelectItem>
-                {cycles.map((c) => (
+                {filter.cycles.map((c) => (
                   <SelectItem key={c.id} value={c.id}>
                     {c.name}
                   </SelectItem>
