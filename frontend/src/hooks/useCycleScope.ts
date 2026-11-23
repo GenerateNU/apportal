@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useSyncExternalStore } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { scopeCycles } from '@/lib/cycle-scope'
 import { defaultPipelineCycleId } from '@/lib/cycles'
@@ -13,6 +13,25 @@ const STORAGE_KEY: Record<'chief' | 'lead', string> = {
   lead: 'lead-cycle',
 }
 
+const listeners = new Set<() => void>()
+
+function subscribe(onChange: () => void) {
+  listeners.add(onChange)
+  window.addEventListener('storage', onChange)
+  return () => {
+    listeners.delete(onChange)
+    window.removeEventListener('storage', onChange)
+  }
+}
+
+function readStored(mode: 'chief' | 'lead') {
+  try {
+    return localStorage.getItem(STORAGE_KEY[mode])
+  } catch {
+    return null
+  }
+}
+
 export function useCycleScope(mode: 'chief' | 'lead' = 'chief') {
   const router = useRouter()
   const pathname = usePathname()
@@ -20,14 +39,11 @@ export function useCycleScope(mode: 'chief' | 'lead' = 'chief') {
   const { data: allCycles = [] } = useStaffCycles()
   const { data: branches = [] } = useBranches()
   const { isAdmin, chiefCycleIds, staffCycleIds, isLoading } = useStaffAccess()
-  const [stored, setStored] = useState<string | null>(null)
-
-  useEffect(() => {
-    try {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setStored(localStorage.getItem(STORAGE_KEY[mode]))
-    } catch {}
-  }, [mode])
+  const stored = useSyncExternalStore(
+    subscribe,
+    () => readStored(mode),
+    () => null
+  )
 
   const cycles = useMemo(
     () =>
@@ -60,7 +76,7 @@ export function useCycleScope(mode: 'chief' | 'lead' = 'chief') {
     try {
       localStorage.setItem(STORAGE_KEY[mode], id)
     } catch {}
-    setStored(id)
+    listeners.forEach((l) => l())
     const next = new URLSearchParams(params)
     next.set('cycle', id)
     next.delete('role')
