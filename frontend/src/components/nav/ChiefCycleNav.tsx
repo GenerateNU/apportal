@@ -1,8 +1,8 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { usePathname, useSearchParams } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { Check, Lock } from 'lucide-react'
 import { Tooltip } from '@/components/Tooltip'
 import { useCycleScope } from '@/hooks/useCycleScope'
@@ -18,19 +18,44 @@ export function useChiefPhases() {
   return { scope, phases }
 }
 
+function furthestOpenStep(phases: Phase[]) {
+  for (const p of [...phases].reverse()) {
+    if (p.status === 'locked') continue
+    const step = p.steps.find((s) => !s.locked)
+    if (step) return step
+  }
+}
+
 export function ChiefCycleNav({ collapsed }: { collapsed?: boolean }) {
+  const router = useRouter()
   const pathname = usePathname()
   const search = useSearchParams().toString()
-  const { phases } = useChiefPhases()
+  const { scope, phases } = useChiefPhases()
   const onPage = phases.findIndex((p) =>
     p.steps.some((s) => stepActive(pathname, search, s))
   )
+  const lockedHere =
+    onPage >= 0 &&
+    (phases[onPage].status === 'locked' ||
+      phases[onPage].steps.some(
+        (s) => s.locked && stepActive(pathname, search, s)
+      ))
+  const fallback = lockedHere ? furthestOpenStep(phases)?.href : undefined
   const [opened, setOpened] = useState<string | null>(null)
   const [prevPathname, setPrevPathname] = useState(pathname)
-  if (pathname !== prevPathname) {
+  const [prevCycle, setPrevCycle] = useState(scope.cycleId)
+  if (pathname !== prevPathname || scope.cycleId !== prevCycle) {
     setPrevPathname(pathname)
+    setPrevCycle(scope.cycleId)
     setOpened(null)
   }
+
+  useEffect(() => {
+    if (!fallback || !scope.cycleId) return
+    router.replace(
+      `${fallback}?${new URLSearchParams({ cycle: scope.cycleId })}`
+    )
+  }, [fallback, scope.cycleId, router])
 
   if (phases.length === 0) return null
 
