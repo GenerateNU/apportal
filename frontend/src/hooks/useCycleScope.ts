@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useSyncExternalStore } from 'react'
+import { useMemo, useState, useSyncExternalStore } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { scopeCycles } from '@/lib/cycle-scope'
 import { defaultPipelineCycleId } from '@/lib/cycles'
@@ -103,3 +103,16 @@ export function useCycleScope(mode: 'chief' | 'lead' = 'chief') {
 }
 
 export type CycleScope = ReturnType<typeof useCycleScope>
+
+export function useCycleFilter(mode: 'chief' | 'lead') {
+  const scope = useCycleScope(mode)
+  const [all, setAll] = useState(false)
+  return {
+    cycles: scope.cycles,
+    cycleId: all || !scope.cycleId ? 'all' : scope.cycleId,
+    setCycleId(id: string) {
+      setAll(id === 'all')
+      if (id !== 'all') scope.setCycleId(id)
+    },
+  }
+}

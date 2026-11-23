@@ -17,8 +17,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useApplications } from '@/lib/queries/applications'
-import { DEFAULT_CYCLE_ID } from '@/lib/queries/cycles'
-import { useStaffCycles } from '@/lib/queries/cycle-staff'
+import { useCycleFilter } from '@/hooks/useCycleScope'
 import { useChiefs, useCurrentUser, useLeads } from '@/lib/queries/users'
 import { useInterviewReviewersBulk } from '@/lib/queries/interview-assignments'
 import {
@@ -40,22 +39,13 @@ const SEARCH_DEBOUNCE_MS = 250
 
 export function MyInterviewsClient() {
   const { data: currentUser } = useCurrentUser()
-  const { data: cycles = [] } = useStaffCycles()
   const { data: leads = [] } = useLeads()
   const { data: chiefs = [] } = useChiefs()
 
   const isChief = useIsChief()
 
-  // A personal queue, so role stays "all" rather than forcing a pick. Cycle
-  // defaults to the pinned cycle when it's in the list, but can be widened.
-  const [cycleId, setCycleId] = useState<string>('all')
-  const [cycleDefaulted, setCycleDefaulted] = useState(false)
-  if (!cycleDefaulted && cycles.length > 0) {
-    if (cycles.some((c) => c.id === DEFAULT_CYCLE_ID)) {
-      setCycleId(DEFAULT_CYCLE_ID)
-    }
-    setCycleDefaulted(true)
-  }
+  const filter = useCycleFilter(isChief ? 'chief' : 'lead')
+  const { cycleId, setCycleId } = filter
   // A role ID, or 'all'.
   const { activeRole, setActiveRole, roleIds, roleLabel } =
     useCycleRoleFilter(cycleId)
@@ -289,7 +279,7 @@ export function MyInterviewsClient() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All cycles</SelectItem>
-                {cycles.map((c) => (
+                {filter.cycles.map((c) => (
                   <SelectItem key={c.id} value={c.id}>
                     {c.name}
                   </SelectItem>

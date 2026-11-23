@@ -19,6 +19,7 @@ import { PageHeader } from '@/components/ui/page-header'
 import { PAGE_SHELL } from '@/components/ui/page-shell'
 import { useToast } from '@/components/ui/toast'
 import { useCycleScope } from '@/hooks/useCycleScope'
+import { useIsChief } from '@/lib/queries/cycle-staff'
 import { apiErrorDetail } from '@/lib/api/client'
 import type {
   InterviewScript,
@@ -43,7 +44,7 @@ const INLINE =
   'field-sizing-content -mx-2 w-[calc(100%+1rem)] resize-none border border-transparent bg-transparent px-2 py-1.5 outline-none transition-colors placeholder:text-text-faint hover:border-gray-200 focus:border-gray-300'
 
 export function InterviewScriptPageClient() {
-  const scope = useCycleScope()
+  const scope = useCycleScope(useIsChief() ? 'chief' : 'lead')
   const { data: summaries = [], isLoading: summariesLoading } =
     useCycleTemplateSummary(scope.cycleId)
   const router = useRouter()
@@ -118,7 +119,7 @@ export function InterviewScriptOpeningClient({
   roleId: string
   isChief: boolean
 }) {
-  const scope = useCycleScope()
+  const scope = useCycleScope(isChief ? 'chief' : 'lead')
   const [status, setStatus] = useState<Status>('saved')
   const name = scope.roles.roleLabel(roleId)
 

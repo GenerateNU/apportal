@@ -25,9 +25,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import type { DecisionRow, DecisionStatus } from '@/lib/api/types'
-import { defaultPipelineCycleId } from '@/lib/cycles'
+import { useCycleScope } from '@/hooks/useCycleScope'
 import { useDecisionTemplates, useDecisions } from '@/lib/queries/decisions'
-import { useStaffAccess, useStaffCycles } from '@/lib/queries/cycle-staff'
+import { useIsChief, useStaffAccess } from '@/lib/queries/cycle-staff'
 import { DecisionListRow } from './DecisionListRow'
 import { NoInterviewCard } from './NoInterviewCard'
 import { useCycleRolePicker } from '@/hooks/useRoleSelection'
@@ -47,13 +47,8 @@ const STATUS_EMPTY: Record<DecisionStatus, string> = {
 }
 
 export function DecisionsClient() {
-  const { data: cycles = [] } = useStaffCycles()
-
-  const [cycleId, setCycleId] = useState('')
-  if (!cycleId && cycles.length > 0) {
-    const defaultId = defaultPipelineCycleId(cycles)
-    if (defaultId) setCycleId(defaultId)
-  }
+  const scope = useCycleScope(useIsChief() ? 'chief' : 'lead')
+  const { cycleId } = scope
 
   const { role, setRole, roleIds, roleLabel } = useCycleRolePicker(cycleId)
   const [search, setSearch] = useState('')
@@ -78,7 +73,7 @@ export function DecisionsClient() {
   })
   const { data: templates = [] } = useDecisionTemplates(cycleId, role)
 
-  const cycleName = cycles.find((c) => c.id === cycleId)?.name ?? ''
+  const cycleName = scope.cycle?.name ?? ''
 
   const interviewed = useMemo(
     () => rows.filter((r) => r.kind === 'rejection_post_interview'),
