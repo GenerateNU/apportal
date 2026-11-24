@@ -25,6 +25,7 @@ import type {
 } from '@/lib/api/types'
 import { useApplications } from '@/lib/queries/applications'
 import { useCycleScope } from '@/hooks/useCycleScope'
+import { useIsChief } from '@/lib/queries/cycle-staff'
 import { useDraftBoards, useDraftedApplications } from '@/lib/queries/drafts'
 import { usePreferenceListDetails } from '@/lib/queries/preference-lists'
 import { useCycleRoles } from '@/lib/queries/roles'
@@ -41,7 +42,9 @@ const isOpen = (b?: DraftBoard): b is DraftBoard =>
 
 export function LeadDraftClient() {
   const { data: user } = useCurrentUser()
-  const { cycle, isLoading: cyclesLoading } = useCycleScope('lead')
+  const { cycle, isLoading: cyclesLoading } = useCycleScope(
+    useIsChief() ? 'chief' : 'lead'
+  )
   const cycleId = cycle?.id ?? ''
 
   const { roleIds, roleLabel } = useCycleRoles(cycleId)

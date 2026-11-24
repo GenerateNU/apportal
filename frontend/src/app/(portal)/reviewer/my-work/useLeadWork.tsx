@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react'
 import { useCycleScope } from '@/hooks/useCycleScope'
+import { useIsChief } from '@/lib/queries/cycle-staff'
 import { useMyWork } from '@/lib/queries/my-work'
 import { useApplications } from '@/lib/queries/applications'
 import { useDecisions } from '@/lib/queries/decisions'
@@ -80,7 +81,9 @@ export const TASK_STATE = {
 export function useLeadWork() {
   const { data: user } = useCurrentUser()
   const me = user?.nuid ?? ''
-  const { cycle, branch, isLoading } = useCycleScope('lead')
+  const { cycle, branch, isLoading } = useCycleScope(
+    useIsChief() ? 'chief' : 'lead'
+  )
   const cycleId = cycle?.id ?? ''
   const { data: work = [], isPending: workPending } = useMyWork(cycleId)
   const ready = !!me && !!cycleId
