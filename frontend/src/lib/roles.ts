@@ -60,7 +60,7 @@ export function withCycleNames(
     ...lookup,
     roleLabel: (id) => {
       const name = cycleName.get(roleCycle.get(id) ?? '')
-      return name ? `${lookup.roleLabel(id)} · ${name}` : lookup.roleLabel(id)
+      return name ? `${lookup.roleLabel(id)} (${name})` : lookup.roleLabel(id)
     },
   }
 }

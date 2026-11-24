@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils'
 import { FormStatusBadge } from '../../components/FormStatusBadge'
 
 const ROW =
-  'grid items-center gap-3 px-5 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1.3fr)_minmax(0,1fr)] md:gap-4'
+  'grid items-center gap-3 px-5 lg:grid-cols-[minmax(0,1fr)_7rem_6rem_9rem_minmax(0,1fr)] lg:gap-4'
 
 export function ReviewFormsClient() {
   const scope = useCycleScope()
@@ -51,12 +51,14 @@ export function ReviewFormsClient() {
           <div
             className={cn(
               ROW,
-              'font-display text-text-subtle hidden border-b border-gray-100 py-2 text-[11px] tracking-wider uppercase md:grid'
+              'font-display text-text-subtle hidden border-b border-gray-100 py-2 text-[11px] tracking-wider uppercase lg:grid'
             )}
           >
             <span>Position</span>
-            <span>Review form</span>
-            <span>Ranking</span>
+            <span>Form</span>
+            <span className="text-center">Scored</span>
+            <span className="text-center">Written answers</span>
+            <span>Counts toward ranking</span>
           </div>
           {isLoading ? (
             <LoadingText className="px-5 py-4" />
@@ -92,9 +94,9 @@ function PositionReviewForm({
 }) {
   const router = useRouter()
   const written = questions.length > 0
-  const ranked = questions.filter(
-    (q) => q.question_type === 'score' && q.ranked
-  ).length
+  const scored = questions.filter((q) => q.question_type === 'score')
+  const ranked = scored.filter((q) => q.ranked).length
+  const openEnded = questions.length - scored.length
   const href = `/admin/applications/${cycleId}/${roleId}/builder?from=review-forms&tab=review`
 
   return (
@@ -110,17 +112,32 @@ function PositionReviewForm({
         'cursor-pointer border-b border-gray-100 py-3 transition-colors last:border-b-0 hover:bg-gray-50'
       )}
     >
-      <div className="flex min-w-0 items-center gap-2">
-        <span className="text-ink truncate font-semibold">{roleName}</span>
+      <span className="text-ink truncate font-semibold">{roleName}</span>
+
+      <span>
         <FormStatusBadge written={written} />
-      </div>
+      </span>
 
       <span
-        className={cn('text-sm', written ? 'text-ink' : 'text-text-subtle')}
+        className={cn(
+          'text-sm tabular-nums lg:text-center',
+          written ? 'text-ink' : 'text-text-subtle'
+        )}
       >
-        {written
-          ? `${questions.length} question${questions.length === 1 ? '' : 's'}`
-          : 'No questions yet'}
+        <span className="text-text-subtle mr-1.5 lg:hidden">Scored</span>
+        {written ? scored.length : '—'}
+      </span>
+
+      <span
+        className={cn(
+          'text-sm tabular-nums lg:text-center',
+          written ? 'text-ink' : 'text-text-subtle'
+        )}
+      >
+        <span className="text-text-subtle mr-1.5 lg:hidden">
+          Written answers
+        </span>
+        {written ? openEnded : '—'}
       </span>
 
       <span
@@ -133,11 +150,14 @@ function PositionReviewForm({
               : 'text-amber-600'
         )}
       >
+        <span className="text-text-subtle mr-1.5 lg:hidden">
+          Counts toward ranking
+        </span>
         {!written
           ? '—'
           : ranked > 0
-            ? `${ranked} count${ranked === 1 ? 's' : ''} toward ranking`
-            : 'None count toward ranking'}
+            ? `${ranked} of ${scored.length} scored`
+            : 'None'}
       </span>
     </div>
   )

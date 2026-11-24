@@ -7,7 +7,6 @@ import {
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, ArrowRight, ChevronDown, Loader2 } from 'lucide-react'
-import { HelpContact } from '@/components/HelpContact'
 import { TemplateNote } from '../../components/TemplateNote'
 import { Button } from '@/components/ui/button'
 import {
@@ -59,6 +58,7 @@ import {
 } from '../../components/ApplicantPage'
 import { QuestionOutline } from './QuestionOutline'
 import { useRoleLookup } from '@/lib/queries/roles'
+import { Tooltip } from '@/components/Tooltip'
 
 const DEFAULT_SUBMIT_ERROR =
   'Something went wrong submitting your application. Please try again.'
@@ -589,10 +589,6 @@ function Form({
   const challengeError = challenge
     ? challengeLinkError(submissionUrl)
     : undefined
-  const blockedHere =
-    pageIndex === lastPage
-      ? questions.some((q) => !!errorFor(q)) || !!challengeError
-      : currentPageQuestions.some((q) => !!errorFor(q))
 
   function revealed(p: number) {
     return p !== pageIndex ? p <= furthestPage : p < furthestPage
@@ -609,12 +605,23 @@ function Form({
   if (challenge && submissionUrl.trim() && !challengeError) {
     answeredIds.add('challenge')
   }
+  const activeQuestionId =
+    selectedQuestionId ??
+    currentPageQuestions[0]?.id ??
+    (pageIndex === challengePage ? 'challenge' : null)
+  const order = [
+    ...pages.flatMap((page) => page.questions.map((q) => q.id)),
+    ...(challenge ? ['challenge'] : []),
+  ]
+  const activeIndex = activeQuestionId ? order.indexOf(activeQuestionId) : -1
+  const passed = new Set(order.slice(0, Math.max(0, activeIndex)))
   const problemIds = new Set<string>()
   pages.forEach((page, p) => {
     for (const q of page.questions) {
       if (
         errorFor(q) &&
         (revealed(p) ||
+          passed.has(q.id) ||
           engaged(`answers.${q.id}`) ||
           !isEmptyAnswer(q, values[q.id]))
       ) {
@@ -622,24 +629,29 @@ function Form({
       }
     }
   })
-  if (challengeError && (revealed(challengePage) || engaged('submissionUrl'))) {
+  if (
+    challengeError &&
+    (revealed(challengePage) ||
+      passed.has('challenge') ||
+      engaged('submissionUrl'))
+  ) {
     problemIds.add('challenge')
   }
 
   const unlockedThrough =
-    pages
-      .slice(0, furthestPage + 1)
-      .reduce((n, p) => n + p.questions.length, 0) -
-    1 +
-    (challenge && furthestPage >= challengePage ? 1 : 0)
-  const activeQuestionId =
-    selectedQuestionId ??
-    currentPageQuestions[0]?.id ??
-    (pageIndex === challengePage ? 'challenge' : null)
+    pages.reduce((n, p) => n + p.questions.length, 0) - 1 + (challenge ? 1 : 0)
+  const missing = [
+    ...pages.flatMap((page, p) =>
+      page.questions
+        .filter((q) => !!errorFor(q))
+        .map((q) => ({ id: q.id, page: p }))
+    ),
+    ...(challengeError ? [{ id: 'challenge', page: challengePage }] : []),
+  ]
 
   function handleOutlineNavigate(targetPage: number, questionId: string) {
-    if (targetPage > furthestPage) return
     setSelectedQuestionId(questionId)
+    setFurthestPage((f) => Math.max(f, targetPage))
     if (mobileOutlineRef.current) mobileOutlineRef.current.open = false
     if (targetPage === pageIndex) {
       const element = document.getElementById(`question-${questionId}`)
@@ -687,6 +699,13 @@ function Form({
       ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }, [pageIndex])
 
+  async function ensureApplicationId() {
+    await waitForIdle()
+    if (!applicationIdRef.current) await runSave(snapshotRef.current)
+    if (!applicationIdRef.current) throw new Error('missing application id')
+    return applicationIdRef.current
+  }
+
   async function handleSubmit() {
     setSubmitError(null)
     setSubmitting(true)
@@ -729,7 +748,7 @@ function Form({
             <Breadcrumbs
               items={[
                 { label: origin.label, onClick: handleBack },
-                { label: cycleCrumb },
+                ...cycleCrumb,
                 { label: roleLabel(role) },
               ]}
             />
@@ -822,9 +841,10 @@ function Form({
               questions={currentPageQuestions}
               startIndex={startIndex}
               challenge={pageIndex === challengePage ? challenge : undefined}
-              reveal={pageIndex < furthestPage}
+              revealed={(id) => pageIndex < furthestPage || passed.has(id)}
               disabled={deadlineClosed}
               applicationId={applicationId ?? undefined}
+              ensureApplicationId={ensureApplicationId}
             />
 
             {template?.instructions && pageIndex === lastPage && (
@@ -847,33 +867,33 @@ function Form({
               </Button>
             )}
             {pageIndex < lastPage ? (
-              <Button
-                onClick={handleNextPage}
-                disabled={blockedHere || deadlineClosed}
-              >
+              <Button onClick={handleNextPage} disabled={deadlineClosed}>
                 Next
                 <ArrowRight size={14} />
               </Button>
             ) : (
-              <Button
-                onClick={() => setConfirmSubmit(true)}
-                disabled={submitting || blockedHere || deadlineClosed}
+              <Tooltip
+                label={`Answer ${missing.length} more required ${missing.length === 1 ? 'question' : 'questions'} first`}
+                disabled={missing.length === 0}
               >
-                {submitting ? (
-                  <>
-                    <Loader2 className="animate-spin" size={14} />
-                    Submitting…
-                  </>
-                ) : (
-                  'Submit application'
-                )}
-              </Button>
+                <Button
+                  onClick={() => setConfirmSubmit(true)}
+                  disabled={submitting || deadlineClosed || missing.length > 0}
+                >
+                  {submitting ? (
+                    <>
+                      <Loader2 className="animate-spin" size={14} />
+                      Submitting…
+                    </>
+                  ) : (
+                    'Submit application'
+                  )}
+                </Button>
+              </Tooltip>
             )}
           </div>
         </div>
       </div>
-
-      <HelpContact className="mt-12 text-left" />
 
       <Dialog open={confirmSubmit} onOpenChange={setConfirmSubmit}>
         <DialogContent>

@@ -8,10 +8,12 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import {
   ArrowDown,
   ArrowRight,
+  BookOpen,
+  CalendarClock,
   ChevronLeft,
+  GraduationCap,
   Loader2,
   Pencil,
-  CalendarClock,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -57,6 +59,7 @@ import { InterviewScriptContent } from '@/app/(portal)/reviewer/interview-script
 import { InterviewSummary } from './InterviewSummary'
 import { InterviewWriteupForm } from './InterviewWriteupForm'
 import { RecordingReviewThread } from './RecordingReviewThread'
+import { Fact, Facts } from '@/components/ui/facts'
 
 const COMMENT_TEXTAREA_CLASS =
   'focus:border-ink text-text-default placeholder:text-text-subtle w-full border border-gray-300 bg-white p-3 text-sm focus:outline-none'
@@ -252,11 +255,6 @@ export function InterviewConductClient({
           ]
         : [backLink]
 
-  const applicantFacts = [
-    applicant?.graduation_year && `Class of ${applicant.graduation_year}`,
-    applicant?.major,
-  ].filter(Boolean) as string[]
-
   const scrollPane = cn(
     'py-6 pl-6 sm:pl-8 lg:flex-1 lg:overflow-y-auto',
     PAGE_R
@@ -307,10 +305,17 @@ export function InterviewConductClient({
                 cycleId={cycleId}
                 tagIds={application?.tag_ids}
               />
-              {applicantFacts.length > 0 && (
-                <span className="text-text-muted text-sm">
-                  {applicantFacts.join(' · ')}
-                </span>
+              {(applicant?.graduation_year || applicant?.major) && (
+                <Facts className="text-text-muted text-sm">
+                  {applicant?.graduation_year && (
+                    <Fact icon={GraduationCap}>
+                      Class of {applicant.graduation_year}
+                    </Fact>
+                  )}
+                  {applicant?.major && (
+                    <Fact icon={BookOpen}>{applicant.major}</Fact>
+                  )}
+                </Facts>
               )}
               {applicant?.returner && <ReturnerBadge showLabel />}
             </span>
@@ -600,13 +605,16 @@ export function InterviewConductClient({
                         ) : (
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0 wrap-anywhere">
-                              <p className="text-text-muted text-xs">
-                                {c.author_name || c.author_nuid}
+                              <p className="text-text-muted flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
+                                <span>{c.author_name || c.author_nuid}</span>
                                 <span className="text-text-faint">
-                                  {' · '}
                                   {new Date(c.created_at).toLocaleString()}
-                                  {edited && ' · edited'}
                                 </span>
+                                {edited && (
+                                  <Badge size="sm" className="text-text-muted">
+                                    Edited
+                                  </Badge>
+                                )}
                               </p>
                               <p className="text-text-default mt-1 text-sm whitespace-pre-wrap">
                                 {c.body}

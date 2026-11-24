@@ -318,7 +318,16 @@ export default function Sidebar({
         className={`flex flex-shrink-0 items-center ${collapsed ? 'justify-center px-2 pt-6 pb-4' : 'gap-2.5 px-5 pt-6 pb-4'}`}
       >
         {collapsed && onToggleCollapsed ? (
-          <Tooltip label="Expand sidebar · ⌘K / Ctrl+K">
+          <Tooltip
+            label={
+              <span className="inline-flex items-center gap-2">
+                Expand sidebar
+                <kbd className="text-text-muted rounded border border-gray-200 px-1 font-sans text-[10px]">
+                  ⌘K
+                </kbd>
+              </span>
+            }
+          >
             <button
               type="button"
               onClick={onToggleCollapsed}
@@ -354,7 +363,16 @@ export default function Sidebar({
           </span>
         )}
         {onToggleCollapsed && !collapsed && (
-          <Tooltip label="Collapse sidebar · ⌘K / Ctrl+K">
+          <Tooltip
+            label={
+              <span className="inline-flex items-center gap-2">
+                Collapse sidebar
+                <kbd className="text-text-muted rounded border border-gray-200 px-1 font-sans text-[10px]">
+                  ⌘K
+                </kbd>
+              </span>
+            }
+          >
             <button
               type="button"
               onClick={onToggleCollapsed}
@@ -392,9 +410,7 @@ export default function Sidebar({
         ))}
       </nav>
 
-      {!collapsed && staffSections.length === 0 && !cycleNavMode && (
-        <HelpContact className="px-5 pb-4 text-left leading-relaxed" />
-      )}
+      {!collapsed && <HelpContact variant="card" className="mx-4 mb-3" />}
       {/* User */}
       {fullName && <SidebarUser fullName={fullName} collapsed={collapsed} />}
     </aside>

@@ -41,6 +41,8 @@ import {
   interviewStatus,
   useInterviewSetup,
 } from '../../interviewers/components/InterviewAssignClient'
+import { Stats } from '@/components/ui/facts'
+import { TruncatedText } from '@/components/ui/truncated-name'
 
 type View = 'everyone' | 'mine'
 
@@ -315,7 +317,11 @@ function Mine({
               <div className="flex flex-col gap-1.5">
                 <h2 className="font-display text-ink text-xl font-bold tracking-tight uppercase">
                   {s.title}
-                  {s.kind === 'rec' && !both && ' · recording reviews'}
+                  {s.kind === 'rec' && !both && (
+                    <Badge size="sm" className="ml-2 align-middle">
+                      Recording reviews
+                    </Badge>
+                  )}
                 </h2>
                 {s.date && (
                   <DueLine
@@ -665,11 +671,17 @@ function Everyone({
                 <span className="text-ink w-48 shrink-0 truncate text-sm font-medium">
                   {r.name}
                 </span>
-                <span className="text-text-muted min-w-0 flex-1 truncate text-sm">
-                  {r.interviewers.length
-                    ? r.interviewers.map((x) => x.name.split(' ')[0]).join(', ')
-                    : 'No interviewers yet'}
-                </span>
+                {r.interviewers.length ? (
+                  <TruncatedText
+                    text={r.interviewers.map((x) => x.name).join(', ')}
+                    className="text-text-muted text-sm"
+                    wrapperClassName="min-w-0 flex-1"
+                  />
+                ) : (
+                  <span className="text-text-muted min-w-0 flex-1 truncate text-sm">
+                    No interviewers yet
+                  </span>
+                )}
                 <span
                   className={cn(
                     'shrink-0 text-xs',
@@ -762,14 +774,28 @@ function MoveOn({
 
   if (!ready)
     return (
-      <p className="text-text-muted flex items-center gap-2 text-sm">
-        <Lock size={14} className="shrink-0" />
-        {next ? 'Decisions' : 'Finishing interviews'} unlocks once every
-        interview{withRecording ? ' and recording review' : ''} is in:{' '}
-        {interviewed}/{rows.length} interviewed
-        {withRecording &&
-          ` · ${reviewed}/${reviews.length} reviewed${needsReviewer ? ` · ${needsReviewer} without a reviewer` : ''}`}
-      </p>
+      <div className="flex flex-col gap-3">
+        <p className="text-text-muted flex items-center gap-2 text-sm">
+          <Lock size={14} className="shrink-0" />
+          {next ? 'Decisions' : 'Finishing interviews'} unlocks once every
+          interview{withRecording ? ' and recording review' : ''} is in.
+        </p>
+        <Stats
+          className="text-ink"
+          items={[
+            { label: 'Interviewed', value: `${interviewed}/${rows.length}` },
+            withRecording && {
+              label: 'Recordings reviewed',
+              value: `${reviewed}/${reviews.length}`,
+            },
+            withRecording &&
+              needsReviewer > 0 && {
+                label: 'Without a reviewer',
+                value: needsReviewer,
+              },
+          ]}
+        />
+      </div>
     )
 
   return (

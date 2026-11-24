@@ -52,6 +52,7 @@ import { cn } from '@/lib/utils'
 import type { ApplicationStage } from '@/lib/api/types'
 import { stageLabel } from '../../../applications/components/constants'
 import { ConflictsEditor } from '../../components/PositionTeams'
+import { TruncatedName } from '@/components/ui/truncated-name'
 
 export type PositionState = {
   roleId: string
@@ -247,7 +248,6 @@ function AssignBoard({
     staff.find((s) => s.user_nuid === nuid)?.full_name ??
     board.flatMap((r) => r.reviewers).find((x) => x.leadNuid === nuid)?.name ??
     nuid
-  const first = (nuid: string) => nameOf(nuid).split(' ')[0]
 
   const proposed = new Map<string, string[]>()
   for (const p of plan?.new ?? []) {
@@ -523,7 +523,6 @@ function AssignBoard({
                       {r.reviewers.map((x) => (
                         <span
                           key={x.assignmentId}
-                          title={x.name}
                           className="group/chip text-ink flex items-center gap-1 border border-gray-200 bg-white px-2 py-0.5 text-xs"
                         >
                           {x.submitted && (
@@ -533,7 +532,7 @@ function AssignBoard({
                               className="text-emerald-600"
                             />
                           )}
-                          {x.name.split(' ')[0]}
+                          <TruncatedName name={x.name} />
                           {!released(position) && current(r) && (
                             <button
                               type="button"
@@ -551,10 +550,9 @@ function AssignBoard({
                       {(proposed.get(r.applicationId) ?? []).map((n) => (
                         <span
                           key={n}
-                          title={nameOf(n)}
-                          className="border border-dashed border-emerald-400 bg-emerald-50 px-2 py-0.5 text-xs text-emerald-800"
+                          className="flex items-center gap-1 border border-dashed border-emerald-400 bg-emerald-50 px-2 py-0.5 text-xs text-emerald-800"
                         >
-                          + {first(n)}
+                          + <TruncatedName name={nameOf(n)} />
                         </span>
                       ))}
                       {!plan && need > 0 && (

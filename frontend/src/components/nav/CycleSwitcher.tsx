@@ -10,6 +10,7 @@ import {
 import { useCycleScope } from '@/hooks/useCycleScope'
 import { cycleAudience } from '@/lib/cycle-type'
 import { cn } from '@/lib/utils'
+import { Badge } from '@/components/ui/badge'
 
 export function CycleSwitcher({ mode = 'lead' }: { mode?: 'lead' | 'chief' }) {
   const scope = useCycleScope(mode)
@@ -17,8 +18,11 @@ export function CycleSwitcher({ mode = 'lead' }: { mode?: 'lead' | 'chief' }) {
 
   const header = (
     <span className="flex min-w-0 flex-1 flex-col">
-      <span className="text-ink truncate text-sm font-semibold">
-        {[scope.branch?.name, scope.cycle.name].filter(Boolean).join(' · ')}
+      <span className="flex min-w-0 items-center gap-2">
+        <span className="text-ink truncate text-sm font-semibold">
+          {scope.cycle.name}
+        </span>
+        {scope.branch && <Badge size="sm">{scope.branch.name}</Badge>}
       </span>
       <span className="text-text-subtle text-xs">
         Recruiting {cycleAudience(scope.cycle.application_type).toLowerCase()}
@@ -47,7 +51,10 @@ export function CycleSwitcher({ mode = 'lead' }: { mode?: 'lead' | 'chief' }) {
               size={14}
               className={cn(c.id !== scope.cycleId && 'invisible')}
             />
-            {c.name} · {cycleAudience(c.application_type)}
+            <span className="flex-1 truncate">{c.name}</span>
+            <Badge size="sm" className="text-text-muted">
+              {cycleAudience(c.application_type)}
+            </Badge>
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>

@@ -24,6 +24,9 @@ import { useCurrentUser, useReviewerNames } from '@/lib/queries/users'
 import { MEETING_DAY_LABEL } from '@/app/(portal)/reviewer/applications/components/meetingAvailability'
 import { formatDate } from '@/lib/utils'
 import { LeadTeamTab } from './LeadTeamTab'
+import { Fact, Facts } from '@/components/ui/facts'
+import { Badge } from '@/components/ui/badge'
+import { CalendarDays, Clock, Users } from 'lucide-react'
 
 export function LeadPreferenceListClient({
   id,
@@ -138,16 +141,24 @@ export function LeadPreferenceListClient({
     .map((n) => (n === currentUser?.full_name ? 'you' : n.split(' ')[0]))
     .join(', ')
   const deadline = closesAtByRole[role]
-  const subtitle = [
-    list.name,
-    team,
-    list.meeting_day && `Meets ${MEETING_DAY_LABEL[list.meeting_day]}`,
-    list.status === 'submitted'
-      ? `Submitted ${formatDate(list.submitted_at)}`
-      : deadline && `Due ${formatDate(deadline)}`,
-  ]
-    .filter(Boolean)
-    .join(' · ')
+  const subtitle = (
+    <Facts>
+      <span className="text-ink font-medium">{list.name}</span>
+      {team && <Fact icon={Users}>{team}</Fact>}
+      {list.meeting_day && (
+        <Fact icon={CalendarDays}>
+          Meets {MEETING_DAY_LABEL[list.meeting_day]}
+        </Fact>
+      )}
+      {list.status === 'submitted' ? (
+        <Badge size="sm" className="bg-emerald-50 text-emerald-700">
+          Submitted {formatDate(list.submitted_at)}
+        </Badge>
+      ) : (
+        deadline && <Fact icon={Clock}>Due {formatDate(deadline)}</Fact>
+      )}
+    </Facts>
+  )
 
   const roleCount = (r: string) =>
     list.entries.filter((e) => e.role_id === r).length

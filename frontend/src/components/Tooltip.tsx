@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { cn } from '@/lib/utils'
 
 // How long a tap-opened tooltip stays up, since touch has no mouseleave.
 const TOUCH_DISMISS_MS = 1500
@@ -9,9 +10,13 @@ const GAP = 8
 export function Tooltip({
   label,
   children,
+  className,
+  disabled,
 }: {
-  label: string
+  label: ReactNode
   children: ReactNode
+  className?: string
+  disabled?: boolean
 }) {
   const triggerRef = useRef<HTMLSpanElement>(null)
   const bubbleRef = useRef<HTMLSpanElement>(null)
@@ -26,6 +31,7 @@ export function Tooltip({
   }, [touchOpenedAt])
 
   function show() {
+    if (disabled) return
     const rect = triggerRef.current?.getBoundingClientRect()
     if (!rect) return
     const width = bubbleRef.current?.offsetWidth ?? 0
@@ -43,7 +49,11 @@ export function Tooltip({
   return (
     <span
       ref={triggerRef}
-      className="relative inline-flex cursor-default"
+      className={cn(
+        'relative inline-flex',
+        !disabled && 'cursor-default',
+        className
+      )}
       onPointerEnter={(e) => {
         if (e.pointerType === 'mouse') show()
       }}

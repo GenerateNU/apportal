@@ -21,6 +21,7 @@ import { useCycleStaff, useSetCycleStaff } from '@/lib/queries/cycle-staff'
 import { useUsers } from '@/lib/queries/users'
 import { STAFF_ROLE_LABEL, staffRolesFor } from '../lib/cycle-staff'
 import { StaffRow } from './StaffRow'
+import { Count } from '@/components/ui/badge'
 
 const ROLE_ORDER: CycleStaffRole[] = ['chief', 'lead']
 const MAX_RESULTS = 20
@@ -41,7 +42,9 @@ export function CycleStaffPanel({ cycle }: { cycle: Cycle }) {
     <div className="flex flex-col gap-6">
       {groups.map(({ role, members }) => (
         <section key={role} className="flex flex-col gap-2">
-          <SectionLabel as="h3">{`${STAFF_ROLE_LABEL[role]}s · ${members.length}`}</SectionLabel>
+          <SectionLabel as="h3" className="flex items-center gap-2">
+            {STAFF_ROLE_LABEL[role]}s <Count value={members.length} />
+          </SectionLabel>
           <ul
             aria-label={`${STAFF_ROLE_LABEL[role]}s`}
             className="divide-y divide-gray-100 border border-gray-200 bg-white"

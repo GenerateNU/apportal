@@ -18,7 +18,11 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { LoadingText } from '@/components/ui/loading-text'
 import { PageHeader } from '@/components/ui/page-header'
 import { PAGE_SHELL } from '@/components/ui/page-shell'
-import { SearchableSelect } from '@/components/ui/searchable-select'
+import {
+  SearchableSelect,
+  type SearchableSelectOption,
+} from '@/components/ui/searchable-select'
+import { Count } from '@/components/ui/badge'
 import { useToast } from '@/components/ui/toast'
 import type { InterviewPlan } from '@/generated/model/interviewPlan'
 import { useCycleScope } from '@/hooks/useCycleScope'
@@ -48,6 +52,7 @@ import {
 import { useReviewConflicts, useStaffing } from '@/lib/queries/reviewer-pools'
 import { cn } from '@/lib/utils'
 import { ConflictsButton } from '../../reviews/components/ReviewsClient'
+import { TruncatedName } from '@/components/ui/truncated-name'
 
 const IN_INTERVIEWS = new Set<string>([
   'interview',
@@ -394,8 +399,9 @@ function Board({
               </span>
               {editable && panelMode && (
                 <Tooltip label="Each applicant gets one whole interview panel. Delete the panels to assign people one by one.">
-                  <span className="text-text-subtle text-xs">
-                    by interview panel · {usable.length}
+                  <span className="text-text-subtle inline-flex items-center gap-2 text-xs">
+                    by interview panel
+                    <Count value={usable.length} />
                   </span>
                 </Tooltip>
               )}
@@ -556,7 +562,11 @@ function Board({
                         )
                         .map((g) => ({
                           value: `panel:${g.id}`,
-                          label: `Panel · ${g.name}`,
+                          label: g.name,
+                          badge: {
+                            label: 'Panel',
+                            className: 'text-text-muted bg-gray-100',
+                          },
                         }))}
                       label={`Add an interviewer for ${r.name}`}
                       onAdd={(value) =>
@@ -664,14 +674,16 @@ function Board({
                 <li key={l.nuid} className="flex flex-col gap-1 text-sm">
                   <span className="flex items-baseline justify-between gap-2">
                     <span className="text-ink truncate">{l.name}</span>
-                    <span className="text-text-muted shrink-0 text-xs tabular-nums">
-                      <span className="text-ink">{l.iv}</span>
-                      {l.ivPlus > 0 && (
-                        <span className="text-emerald-700"> +{l.ivPlus}</span>
-                      )}
+                    <span className="text-text-muted inline-flex shrink-0 items-baseline gap-3 text-xs tabular-nums">
+                      <span>
+                        <span className="text-ink">{l.iv}</span>
+                        {l.ivPlus > 0 && (
+                          <span className="text-emerald-700"> +{l.ivPlus}</span>
+                        )}
+                        {withRecording && ' interviews'}
+                      </span>
                       {withRecording && (
-                        <>
-                          {' · '}
+                        <span>
                           <span className="text-ink">{l.rec}</span>
                           {l.recPlus > 0 && (
                             <span className="text-emerald-700">
@@ -679,8 +691,8 @@ function Board({
                               +{l.recPlus}
                             </span>
                           )}{' '}
-                          rec
-                        </>
+                          recordings
+                        </span>
                       )}
                     </span>
                   </span>
@@ -757,7 +769,7 @@ function Chips({
   onAdd,
   onRemove,
 }: {
-  panelOptions?: { value: string; label: string }[]
+  panelOptions?: SearchableSelectOption[]
   teams?: Team[]
   people: Person[]
   proposed: string[]
@@ -780,14 +792,15 @@ function Chips({
         return (
           <span
             key={team.id}
-            title={items.map((x) => x.name).join(', ')}
             className={cn(chip, 'text-ink border-gray-300 bg-gray-50')}
           >
             <Users size={11} className="text-text-subtle" />
             {done && (
               <Check size={11} strokeWidth={3} className="text-emerald-600" />
             )}
-            {team.name}
+            <Tooltip label={items.map((x) => x.name).join(', ')}>
+              <span className="block max-w-40 truncate">{team.name}</span>
+            </Tooltip>
             {!done && !locked && (
               <button
                 type="button"
@@ -804,13 +817,12 @@ function Chips({
       {current.rest.map((x) => (
         <span
           key={x.assignmentId}
-          title={x.name}
           className={cn(chip, 'text-ink border-gray-200 bg-white')}
         >
           {x.done && (
             <Check size={11} strokeWidth={3} className="text-emerald-600" />
           )}
-          {x.name.split(' ')[0]}
+          <TruncatedName name={x.name} />
           {!x.done && !locked && (
             <button
               type="button"
@@ -837,13 +849,12 @@ function Chips({
       {planned.rest.map((n) => (
         <span
           key={n}
-          title={nameOf(n)}
           className={cn(
             chip,
             'border-dashed border-emerald-400 bg-emerald-50 text-emerald-800'
           )}
         >
-          + {nameOf(n).split(' ')[0]}
+          + <TruncatedName name={nameOf(n)} />
         </span>
       ))}
       {canAdd && need > 0 && !locked && (

@@ -1,12 +1,13 @@
 'use client'
 
 import { useState } from 'react'
-import { ChevronRight } from 'lucide-react'
+import { CalendarDays, ChevronRight, Users } from 'lucide-react'
 import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import { EmptyState } from '@/components/ui/empty-state'
 import { LoadingText } from '@/components/ui/loading-text'
 import { PageHeader } from '@/components/ui/page-header'
 import { LiveDot } from '@/components/ui/live-dot'
+import { Badge } from '@/components/ui/badge'
 import { PAGE_SHELL } from '@/components/ui/page-shell'
 import { PanelHeading } from '@/components/ui/panel-heading'
 import { SearchInput } from '@/components/ui/search-input'
@@ -29,6 +30,7 @@ import { usePreferenceListDetails } from '@/lib/queries/preference-lists'
 import { useCycleRoles } from '@/lib/queries/roles'
 import { useCurrentUser } from '@/lib/queries/users'
 import { cn } from '@/lib/utils'
+import { Fact, Facts } from '@/components/ui/facts'
 
 const CRUMBS = myWorkCrumbs('draft')
 
@@ -72,7 +74,12 @@ export function LeadDraftClient() {
         <PageHeader
           back={<Breadcrumbs items={CRUMBS} />}
           title="Draft"
-          subtitle={[cycle?.name, myGroup?.name].filter(Boolean).join(' · ')}
+          subtitle={
+            <Facts>
+              {cycle?.name && <Fact icon={CalendarDays}>{cycle.name}</Fact>}
+              {myGroup?.name && <Fact icon={Users}>{myGroup.name}</Fact>}
+            </Facts>
+          }
         />
       </div>
 
@@ -169,14 +176,19 @@ function StatusRows({
                     ? "You're on the clock"
                     : `${onClock?.name ?? 'Next team'} is picking`}
               {open && !complete && board && (
-                <span
-                  className={cn(
-                    'font-normal',
-                    usUp ? 'text-white/70' : 'text-text-muted'
-                  )}
-                >
-                  Round {roundOf(board.on_the_clock, teams.length)} · pick{' '}
-                  {board.on_the_clock} of {total}
+                <span className="flex flex-wrap gap-1.5 font-normal">
+                  <Badge
+                    size="sm"
+                    className={usUp ? 'bg-white/15 text-white' : undefined}
+                  >
+                    Round {roundOf(board.on_the_clock, teams.length)}
+                  </Badge>
+                  <Badge
+                    size="sm"
+                    className={usUp ? 'bg-white/15 text-white' : undefined}
+                  >
+                    Pick {board.on_the_clock} of {total}
+                  </Badge>
                 </span>
               )}
             </span>
@@ -291,9 +303,13 @@ function TeamRow({
             open && 'rotate-90'
           )}
         />
-        <span className="text-ink min-w-0 flex-1 font-semibold wrap-anywhere">
+        <span className="text-ink flex min-w-0 flex-1 items-center gap-2 font-semibold wrap-anywhere">
           {name}
-          {ours && <span className="text-text-muted font-normal"> · You</span>}
+          {ours && (
+            <Badge size="sm" className="text-text-muted">
+              You
+            </Badge>
+          )}
         </span>
         {pickingNow && (
           <span className="text-ink flex items-center gap-1.5 text-xs font-semibold">

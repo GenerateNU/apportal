@@ -1,6 +1,6 @@
 'use client'
 
-import { ArrowRight, Loader2 } from 'lucide-react'
+import { ArrowRight, Loader2, Users } from 'lucide-react'
 import { Avatar } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { ReturnerBadge } from '@/components/ReturnerBadge'
@@ -15,6 +15,7 @@ import type {
   PreferenceListDetail,
 } from '@/lib/api/types'
 import { roundOf } from './snake'
+import { Fact, Stats } from '@/components/ui/facts'
 
 // What the operator actually drives during the draft: whose turn it is, that
 // team's own ranked list to pick down, and a search over the rest of the pool
@@ -78,14 +79,21 @@ export function OnTheClockPanel({
           <span className="bg-white/20 px-2 py-0.5 text-xs font-semibold tracking-wide uppercase">
             On the clock
           </span>
-          <div>
+          <div className="flex min-w-0 flex-col gap-1">
             <p className="text-xl leading-tight font-semibold">{team.name}</p>
-            <p className="text-xs text-white/80">
-              Round {round} · Pick #{board.on_the_clock}
-              {team.member_names.length > 0 &&
-                ` · ${team.member_names.join(', ')}`}
-            </p>
+            {team.member_names.length > 0 && (
+              <Fact icon={Users} className="text-xs text-white/80">
+                {team.member_names.join(', ')}
+              </Fact>
+            )}
           </div>
+          <Stats
+            className="border-l border-white/20 pl-4"
+            items={[
+              { label: 'Round', value: round },
+              { label: 'Pick', value: `#${board.on_the_clock}` },
+            ]}
+          />
         </div>
         {canPick && (
           <SearchableSelect
@@ -153,9 +161,14 @@ export function OnTheClockPanel({
                     </span>
                   </div>
                   {takenBy ? (
-                    <Badge className="text-text-muted block max-w-[40%] truncate">
-                      Drafted · {takenBy}
-                    </Badge>
+                    <span className="flex max-w-[40%] min-w-0 items-center gap-1.5">
+                      <Badge size="sm" className="text-text-muted">
+                        Drafted
+                      </Badge>
+                      <span className="text-text-muted truncate text-xs">
+                        {takenBy}
+                      </span>
+                    </span>
                   ) : (
                     canPick && (
                       <Button

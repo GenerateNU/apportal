@@ -23,6 +23,12 @@ import {
   useRequestUploadUrl,
   uploadFileToSignedUrl,
 } from '@/lib/queries/uploads'
+import {
+  isOtherOption,
+  matchesOption,
+  otherDetail,
+  withOtherDetail,
+} from '../lib/other-option'
 
 export type AnswerValue = {
   text?: string
@@ -35,10 +41,9 @@ const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024
 
 // Lets a `url`-type question be answered either by typing a link or by
 // uploading a PDF (e.g. a resume or portfolio that isn't hosted anywhere).
-// applicationId is required to request an upload URL — until the draft has
-// been saved once and has an id, uploading is disabled.
 function UrlOrFileAnswer({
   applicationId,
+  ensureApplicationId,
   questionId,
   value,
   onChange,
@@ -46,6 +51,7 @@ function UrlOrFileAnswer({
   invalid,
 }: {
   applicationId?: string
+  ensureApplicationId?: () => Promise<string>
   questionId: string
   value: AnswerValue
   onChange: (next: AnswerValue) => void
@@ -58,7 +64,7 @@ function UrlOrFileAnswer({
   const requestUploadUrl = useRequestUploadUrl()
 
   async function handleFileSelected(file: File | undefined) {
-    if (!file || !applicationId) return
+    if (!file) return
     setError(null)
     if (file.type !== 'application/pdf') {
       setError('Only PDF files are supported.')
@@ -70,8 +76,10 @@ function UrlOrFileAnswer({
     }
     setUploading(true)
     try {
+      const id = applicationId ?? (await ensureApplicationId?.())
+      if (!id) throw new Error('no application')
       const { path, upload_url } = await requestUploadUrl.mutateAsync({
-        applicationId,
+        applicationId: id,
         questionId,
         filename: file.name,
       })
@@ -136,7 +144,7 @@ function UrlOrFileAnswer({
             type="button"
             variant="outline"
             size="sm"
-            disabled={!applicationId || uploading}
+            disabled={uploading}
             onClick={() => fileInputRef.current?.click()}
           >
             {uploading ? (
@@ -146,11 +154,6 @@ function UrlOrFileAnswer({
             )}
             Upload a PDF instead
           </Button>
-          {!applicationId && (
-            <span className="text-text-subtle text-xs">
-              Answer another question first to enable uploads
-            </span>
-          )}
         </div>
       )}
       {error && <p className="text-destructive text-xs">{error}</p>}
@@ -175,8 +178,50 @@ export type FieldQuestion = {
 const TEXTAREA_CLASS =
   'aria-invalid:border-destructive placeholder:text-text-subtle focus-visible:border-ink focus-visible:ring-ink/10 min-h-36 w-full resize-y border border-gray-300 bg-white px-3.5 py-3 text-base leading-relaxed transition-colors outline-none focus-visible:ring-3 disabled:bg-gray-50'
 
-const OPTION_CLASS =
-  'has-[:checked]:border-ink flex cursor-pointer items-center gap-3 border border-gray-200 bg-white px-4 py-3 text-base transition-colors hover:bg-gray-50 has-[:checked]:bg-gray-50 has-[:disabled]:cursor-default'
+function OptionCard({
+  checked,
+  label,
+  control,
+  detail,
+  disabled,
+}: {
+  checked: boolean
+  label: string
+  control: React.ReactNode
+  detail?: { value: string; onChange: (value: string) => void }
+  disabled: boolean
+}) {
+  return (
+    <div
+      className={cn(
+        'border bg-white transition-colors',
+        checked ? 'border-ink bg-gray-50' : 'border-gray-200 hover:bg-gray-50'
+      )}
+    >
+      <label
+        className={cn(
+          'flex items-center gap-3 px-4 py-3 text-base',
+          disabled ? 'cursor-default' : 'cursor-pointer'
+        )}
+      >
+        {control}
+        {label}
+      </label>
+      {detail && (
+        <div className="border-t border-gray-200 py-2.5 pr-4 pl-11">
+          <input
+            value={detail.value}
+            onChange={(e) => detail.onChange(e.target.value)}
+            placeholder="Please specify"
+            aria-label={`${label}: please specify`}
+            disabled={disabled}
+            className="placeholder:text-text-subtle focus:border-ink w-full border-b border-gray-300 bg-transparent py-1.5 text-base outline-none"
+          />
+        </div>
+      )}
+    </div>
+  )
+}
 
 export function QuestionField({
   question,
@@ -185,6 +230,7 @@ export function QuestionField({
   onChange,
   disabled = false,
   applicationId,
+  ensureApplicationId,
   error,
   onBlur,
 }: {
@@ -197,10 +243,13 @@ export function QuestionField({
   // when this component renders review-question answers, which never use
   // the `url` type.
   applicationId?: string
+  ensureApplicationId?: () => Promise<string>
   error?: string
   onBlur?: () => void
 }) {
   const options = question.options ?? []
+  const chosen = options.find((o) => matchesOption(value.text ?? '', o))
+  const chosenOther = chosen && isOtherOption(chosen) ? chosen : undefined
 
   return (
     <Card
@@ -267,6 +316,7 @@ export function QuestionField({
         {question.question_type === 'url' && (
           <UrlOrFileAnswer
             applicationId={applicationId}
+            ensureApplicationId={ensureApplicationId}
             questionId={question.id}
             value={value}
             onChange={onChange}
@@ -277,19 +327,36 @@ export function QuestionField({
 
         {question.question_type === 'multiple_choice' && (
           <div className="flex flex-col gap-2">
-            {options.map((option) => (
-              <label key={option} className={OPTION_CLASS}>
-                <input
-                  type="radio"
-                  name={question.id}
-                  checked={value.text === option}
-                  onChange={() => onChange({ text: option })}
+            {options.map((option) => {
+              const checked = matchesOption(value.text ?? '', option)
+              return (
+                <OptionCard
+                  key={option}
+                  checked={checked}
+                  label={option}
+                  control={
+                    <input
+                      type="radio"
+                      name={question.id}
+                      checked={checked}
+                      onChange={() => onChange({ text: option })}
+                      disabled={disabled}
+                      className="accent-ink h-4 w-4 shrink-0 cursor-pointer"
+                    />
+                  }
+                  detail={
+                    checked && isOtherOption(option)
+                      ? {
+                          value: otherDetail(value.text ?? '', option),
+                          onChange: (d) =>
+                            onChange({ text: withOtherDetail(option, d) }),
+                        }
+                      : undefined
+                  }
                   disabled={disabled}
-                  className="accent-ink h-4 w-4 shrink-0 cursor-pointer"
                 />
-                {option}
-              </label>
-            ))}
+              )
+            })}
           </div>
         )}
 
@@ -308,49 +375,91 @@ export function QuestionField({
         )}
 
         {question.question_type === 'dropdown' && (
-          <Select
-            value={value.text ?? ''}
-            onValueChange={(val) => onChange({ text: val })}
-            disabled={disabled}
-          >
-            <SelectTrigger
-              aria-label={question.question_text}
-              aria-invalid={!!error}
+          <div className="flex flex-col gap-2">
+            <Select
+              value={chosen ?? ''}
+              onValueChange={(val) => onChange({ text: val })}
+              disabled={disabled}
             >
-              <SelectValue placeholder="Select an option" />
-            </SelectTrigger>
-            <SelectContent>
-              {options.map((option) => (
-                <SelectItem key={option} value={option}>
-                  {option}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+              <SelectTrigger
+                aria-label={question.question_text}
+                aria-invalid={!!error}
+              >
+                <SelectValue placeholder="Select an option" />
+              </SelectTrigger>
+              <SelectContent>
+                {options.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {chosenOther && (
+              <div className="flex flex-col gap-1.5 border-l-2 border-gray-200 pl-3">
+                <label
+                  htmlFor={`${question.id}-other`}
+                  className="text-text-muted text-sm"
+                >
+                  Please specify
+                </label>
+                <Input
+                  id={`${question.id}-other`}
+                  className="h-11 text-base md:text-base"
+                  value={otherDetail(value.text ?? '', chosenOther)}
+                  onChange={(e) =>
+                    onChange({
+                      text: withOtherDetail(chosenOther, e.target.value),
+                    })
+                  }
+                  disabled={disabled}
+                />
+              </div>
+            )}
+          </div>
         )}
 
         {question.question_type === 'checkbox' && (
           <div className="flex flex-col gap-2">
             {options.map((option) => {
               const selected = value.options ?? []
-              const checked = selected.includes(option)
+              const entry = selected.find((o) => matchesOption(o, option))
+              const checked = entry !== undefined
               return (
-                <label key={option} className={OPTION_CLASS}>
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={() =>
-                      onChange({
-                        options: checked
-                          ? selected.filter((o) => o !== option)
-                          : [...selected, option],
-                      })
-                    }
-                    disabled={disabled}
-                    className="accent-ink h-4 w-4 shrink-0 cursor-pointer"
-                  />
-                  {option}
-                </label>
+                <OptionCard
+                  key={option}
+                  checked={checked}
+                  label={option}
+                  control={
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() =>
+                        onChange({
+                          options: checked
+                            ? selected.filter((o) => o !== entry)
+                            : [...selected, option],
+                        })
+                      }
+                      disabled={disabled}
+                      className="accent-ink h-4 w-4 shrink-0 cursor-pointer"
+                    />
+                  }
+                  detail={
+                    checked && isOtherOption(option)
+                      ? {
+                          value: otherDetail(entry, option),
+                          onChange: (d) =>
+                            onChange({
+                              options: selected.map((o) =>
+                                o === entry ? withOtherDetail(option, d) : o
+                              ),
+                            }),
+                        }
+                      : undefined
+                  }
+                  disabled={disabled}
+                />
               )
             })}
           </div>

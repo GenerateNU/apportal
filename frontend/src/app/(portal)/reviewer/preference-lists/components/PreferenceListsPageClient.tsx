@@ -146,12 +146,8 @@ export function PreferenceListsPageClient({ isChief }: { isChief: boolean }) {
           <section className={SECTION}>
             <div className="flex flex-wrap items-end justify-between gap-3">
               <Subheading
-                title={`Teams · ${lists.length}`}
-                hint={
-                  lists.length > 0
-                    ? `${submitted} of ${lists.length} submitted their list.`
-                    : undefined
-                }
+                title="Teams"
+                hint="Each team is a group of leads who rank the applicants they want. Teams take turns picking from their lists in the draft."
               />
               <Button onClick={() => setDialogOpen(true)}>
                 <Plus data-icon="inline-start" size={14} />

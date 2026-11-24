@@ -148,12 +148,10 @@ function PhaseRow({
   const header = (
     <button
       type="button"
-      onClick={locked ? undefined : onToggle}
-      aria-expanded={locked ? undefined : expanded}
-      aria-disabled={locked || undefined}
+      onClick={onToggle}
+      aria-expanded={expanded}
       className={cn(
-        'flex w-full items-center gap-2.5 px-3 py-1.5 text-left text-sm transition-colors',
-        locked ? 'cursor-default' : 'hover:bg-gray-50',
+        'flex w-full items-center gap-2.5 px-3 py-1.5 text-left text-sm transition-colors hover:bg-gray-50',
         expanded ? 'text-ink font-semibold' : 'font-medium',
         locked ? 'text-ink/40' : !expanded && 'text-ink/70'
       )}
@@ -175,7 +173,7 @@ function PhaseRow({
           Chiefs are running this stage.
         </p>
       )}
-      {expanded && !locked && phase.steps.length > 0 && (
+      {expanded && phase.steps.length > 0 && (
         <ul className="mb-1 ml-[1.375rem] flex flex-col border-l border-gray-200">
           {phase.steps.map((step) => {
             const active = stepActive(pathname, search, step)

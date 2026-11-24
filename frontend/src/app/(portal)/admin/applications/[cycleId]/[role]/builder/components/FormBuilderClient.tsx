@@ -56,6 +56,8 @@ import { TemplateTextBlock } from './TemplateTextBlock'
 import { TEMPLATE_STATUS_LABEL, TEMPLATE_STATUS_ORDER } from './constants'
 import { useRoleLookup } from '@/lib/queries/roles'
 import { useCycle } from '@/lib/queries/cycles'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { formatDeadline } from '@/lib/deadline'
 
 function FormBuilder({
   cycleId,
@@ -121,9 +123,16 @@ function FormBuilder({
 
   const step = mode === 'application' ? 'applications' : 'reviews'
 
-  function changeStatus(next: CycleStatus) {
+  const [confirmOpen, setConfirmOpen] = useState(false)
+
+  function applyStatus(next: CycleStatus) {
     if (!template || next === status) return
     save(setOpeningStep, { cycleId, roleId: role, step, status: next })
+  }
+
+  function changeStatus(next: CycleStatus) {
+    if (next === 'open' && next !== status) setConfirmOpen(true)
+    else applyStatus(next)
   }
 
   function changeDeadline(date: Date) {
@@ -209,6 +218,23 @@ function FormBuilder({
               />
             )}
 
+            <ConfirmDialog
+              open={confirmOpen}
+              onOpenChange={setConfirmOpen}
+              title={`${status === 'closed' ? 'Reopen' : 'Release'} ${mode === 'application' ? 'applications' : 'reviews'} for ${roleLabel(role)}?`}
+              description={
+                mode === 'application'
+                  ? closesAt
+                    ? `Applicants can apply until ${formatDeadline(new Date(closesAt))}.`
+                    : 'Applicants can start applying right away.'
+                  : 'Reviewers can start scoring. Reviews close on their own at the due date.'
+              }
+              confirmLabel={status === 'closed' ? 'Reopen' : 'Release'}
+              onConfirm={() => {
+                applyStatus('open')
+                setConfirmOpen(false)
+              }}
+            />
             {template && status && (
               <fieldset disabled={readOnly} className="contents">
                 <Select value={status} onValueChange={changeStatus}>

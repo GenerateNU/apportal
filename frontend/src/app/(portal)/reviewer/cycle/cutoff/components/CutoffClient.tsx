@@ -44,6 +44,7 @@ import { useReviewBoard } from '@/lib/queries/reviewer-pools'
 import { useCycleScope } from '@/hooks/useCycleScope'
 import { ApplicationDetail } from '../../../applications/components/ApplicationDetail'
 import { ADVANCEABLE_STAGES, type CutoffDraft, previewEntries } from './cutoff'
+import { Stats } from '@/components/ui/facts'
 
 const STAGE_LABEL: Record<string, string> = {
   interview: 'Interview',
@@ -250,9 +251,20 @@ function Ranking({ cycleId, roleId }: { cycleId: string; roleId: string }) {
       <EmptyState
         title="Shortlist opens once reviews are in"
         description={
-          assigned.length === 0
-            ? 'Assign reviewers and release reviews first.'
-            : `${reviewsIn} of ${assigned.length} reviews in${due ? ` · reviews close ${formatDeadline(due)}` : ''}`
+          assigned.length === 0 ? (
+            'Assign reviewers and release reviews first.'
+          ) : (
+            <Stats
+              className="text-ink mt-2 justify-center"
+              items={[
+                {
+                  label: 'Reviews in',
+                  value: `${reviewsIn} of ${assigned.length}`,
+                },
+                due && { label: 'Reviews close', value: formatDeadline(due) },
+              ]}
+            />
+          )
         }
         action={
           <Link
@@ -482,10 +494,12 @@ function Ranking({ cycleId, roleId }: { cycleId: string; roleId: string }) {
                 <span className="text-ink font-semibold">
                   {toAdvance.length}
                 </span>{' '}
-                <span className="text-text-muted">
-                  selected
-                  {handPicked > 0 && ` · ${handPicked} changed by hand`}
-                </span>
+                <span className="text-text-muted">selected</span>
+                {handPicked > 0 && (
+                  <span className="text-text-muted ml-3">
+                    {handPicked} changed by hand
+                  </span>
+                )}
               </>
             ) : movedOn > 0 || rejected > 0 ? (
               <span className="text-ink inline-flex items-center gap-1.5">
@@ -496,8 +510,9 @@ function Ranking({ cycleId, roleId }: { cycleId: string; roleId: string }) {
                   </>
                 )}
                 {rejected > 0 && (
-                  <span className="text-text-muted">
-                    {movedOn > 0 ? ' · ' : ''}
+                  <span
+                    className={cn('text-text-muted', movedOn > 0 && 'ml-1.5')}
+                  >
                     {rejected} rejected
                   </span>
                 )}

@@ -2,9 +2,7 @@
 
 import { MeetingTimes } from '../../components/MeetingTimes'
 import { useState } from 'react'
-import Link from 'next/link'
-import { Plus, UserPlus, X } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Plus, X } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { EmptyState } from '@/components/ui/empty-state'
 import { LoadingText } from '@/components/ui/loading-text'
@@ -15,7 +13,6 @@ import { PAGE_SHELL } from '@/components/ui/page-shell'
 import { useToast } from '@/components/ui/toast'
 import { type CycleScope, useCycleScope } from '@/hooks/useCycleScope'
 import { apiErrorDetail } from '@/lib/api/client'
-import { useStaffAccess } from '@/lib/queries/cycle-staff'
 import {
   perApplicant,
   type StepName,
@@ -63,24 +60,10 @@ const rolesOf = (scope: CycleScope) =>
   scope.roles.roleIds.map((id) => ({ id, name: scope.roles.roleLabel(id) }))
 
 export function TeamClient() {
-  const { isAdmin } = useStaffAccess()
   return (
     <SetupShell
       title="Recruitment team"
       subtitle="Who's involved in recruitment, and which openings they handle."
-      actions={(scope) =>
-        isAdmin &&
-        scope.cycle && (
-          <Button asChild>
-            <Link
-              href={`/admin/branches/${scope.cycle.branch_id}/cycles/${scope.cycleId}/team`}
-            >
-              <UserPlus className="h-4 w-4" />
-              Add staff
-            </Link>
-          </Button>
-        )
-      }
     >
       {(scope) => (
         <>
@@ -353,7 +336,7 @@ function StageRow({
               : 'border border-dashed border-gray-300 bg-white text-transparent'
           )}
         >
-          {number ?? '·'}
+          {number}
         </span>
         <div
           className={cn(

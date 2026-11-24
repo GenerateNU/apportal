@@ -91,12 +91,13 @@ export function RecordingReviewThread({
             ) : (
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 wrap-anywhere">
-                  <p className="text-text-muted text-xs">
-                    {isOwn
-                      ? 'You'
-                      : r.reviewer_name || nameFor(r.reviewer_nuid)}
+                  <p className="text-text-muted flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
+                    <span>
+                      {isOwn
+                        ? 'You'
+                        : r.reviewer_name || nameFor(r.reviewer_nuid)}
+                    </span>
                     <span className="text-text-faint">
-                      {' · '}
                       {formatDate(r.writeup_submitted_at)}
                     </span>
                   </p>

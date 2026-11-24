@@ -2,9 +2,9 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Trash2, Users } from 'lucide-react'
+import { CalendarDays, Trash2, Users } from 'lucide-react'
 import { PageContainer } from '@/components/PageContainer'
-import { Badge } from '@/components/ui/badge'
+import { Badge, Count } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import { Button } from '@/components/ui/button'
@@ -34,6 +34,7 @@ import { useReviewerNames } from '@/lib/queries/users'
 import { MEETING_DAY_LABEL } from '@/app/(portal)/reviewer/applications/components/meetingAvailability'
 import { MembersDialog } from './MembersDialog'
 import { ApplicationDetail } from '@/app/(portal)/reviewer/applications/components/ApplicationDetail'
+import { Fact, Facts } from '@/components/ui/facts'
 
 const CRUMB = {
   label: 'Teams & preference lists',
@@ -77,12 +78,18 @@ export function ChiefTeamClient({ id }: { id: string }) {
   const members = list.members.map(
     (m) => nameByNuid.get(m.lead_nuid) ?? m.lead_nuid
   )
-  const subtitle = [
-    members.length > 0 ? members.join(', ') : 'No members yet',
-    list.meeting_day && `Meets ${MEETING_DAY_LABEL[list.meeting_day]}`,
-  ]
-    .filter(Boolean)
-    .join(' · ')
+  const subtitle = (
+    <Facts>
+      <Fact icon={Users}>
+        {members.length > 0 ? members.join(', ') : 'No members yet'}
+      </Fact>
+      {list.meeting_day && (
+        <Fact icon={CalendarDays}>
+          Meets {MEETING_DAY_LABEL[list.meeting_day]}
+        </Fact>
+      )}
+    </Facts>
+  )
   const openEntry = list.entries.find((e) => e.application_id === openId)
   const role = roleIds.includes(pickedRole) ? pickedRole : roleIds[0]
   const entries = list.entries
@@ -117,8 +124,14 @@ export function ChiefTeamClient({ id }: { id: string }) {
                 <SelectContent>
                   {roleIds.map((r) => (
                     <SelectItem key={r} value={r}>
-                      {roleLabel(r)} ·{' '}
-                      {list.entries.filter((e) => e.role_id === r).length}
+                      <span className="inline-flex items-center gap-2">
+                        {roleLabel(r)}
+                        <Count
+                          value={
+                            list.entries.filter((e) => e.role_id === r).length
+                          }
+                        />
+                      </span>
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -126,7 +139,8 @@ export function ChiefTeamClient({ id }: { id: string }) {
             )}
             <Button variant="outline" onClick={() => setEditingMembers(true)}>
               <Users size={14} />
-              Members · {list.members.length}
+              Members
+              <Count value={list.members.length} />
             </Button>
             <Button variant="outline" onClick={() => setConfirming(true)}>
               <Trash2 size={14} />

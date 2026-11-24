@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { Flame } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Skeleton } from '@/components/ui/skeleton'
 import { TagPill } from '@/components/ui/tag-select'
@@ -136,9 +137,21 @@ export function CandidatesBoard({
                         )}
                       </span>
                       <span className="text-text-muted text-xs">
-                        {w.length === 0
-                          ? 'No team has ranked them'
-                          : `${w.length} team${w.length === 1 ? '' : 's'} · #${w[0].rank} ${w[0].team}`}
+                        {w.length === 0 ? (
+                          'No team has ranked them'
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5">
+                            <Badge size="sm" className="tabular-nums">
+                              #{w[0].rank}
+                            </Badge>
+                            {w[0].team}
+                            {w.length > 1 && (
+                              <span className="text-text-faint">
+                                +{w.length - 1} more
+                              </span>
+                            )}
+                          </span>
+                        )}
                       </span>
                       {(a.tag_ids ?? []).length > 0 && (
                         <span className="flex flex-wrap gap-1">

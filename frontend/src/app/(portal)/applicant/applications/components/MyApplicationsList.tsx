@@ -2,14 +2,13 @@
 
 import { useMemo } from 'react'
 import Link from 'next/link'
-import { ArrowRight } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { EmptyState } from '@/components/ui/empty-state'
 import { SectionLabel } from '@/components/ui/section-label'
-import { TABLE_FRAME, TABLE_ROW } from '@/components/ui/table-styles'
+import { TABLE_FRAME } from '@/components/ui/table-styles'
 import type { Application, Branch, Cycle } from '@/lib/api/types'
 import { useRoleLookup } from '@/lib/queries/roles'
-import { formatDate } from '@/lib/utils'
+import { cn, formatDate } from '@/lib/utils'
 import { APPLICANT_STATUS } from '../lib/status'
 
 const CURRENT_STATUSES = new Set(['open', 'draft'])
@@ -50,7 +49,7 @@ export function MyApplicationsList({
   return (
     <div className="flex flex-col gap-10">
       <ApplicationList
-        title="Current"
+        title="Active applications"
         empty="Nothing in progress right now."
         applications={current}
         cycles={cycles}
@@ -58,7 +57,7 @@ export function MyApplicationsList({
       />
       {past.length > 0 && (
         <ApplicationList
-          title="Past"
+          title="Past applications"
           empty="No applications from earlier cycles."
           applications={past}
           cycles={cycles}
@@ -67,11 +66,6 @@ export function MyApplicationsList({
       )}
     </div>
   )
-}
-
-function cycleLabel(cycle: Cycle | undefined, branches: Branch[]) {
-  const branch = branches.find((b) => b.id === cycle?.branch_id)
-  return [branch?.name, cycle?.name].filter(Boolean).join(' · ')
 }
 
 function ApplicationList({
@@ -97,30 +91,43 @@ function ApplicationList({
           applications={applications}
           cycles={cycles}
           branches={branches}
-          showCycle
         />
       )}
     </section>
   )
 }
 
+const ROW =
+  'grid items-center gap-x-4 gap-y-1 px-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1.3fr)_7rem_8rem_8rem]'
+
 function ApplicationRows({
   applications,
   cycles,
   branches,
-  showCycle,
 }: {
   applications: Application[]
   cycles: Cycle[]
   branches: Branch[]
-  showCycle: boolean
 }) {
   const { roleLabel } = useRoleLookup()
 
   return (
     <div className={TABLE_FRAME}>
+      <div
+        className={cn(
+          ROW,
+          'font-display text-text-subtle hidden border-b border-gray-100 py-2 text-[11px] tracking-wider uppercase lg:grid'
+        )}
+      >
+        <span>Position</span>
+        <span>Cycle</span>
+        <span>Branch</span>
+        <span>Last updated</span>
+        <span>Status</span>
+      </div>
       {applications.map((application) => {
         const cycle = cycles.find((c) => c.id === application.cycle_id)
+        const branch = branches.find((b) => b.id === cycle?.branch_id)
         const isDraft = application.stage === 'draft'
         const status = APPLICANT_STATUS[application.stage]
         const href = isDraft
@@ -131,34 +138,36 @@ function ApplicationRows({
           <Link
             key={application.id}
             href={href}
-            className={`group flex flex-wrap items-center gap-x-6 gap-y-2 ${TABLE_ROW}`}
-          >
-            <div className="min-w-0 flex-1">
-              <p className="text-ink truncate font-semibold">
-                {roleLabel(application.role_id)}
-              </p>
-              {showCycle && (
-                <p className="text-text-muted truncate text-xs">
-                  {cycleLabel(cycle, branches)}
-                </p>
-              )}
-            </div>
-            <span className="text-text-subtle hidden w-36 text-xs sm:block">
-              {application.submitted_at
-                ? `Submitted ${formatDate(application.submitted_at)}`
-                : `Edited ${formatDate(application.updated_at)}`}
-            </span>
-            {isDraft ? (
-              <Badge>In progress</Badge>
-            ) : (
-              <Badge className={status.className}>{status.label}</Badge>
+            className={cn(
+              ROW,
+              'group border-b border-gray-100 py-3.5 transition-colors last:border-b-0 hover:bg-gray-50'
             )}
-            <span className="text-text-subtle group-hover:text-ink flex w-24 items-center justify-end gap-1 text-sm font-medium transition-colors">
-              {isDraft ? 'Continue' : 'View'}
-              <ArrowRight
-                size={14}
-                className="transition-transform group-hover:translate-x-1"
-              />
+          >
+            <span className="text-ink truncate font-semibold">
+              {roleLabel(application.role_id)}
+            </span>
+            <span className="text-text-muted truncate text-sm">
+              {cycle?.name ?? '—'}
+            </span>
+            <span>
+              {branch ? (
+                <Badge size="sm">{branch.name}</Badge>
+              ) : (
+                <span className="text-text-subtle text-sm">—</span>
+              )}
+            </span>
+            <span className="text-text-subtle text-sm">
+              <span className="mr-1.5 lg:hidden">
+                {application.submitted_at ? 'Submitted' : 'Edited'}
+              </span>
+              {formatDate(application.submitted_at ?? application.updated_at)}
+            </span>
+            <span>
+              {isDraft ? (
+                <Badge>In progress</Badge>
+              ) : (
+                <Badge className={status.className}>{status.label}</Badge>
+              )}
             </span>
           </Link>
         )

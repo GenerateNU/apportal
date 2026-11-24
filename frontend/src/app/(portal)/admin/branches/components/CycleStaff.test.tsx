@@ -42,7 +42,7 @@ function render(
 describe('CycleStaffPanel', () => {
   it('lists the staff grouped by role', () => {
     const html = render('member', [ada])
-    expect(html).toContain('Chiefs · 1')
+    expect(html).toMatch(/Chiefs <span[^>]*>1<\/span>/)
     expect(html).toContain('Ada Chief')
     expect(html).toContain('aria-label="Remove Ada Chief"')
   })
@@ -55,8 +55,8 @@ describe('CycleStaffPanel', () => {
       role: 'lead',
     }
     const html = render('lead', [ada, lee])
-    expect(html).toContain('Chiefs · 1')
-    expect(html).toContain('Leads · 1')
+    expect(html).toMatch(/Chiefs <span[^>]*>1<\/span>/)
+    expect(html).toMatch(/Leads <span[^>]*>1<\/span>/)
     expect(html).toContain('No access: leads can’t see lead cycles')
     expect(html).toContain('aria-label="Remove Lee Lead"')
     expect(html.match(/No access/g)).toHaveLength(1)

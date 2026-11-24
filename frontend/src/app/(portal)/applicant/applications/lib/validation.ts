@@ -1,8 +1,10 @@
 import type { AnyFieldApi } from '@tanstack/react-form'
 import type { AnswerValue, FieldQuestion } from '../components/QuestionField'
+import { isOtherOption } from './other-option'
 import { urlError } from './url'
 
 export const REQUIRED_MESSAGE = 'This question is required.'
+export const OTHER_MESSAGE = 'Tell us more about your answer.'
 
 export function isEmptyAnswer(
   question: FieldQuestion,
@@ -24,6 +26,16 @@ export function answerError(
   }
   if (question.question_type === 'url' && value?.text?.trim()) {
     return urlError(value.text) ?? undefined
+  }
+  const picked =
+    question.question_type === 'checkbox'
+      ? (value?.options ?? [])
+      : ['multiple_choice', 'dropdown'].includes(question.question_type) &&
+          value?.text
+        ? [value.text]
+        : []
+  if (picked.some((p) => isOtherOption(p) && !p.includes(':'))) {
+    return OTHER_MESSAGE
   }
   return undefined
 }

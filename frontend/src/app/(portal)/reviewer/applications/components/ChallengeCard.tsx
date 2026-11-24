@@ -13,6 +13,7 @@ import { PanelHeading } from '@/components/ui/panel-heading'
 import { SectionLabel } from '@/components/ui/section-label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn, formatDate } from '@/lib/utils'
+import { Stats } from '@/components/ui/facts'
 
 const CHALLENGE_METRIC_LABEL: { key: keyof ChallengeMetrics; label: string }[] =
   [
@@ -211,15 +212,22 @@ function ScoreBlock({ score }: { score: ChallengeScore }) {
   const [showHistory, setShowHistory] = useState(false)
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-end gap-x-4 gap-y-1">
-        <span className="font-display text-ink text-4xl leading-none font-bold">
-          {score.overall_score.toFixed(1)}
+      <div className="flex flex-wrap items-end gap-x-8 gap-y-3">
+        <span className="flex flex-col gap-1">
+          <span className="font-display text-ink text-4xl leading-none font-bold">
+            {score.overall_score.toFixed(1)}
+          </span>
+          <span className="font-display text-text-subtle text-[10px] font-bold tracking-[0.12em] uppercase">
+            Overall
+          </span>
         </span>
-        <span className="text-text-muted pb-0.5 text-xs">
-          Overall · {score.attempt_count} finished attempt
-          {score.attempt_count === 1 ? '' : 's'} ·{' '}
-          {formatDate(score.finished_at)}
-        </span>
+        <Stats
+          className="text-ink pb-0.5"
+          items={[
+            { label: 'Finished attempts', value: score.attempt_count },
+            { label: 'Last finished', value: formatDate(score.finished_at) },
+          ]}
+        />
       </div>
 
       <div className="grid grid-cols-2 border-t border-l border-gray-200 sm:grid-cols-3">

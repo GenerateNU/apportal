@@ -87,9 +87,9 @@ func TestListApplicationsQueryAnswerFilters(t *testing.T) {
 				},
 			},
 			wantSQL: []string{
-				`(wa0.answer_options @> jsonb_build_array($3::text) OR wa0.answer_options @> jsonb_build_array($4::text))`,
+				`(EXISTS (SELECT 1 FROM jsonb_array_elements_text(wa0.answer_options) o WHERE o = $3 OR o LIKE $4 ESCAPE '\') OR EXISTS (SELECT 1 FROM jsonb_array_elements_text(wa0.answer_options) o WHERE o = $5 OR o LIKE $6 ESCAPE '\'))`,
 			},
-			wantArgs: []any{"q2", models.StageDraft, "Yes", "Maybe"},
+			wantArgs: []any{"q2", models.StageDraft, "Yes", "Yes: %", "Maybe", "Maybe: %"},
 		},
 		{
 			name: "single-choice matches answer_text exactly",
@@ -98,8 +98,8 @@ func TestListApplicationsQueryAnswerFilters(t *testing.T) {
 					{QuestionIDs: []string{"q3"}, Match: MatchAnyOf, Values: []string{"Fall"}},
 				},
 			},
-			wantSQL:  []string{`wa0.answer_text IN ($3)`},
-			wantArgs: []any{"q3", models.StageDraft, "Fall"},
+			wantSQL:  []string{`(wa0.answer_text = $3 OR wa0.answer_text LIKE $4 ESCAPE '\')`},
+			wantArgs: []any{"q3", models.StageDraft, "Fall", "Fall: %"},
 		},
 		{
 			name: "two filters, each with its own join",
@@ -113,9 +113,9 @@ func TestListApplicationsQueryAnswerFilters(t *testing.T) {
 				`written_answers wa0 ON wa0.application_id = a.id AND wa0.question_id IN ($1)`,
 				`written_answers wa1 ON wa1.application_id = a.id AND wa1.question_id IN ($2)`,
 				`wa0.answer_text ILIKE $4 ESCAPE '\'`,
-				`wa1.answer_options @> jsonb_build_array($5::text)`,
+				`EXISTS (SELECT 1 FROM jsonb_array_elements_text(wa1.answer_options) o WHERE o = $5 OR o LIKE $6 ESCAPE '\')`,
 			},
-			wantArgs: []any{"q1", "q2", models.StageDraft, "%a%", "b"},
+			wantArgs: []any{"q1", "q2", models.StageDraft, "%a%", "b", "b: %"},
 		},
 		{
 			// LIKE metacharacters in user input are literals, not wildcards.
@@ -137,9 +137,9 @@ func TestListApplicationsQueryAnswerFilters(t *testing.T) {
 			},
 			wantSQL: []string{
 				`LEFT JOIN written_answers wa0 ON wa0.application_id = a.id AND wa0.question_id IN ($1,$2)`,
-				`wa0.answer_text IN ($4)`,
+				`(wa0.answer_text = $4 OR wa0.answer_text LIKE $5 ESCAPE '\')`,
 			},
-			wantArgs:  []any{"q1", "q2", models.StageDraft, "Fall"},
+			wantArgs:  []any{"q1", "q2", models.StageDraft, "Fall", "Fall: %"},
 			wantNoSQL: []string{`wa1`},
 		},
 		{

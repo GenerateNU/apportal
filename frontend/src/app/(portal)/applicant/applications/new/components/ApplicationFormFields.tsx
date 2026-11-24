@@ -34,6 +34,7 @@ function AnswerField({
   reveal,
   disabled,
   applicationId,
+  ensureApplicationId,
 }: {
   field: AnyFieldApi
   question: Question
@@ -41,27 +42,43 @@ function AnswerField({
   reveal: boolean
   disabled: boolean
   applicationId?: string
+  ensureApplicationId?: () => Promise<string>
 }) {
   const value = (field.state.value ?? {}) as AnswerValue
   const serialized = JSON.stringify(value)
   const settled = useSettledValue(serialized) === serialized
 
   return (
-    <QuestionField
-      question={question}
-      index={index}
-      value={value}
-      onChange={(next) => field.handleChange(next)}
-      onBlur={field.handleBlur}
-      error={visibleError(
-        field,
-        settled,
-        reveal,
-        !isEmptyAnswer(question, value)
-      )}
-      disabled={disabled}
-      applicationId={applicationId}
-    />
+    <div
+      tabIndex={-1}
+      className="outline-none"
+      onBlur={(e) => {
+        const next = e.relatedTarget as HTMLElement | null
+        if (e.currentTarget.contains(next)) return
+        if (
+          next?.closest('[data-radix-popper-content-wrapper],[role="listbox"]')
+        )
+          return
+        field.handleBlur()
+      }}
+    >
+      <QuestionField
+        question={question}
+        index={index}
+        value={value}
+        onChange={(next) => field.handleChange(next)}
+        onBlur={field.handleBlur}
+        error={visibleError(
+          field,
+          settled,
+          reveal,
+          !isEmptyAnswer(question, value)
+        )}
+        disabled={disabled}
+        applicationId={applicationId}
+        ensureApplicationId={ensureApplicationId}
+      />
+    </div>
   )
 }
 
@@ -96,17 +113,19 @@ export function ApplicationFormFields({
   questions,
   startIndex,
   challenge,
-  reveal,
+  revealed,
   disabled,
   applicationId,
+  ensureApplicationId,
 }: {
   form: ApplicationForm
   questions: Question[]
   startIndex: number
   challenge?: CodeChallenge
-  reveal: boolean
+  revealed: (id: string) => boolean
   disabled: boolean
   applicationId?: string
+  ensureApplicationId?: () => Promise<string>
 }) {
   return (
     <div className="flex flex-col gap-8">
@@ -127,9 +146,10 @@ export function ApplicationFormFields({
                   field={field}
                   question={question}
                   index={startIndex + i}
-                  reveal={reveal}
+                  reveal={revealed(question.id)}
                   disabled={disabled}
                   applicationId={applicationId}
+                  ensureApplicationId={ensureApplicationId}
                 />
               )}
             </form.Field>
@@ -151,7 +171,7 @@ export function ApplicationFormFields({
               <SubmissionField
                 field={field}
                 challenge={challenge}
-                reveal={reveal}
+                reveal={revealed('challenge')}
                 disabled={disabled}
               />
             )}

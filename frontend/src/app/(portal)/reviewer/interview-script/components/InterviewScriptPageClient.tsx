@@ -36,12 +36,16 @@ import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import { useCycleTemplateSummary } from '@/lib/queries/cycles'
 import { queryKeys } from '@/lib/queries/keys'
 import { useQueryClient } from '@tanstack/react-query'
+import { FormStatusBadge } from '../../cycle/components/FormStatusBadge'
 
 type Status = 'saved' | 'saving' | 'unsaved'
 type SectionId = 'opening' | 'questions' | 'challenge' | 'closing' | 'after'
 
 const INLINE =
   'field-sizing-content -mx-2 w-[calc(100%+1rem)] resize-none border border-transparent bg-transparent px-2 py-1.5 outline-none transition-colors placeholder:text-text-faint hover:border-gray-200 focus:border-gray-300'
+
+const SCRIPT_ROW =
+  'grid items-center gap-3 px-5 lg:grid-cols-[minmax(0,1fr)_7rem_6rem_1.5rem] lg:gap-4'
 
 export function InterviewScriptPageClient() {
   const scope = useCycleScope(useIsChief() ? 'chief' : 'lead')
@@ -65,6 +69,17 @@ export function InterviewScriptPageClient() {
         <EmptyState title="Add an opening first" />
       ) : (
         <Card padding="none">
+          <div
+            className={cn(
+              SCRIPT_ROW,
+              'font-display text-text-subtle hidden border-b border-gray-100 py-2 text-[11px] tracking-wider uppercase lg:grid'
+            )}
+          >
+            <span>Position</span>
+            <span>Script</span>
+            <span className="text-center">Questions</span>
+            <span />
+          </div>
           {scope.roles.roleIds.map((id) => {
             const s = summaries.find((x) => x.role_id === id)
             const href = `/reviewer/interview-script/${id}`
@@ -77,31 +92,35 @@ export function InterviewScriptPageClient() {
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') router.push(href)
                 }}
-                className="group flex cursor-pointer items-center gap-4 border-b border-gray-100 px-5 py-3.5 transition-colors last:border-b-0 hover:bg-gray-50"
+                className={cn(
+                  SCRIPT_ROW,
+                  'group cursor-pointer border-b border-gray-100 py-3.5 transition-colors last:border-b-0 hover:bg-gray-50'
+                )}
               >
-                <div className="min-w-0 flex-1">
-                  <div className="text-ink truncate font-semibold">
-                    {scope.roles.roleLabel(id)}
-                  </div>
-                  {summariesLoading ? (
-                    <Skeleton className="mt-1 h-3 w-24" />
-                  ) : (
-                    <div className="text-text-muted flex items-center gap-1.5 text-xs">
-                      <span
-                        className={cn(
-                          'size-1.5 rounded-full',
-                          s?.script_written ? 'bg-emerald-500' : 'bg-amber-400'
-                        )}
-                      />
-                      {s?.script_written ? 'Written' : 'Not written'}
-                      {!!s?.script_questions &&
-                        ` · ${s.script_questions} question${s.script_questions === 1 ? '' : 's'}`}
-                    </div>
+                <span className="text-ink truncate font-semibold">
+                  {scope.roles.roleLabel(id)}
+                </span>
+                {summariesLoading ? (
+                  <Skeleton className="h-4 w-20" />
+                ) : (
+                  <span>
+                    <FormStatusBadge written={!!s?.script_written} />
+                  </span>
+                )}
+                <span
+                  className={cn(
+                    'text-sm tabular-nums lg:text-center',
+                    s?.script_questions ? 'text-ink' : 'text-text-subtle'
                   )}
-                </div>
+                >
+                  <span className="text-text-subtle mr-1.5 lg:hidden">
+                    Questions
+                  </span>
+                  {summariesLoading ? '' : s?.script_questions || '—'}
+                </span>
                 <ArrowRight
                   size={16}
-                  className="text-text-subtle group-hover:text-ink shrink-0 transition-transform group-hover:translate-x-0.5"
+                  className="text-text-subtle group-hover:text-ink hidden shrink-0 justify-self-end transition-transform group-hover:translate-x-0.5 lg:block"
                 />
               </div>
             )
