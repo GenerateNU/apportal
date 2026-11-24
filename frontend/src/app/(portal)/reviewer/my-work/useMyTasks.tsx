@@ -78,7 +78,7 @@ export const TASK_STATE = {
   waiting: { label: 'Waiting', className: 'bg-gray-100 text-text-subtle' },
 }
 
-export function useLeadWork() {
+export function useMyTasks() {
   const { data: user } = useCurrentUser()
   const me = user?.nuid ?? ''
   const { cycle, branch, isLoading } = useCycleScope(

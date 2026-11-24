@@ -14,8 +14,8 @@ import { useWorkflow } from '@/lib/queries/workflow'
 import { PAGE_TOP, PAGE_X } from '@/components/ui/page-shell'
 
 import { LeadPreferenceListClient } from '../preference-lists/[id]/components/LeadPreferenceListClient'
-import { LeadDraftClient } from './draft/LeadDraftClient'
-import { type Phase, type Task, useLeadWork } from './useLeadWork'
+import { MyDraftClient } from './draft/MyDraftClient'
+import { type Phase, type Task, useMyTasks } from './useMyTasks'
 
 function PhaseProgress({ phase }: { phase: Phase }) {
   const { total, doneCount } = phase
@@ -53,7 +53,7 @@ function PhaseProgress({ phase }: { phase: Phase }) {
   )
 }
 
-export function LeadHomeClient() {
+export function MyWorkClient() {
   const {
     cycle,
     phases,
@@ -63,7 +63,7 @@ export function LeadHomeClient() {
     roleLabel,
     loading: loadingWork,
     tasksLoading,
-  } = useLeadWork()
+  } = useMyTasks()
   const requestedPhase = useSearchParams().get('phase')
   const { data: mine } = useWorkflow(cycle?.id ?? '')
   const reviewDue = (roleId: string) =>
@@ -80,7 +80,7 @@ export function LeadHomeClient() {
 
   if (selected?.open && tasksLoading[selected.id]) return <LeadHomeSkeleton />
 
-  if (selected?.open && selected.id === 'draft') return <LeadDraftClient />
+  if (selected?.open && selected.id === 'draft') return <MyDraftClient />
   const myListId = selected?.id === 'preference' ? selected.tasks[0]?.id : ''
   if (selected?.open && myListId) {
     return <LeadPreferenceListClient id={myListId} embedded />

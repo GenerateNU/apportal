@@ -40,7 +40,7 @@ type RoleBoard = { roleId: string; board?: DraftBoard }
 const isOpen = (b?: DraftBoard): b is DraftBoard =>
   !!b && (b.status === 'active' || b.status === 'complete')
 
-export function LeadDraftClient() {
+export function MyDraftClient() {
   const { data: user } = useCurrentUser()
   const { cycle, isLoading: cyclesLoading } = useCycleScope(
     useIsChief() ? 'chief' : 'lead'
