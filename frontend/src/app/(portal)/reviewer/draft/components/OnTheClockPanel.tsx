@@ -5,6 +5,7 @@ import { Avatar } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { ReturnerBadge } from '@/components/ReturnerBadge'
 import { Button } from '@/components/ui/button'
+import { MetaList } from '@/components/ui/meta-list'
 import { Card } from '@/components/ui/card'
 import { LoadingText } from '@/components/ui/loading-text'
 import { SearchableSelect } from '@/components/ui/searchable-select'
@@ -80,11 +81,14 @@ export function OnTheClockPanel({
           </span>
           <div>
             <p className="text-xl leading-tight font-semibold">{team.name}</p>
-            <p className="text-xs text-white/80">
-              Round {round} · Pick #{board.on_the_clock}
-              {team.member_names.length > 0 &&
-                ` · ${team.member_names.join(', ')}`}
-            </p>
+            <MetaList
+              className="text-xs text-white/80"
+              items={[
+                `Round ${round}`,
+                `Pick #${board.on_the_clock}`,
+                team.member_names.join(', '),
+              ]}
+            />
           </div>
         </div>
         {canPick && (
@@ -153,9 +157,14 @@ export function OnTheClockPanel({
                     </span>
                   </div>
                   {takenBy ? (
-                    <Badge className="text-text-muted block max-w-[40%] truncate">
-                      Drafted · {takenBy}
-                    </Badge>
+                    <span className="flex max-w-[40%] min-w-0 items-center gap-1.5">
+                      <Badge size="sm" className="text-text-muted">
+                        Drafted
+                      </Badge>
+                      <span className="text-text-muted truncate text-xs">
+                        {takenBy}
+                      </span>
+                    </span>
                   ) : (
                     canPick && (
                       <Button

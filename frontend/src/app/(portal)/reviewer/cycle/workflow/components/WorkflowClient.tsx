@@ -353,7 +353,7 @@ function StageRow({
               : 'border border-dashed border-gray-300 bg-white text-transparent'
           )}
         >
-          {number ?? '·'}
+          {number}
         </span>
         <div
           className={cn(

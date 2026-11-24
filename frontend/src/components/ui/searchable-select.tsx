@@ -13,8 +13,6 @@ import { cn } from '@/lib/utils'
 export interface SearchableSelectOption {
   value: string
   label: string
-  // A small pill shown to the right of the label (e.g. an availability
-  // indicator) — purely informational, doesn't affect filtering.
   badge?: { label: string; className: string }
 }
 
@@ -48,7 +46,9 @@ export function SearchableSelect({
 
   const filtered = query.trim()
     ? options.filter((o) =>
-        o.label.toLowerCase().includes(query.trim().toLowerCase())
+        `${o.label} ${o.badge?.label ?? ''}`
+          .toLowerCase()
+          .includes(query.trim().toLowerCase())
       )
     : options
 

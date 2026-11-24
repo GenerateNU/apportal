@@ -8,6 +8,7 @@ import {
   branchRoleNames,
   groupCyclesByStatus,
 } from '../lib/branch-cycles'
+import { MetaList } from '@/components/ui/meta-list'
 
 // Full class names so Tailwind can see them. All pass contrast with ink text.
 const BRANCH_COLORS = [
@@ -37,7 +38,7 @@ export function BranchCard({
   const counts = BRANCH_CYCLE_STATUSES.map(
     (status) =>
       `${groups[status].length} ${CYCLE_STATUS[status].label.toLowerCase()}`
-  ).join(' · ')
+  )
 
   return (
     <Link
@@ -71,7 +72,9 @@ export function BranchCard({
               ))}
             </ul>
           )}
-          <p className="text-ink text-base sm:text-lg">{`Cycles: ${counts}`}</p>
+          <p className="text-ink text-base sm:text-lg">
+            <MetaList items={counts} />
+          </p>
         </div>
         <div className="bg-ink flex items-center gap-4 px-5 py-3 text-white sm:px-7 sm:py-4">
           <ArrowRight

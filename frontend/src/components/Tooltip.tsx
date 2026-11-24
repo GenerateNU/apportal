@@ -10,7 +10,7 @@ export function Tooltip({
   label,
   children,
 }: {
-  label: string
+  label: ReactNode
   children: ReactNode
 }) {
   const triggerRef = useRef<HTMLSpanElement>(null)

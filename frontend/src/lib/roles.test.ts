@@ -112,8 +112,8 @@ describe('withCycleNames', () => {
       ]),
       [cycle('spring', 'Spring 2027'), cycle('fall', 'Fall 2026')]
     )
-    expect(lookup.roleLabel('swe')).toBe('Software Engineer · Spring 2027')
-    expect(lookup.roleLabel('swe-fall')).toBe('Software Engineer · Fall 2026')
+    expect(lookup.roleLabel('swe')).toBe('Software Engineer (Spring 2027)')
+    expect(lookup.roleLabel('swe-fall')).toBe('Software Engineer (Fall 2026)')
   })
 
   it('leaves the plain name while the cycle is unknown', () => {

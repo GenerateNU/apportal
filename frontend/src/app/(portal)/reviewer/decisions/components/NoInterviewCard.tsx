@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Check, ChevronDown, ChevronRight, Copy, Send } from 'lucide-react'
+import { Count } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import type { DecisionRow, DecisionTemplate } from '@/lib/api/types'
@@ -44,11 +45,11 @@ export function NoInterviewCard({
     <div className="flex flex-col border border-gray-200 bg-white">
       <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
         <div className="flex flex-col gap-0.5">
-          <span className="text-ink text-sm font-semibold">
+          <span className="text-ink inline-flex items-center gap-2 text-sm font-semibold">
             {unsent.length > 0 ? `${unsent.length} to send` : 'All sent'}
-            <span className="text-text-muted font-normal">
-              {' '}
-              · {rows.length - unsent.length} sent
+            <span className="text-text-muted inline-flex items-center gap-1 text-xs font-normal">
+              Sent
+              <Count value={rows.length - unsent.length} />
             </span>
           </span>
           <span className="text-text-muted text-xs">
@@ -114,9 +115,11 @@ export function NoInterviewCard({
               key={r.application_id}
               className="flex items-center justify-between gap-3 px-5 py-2 text-sm"
             >
-              <span className="min-w-0 truncate">
-                <span className="text-ink">{r.full_name}</span>
-                <span className="text-text-faint"> · {r.email}</span>
+              <span className="flex min-w-0 flex-col">
+                <span className="text-ink truncate">{r.full_name}</span>
+                <span className="text-text-faint truncate text-xs">
+                  {r.email}
+                </span>
               </span>
               <span
                 className={

@@ -49,8 +49,12 @@ export function TeamCard({
             title={people}
           >
             {people}
-            {list.meeting_day && ` · ${MEETING_DAY_LABEL[list.meeting_day]}`}
           </p>
+          {list.meeting_day && (
+            <Badge size="sm" className="text-text-muted shrink-0">
+              Meets {MEETING_DAY_LABEL[list.meeting_day]}
+            </Badge>
+          )}
         </div>
       </div>
       {counts.length > 0 && (

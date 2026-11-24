@@ -23,13 +23,15 @@ import {
   PREFERENCE_LIST_STATUS_LABEL,
 } from '@/lib/preference-list-status'
 import { formatDate } from '@/lib/utils'
+import { Badge } from '@/components/ui/badge'
+import { MetaList } from '@/components/ui/meta-list'
 import { feedbackState } from '../decisions/components/constants'
 
 export type Task = {
   id: string
   title: string
   roleId?: string
-  meta?: string
+  meta?: React.ReactNode
   status: { label: string; className?: string }
   done: boolean
   waiting?: boolean
@@ -159,9 +161,16 @@ export function useLeadWork() {
         id: `iv-${app.id}`,
         title: app.full_name,
         roleId: app.role_id,
-        meta: interview?.scheduled_at
-          ? `Interview · ${formatDate(interview.scheduled_at)}`
-          : 'Interview · not scheduled',
+        meta: (
+          <MetaList
+            items={[
+              'Interview',
+              interview?.scheduled_at
+                ? formatDate(interview.scheduled_at)
+                : 'Not scheduled',
+            ]}
+          />
+        ),
         status:
           state === 'todo'
             ? { ...TASK_STATE.todo, label: 'To be interviewed' }
@@ -204,16 +213,24 @@ export function useLeadWork() {
     const listTasks: Task[] = lists.map((list) => {
       const entries = listDetails.find((d) => d.id === list.id)?.entries ?? []
       const submitted = list.status === 'submitted'
-      const perRole = roleIds
-        .map(
-          (roleId) =>
-            `${roleLabel(roleId)} ${entries.filter((e) => e.role_id === roleId).length}`
-        )
-        .join(' · ')
+      const perRole = roleIds.map((roleId) => (
+        <Badge key={roleId} size="sm" className="text-text-muted">
+          {roleLabel(roleId)}
+          <span className="tabular-nums">
+            {entries.filter((e) => e.role_id === roleId).length}
+          </span>
+        </Badge>
+      ))
       return {
         id: list.id,
         title: list.name,
-        meta: perRole ? `Ranked so far: ${perRole}` : undefined,
+        meta:
+          perRole.length > 0 ? (
+            <span className="inline-flex flex-wrap items-center gap-1.5">
+              Ranked so far
+              {perRole}
+            </span>
+          ) : undefined,
         status: {
           label: PREFERENCE_LIST_STATUS_LABEL[list.status],
           className: PREFERENCE_LIST_STATUS_BADGE[list.status],
@@ -249,7 +266,7 @@ export function useLeadWork() {
             {
               id: 'draft',
               title: 'Draft',
-              meta: roleStatus.join(' · '),
+              meta: <MetaList items={roleStatus} />,
               status: allDone
                 ? { label: 'Finished', className: TASK_STATE.done.className }
                 : anyLive

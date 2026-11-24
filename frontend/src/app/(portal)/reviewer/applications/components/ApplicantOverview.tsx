@@ -8,6 +8,7 @@ import { Avatar } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { LoadingText } from '@/components/ui/loading-text'
+import { MetaList } from '@/components/ui/meta-list'
 import { PageHeader } from '@/components/ui/page-header'
 import { SectionLabel } from '@/components/ui/section-label'
 import { ReturnerBadge } from '@/components/ReturnerBadge'
@@ -270,22 +271,28 @@ export function ApplicantOverview({
               </dl>
 
               <div>
-                <p className="text-text-muted text-xs font-medium">
-                  Write-up ·{' '}
-                  {interview.interviewers
-                    .map(
-                      (iv) =>
-                        iv.interviewer_name ??
-                        nameByNuid.get(iv.interviewer_nuid) ??
-                        iv.interviewer_nuid
-                    )
-                    .join(', ') || 'No interviewers'}
-                  <span className="text-text-faint font-normal">
-                    {interview.submitted_at
-                      ? ` · Submitted ${formatDate(interview.submitted_at)}`
-                      : ' · Not submitted'}
-                  </span>
-                </p>
+                <MetaList
+                  className="text-text-muted text-xs font-medium"
+                  items={[
+                    'Write-up',
+                    interview.interviewers
+                      .map(
+                        (iv) =>
+                          iv.interviewer_name ??
+                          nameByNuid.get(iv.interviewer_nuid) ??
+                          iv.interviewer_nuid
+                      )
+                      .join(', ') || 'No interviewers',
+                    <span
+                      key="submitted"
+                      className="text-text-faint font-normal"
+                    >
+                      {interview.submitted_at
+                        ? `Submitted ${formatDate(interview.submitted_at)}`
+                        : 'Not submitted'}
+                    </span>,
+                  ]}
+                />
                 <p className="text-text-default mt-1 whitespace-pre-wrap">
                   {interview.writeup || (
                     <span className="text-text-faint">No write-up yet.</span>

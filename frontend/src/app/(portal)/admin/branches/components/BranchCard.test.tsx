@@ -56,7 +56,8 @@ describe('BranchCard', () => {
     )
     expect(html).toMatch(/<li[^>]*>Mobile<\/li>/)
     expect(html).toMatch(/<li[^>]*>Web<\/li>/)
-    expect(html).toContain('Cycles: 2 open · 0 draft · 1 closed')
+    for (const count of ['2 open', '0 draft', '1 closed'])
+      expect(html).toContain(`<span>${count}</span>`)
   })
 
   it('leaves out the chip row when the branch has no roles', () => {

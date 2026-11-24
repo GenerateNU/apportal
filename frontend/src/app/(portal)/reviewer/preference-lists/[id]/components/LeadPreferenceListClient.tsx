@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import { EmptyState } from '@/components/ui/empty-state'
 import { LoadingText } from '@/components/ui/loading-text'
+import { MetaList } from '@/components/ui/meta-list'
 import { PageHeader } from '@/components/ui/page-header'
 import { PAGE_SHELL } from '@/components/ui/page-shell'
 import { SegmentedTabs } from '@/components/ui/segmented-tabs'
@@ -138,16 +139,18 @@ export function LeadPreferenceListClient({
     .map((n) => (n === currentUser?.full_name ? 'you' : n.split(' ')[0]))
     .join(', ')
   const deadline = closesAtByRole[role]
-  const subtitle = [
-    list.name,
-    team,
-    list.meeting_day && `Meets ${MEETING_DAY_LABEL[list.meeting_day]}`,
-    list.status === 'submitted'
-      ? `Submitted ${formatDate(list.submitted_at)}`
-      : deadline && `Due ${formatDate(deadline)}`,
-  ]
-    .filter(Boolean)
-    .join(' · ')
+  const subtitle = (
+    <MetaList
+      items={[
+        list.name,
+        team,
+        list.meeting_day && `Meets ${MEETING_DAY_LABEL[list.meeting_day]}`,
+        list.status === 'submitted'
+          ? `Submitted ${formatDate(list.submitted_at)}`
+          : deadline && `Due ${formatDate(deadline)}`,
+      ]}
+    />
+  )
 
   const roleCount = (r: string) =>
     list.entries.filter((e) => e.role_id === r).length

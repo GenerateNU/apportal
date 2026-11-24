@@ -29,7 +29,7 @@ describe('CycleStatusList', () => {
     const html = render(
       <CycleStatusList status="open" cycles={[fall]} roles={[]} />
     )
-    expect(html).toContain('Open cycles · 1')
+    expect(html).toMatch(/Open cycles <span[^>]*>1<\/span>/)
     expect(html).toContain('Fall 2026')
   })
 

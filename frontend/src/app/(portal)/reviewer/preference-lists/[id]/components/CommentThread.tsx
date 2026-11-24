@@ -88,9 +88,9 @@ export function CommentThread({
                   <p className="text-text-default mt-1 text-sm wrap-anywhere whitespace-pre-wrap">
                     {c.body}
                   </p>
-                  <p className="text-text-faint mt-1.5 text-xs">
+                  <p className="text-text-faint mt-1.5 flex items-center gap-2 text-xs">
                     {new Date(c.created_at).toLocaleString()}
-                    {edited && ' · edited'}
+                    {edited && <span className="italic">Edited</span>}
                   </p>
                 </div>
                 {isOwn && (

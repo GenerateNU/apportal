@@ -30,5 +30,7 @@ export function useCycleCrumb(cycleId: string, cycleName: string) {
   const { data: cycle } = useCycle(cycleId)
   const { data: branches = [] } = useBranches()
   const branch = branches.find((b) => b.id === cycle?.branch_id)
-  return branch ? `${branch.name} · ${cycleName}` : cycleName
+  return branch
+    ? [{ label: branch.name }, { label: cycleName }]
+    : [{ label: cycleName }]
 }

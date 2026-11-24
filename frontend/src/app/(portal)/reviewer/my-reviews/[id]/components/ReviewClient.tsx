@@ -14,6 +14,7 @@ import { PageHeader } from '@/components/ui/page-header'
 import { PAGE_L, PAGE_R, PAGE_TOP, PAGE_X } from '@/components/ui/page-shell'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
+import { MetaList } from '@/components/ui/meta-list'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Card } from '@/components/ui/card'
 import { SectionLabel } from '@/components/ui/section-label'
@@ -147,9 +148,10 @@ export function ReviewClient({
                 tagIds={application?.tag_ids}
               />
               {applicantFacts.length > 0 && (
-                <span className="text-text-muted text-sm">
-                  {applicantFacts.join(' · ')}
-                </span>
+                <MetaList
+                  className="text-text-muted text-sm"
+                  items={applicantFacts}
+                />
               )}
               {applicant?.returner && <ReturnerBadge showLabel />}
             </span>

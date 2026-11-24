@@ -9,6 +9,7 @@ import { useChallenges } from '@/lib/queries/challenges'
 import { useSubmission } from '@/lib/queries/submissions'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
+import { MetaList } from '@/components/ui/meta-list'
 import { PanelHeading } from '@/components/ui/panel-heading'
 import { SectionLabel } from '@/components/ui/section-label'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -215,11 +216,14 @@ function ScoreBlock({ score }: { score: ChallengeScore }) {
         <span className="font-display text-ink text-4xl leading-none font-bold">
           {score.overall_score.toFixed(1)}
         </span>
-        <span className="text-text-muted pb-0.5 text-xs">
-          Overall · {score.attempt_count} finished attempt
-          {score.attempt_count === 1 ? '' : 's'} ·{' '}
-          {formatDate(score.finished_at)}
-        </span>
+        <MetaList
+          className="text-text-muted pb-0.5 text-xs"
+          items={[
+            'Overall',
+            `${score.attempt_count} finished attempt${score.attempt_count === 1 ? '' : 's'}`,
+            formatDate(score.finished_at),
+          ]}
+        />
       </div>
 
       <div className="grid grid-cols-2 border-t border-l border-gray-200 sm:grid-cols-3">

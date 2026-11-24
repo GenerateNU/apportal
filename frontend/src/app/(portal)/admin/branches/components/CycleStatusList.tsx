@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils'
 import { CYCLE_STATUS } from '../../cycles/lib/cycle-meta'
 import type { BranchCycleStatus } from '../lib/branch-cycles'
 import { CycleCard } from './CycleCard'
+import { Count } from '@/components/ui/badge'
 
 export function CycleStatusList({
   status,
@@ -19,7 +20,11 @@ export function CycleStatusList({
   const headingId = `cycles-${status}`
   // Open and draft are the cycles someone is working on; closed ones are history.
   const open = status !== 'closed'
-  const title = `${label} cycles · ${cycles.length}`
+  const title = (
+    <span className="inline-flex items-center gap-2">
+      {label} cycles <Count value={cycles.length} />
+    </span>
+  )
 
   return (
     <section

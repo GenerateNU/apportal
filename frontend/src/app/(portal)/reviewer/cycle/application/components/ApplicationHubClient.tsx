@@ -231,7 +231,9 @@ function PositionRelease({
           <div className="text-text-muted flex items-center gap-1.5 text-xs">
             <StatusDot className={cycleStatusDot[status]} />
             {cycleStatusLabel[status]}
-            {status !== 'draft' && ` · ${applicants} applied`}
+            {status !== 'draft' && (
+              <span className="ml-1.5">{applicants} applied</span>
+            )}
           </div>
         )}
       </div>

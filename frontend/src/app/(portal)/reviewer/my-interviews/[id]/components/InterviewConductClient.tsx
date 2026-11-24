@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { MetaList } from '@/components/ui/meta-list'
 import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import { EmptyState } from '@/components/ui/empty-state'
 import { PageHeader } from '@/components/ui/page-header'
@@ -308,9 +309,10 @@ export function InterviewConductClient({
                 tagIds={application?.tag_ids}
               />
               {applicantFacts.length > 0 && (
-                <span className="text-text-muted text-sm">
-                  {applicantFacts.join(' · ')}
-                </span>
+                <MetaList
+                  className="text-text-muted text-sm"
+                  items={applicantFacts}
+                />
               )}
               {applicant?.returner && <ReturnerBadge showLabel />}
             </span>
@@ -600,13 +602,16 @@ export function InterviewConductClient({
                         ) : (
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0 wrap-anywhere">
-                              <p className="text-text-muted text-xs">
-                                {c.author_name || c.author_nuid}
+                              <p className="text-text-muted flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
+                                <span>{c.author_name || c.author_nuid}</span>
                                 <span className="text-text-faint">
-                                  {' · '}
                                   {new Date(c.created_at).toLocaleString()}
-                                  {edited && ' · edited'}
                                 </span>
+                                {edited && (
+                                  <Badge size="sm" className="text-text-muted">
+                                    Edited
+                                  </Badge>
+                                )}
                               </p>
                               <p className="text-text-default mt-1 text-sm whitespace-pre-wrap">
                                 {c.body}

@@ -11,7 +11,7 @@ export function formatDeadline(date: Date) {
     minute: '2-digit',
     timeZoneName: 'short',
   })
-  return `${day} · ${time}`
+  return `${day} at ${time}`
 }
 
 export function timeLeft(date: Date, now = new Date()) {

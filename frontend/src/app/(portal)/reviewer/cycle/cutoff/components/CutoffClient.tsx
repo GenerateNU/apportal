@@ -12,6 +12,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Input } from '@/components/ui/input'
 import { LoadingText } from '@/components/ui/loading-text'
+import { MetaList } from '@/components/ui/meta-list'
 import { PageHeader } from '@/components/ui/page-header'
 import {
   Select,
@@ -250,9 +251,16 @@ function Ranking({ cycleId, roleId }: { cycleId: string; roleId: string }) {
       <EmptyState
         title="Shortlist opens once reviews are in"
         description={
-          assigned.length === 0
-            ? 'Assign reviewers and release reviews first.'
-            : `${reviewsIn} of ${assigned.length} reviews in${due ? ` · reviews close ${formatDeadline(due)}` : ''}`
+          assigned.length === 0 ? (
+            'Assign reviewers and release reviews first.'
+          ) : (
+            <MetaList
+              items={[
+                `${reviewsIn} of ${assigned.length} reviews in`,
+                due && `Reviews close ${formatDeadline(due)}`,
+              ]}
+            />
+          )
         }
         action={
           <Link
@@ -482,10 +490,12 @@ function Ranking({ cycleId, roleId }: { cycleId: string; roleId: string }) {
                 <span className="text-ink font-semibold">
                   {toAdvance.length}
                 </span>{' '}
-                <span className="text-text-muted">
-                  selected
-                  {handPicked > 0 && ` · ${handPicked} changed by hand`}
-                </span>
+                <span className="text-text-muted">selected</span>
+                {handPicked > 0 && (
+                  <span className="text-text-muted ml-3">
+                    {handPicked} changed by hand
+                  </span>
+                )}
               </>
             ) : movedOn > 0 || rejected > 0 ? (
               <span className="text-ink inline-flex items-center gap-1.5">
@@ -496,8 +506,9 @@ function Ranking({ cycleId, roleId }: { cycleId: string; roleId: string }) {
                   </>
                 )}
                 {rejected > 0 && (
-                  <span className="text-text-muted">
-                    {movedOn > 0 ? ' · ' : ''}
+                  <span
+                    className={cn('text-text-muted', movedOn > 0 && 'ml-1.5')}
+                  >
                     {rejected} rejected
                   </span>
                 )}

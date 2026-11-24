@@ -21,3 +21,11 @@ export function Badge({
 export function StatusDot({ className }: { className?: string }) {
   return <span className={cn('h-2 w-2 shrink-0 rounded-full', className)} />
 }
+
+export function Count({ value }: { value: number }) {
+  return (
+    <Badge size="sm" className="text-text-muted tabular-nums">
+      {value}
+    </Badge>
+  )
+}

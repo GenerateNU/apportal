@@ -180,7 +180,7 @@ export function CompareTable({
                       return (
                         <td key={t.id} className="px-2 py-2.5 text-center">
                           {rank === undefined ? (
-                            <span className="text-gray-300">·</span>
+                            <span className="text-gray-300">—</span>
                           ) : (
                             <span
                               className={cn(

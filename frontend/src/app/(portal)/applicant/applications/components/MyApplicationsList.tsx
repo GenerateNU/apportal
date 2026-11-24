@@ -69,9 +69,20 @@ export function MyApplicationsList({
   )
 }
 
-function cycleLabel(cycle: Cycle | undefined, branches: Branch[]) {
+function CycleLabel({
+  cycle,
+  branches,
+}: {
+  cycle: Cycle | undefined
+  branches: Branch[]
+}) {
   const branch = branches.find((b) => b.id === cycle?.branch_id)
-  return [branch?.name, cycle?.name].filter(Boolean).join(' · ')
+  return (
+    <span className="flex items-center gap-2">
+      <span className="truncate">{cycle?.name}</span>
+      {branch && <Badge size="sm">{branch.name}</Badge>}
+    </span>
+  )
 }
 
 function ApplicationList({
@@ -138,9 +149,9 @@ function ApplicationRows({
                 {roleLabel(application.role_id)}
               </p>
               {showCycle && (
-                <p className="text-text-muted truncate text-xs">
-                  {cycleLabel(cycle, branches)}
-                </p>
+                <div className="text-text-muted mt-0.5 text-xs">
+                  <CycleLabel cycle={cycle} branches={branches} />
+                </div>
               )}
             </div>
             <span className="text-text-subtle hidden w-36 text-xs sm:block">

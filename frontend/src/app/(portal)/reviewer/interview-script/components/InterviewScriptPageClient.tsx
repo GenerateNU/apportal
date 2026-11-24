@@ -94,8 +94,12 @@ export function InterviewScriptPageClient() {
                         )}
                       />
                       {s?.script_written ? 'Written' : 'Not written'}
-                      {!!s?.script_questions &&
-                        ` · ${s.script_questions} question${s.script_questions === 1 ? '' : 's'}`}
+                      {!!s?.script_questions && (
+                        <span className="ml-1.5">
+                          {s.script_questions} question
+                          {s.script_questions === 1 ? '' : 's'}
+                        </span>
+                      )}
                     </div>
                   )}
                 </div>

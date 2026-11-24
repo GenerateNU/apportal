@@ -13,6 +13,7 @@ import type { Cycle } from '@/lib/api/types'
 import { useBranches } from '@/lib/queries/branches'
 import { useCycles } from '@/lib/queries/cycles'
 import { CycleStaffPanel } from '../../branches/components/CycleStaff'
+import { Badge } from '@/components/ui/badge'
 
 // Cycles that have a team to manage: chief cycles are run by admins, and archived ones are done.
 export function useTeamCycles(picked: string) {
@@ -46,7 +47,12 @@ export function CyclePicker({
       <SelectContent>
         {cycles.map((c) => (
           <SelectItem key={c.id} value={c.id}>
-            {[branchName(c.branch_id), c.name].filter(Boolean).join(' · ')}
+            <span className="flex items-center gap-2">
+              {c.name}
+              {branchName(c.branch_id) && (
+                <Badge size="sm">{branchName(c.branch_id)}</Badge>
+              )}
+            </span>
           </SelectItem>
         ))}
       </SelectContent>

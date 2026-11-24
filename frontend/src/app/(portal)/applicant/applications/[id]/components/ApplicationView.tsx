@@ -69,7 +69,7 @@ export function ApplicationView({
         className="mb-6"
         back={
           <Breadcrumbs
-            items={[origin, { label: cycleCrumb }, { label: roleLabel(role) }]}
+            items={[origin, ...cycleCrumb, { label: roleLabel(role) }]}
           />
         }
         title={roleLabel(role)}

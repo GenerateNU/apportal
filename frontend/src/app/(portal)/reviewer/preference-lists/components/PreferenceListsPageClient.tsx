@@ -2,6 +2,7 @@
 
 import { EmptyState } from '@/components/ui/empty-state'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Count } from '@/components/ui/badge'
 import { CARD_GRID, SECTION } from '@/components/ui/page-shell'
 import { Subheading } from '@/components/ui/subheading'
 import { PageHeader } from '@/components/ui/page-header'
@@ -146,7 +147,12 @@ export function PreferenceListsPageClient({ isChief }: { isChief: boolean }) {
           <section className={SECTION}>
             <div className="flex flex-wrap items-end justify-between gap-3">
               <Subheading
-                title={`Teams · ${lists.length}`}
+                title={
+                  <span className="inline-flex items-center gap-2">
+                    Teams
+                    <Count value={lists.length} />
+                  </span>
+                }
                 hint={
                   lists.length > 0
                     ? `${submitted} of ${lists.length} submitted their list.`

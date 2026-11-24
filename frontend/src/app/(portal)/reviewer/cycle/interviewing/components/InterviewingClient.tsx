@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/card'
 import { DueLine } from '@/components/ui/due-line'
 import { EmptyState } from '@/components/ui/empty-state'
 import { LoadingText } from '@/components/ui/loading-text'
+import { MetaList } from '@/components/ui/meta-list'
 import { PageHeader } from '@/components/ui/page-header'
 import { PAGE_SHELL } from '@/components/ui/page-shell'
 import { SegmentedTabs } from '@/components/ui/segmented-tabs'
@@ -315,7 +316,11 @@ function Mine({
               <div className="flex flex-col gap-1.5">
                 <h2 className="font-display text-ink text-xl font-bold tracking-tight uppercase">
                   {s.title}
-                  {s.kind === 'rec' && !both && ' · recording reviews'}
+                  {s.kind === 'rec' && !both && (
+                    <Badge size="sm" className="ml-2 align-middle">
+                      Recording reviews
+                    </Badge>
+                  )}
                 </h2>
                 {s.date && (
                   <DueLine
@@ -765,10 +770,16 @@ function MoveOn({
       <p className="text-text-muted flex items-center gap-2 text-sm">
         <Lock size={14} className="shrink-0" />
         {next ? 'Decisions' : 'Finishing interviews'} unlocks once every
-        interview{withRecording ? ' and recording review' : ''} is in:{' '}
-        {interviewed}/{rows.length} interviewed
-        {withRecording &&
-          ` · ${reviewed}/${reviews.length} reviewed${needsReviewer ? ` · ${needsReviewer} without a reviewer` : ''}`}
+        interview{withRecording ? ' and recording review' : ''} is in:
+        <MetaList
+          items={[
+            `${interviewed}/${rows.length} interviewed`,
+            withRecording && `${reviewed}/${reviews.length} reviewed`,
+            withRecording &&
+              needsReviewer > 0 &&
+              `${needsReviewer} without a reviewer`,
+          ]}
+        />
       </p>
     )
 

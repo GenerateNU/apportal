@@ -729,7 +729,7 @@ function Form({
             <Breadcrumbs
               items={[
                 { label: origin.label, onClick: handleBack },
-                { label: cycleCrumb },
+                ...cycleCrumb,
                 { label: roleLabel(role) },
               ]}
             />

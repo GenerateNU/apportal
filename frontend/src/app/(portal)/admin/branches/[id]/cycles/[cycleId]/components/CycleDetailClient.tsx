@@ -29,6 +29,7 @@ import {
   cycleHref,
 } from '../../../../lib/breadcrumbs'
 import { useCycleStaff } from '@/lib/queries/cycle-staff'
+import { Count } from '@/components/ui/badge'
 
 export function CycleDetailClient({
   branchId,
@@ -83,9 +84,8 @@ export function CycleDetailClient({
         back={back}
         title={cycle.name}
         subtitle={
-          <span className="text-text-muted mt-1 inline-flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+          <span className="text-text-muted mt-1 inline-flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
             <span>{applicationTypeLabel(cycle.application_type)}</span>
-            <span aria-hidden>·</span>
             <span className="inline-flex items-center gap-1.5">
               <span
                 className={`h-1.5 w-1.5 rounded-full ${status.dot}`}
@@ -111,7 +111,7 @@ export function CycleDetailClient({
               <Button variant="outline" asChild>
                 <Link href={`${cycleHref(branchId, cycle.id)}/team`}>
                   <Users className="h-4 w-4" />
-                  {`Recruitment team · ${staff.length}`}
+                  Recruitment team <Count value={staff.length} />
                 </Link>
               </Button>
             ) : (
@@ -137,7 +137,11 @@ export function CycleDetailClient({
         <div className="flex flex-wrap items-end justify-between gap-3">
           <Subheading
             id="cycle-applications"
-            title={`Application forms · ${cards.length}`}
+            title={
+              <span className="inline-flex items-center gap-2">
+                Application forms <Count value={cards.length} />
+              </span>
+            }
           />
           <Button
             variant="outline"

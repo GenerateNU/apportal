@@ -49,7 +49,9 @@ export function DeadlinePicker({
                   )}
                 >
                   {left.text}
-                  {left.passed && !lockedReason && ' · Extend'}
+                  {left.passed && !lockedReason && (
+                    <span className="text-ink ml-2 font-medium">Extend</span>
+                  )}
                 </span>
               </span>
               <ChevronDown
