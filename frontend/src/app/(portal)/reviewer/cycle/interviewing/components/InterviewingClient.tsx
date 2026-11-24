@@ -36,7 +36,7 @@ import {
 } from '@/lib/queries/workflow'
 import { queryKeys } from '@/lib/queries/keys'
 import { ApplicationDetail } from '../../../applications/components/ApplicationDetail'
-import { TASK_STATE } from '../../../my-work/useLeadWork'
+import { TASK_STATE } from '../../../my-work/useMyTasks'
 import {
   interviewStatus,
   useInterviewSetup,

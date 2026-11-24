@@ -1,7 +1,7 @@
-import { LeadHomeClient } from './LeadHomeClient'
+import { MyWorkClient } from './MyWorkClient'
 
 export const dynamic = 'force-dynamic'
 
 export default function MyWorkPage() {
-  return <LeadHomeClient />
+  return <MyWorkClient />
 }

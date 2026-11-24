@@ -18,7 +18,7 @@ import { type BoardEntry, useReviewBoard } from '@/lib/queries/reviewer-pools'
 import { useCurrentUser } from '@/lib/queries/users'
 import { cn } from '@/lib/utils'
 import { ApplicationDetail } from '../../../applications/components/ApplicationDetail'
-import { TASK_STATE } from '../../../my-work/useLeadWork'
+import { TASK_STATE } from '../../../my-work/useMyTasks'
 import {
   type PositionState,
   usePositions,

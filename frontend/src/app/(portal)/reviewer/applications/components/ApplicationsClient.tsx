@@ -99,7 +99,7 @@ export function ApplicationsClient({
   }
 
   // The cycle is the sidebar's (or ?cycle= on the link that opened this).
-  const scope = useCycleScope('lead')
+  const scope = useCycleScope(isChief ? 'chief' : 'lead')
   const activeCycle = scope.cycleId
   const { data: workflow } = useWorkflow(activeCycle)
   // While applications are the current step everyone is just "submitted", so a summary says more than stages.
