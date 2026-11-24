@@ -4,7 +4,6 @@ import { useMemo, useState } from 'react'
 import { Flame } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { EmptyState } from '@/components/ui/empty-state'
-import { MetaList } from '@/components/ui/meta-list'
 import { Skeleton } from '@/components/ui/skeleton'
 import { TagPill } from '@/components/ui/tag-select'
 import type { InterviewRating } from '@/lib/api/types'
@@ -141,21 +140,17 @@ export function CandidatesBoard({
                         {w.length === 0 ? (
                           'No team has ranked them'
                         ) : (
-                          <MetaList
-                            className="gap-x-2"
-                            items={[
-                              `${w.length} team${w.length === 1 ? '' : 's'}`,
-                              <span
-                                key="top"
-                                className="inline-flex items-center gap-1"
-                              >
-                                <Badge size="sm" className="tabular-nums">
-                                  #{w[0].rank}
-                                </Badge>
-                                {w[0].team}
-                              </span>,
-                            ]}
-                          />
+                          <span className="inline-flex items-center gap-1.5">
+                            <Badge size="sm" className="tabular-nums">
+                              #{w[0].rank}
+                            </Badge>
+                            {w[0].team}
+                            {w.length > 1 && (
+                              <span className="text-text-faint">
+                                +{w.length - 1} more
+                              </span>
+                            )}
+                          </span>
                         )}
                       </span>
                       {(a.tag_ids ?? []).length > 0 && (

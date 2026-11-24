@@ -5,7 +5,13 @@ import { useIsChief } from '@/lib/queries/cycle-staff'
 import { useMemo } from 'react'
 import { useRoleLookup } from '@/lib/queries/roles'
 import { useRouter } from 'next/navigation'
-import { ArrowRight, CheckCircle2, ChevronLeft } from 'lucide-react'
+import {
+  ArrowRight,
+  BookOpen,
+  CheckCircle2,
+  ChevronLeft,
+  GraduationCap,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import { ReturnerBadge } from '@/components/ReturnerBadge'
@@ -14,7 +20,6 @@ import { PageHeader } from '@/components/ui/page-header'
 import { PAGE_L, PAGE_R, PAGE_TOP, PAGE_X } from '@/components/ui/page-shell'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
-import { MetaList } from '@/components/ui/meta-list'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Card } from '@/components/ui/card'
 import { SectionLabel } from '@/components/ui/section-label'
@@ -30,6 +35,7 @@ import { useWrittenReviews } from '@/lib/queries/written-reviews'
 import { REVIEW_STATE_BADGE } from '../../constants'
 import { ReviewForm } from './ReviewForm'
 import { ResponseField } from '@/app/(portal)/reviewer/applications/components/ResponseField'
+import { Fact, Facts } from '@/components/ui/facts'
 
 export function ReviewClient({
   applicationId,
@@ -87,10 +93,6 @@ export function ReviewClient({
   )
 
   const submitted = !!own?.submitted_at
-  const applicantFacts = [
-    applicant?.graduation_year && `Class of ${applicant.graduation_year}`,
-    applicant?.major,
-  ].filter(Boolean) as string[]
 
   if (
     currentUser &&
@@ -147,11 +149,17 @@ export function ReviewClient({
                 cycleId={cycleId}
                 tagIds={application?.tag_ids}
               />
-              {applicantFacts.length > 0 && (
-                <MetaList
-                  className="text-text-muted text-sm"
-                  items={applicantFacts}
-                />
+              {(applicant?.graduation_year || applicant?.major) && (
+                <Facts className="text-text-muted text-sm">
+                  {applicant?.graduation_year && (
+                    <Fact icon={GraduationCap}>
+                      Class of {applicant.graduation_year}
+                    </Fact>
+                  )}
+                  {applicant?.major && (
+                    <Fact icon={BookOpen}>{applicant.major}</Fact>
+                  )}
+                </Facts>
               )}
               {applicant?.returner && <ReturnerBadge showLabel />}
             </span>

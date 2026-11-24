@@ -56,8 +56,9 @@ describe('BranchCard', () => {
     )
     expect(html).toMatch(/<li[^>]*>Mobile<\/li>/)
     expect(html).toMatch(/<li[^>]*>Web<\/li>/)
-    for (const count of ['2 open', '0 draft', '1 closed'])
-      expect(html).toContain(`<span>${count}</span>`)
+    expect(html).toMatch(/open<\/dt><dd[^>]*>2</)
+    expect(html).toMatch(/draft<\/dt><dd[^>]*>0</)
+    expect(html).toMatch(/closed<\/dt><dd[^>]*>1</)
   })
 
   it('leaves out the chip row when the branch has no roles', () => {
@@ -70,8 +71,8 @@ describe('BranchCard', () => {
 
 describe('branchColor', () => {
   it('rotates through the brand colors, starting with yellow', () => {
-    expect(branchColor(0)).toBe('bg-gen-yellow')
-    expect(branchColor(4)).toBe('bg-gen-yellow')
+    expect(branchColor(0)).toBe('bg-gen-coral')
+    expect(branchColor(4)).toBe('bg-gen-coral')
     expect(branchColor(1)).not.toBe(branchColor(0))
   })
 })

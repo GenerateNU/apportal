@@ -8,13 +8,12 @@ import {
   branchRoleNames,
   groupCyclesByStatus,
 } from '../lib/branch-cycles'
-import { MetaList } from '@/components/ui/meta-list'
 
 // Full class names so Tailwind can see them. All pass contrast with ink text.
 const BRANCH_COLORS = [
+  'bg-gen-coral',
   'bg-gen-yellow',
   'bg-gen-green',
-  'bg-gen-coral',
   'bg-gen-purple',
 ] as const
 
@@ -35,10 +34,6 @@ export function BranchCard({
 }) {
   const groups = groupCyclesByStatus(cycles)
   const roleNames = branchRoleNames(cycles, roles)
-  const counts = BRANCH_CYCLE_STATUSES.map(
-    (status) =>
-      `${groups[status].length} ${CYCLE_STATUS[status].label.toLowerCase()}`
-  )
 
   return (
     <Link
@@ -57,9 +52,42 @@ export function BranchCard({
             branchColor(colorIndex)
           )}
         >
-          <h2 className="font-display text-ink text-4xl leading-none font-bold tracking-tight break-words uppercase sm:text-6xl">
-            {branch.name}
-          </h2>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <h2 className="font-display text-ink min-w-0 text-4xl leading-none font-bold tracking-tight break-words uppercase sm:text-6xl">
+              {branch.name}
+            </h2>
+            <dl
+              aria-label="Cycles"
+              className="divide-ink/15 flex shrink-0 divide-x bg-white/70"
+            >
+              {BRANCH_CYCLE_STATUSES.map((status) => {
+                const n = groups[status].length
+                return (
+                  <div
+                    key={status}
+                    className={cn(
+                      'flex flex-col-reverse items-center px-4 py-2',
+                      n === 0 && 'opacity-50'
+                    )}
+                  >
+                    <dt className="text-ink mt-1 flex items-center gap-1.5 text-xs font-medium">
+                      <span
+                        aria-hidden
+                        className={cn(
+                          'h-1.5 w-1.5 rounded-full',
+                          CYCLE_STATUS[status].dot
+                        )}
+                      />
+                      {CYCLE_STATUS[status].label.toLowerCase()}
+                    </dt>
+                    <dd className="font-display text-ink text-2xl leading-none font-bold tabular-nums">
+                      {n}
+                    </dd>
+                  </div>
+                )
+              })}
+            </dl>
+          </div>
           {roleNames.length > 0 && (
             <ul className="flex flex-wrap gap-2.5" aria-label="Roles">
               {roleNames.map((name) => (
@@ -72,9 +100,6 @@ export function BranchCard({
               ))}
             </ul>
           )}
-          <p className="text-ink text-base sm:text-lg">
-            <MetaList items={counts} />
-          </p>
         </div>
         <div className="bg-ink flex items-center gap-4 px-5 py-3 text-white sm:px-7 sm:py-4">
           <ArrowRight

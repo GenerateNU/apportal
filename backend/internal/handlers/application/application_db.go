@@ -207,14 +207,16 @@ func applicationsFrom(db *gorm.DB, f ApplicationFilter, scope applicationFilterS
 		var args []any
 		switch af.Match {
 		case MatchAnyOption:
-			// Containment per value, since jsonb's ?| operator would read as a placeholder.
+			// "Other: detail" answers still count as the "Other" option.
 			for _, v := range af.Values {
-				clauses = append(clauses, alias+".answer_options @> jsonb_build_array(?::text)")
-				args = append(args, v)
+				clauses = append(clauses, "EXISTS (SELECT 1 FROM jsonb_array_elements_text("+alias+`.answer_options) o WHERE o = ? OR o LIKE ? ESCAPE '\')`)
+				args = append(args, v, utils.EscapeLike(v)+": %")
 			}
 		case MatchAnyOf:
-			clauses = append(clauses, alias+".answer_text IN ?")
-			args = append(args, af.Values)
+			for _, v := range af.Values {
+				clauses = append(clauses, alias+".answer_text = ? OR "+alias+`.answer_text LIKE ? ESCAPE '\'`)
+				args = append(args, v, utils.EscapeLike(v)+": %")
+			}
 		default:
 			// OR'd substring matches, so more values widen the filter.
 			for _, v := range af.Values {

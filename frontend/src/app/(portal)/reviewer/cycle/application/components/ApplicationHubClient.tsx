@@ -27,11 +27,14 @@ import {
 } from '../../../../admin/applications/components/constants'
 import { cn } from '@/lib/utils'
 import { FormStatusBadge } from '../../components/FormStatusBadge'
+import { useState } from 'react'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { formatDeadline } from '@/lib/deadline'
 
 type Status = ApplicationTemplate['status']
 
 const ROW =
-  'grid items-center gap-3 px-5 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1.3fr)_minmax(0,1fr)_7rem] md:gap-4'
+  'grid items-center gap-3 px-5 lg:grid-cols-[minmax(0,1fr)_7rem_6rem_7rem_5.5rem_18rem_6.5rem] lg:gap-4'
 
 const NEXT_ACTION: Record<Status, { label: string; to: Status } | null> = {
   draft: { label: 'Release', to: 'open' },
@@ -57,6 +60,7 @@ export function ApplicationHubClient() {
   )
   const setStep = useSetOpeningStep()
   const toast = useToast()
+  const [confirmAll, setConfirmAll] = useState(false)
 
   async function releaseAll() {
     try {
@@ -73,6 +77,8 @@ export function ApplicationHubClient() {
       )
     } catch (err) {
       toast(apiErrorDetail(err), { variant: 'error' })
+    } finally {
+      setConfirmAll(false)
     }
   }
 
@@ -92,7 +98,7 @@ export function ApplicationHubClient() {
                   ? `${drafts.length - releasable.length} still need a form or deadline`
                   : undefined
               }
-              onClick={releaseAll}
+              onClick={() => setConfirmAll(true)}
             >
               Release all
               {releasable.length < drafts.length &&
@@ -101,6 +107,15 @@ export function ApplicationHubClient() {
             </Button>
           )
         }
+      />
+      <ConfirmDialog
+        open={confirmAll}
+        onOpenChange={setConfirmAll}
+        title={`Release ${releasable.length} application${releasable.length === 1 ? '' : 's'}?`}
+        description="Applicants can start applying right away. Each form stays open until its closing date."
+        confirmLabel="Release"
+        pending={setStep.isPending}
+        onConfirm={() => void releaseAll()}
       />
       {!scope.cycleId ? (
         scope.isLoading ? (
@@ -124,11 +139,14 @@ export function ApplicationHubClient() {
           <div
             className={cn(
               ROW,
-              'font-display text-text-subtle hidden border-b border-gray-100 py-2 text-[11px] tracking-wider uppercase md:grid'
+              'font-display text-text-subtle hidden border-b border-gray-100 py-2 text-[11px] tracking-wider uppercase lg:grid'
             )}
           >
             <span>Position</span>
-            <span>Application form</span>
+            <span>Form</span>
+            <span className="text-center">Questions</span>
+            <span>Status</span>
+            <span className="text-center">Applied</span>
             <span>Closes</span>
             <span />
           </div>
@@ -182,6 +200,7 @@ function PositionRelease({
   const toast = useToast()
   const status = template?.status
   const action = status ? NEXT_ACTION[status] : null
+  const [confirming, setConfirming] = useState(false)
   const missing = releaseBlocker(questions > 0, !!template?.closes_at)
   const blocked = action?.to === 'open' && !!missing
   const router = useRouter()
@@ -222,31 +241,41 @@ function PositionRelease({
         'cursor-pointer border-b border-gray-100 py-3 transition-colors last:border-b-0 hover:bg-gray-50'
       )}
     >
-      <div className="min-w-0">
-        <div className="flex min-w-0 items-center gap-2">
-          <span className="text-ink truncate font-semibold">{roleName}</span>
-          <FormStatusBadge written={questions > 0} />
-        </div>
-        {status && (
-          <div className="text-text-muted flex items-center gap-1.5 text-xs">
-            <StatusDot className={cycleStatusDot[status]} />
-            {cycleStatusLabel[status]}
-            {status !== 'draft' && (
-              <span className="ml-1.5">{applicants} applied</span>
-            )}
-          </div>
-        )}
-      </div>
+      <span className="text-ink truncate font-semibold">{roleName}</span>
+
+      <span>
+        <FormStatusBadge written={questions > 0} />
+      </span>
 
       <span
         className={cn(
-          'text-sm',
+          'text-sm tabular-nums lg:text-center',
           questions > 0 ? 'text-ink' : 'text-text-subtle'
         )}
       >
-        {questions > 0
-          ? `${questions} question${questions === 1 ? '' : 's'}`
-          : 'Not written'}
+        <span className="text-text-subtle mr-1.5 lg:hidden">Questions</span>
+        {questions > 0 ? questions : '—'}
+      </span>
+
+      <span className="text-text-muted flex items-center gap-1.5 text-sm">
+        {status ? (
+          <>
+            <StatusDot className={cycleStatusDot[status]} />
+            {cycleStatusLabel[status]}
+          </>
+        ) : (
+          '—'
+        )}
+      </span>
+
+      <span
+        className={cn(
+          'text-sm tabular-nums lg:text-center',
+          status && status !== 'draft' ? 'text-ink' : 'text-text-subtle'
+        )}
+      >
+        <span className="text-text-subtle mr-1.5 lg:hidden">Applied</span>
+        {status && status !== 'draft' ? applicants : '—'}
       </span>
 
       <div onClick={stop} onKeyDown={stop}>
@@ -264,6 +293,21 @@ function PositionRelease({
       </div>
 
       <div className="flex justify-end" onClick={stop} onKeyDown={stop}>
+        <ConfirmDialog
+          open={confirming}
+          onOpenChange={setConfirming}
+          title={`${status === 'closed' ? 'Reopen' : 'Release'} ${roleName} applications?`}
+          description={
+            template?.closes_at
+              ? `Applicants can apply until ${formatDeadline(new Date(template.closes_at))}.`
+              : 'Applicants can start applying right away.'
+          }
+          confirmLabel={status === 'closed' ? 'Reopen' : 'Release'}
+          pending={setStep.isPending}
+          onConfirm={() =>
+            void save({ status: 'open' }).finally(() => setConfirming(false))
+          }
+        />
         {action && blocked && missing ? (
           <Tooltip label={missing}>
             <Button size="sm" variant="outline" disabled>
@@ -276,7 +320,11 @@ function PositionRelease({
               size="sm"
               variant={action.to === 'open' ? 'default' : 'outline'}
               disabled={!template || setStep.isPending}
-              onClick={() => save({ status: action.to })}
+              onClick={() =>
+                action.to === 'open'
+                  ? setConfirming(true)
+                  : save({ status: action.to })
+              }
             >
               {action.label}
             </Button>

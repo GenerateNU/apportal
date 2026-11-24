@@ -52,6 +52,7 @@ import {
 import { useReviewConflicts, useStaffing } from '@/lib/queries/reviewer-pools'
 import { cn } from '@/lib/utils'
 import { ConflictsButton } from '../../reviews/components/ReviewsClient'
+import { TruncatedName } from '@/components/ui/truncated-name'
 
 const IN_INTERVIEWS = new Set<string>([
   'interview',
@@ -791,14 +792,15 @@ function Chips({
         return (
           <span
             key={team.id}
-            title={items.map((x) => x.name).join(', ')}
             className={cn(chip, 'text-ink border-gray-300 bg-gray-50')}
           >
             <Users size={11} className="text-text-subtle" />
             {done && (
               <Check size={11} strokeWidth={3} className="text-emerald-600" />
             )}
-            {team.name}
+            <Tooltip label={items.map((x) => x.name).join(', ')}>
+              <span className="block max-w-40 truncate">{team.name}</span>
+            </Tooltip>
             {!done && !locked && (
               <button
                 type="button"
@@ -815,13 +817,12 @@ function Chips({
       {current.rest.map((x) => (
         <span
           key={x.assignmentId}
-          title={x.name}
           className={cn(chip, 'text-ink border-gray-200 bg-white')}
         >
           {x.done && (
             <Check size={11} strokeWidth={3} className="text-emerald-600" />
           )}
-          {x.name.split(' ')[0]}
+          <TruncatedName name={x.name} />
           {!x.done && !locked && (
             <button
               type="button"
@@ -848,13 +849,12 @@ function Chips({
       {planned.rest.map((n) => (
         <span
           key={n}
-          title={nameOf(n)}
           className={cn(
             chip,
             'border-dashed border-emerald-400 bg-emerald-50 text-emerald-800'
           )}
         >
-          + {nameOf(n).split(' ')[0]}
+          + <TruncatedName name={nameOf(n)} />
         </span>
       ))}
       {canAdd && need > 0 && !locked && (

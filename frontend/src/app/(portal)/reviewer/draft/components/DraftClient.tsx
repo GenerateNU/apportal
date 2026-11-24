@@ -127,6 +127,7 @@ export function DraftClient() {
   const finishDraft = useFinishDraft()
   const router = useRouter()
   const [finishing, setFinishing] = useState(false)
+  const [ending, setEnding] = useState(false)
   // Which filled slot is being reassigned; null while that dialog is closed.
   const [changingSlot, setChangingSlot] = useState<number | null>(null)
   const [changeQuery, setChangeQuery] = useState('')
@@ -487,9 +488,7 @@ export function DraftClient() {
           ) : (
             <>
               <Button
-                onClick={() =>
-                  updateDraft.mutate({ ...draftScope, status: 'complete' })
-                }
+                onClick={() => setEnding(true)}
                 disabled={updateDraft.isPending}
               >
                 Finish draft
@@ -668,6 +667,21 @@ export function DraftClient() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={ending}
+        onOpenChange={setEnding}
+        title={`Finish the ${roleLabel(role)} draft?`}
+        description="Picking stops for every team. You can still finalize afterwards to accept the drafted applicants."
+        confirmLabel="Finish draft"
+        pending={updateDraft.isPending}
+        onConfirm={() =>
+          updateDraft.mutate(
+            { ...draftScope, status: 'complete' },
+            { onSuccess: () => setEnding(false) }
+          )
+        }
+      />
 
       <ConfirmDialog
         open={finishing}

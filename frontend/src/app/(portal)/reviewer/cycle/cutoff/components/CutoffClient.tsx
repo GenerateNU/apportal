@@ -12,7 +12,6 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Input } from '@/components/ui/input'
 import { LoadingText } from '@/components/ui/loading-text'
-import { MetaList } from '@/components/ui/meta-list'
 import { PageHeader } from '@/components/ui/page-header'
 import {
   Select,
@@ -45,6 +44,7 @@ import { useReviewBoard } from '@/lib/queries/reviewer-pools'
 import { useCycleScope } from '@/hooks/useCycleScope'
 import { ApplicationDetail } from '../../../applications/components/ApplicationDetail'
 import { ADVANCEABLE_STAGES, type CutoffDraft, previewEntries } from './cutoff'
+import { Stats } from '@/components/ui/facts'
 
 const STAGE_LABEL: Record<string, string> = {
   interview: 'Interview',
@@ -254,10 +254,14 @@ function Ranking({ cycleId, roleId }: { cycleId: string; roleId: string }) {
           assigned.length === 0 ? (
             'Assign reviewers and release reviews first.'
           ) : (
-            <MetaList
+            <Stats
+              className="text-ink mt-2 justify-center"
               items={[
-                `${reviewsIn} of ${assigned.length} reviews in`,
-                due && `Reviews close ${formatDeadline(due)}`,
+                {
+                  label: 'Reviews in',
+                  value: `${reviewsIn} of ${assigned.length}`,
+                },
+                due && { label: 'Reviews close', value: formatDeadline(due) },
               ]}
             />
           )

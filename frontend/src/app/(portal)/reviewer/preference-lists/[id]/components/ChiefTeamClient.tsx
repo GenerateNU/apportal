@@ -2,10 +2,9 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Trash2, Users } from 'lucide-react'
+import { CalendarDays, Trash2, Users } from 'lucide-react'
 import { PageContainer } from '@/components/PageContainer'
 import { Badge, Count } from '@/components/ui/badge'
-import { MetaList } from '@/components/ui/meta-list'
 import { cn } from '@/lib/utils'
 import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import { Button } from '@/components/ui/button'
@@ -35,6 +34,7 @@ import { useReviewerNames } from '@/lib/queries/users'
 import { MEETING_DAY_LABEL } from '@/app/(portal)/reviewer/applications/components/meetingAvailability'
 import { MembersDialog } from './MembersDialog'
 import { ApplicationDetail } from '@/app/(portal)/reviewer/applications/components/ApplicationDetail'
+import { Fact, Facts } from '@/components/ui/facts'
 
 const CRUMB = {
   label: 'Teams & preference lists',
@@ -79,12 +79,16 @@ export function ChiefTeamClient({ id }: { id: string }) {
     (m) => nameByNuid.get(m.lead_nuid) ?? m.lead_nuid
   )
   const subtitle = (
-    <MetaList
-      items={[
-        members.length > 0 ? members.join(', ') : 'No members yet',
-        list.meeting_day && `Meets ${MEETING_DAY_LABEL[list.meeting_day]}`,
-      ]}
-    />
+    <Facts>
+      <Fact icon={Users}>
+        {members.length > 0 ? members.join(', ') : 'No members yet'}
+      </Fact>
+      {list.meeting_day && (
+        <Fact icon={CalendarDays}>
+          Meets {MEETING_DAY_LABEL[list.meeting_day]}
+        </Fact>
+      )}
+    </Facts>
   )
   const openEntry = list.entries.find((e) => e.application_id === openId)
   const role = roleIds.includes(pickedRole) ? pickedRole : roleIds[0]

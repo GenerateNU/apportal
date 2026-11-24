@@ -8,14 +8,15 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import {
   ArrowDown,
   ArrowRight,
+  BookOpen,
+  CalendarClock,
   ChevronLeft,
+  GraduationCap,
   Loader2,
   Pencil,
-  CalendarClock,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { MetaList } from '@/components/ui/meta-list'
 import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import { EmptyState } from '@/components/ui/empty-state'
 import { PageHeader } from '@/components/ui/page-header'
@@ -58,6 +59,7 @@ import { InterviewScriptContent } from '@/app/(portal)/reviewer/interview-script
 import { InterviewSummary } from './InterviewSummary'
 import { InterviewWriteupForm } from './InterviewWriteupForm'
 import { RecordingReviewThread } from './RecordingReviewThread'
+import { Fact, Facts } from '@/components/ui/facts'
 
 const COMMENT_TEXTAREA_CLASS =
   'focus:border-ink text-text-default placeholder:text-text-subtle w-full border border-gray-300 bg-white p-3 text-sm focus:outline-none'
@@ -253,11 +255,6 @@ export function InterviewConductClient({
           ]
         : [backLink]
 
-  const applicantFacts = [
-    applicant?.graduation_year && `Class of ${applicant.graduation_year}`,
-    applicant?.major,
-  ].filter(Boolean) as string[]
-
   const scrollPane = cn(
     'py-6 pl-6 sm:pl-8 lg:flex-1 lg:overflow-y-auto',
     PAGE_R
@@ -308,11 +305,17 @@ export function InterviewConductClient({
                 cycleId={cycleId}
                 tagIds={application?.tag_ids}
               />
-              {applicantFacts.length > 0 && (
-                <MetaList
-                  className="text-text-muted text-sm"
-                  items={applicantFacts}
-                />
+              {(applicant?.graduation_year || applicant?.major) && (
+                <Facts className="text-text-muted text-sm">
+                  {applicant?.graduation_year && (
+                    <Fact icon={GraduationCap}>
+                      Class of {applicant.graduation_year}
+                    </Fact>
+                  )}
+                  {applicant?.major && (
+                    <Fact icon={BookOpen}>{applicant.major}</Fact>
+                  )}
+                </Facts>
               )}
               {applicant?.returner && <ReturnerBadge showLabel />}
             </span>

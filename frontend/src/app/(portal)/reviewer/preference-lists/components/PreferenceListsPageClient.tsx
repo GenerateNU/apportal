@@ -2,7 +2,6 @@
 
 import { EmptyState } from '@/components/ui/empty-state'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Count } from '@/components/ui/badge'
 import { CARD_GRID, SECTION } from '@/components/ui/page-shell'
 import { Subheading } from '@/components/ui/subheading'
 import { PageHeader } from '@/components/ui/page-header'
@@ -147,17 +146,8 @@ export function PreferenceListsPageClient({ isChief }: { isChief: boolean }) {
           <section className={SECTION}>
             <div className="flex flex-wrap items-end justify-between gap-3">
               <Subheading
-                title={
-                  <span className="inline-flex items-center gap-2">
-                    Teams
-                    <Count value={lists.length} />
-                  </span>
-                }
-                hint={
-                  lists.length > 0
-                    ? `${submitted} of ${lists.length} submitted their list.`
-                    : undefined
-                }
+                title="Teams"
+                hint="Each team is a group of leads who rank the applicants they want. Teams take turns picking from their lists in the draft."
               />
               <Button onClick={() => setDialogOpen(true)}>
                 <Plus data-icon="inline-start" size={14} />

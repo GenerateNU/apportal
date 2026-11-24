@@ -5,7 +5,6 @@ import { useMemo } from 'react'
 import Link from 'next/link'
 import { ArrowRight, ChevronLeft, Lock } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
-import { MetaList } from '@/components/ui/meta-list'
 import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -183,13 +182,24 @@ function DraftBody({
           actions={
             <>
               {position && (
-                <MetaList
-                  className="font-display text-text-subtle mr-3 text-[11px] tracking-wider uppercase"
-                  items={[
-                    `Feedback ${position.index + 1} of ${position.total}`,
-                    `${position.written} written`,
-                  ]}
-                />
+                <span className="mr-3 flex flex-col gap-1">
+                  <span className="font-display text-text-subtle text-[11px] tracking-wider uppercase">
+                    Feedback {position.index + 1} of {position.total}
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <span className="block h-1 w-20 bg-gray-100">
+                      <span
+                        className="bg-ink block h-full"
+                        style={{
+                          width: `${(position.written / Math.max(1, position.total)) * 100}%`,
+                        }}
+                      />
+                    </span>
+                    <span className="text-text-muted text-[11px] tabular-nums">
+                      {position.written} written
+                    </span>
+                  </span>
+                </span>
               )}
               {previousHref && (
                 <Button asChild variant="outline" size="sm">

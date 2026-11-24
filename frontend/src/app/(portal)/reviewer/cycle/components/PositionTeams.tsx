@@ -26,6 +26,16 @@ import {
   useStaffing,
   useStaffingMutations,
 } from '@/lib/queries/reviewer-pools'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 
 export type Lead = { nuid: string; name: string }
 
@@ -53,8 +63,10 @@ function useTeam(cycleId: string) {
   async function run(p: Promise<unknown>) {
     try {
       await p
+      return true
     } catch (err) {
       toast(apiErrorDetail(err), { variant: 'error' })
+      return false
     }
   }
   return {
@@ -81,20 +93,25 @@ export function GroupsGrid({
   const [newName, setNewName] = useState('')
   const personOf = (nuid: string) => people.find((p) => p.nuid === nuid)
 
-  async function create() {
-    const name = newName.trim()
-    setNewName('')
-    setAdding(false)
-    if (name) await run(m.createCategory.mutateAsync(name))
+  function openDialog(open: boolean) {
+    setAdding(open)
+    if (!open) setNewName('')
   }
 
-  const empty = !isLoading && groups.length === 0 && !adding
+  async function create(e: React.SyntheticEvent) {
+    e.preventDefault()
+    const name = newName.trim()
+    if (!name) return
+    if (await run(m.createCategory.mutateAsync(name))) openDialog(false)
+  }
+
+  const empty = !isLoading && groups.length === 0
 
   return (
     <section className="flex flex-col gap-3">
       <div className="flex items-start justify-between gap-4">
         {header}
-        {!adding && !empty && (
+        {!empty && (
           <button
             type="button"
             onClick={() => setAdding(true)}
@@ -143,9 +160,6 @@ export function GroupsGrid({
               </span>
             </div>
             <div className="flex flex-1 flex-col gap-1 px-4 py-2.5">
-              {g.member_nuids.length === 0 && (
-                <span className="text-text-subtle text-sm">No one yet</span>
-              )}
               {g.member_nuids.map((n) => {
                 const p = personOf(n)
                 return (
@@ -202,35 +216,51 @@ export function GroupsGrid({
                 placeholder="+ Add person"
                 searchPlaceholder="Search people"
                 emptyText="No one matches"
-                className="mt-1"
+                className={g.member_nuids.length > 0 ? 'mt-1' : undefined}
                 ariaLabel={`Add someone to ${g.name}`}
               />
             </div>
           </div>
         ))}
-        {adding && (
-          <div className="border-ink flex flex-col gap-1 border border-dashed bg-white px-4 py-3">
-            <input
-              autoFocus
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              onBlur={create}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') e.currentTarget.blur()
-                if (e.key === 'Escape') {
-                  setNewName('')
-                  setAdding(false)
-                }
-              }}
-              placeholder="Staff group name"
-              className="text-ink placeholder:text-text-faint border-b border-gray-200 bg-transparent pb-1 font-semibold outline-none focus:border-gray-400"
-            />
-            <span className="text-text-subtle text-xs">
-              Press Enter to create, Esc to cancel
-            </span>
-          </div>
-        )}
       </div>
+      <Dialog open={adding} onOpenChange={openDialog}>
+        <DialogContent>
+          <form onSubmit={create} className="flex flex-col gap-4">
+            <DialogHeader>
+              <DialogTitle>New staff group</DialogTitle>
+              <DialogDescription>
+                Group staff so you can pick who reviews and interviews each
+                opening. You can add people once it&apos;s created.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="staff-group-name">Name</Label>
+              <Input
+                id="staff-group-name"
+                autoFocus
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder="e.g. Frontend reviewers"
+              />
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => openDialog(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={!newName.trim() || m.createCategory.isPending}
+              >
+                {m.createCategory.isPending ? 'Creating…' : 'Create group'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </section>
   )
 }

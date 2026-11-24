@@ -410,9 +410,7 @@ export default function Sidebar({
         ))}
       </nav>
 
-      {!collapsed && staffSections.length === 0 && !cycleNavMode && (
-        <HelpContact className="px-5 pb-4 text-left leading-relaxed" />
-      )}
+      {!collapsed && <HelpContact variant="card" className="mx-4 mb-3" />}
       {/* User */}
       {fullName && <SidebarUser fullName={fullName} collapsed={collapsed} />}
     </aside>

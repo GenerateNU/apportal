@@ -3,12 +3,11 @@
 import { scoreOutOf, averageLabel } from '@/lib/scores'
 import { useIsChief } from '@/lib/queries/cycle-staff'
 import Link from 'next/link'
-import { ExternalLink } from 'lucide-react'
+import { ExternalLink, Users } from 'lucide-react'
 import { Avatar } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { LoadingText } from '@/components/ui/loading-text'
-import { MetaList } from '@/components/ui/meta-list'
 import { PageHeader } from '@/components/ui/page-header'
 import { SectionLabel } from '@/components/ui/section-label'
 import { ReturnerBadge } from '@/components/ReturnerBadge'
@@ -32,6 +31,7 @@ import { ORDERED_STAGES, stageBadge, stageLabel } from './constants'
 import { ResponseField } from './ResponseField'
 import { ReviewTeam } from './ReviewTeam'
 import { useRoleLookup } from '@/lib/queries/roles'
+import { Fact } from '@/components/ui/facts'
 
 const SECTION_CLASS = 'flex flex-col gap-3 p-5'
 
@@ -271,28 +271,30 @@ export function ApplicantOverview({
               </dl>
 
               <div>
-                <MetaList
-                  className="text-text-muted text-xs font-medium"
-                  items={[
-                    'Write-up',
-                    interview.interviewers
-                      .map(
-                        (iv) =>
-                          iv.interviewer_name ??
-                          nameByNuid.get(iv.interviewer_nuid) ??
-                          iv.interviewer_nuid
-                      )
-                      .join(', ') || 'No interviewers',
-                    <span
-                      key="submitted"
-                      className="text-text-faint font-normal"
-                    >
-                      {interview.submitted_at
-                        ? `Submitted ${formatDate(interview.submitted_at)}`
-                        : 'Not submitted'}
-                    </span>,
-                  ]}
-                />
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                  <span className="flex min-w-0 items-center gap-3">
+                    <span className="font-display text-text-subtle text-[11px] tracking-wider uppercase">
+                      Write-up
+                    </span>
+                    <Fact icon={Users} className="text-text-muted">
+                      {interview.interviewers
+                        .map(
+                          (iv) =>
+                            iv.interviewer_name ??
+                            nameByNuid.get(iv.interviewer_nuid) ??
+                            iv.interviewer_nuid
+                        )
+                        .join(', ') || 'No interviewers'}
+                    </Fact>
+                  </span>
+                  {interview.submitted_at ? (
+                    <Badge size="sm" className="bg-emerald-50 text-emerald-700">
+                      Submitted {formatDate(interview.submitted_at)}
+                    </Badge>
+                  ) : (
+                    <Badge size="sm">Not submitted</Badge>
+                  )}
+                </div>
                 <p className="text-text-default mt-1 whitespace-pre-wrap">
                   {interview.writeup || (
                     <span className="text-text-faint">No write-up yet.</span>

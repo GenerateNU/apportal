@@ -24,8 +24,9 @@ import {
 } from '@/lib/preference-list-status'
 import { formatDate } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
-import { MetaList } from '@/components/ui/meta-list'
 import { feedbackState } from '../decisions/components/constants'
+import { Fact } from '@/components/ui/facts'
+import { CalendarClock } from 'lucide-react'
 
 export type Task = {
   id: string
@@ -162,14 +163,11 @@ export function useLeadWork() {
         title: app.full_name,
         roleId: app.role_id,
         meta: (
-          <MetaList
-            items={[
-              'Interview',
-              interview?.scheduled_at
-                ? formatDate(interview.scheduled_at)
-                : 'Not scheduled',
-            ]}
-          />
+          <Fact icon={CalendarClock}>
+            {interview?.scheduled_at
+              ? formatDate(interview.scheduled_at)
+              : 'Not scheduled yet'}
+          </Fact>
         ),
         status:
           state === 'todo'
@@ -266,7 +264,13 @@ export function useLeadWork() {
             {
               id: 'draft',
               title: 'Draft',
-              meta: <MetaList items={roleStatus} />,
+              meta: (
+                <span className="flex flex-col gap-0.5">
+                  {roleStatus.map((s) => (
+                    <span key={s}>{s}</span>
+                  ))}
+                </span>
+              ),
               status: allDone
                 ? { label: 'Finished', className: TASK_STATE.done.className }
                 : anyLive
