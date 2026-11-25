@@ -279,10 +279,10 @@ function Script({
       ? () => setEditing(editing === id ? null : id)
       : undefined,
   })
-  const tracks = (['backend', 'frontend'] as const).map((key) => ({
-    key,
-    track: form.challenge_tracks[key],
-  }))
+  const tracks = form.challenge_tracks
+  const filledTracks = tracks.filter(
+    (t) => t.label || t.followUps.some(Boolean)
+  )
 
   return (
     <div className="flex max-w-3xl flex-col gap-3">
@@ -422,13 +422,12 @@ function Script({
         title="Code challenge"
         {...section('challenge')}
         view={
-          form.challenge_intro ||
-          tracks.some((t) => t.track.followUps.length) ? (
+          form.challenge_intro || filledTracks.length ? (
             <>
               <Clamped text={form.challenge_intro} lines={2} />
               <div className="grid gap-4 sm:grid-cols-2">
-                {tracks.map(({ key, track }) => (
-                  <div key={key} className="flex flex-col gap-1">
+                {filledTracks.map((track, i) => (
+                  <div key={i} className="flex flex-col gap-1">
                     <span className="text-ink text-xs font-semibold">
                       {track.label || 'Untitled'}
                     </span>
@@ -458,20 +457,35 @@ function Script({
           placeholder="Let's talk about your challenge…"
           onChange={(e) => set('challenge_intro', e.target.value)}
         />
-        <div className="grid gap-3 sm:grid-cols-2">
-          {tracks.map(({ key, track }) => (
-            <Track
-              key={key}
-              track={track}
-              onChange={(next) =>
-                set('challenge_tracks', {
-                  ...form.challenge_tracks,
-                  [key]: next,
-                })
-              }
-            />
-          ))}
-        </div>
+        {tracks.length > 0 && (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {tracks.map((track, i) => (
+              <Track
+                key={i}
+                track={track}
+                onChange={(next) =>
+                  set(
+                    'challenge_tracks',
+                    tracks.map((t, idx) => (idx === i ? next : t))
+                  )
+                }
+                onRemove={() =>
+                  set(
+                    'challenge_tracks',
+                    tracks.filter((_, idx) => idx !== i)
+                  )
+                }
+              />
+            ))}
+          </div>
+        )}
+        <AddButton
+          onClick={() =>
+            set('challenge_tracks', [...tracks, { label: '', followUps: [] }])
+          }
+        >
+          Add track
+        </AddButton>
       </Section>
 
       <Section
@@ -745,19 +759,26 @@ function ListEditor({
 function Track({
   track,
   onChange,
+  onRemove,
 }: {
   track: InterviewScriptChallengeTrack
   onChange: (next: InterviewScriptChallengeTrack) => void
+  onRemove: () => void
 }) {
   return (
     <Card className="flex flex-col gap-2">
-      <input
-        aria-label="Track name"
-        value={track.label}
-        placeholder="Track name"
-        onChange={(e) => onChange({ ...track, label: e.target.value })}
-        className="text-ink focus:border-ink border-b border-transparent bg-transparent py-1 text-sm font-semibold outline-none hover:border-gray-200"
-      />
+      <div className="flex items-center gap-1">
+        <input
+          aria-label="Track name"
+          value={track.label}
+          placeholder="Track name"
+          onChange={(e) => onChange({ ...track, label: e.target.value })}
+          className="text-ink focus:border-ink min-w-0 flex-1 border-b border-transparent bg-transparent py-1 text-sm font-semibold outline-none hover:border-gray-200"
+        />
+        <IconButton label="Remove track" onClick={onRemove}>
+          <X size={14} />
+        </IconButton>
+      </div>
       <FollowUps
         items={track.followUps}
         onChange={(followUps) => onChange({ ...track, followUps })}

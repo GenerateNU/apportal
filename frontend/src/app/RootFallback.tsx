@@ -3,7 +3,6 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
-import { HelpContact } from '@/components/HelpContact'
 import { Button } from '@/components/ui/button'
 import { APIError } from '@/lib/api/client'
 import { useAuth } from '@/lib/auth/auth-context'
@@ -49,7 +48,6 @@ export function RootFallback() {
           </p>
           <Button onClick={() => refetch()}>Try again</Button>
         </div>
-        <HelpContact className="max-w-sm" />
       </div>
     )
   }
@@ -60,7 +58,6 @@ export function RootFallback() {
         <Loader2 className="animate-spin" size={16} />
         Loading…
       </div>
-      <HelpContact className="max-w-sm" />
     </div>
   )
 }

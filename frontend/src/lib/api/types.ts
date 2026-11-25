@@ -196,17 +196,12 @@ export interface InterviewScriptChallengeTrack {
   followUps: string[]
 }
 
-export interface InterviewScriptChallengeTracks {
-  backend: InterviewScriptChallengeTrack
-  frontend: InterviewScriptChallengeTrack
-}
-
 export type InterviewScript = Omit<
   GenInterviewScript,
   '$schema' | 'questions' | 'challenge_tracks' | 'post_interview_checklist'
 > & {
   questions: InterviewScriptQuestion[]
-  challenge_tracks: InterviewScriptChallengeTracks
+  challenge_tracks: InterviewScriptChallengeTrack[]
   post_interview_checklist: string[]
 }
 

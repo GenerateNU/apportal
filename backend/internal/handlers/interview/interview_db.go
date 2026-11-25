@@ -150,8 +150,6 @@ var defaultPostInterviewChecklist = json.RawMessage(`[
 	"Submit the interview. This unlocks the recording reviewer's review."
 ]`)
 
-var defaultChallengeTracks = json.RawMessage(`{"backend":{"label":"Backend","followUps":[]},"frontend":{"label":"Frontend","followUps":[]}}`)
-
 // GetOrCreateInterviewScript fetches the (cycle, role) script, creating it
 // with default content on first access so callers never see a missing row.
 func (i *InterviewDB) GetOrCreateInterviewScript(ctx context.Context, cycleID string, role string) (models.InterviewScript, error) {
@@ -169,7 +167,7 @@ func (i *InterviewDB) GetOrCreateInterviewScript(ctx context.Context, cycleID st
 		RecordingReminder:      defaultRecordingReminder,
 		Questions:              defaultQuestions,
 		ClosingNote:            defaultClosingNote,
-		ChallengeTracks:        defaultChallengeTracks,
+		ChallengeTracks:        json.RawMessage(`[]`),
 		PostInterviewChecklist: defaultPostInterviewChecklist,
 	}
 	res := db.Select("cycle_id", "role_id", "intro_speech", "recording_reminder", "questions",

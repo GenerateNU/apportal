@@ -1,6 +1,5 @@
 import type { InterviewRating } from '@/lib/api/types'
 
-// Worst to best, so scales read left to right like 1 to 10.
 export const RATING_OPTIONS: { value: InterviewRating; label: string }[] = [
   { value: 'do_not_hire', label: 'Do not hire' },
   { value: 'neutral', label: 'Neutral' },
