@@ -1,13 +1,12 @@
 import type { InterviewRating } from '@/lib/api/types'
 
-// Best to worst — the order both the rating picker and the ratings-grouped
-// queue display buckets in.
+// Worst to best, so scales read left to right like 1 to 10.
 export const RATING_OPTIONS: { value: InterviewRating; label: string }[] = [
-  { value: 'must_hire', label: 'Must hire' },
-  { value: 'great', label: 'Great hire' },
-  { value: 'good', label: 'Good hire' },
-  { value: 'neutral', label: 'Neutral' },
   { value: 'do_not_hire', label: 'Do not hire' },
+  { value: 'neutral', label: 'Neutral' },
+  { value: 'good', label: 'Good hire' },
+  { value: 'great', label: 'Great hire' },
+  { value: 'must_hire', label: 'Must hire' },
 ]
 
 export const RATING_LABEL: Record<InterviewRating, string> = Object.fromEntries(
