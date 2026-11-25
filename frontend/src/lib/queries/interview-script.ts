@@ -4,8 +4,31 @@ import {
   updateInterviewScript,
 } from '@/generated/interview-script/interview-script'
 import type { RequestOptions } from '@/lib/api/orval-mutator'
-import type { InterviewScript } from '@/lib/api/types'
+import type {
+  InterviewScript,
+  InterviewScriptChallengeTrack,
+} from '@/lib/api/types'
 import { queryKeys } from './keys'
+
+function normalizeTrack(
+  t: Partial<InterviewScriptChallengeTrack> | undefined,
+  label: string
+): InterviewScriptChallengeTrack {
+  return { label: t?.label ?? label, followUps: t?.followUps ?? [] }
+}
+
+export function normalizeScript(s: InterviewScript): InterviewScript {
+  const tracks = s.challenge_tracks ?? {}
+  return {
+    ...s,
+    questions: s.questions ?? [],
+    post_interview_checklist: s.post_interview_checklist ?? [],
+    challenge_tracks: {
+      backend: normalizeTrack(tracks.backend, 'Backend'),
+      frontend: normalizeTrack(tracks.frontend, 'Frontend'),
+    },
+  }
+}
 
 export function useInterviewScript(
   cycleId: string,
@@ -14,12 +37,14 @@ export function useInterviewScript(
 ) {
   return useQuery({
     queryKey: queryKeys.interviewScript.detail(cycleId, roleId),
-    queryFn: () =>
-      getInterviewScript(
-        cycleId,
-        { role_id: roleId },
-        opts
-      ) as Promise<InterviewScript>,
+    queryFn: async () =>
+      normalizeScript(
+        (await getInterviewScript(
+          cycleId,
+          { role_id: roleId },
+          opts
+        )) as InterviewScript
+      ),
     enabled: !!cycleId && !!roleId,
   })
 }
@@ -42,7 +67,7 @@ export function useUpdateInterviewScript() {
     onSuccess: (data, vars) => {
       queryClient.setQueryData(
         queryKeys.interviewScript.detail(vars.cycleId, vars.roleId),
-        data
+        normalizeScript(data as InterviewScript)
       )
     },
   })
