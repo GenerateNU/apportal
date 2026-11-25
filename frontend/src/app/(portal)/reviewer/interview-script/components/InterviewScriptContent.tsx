@@ -193,10 +193,9 @@ export function InterviewScriptContent({
   }
 
   const asked = script.questions.filter((q) => checked.has(`q:${q.prompt}`))
-  const tracks = [
-    script.challenge_tracks.backend,
-    script.challenge_tracks.frontend,
-  ].filter((t) => t.followUps.length > 0)
+  const tracks = script.challenge_tracks.filter((t) =>
+    t.followUps.some(Boolean)
+  )
 
   return (
     <div className="flex flex-col gap-10">
@@ -245,9 +244,9 @@ export function InterviewScriptContent({
             </p>
           )}
           <div className="grid gap-3 sm:grid-cols-2">
-            {tracks.map((track) => (
+            {tracks.map((track, i) => (
               <div
-                key={track.label}
+                key={i}
                 className="flex flex-col gap-2 border border-gray-200 p-4"
               >
                 <span className="font-display text-ink text-xs font-bold tracking-wider uppercase">

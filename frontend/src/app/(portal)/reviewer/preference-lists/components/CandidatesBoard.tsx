@@ -18,8 +18,8 @@ import { ApplicationDetail } from '../../applications/components/ApplicationDeta
 type Want = { team: string; rank: number }
 
 const COLUMNS: { value: InterviewRating | 'unrated'; label: string }[] = [
-  ...RATING_OPTIONS,
   { value: 'unrated', label: 'No rating' },
+  ...RATING_OPTIONS,
 ]
 
 // Who's in Decisions for one position, by interview rating, with how many teams ranked each.

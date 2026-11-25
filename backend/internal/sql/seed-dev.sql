@@ -114,7 +114,7 @@ BEGIN
   CROSS JOIN unnest(ARRAY['applications', 'reviews', 'interviews', 'decisions', 'feedback']) s;
   INSERT INTO step_assignments (cycle_id, step, kind, per_applicant) VALUES (cur, 'reviews', 'reviewer', 3);
   INSERT INTO opening_steps (cycle_id, role_id, step, released_at)
-  SELECT cur, r, s, now() - interval '30 days' FROM unnest(ARRAY[swe, sd]) r CROSS JOIN unnest(ARRAY['applications', 'reviews']) s;
+  SELECT cur, r, s, now() - interval '30 days' FROM unnest(ARRAY[swe, sd]) r CROSS JOIN unnest(ARRAY['applications', 'reviews', 'interviews', 'decisions']) s;
   INSERT INTO opening_deadlines (cycle_id, role_id, step, kind, due_at, hard)
   SELECT cur, r, 'applications', 'applicant', now() + interval '14 days', true FROM unnest(ARRAY[swe, sd]) r
   UNION ALL
@@ -152,8 +152,8 @@ BEGIN
            {"prompt": "Tell me about a time you disagreed with a teammate."}]'::jsonb,
          'That is all from me. Do you have any questions for us?',
          'Let us talk through your challenge submission.',
-         '{"backend": {"label": "Backend", "followUps": ["How did you handle contention?", "What would you test next?"]},
-           "frontend": {"label": "Frontend", "followUps": ["How did you structure state?", "What about accessibility?"]}}'::jsonb,
+         '[{"label": "Backend", "followUps": ["How did you handle contention?", "What would you test next?"]},
+           {"label": "Frontend", "followUps": ["How did you structure state?", "What about accessibility?"]}]'::jsonb,
          '["Stop the recording", "Upload the recording link", "Submit your writeup within 24 hours"]'::jsonb,
          chief1
   FROM unnest(ARRAY[swe, sd]) r;

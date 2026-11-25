@@ -4,6 +4,7 @@ import { listUsers } from '@/generated/users/users'
 import type { RequestOptions } from '@/lib/api/orval-mutator'
 import type { Cycle, InterviewScript, Role, User } from '@/lib/api/types'
 import { fetchCycles, pickDefaultCycleId } from './cycles'
+import { normalizeScript } from './interview-script'
 import { queryKeys } from './keys'
 import { fetchRoles } from './roles'
 import { cycleRoleIds, defaultRoleId } from '@/lib/roles'
@@ -53,12 +54,14 @@ export async function prefetchInterviewScript(
   if (!roleId) return
   await queryClient.prefetchQuery({
     queryKey: queryKeys.interviewScript.detail(cycleId, roleId),
-    queryFn: () =>
-      getInterviewScript(
-        cycleId,
-        { role_id: roleId },
-        opts
-      ) as Promise<InterviewScript>,
+    queryFn: async () =>
+      normalizeScript(
+        (await getInterviewScript(
+          cycleId,
+          { role_id: roleId },
+          opts
+        )) as InterviewScript
+      ),
   })
 }
 

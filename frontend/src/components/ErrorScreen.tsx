@@ -1,6 +1,5 @@
 import Image from 'next/image'
 import Link from 'next/link'
-import { HelpContact } from '@/components/HelpContact'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { BackButton, CopyReference, RetryButton } from './ErrorScreenActions'
@@ -65,7 +64,6 @@ export function ErrorScreen({
           )}
         </div>
         {digest && <CopyReference digest={digest} />}
-        <HelpContact className="mt-10 max-w-sm" />
       </div>
     </div>
   )

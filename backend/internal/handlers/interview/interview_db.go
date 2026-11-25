@@ -167,7 +167,7 @@ func (i *InterviewDB) GetOrCreateInterviewScript(ctx context.Context, cycleID st
 		RecordingReminder:      defaultRecordingReminder,
 		Questions:              defaultQuestions,
 		ClosingNote:            defaultClosingNote,
-		ChallengeTracks:        json.RawMessage(`{}`),
+		ChallengeTracks:        json.RawMessage(`[]`),
 		PostInterviewChecklist: defaultPostInterviewChecklist,
 	}
 	res := db.Select("cycle_id", "role_id", "intro_speech", "recording_reminder", "questions",
