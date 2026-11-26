@@ -104,4 +104,5 @@ type DraftBoard struct {
 	OnTheClock int `json:"on_the_clock"`
 	// The team that owns OnTheClock, empty when nothing is.
 	OnTheClockTeamID string `json:"on_the_clock_team_id,omitempty"`
+	PlacementRounds  int    `json:"placement_rounds"`
 }

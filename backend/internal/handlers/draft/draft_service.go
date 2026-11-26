@@ -3,6 +3,7 @@ package draft
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/danielgtaylor/huma/v2"
 
@@ -64,6 +65,9 @@ func (s *draftService) board(ctx context.Context, in *DraftScopedInput) (*DraftB
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
+	if !s.managesCycle(ctx, in.ID) {
+		board = withoutUnreleased(board)
+	}
 	return &DraftBoardOutput{Body: board}, nil
 }
 
@@ -81,6 +85,11 @@ func (s *draftService) boards(ctx context.Context, in *ListDraftBoardsInput) (*D
 	boards, err := s.draftDB.DraftBoards(ctx, in.ID, roleIDs)
 	if err != nil {
 		return nil, utils.StoreErr(err)
+	}
+	if !s.managesCycle(ctx, in.ID) {
+		for i := range boards {
+			boards[i] = withoutUnreleased(boards[i])
+		}
 	}
 	return &DraftBoardsOutput{Body: boards}, nil
 }
@@ -108,7 +117,7 @@ func (s *draftService) open(ctx context.Context, in *OpenDraftInput) (*DraftOutp
 	if err := role.RequireCycleRole(ctx, s.roleDB, in.ID, in.Body.RoleID); err != nil {
 		return nil, err
 	}
-	draft, err := s.draftDB.CreateDraft(ctx, in.ID, in.Body.RoleID, rounds, utils.CurrentActor(ctx).NUID)
+	draft, err := s.draftDB.CreateDraft(ctx, in.ID, in.Body.RoleID, rounds, in.Body.PlacementsEnabled, utils.CurrentActor(ctx).NUID)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
@@ -132,33 +141,60 @@ func (s *draftService) update(ctx context.Context, in *UpdateDraftInput) (*Draft
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
-	// Shrinking the board would orphan picks in the slots it cuts off, so the
-	// floor is whatever has already been picked.
+	picks, err := s.draftDB.ListDraftPicks(ctx, draft.ID)
+	if err != nil {
+		return nil, utils.StoreErr(err)
+	}
+	teams, err := s.draftDB.ListDraftTeams(ctx, draft.ID)
+	if err != nil {
+		return nil, utils.StoreErr(err)
+	}
+	next := draft
+	if in.Body.PlacementsEnabled != nil && *in.Body.PlacementsEnabled != draft.PlacementsEnabled {
+		if draft.Status != models.DraftSetup || draft.PlacementsReleasedAt != nil {
+			return nil, huma.Error409Conflict("placements can only be turned on or off before they're released")
+		}
+		if !*in.Body.PlacementsEnabled && len(picks) > 0 {
+			return nil, huma.Error409Conflict("remove the placed applicants before turning placements off")
+		}
+		next.PlacementsEnabled = *in.Body.PlacementsEnabled
+	}
 	if in.Body.Rounds != nil {
-		picks, err := s.draftDB.ListDraftPicks(ctx, draft.ID)
-		if err != nil {
-			return nil, utils.StoreErr(err)
-		}
-		teams, err := s.draftDB.ListDraftTeams(ctx, draft.ID)
-		if err != nil {
-			return nil, utils.StoreErr(err)
-		}
-		if len(teams) > 0 {
-			highest := 0
-			for _, p := range picks {
-				if p.PickNumber > highest {
-					highest = p.PickNumber
-				}
+		next.Rounds = *in.Body.Rounds
+	}
+	if len(teams) > 0 {
+		highest := 0
+		for _, p := range picks {
+			if p.PickNumber > highest {
+				highest = p.PickNumber
 			}
-			if *in.Body.Rounds*len(teams) < highest {
-				return nil, huma.Error422UnprocessableEntity("rounds would cut off picks already made")
-			}
+		}
+		if totalRounds(next)*len(teams) < highest {
+			return nil, huma.Error422UnprocessableEntity("rounds would cut off picks already made")
 		}
 	}
-	updated, err := s.draftDB.UpdateDraft(ctx, in.ID, DraftUpdate{
-		Status: in.Body.Status,
-		Rounds: in.Body.Rounds,
-	})
+	change := DraftUpdate{
+		Status:            in.Body.Status,
+		Rounds:            in.Body.Rounds,
+		PlacementsEnabled: in.Body.PlacementsEnabled,
+	}
+	starting := in.Body.Status != nil && *in.Body.Status == models.DraftActive && draft.Status == models.DraftSetup
+	if !starting {
+		updated, err := s.draftDB.UpdateDraft(ctx, in.ID, change)
+		if err != nil {
+			return nil, utils.StoreErr(err)
+		}
+		return &DraftOutput{Body: updated}, nil
+	}
+	if next.PlacementsEnabled {
+		if !placementsFilled(next, len(teams), picks) {
+			return nil, huma.Error409Conflict(fmt.Sprintf("place %d applicants on every team before starting", PlacementRounds))
+		}
+		if draft.PlacementsReleasedAt == nil {
+			return nil, huma.Error409Conflict("release the placements to the teams before starting")
+		}
+	}
+	updated, err := s.draftDB.StartDraft(ctx, in.ID, change)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
@@ -180,10 +216,14 @@ func (s *draftService) setTeams(ctx context.Context, in *SetDraftTeamsInput) (*D
 	// dropping a team cascades its picks away, losing the stage changes they
 	// made. A pick already made keeps the team that made it (see
 	// SlotOwners), so reordering only moves who's up next.
-	switch draft.Status {
-	case models.DraftComplete:
+	picks, err := s.draftDB.ListDraftPicks(ctx, draft.ID)
+	if err != nil {
+		return nil, utils.StoreErr(err)
+	}
+	switch {
+	case draft.Status == models.DraftComplete:
 		return nil, huma.Error409Conflict("a completed draft's order can't be changed")
-	case models.DraftActive:
+	case draft.Status == models.DraftActive || len(picks) > 0:
 		existing, err := s.draftDB.ListDraftTeams(ctx, in.ID)
 		if err != nil {
 			return nil, utils.StoreErr(err)
@@ -235,7 +275,11 @@ func (s *draftService) pick(ctx context.Context, in *MakeDraftPickInput) (*Draft
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
-	if draft.Status != models.DraftActive {
+	if draft.Status == models.DraftSetup {
+		if err := s.requirePlacementSlot(ctx, draft, in.Body.PickNumber); err != nil {
+			return nil, err
+		}
+	} else if draft.Status != models.DraftActive {
 		return nil, huma.Error409Conflict("the draft isn't active")
 	}
 	pick, err := s.draftDB.MakeDraftPick(ctx, draft, in.Body.PickNumber, in.Body.ApplicationID, utils.CurrentActor(ctx).NUID)
@@ -263,7 +307,9 @@ func (s *draftService) replacePick(ctx context.Context, in *ReplaceDraftPickInpu
 		return nil, utils.StoreErr(err)
 	}
 	if draft.Status == models.DraftSetup {
-		return nil, huma.Error409Conflict("the draft hasn't started")
+		if err := s.requirePlacementSlot(ctx, draft, in.PickNumber); err != nil {
+			return nil, err
+		}
 	}
 	pick, err := s.draftDB.ReplaceDraftPick(ctx, draft, in.PickNumber, in.Body.ApplicationID, utils.CurrentActor(ctx).NUID)
 	if err != nil {
@@ -295,6 +341,15 @@ func (s *draftService) removePick(ctx context.Context, in *RemoveDraftPickInput)
 	}
 	if err := s.requireDraftEditable(ctx, in.ID); err != nil {
 		return nil, err
+	}
+	draft, err := s.draftDB.GetDraftByID(ctx, in.ID)
+	if err != nil {
+		return nil, utils.StoreErr(err)
+	}
+	if draft.Status == models.DraftSetup {
+		if err := s.requirePlacementSlot(ctx, draft, in.PickNumber); err != nil {
+			return nil, err
+		}
 	}
 	if err := s.draftDB.RemoveDraftPick(ctx, in.ID, in.PickNumber); err != nil {
 		return nil, utils.StoreErr(err)
@@ -340,7 +395,7 @@ func (s *draftService) drafted(ctx context.Context, in *utils.CycleScopedInput) 
 	if err := s.access.CanCycle(ctx, access.ReviewCycle, in.ID); err != nil {
 		return nil, err
 	}
-	taken, err := s.draftDB.DraftedApplicationIDs(ctx, in.ID)
+	taken, err := s.draftDB.DraftedApplicationIDs(ctx, in.ID, s.managesCycle(ctx, in.ID))
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
@@ -366,4 +421,62 @@ func (s *draftService) finish(ctx context.Context, in *DraftIDInput) (*FinishDra
 	out := &FinishDraftOutput{}
 	out.Body.Rejected = len(rejected)
 	return out, nil
+}
+
+func (s *draftService) managesCycle(ctx context.Context, cycleID string) bool {
+	cycle, err := s.access.Cycle(ctx, cycleID)
+	return err == nil && cycle.Allows(access.ManageCycle)
+}
+
+func (s *draftService) requirePlacementSlot(ctx context.Context, draft models.Draft, slot int) error {
+	teams, err := s.draftDB.ListDraftTeams(ctx, draft.ID)
+	if err != nil {
+		return utils.StoreErr(err)
+	}
+	return requirePlacementEditable(draft, len(teams), slot)
+}
+
+func (s *draftService) setPlacementsReleased(ctx context.Context, draftID string, released bool) (*DraftBoardOutput, error) {
+	if err := s.access.CanCycleOf(ctx, access.ManageCycle, "drafts", draftID); err != nil {
+		return nil, err
+	}
+	if err := s.requireDraftEditable(ctx, draftID); err != nil {
+		return nil, err
+	}
+	draft, err := s.draftDB.GetDraftByID(ctx, draftID)
+	if err != nil {
+		return nil, utils.StoreErr(err)
+	}
+	if !draft.PlacementsEnabled {
+		return nil, huma.Error409Conflict("this draft doesn't use placements")
+	}
+	if draft.Status != models.DraftSetup {
+		return nil, huma.Error409Conflict("the draft has already started")
+	}
+	if released {
+		board, err := s.draftDB.DraftBoard(ctx, draft)
+		if err != nil {
+			return nil, utils.StoreErr(err)
+		}
+		if !placementsFilled(draft, len(board.Teams), board.Picks) {
+			return nil, huma.Error409Conflict(fmt.Sprintf("place %d applicants on every team before releasing", PlacementRounds))
+		}
+	}
+	updated, err := s.draftDB.SetPlacementsReleased(ctx, draftID, released)
+	if err != nil {
+		return nil, utils.StoreErr(err)
+	}
+	board, err := s.draftDB.DraftBoard(ctx, updated)
+	if err != nil {
+		return nil, utils.StoreErr(err)
+	}
+	return &DraftBoardOutput{Body: board}, nil
+}
+
+func (s *draftService) releasePlacements(ctx context.Context, in *DraftIDInput) (*DraftBoardOutput, error) {
+	return s.setPlacementsReleased(ctx, in.ID, true)
+}
+
+func (s *draftService) unreleasePlacements(ctx context.Context, in *DraftIDInput) (*DraftBoardOutput, error) {
+	return s.setPlacementsReleased(ctx, in.ID, false)
 }

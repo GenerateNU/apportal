@@ -130,10 +130,10 @@ func (d *DraftDB) GetDraftByID(ctx context.Context, id string) (models.Draft, er
 
 // CreateDraft opens the board for a (cycle, role). A second call returns the
 // existing board, so two chiefs opening the page at once don't race.
-func (d *DraftDB) CreateDraft(ctx context.Context, cycleID string, role string, rounds int, createdBy string) (models.Draft, error) {
-	draft := models.Draft{CycleID: cycleID, RoleID: role, Rounds: rounds, CreatedBy: createdBy}
+func (d *DraftDB) CreateDraft(ctx context.Context, cycleID string, role string, rounds int, placementsEnabled bool, createdBy string) (models.Draft, error) {
+	draft := models.Draft{CycleID: cycleID, RoleID: role, Rounds: rounds, PlacementsEnabled: placementsEnabled, CreatedBy: createdBy}
 	err := d.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		res := tx.Select("cycle_id", "role_id", "rounds", "created_by").
+		res := tx.Select("cycle_id", "role_id", "rounds", "placements_enabled", "created_by").
 			Clauses(clause.OnConflict{DoNothing: true}, clause.Returning{}).Create(&draft)
 		if res.Error != nil {
 			return res.Error
@@ -167,7 +167,48 @@ func (d *DraftDB) UpdateDraft(ctx context.Context, id string, in DraftUpdate) (m
 	updates := map[string]any{}
 	utils.SetIf(updates, "status", in.Status)
 	utils.SetIf(updates, "rounds", in.Rounds)
+	utils.SetIf(updates, "placements_enabled", in.PlacementsEnabled)
 	return utils.UpdateReturning[models.Draft](d.db.WithContext(ctx), updates, "id = ?", id)
+}
+
+func (d *DraftDB) StartDraft(ctx context.Context, id string, in DraftUpdate) (models.Draft, error) {
+	var draft models.Draft
+	err := d.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := lockDraft(tx, id); err != nil {
+			return utils.DBErr(err)
+		}
+		var picks []models.DraftPick
+		if err := tx.Where("draft_id = ?", id).Find(&picks).Error; err != nil {
+			return err
+		}
+		for _, p := range picks {
+			var stage models.ApplicationStage
+			if err := tx.Model(&models.Application{}).Select("stage").Where("id = ?", p.ApplicationID).Scan(&stage).Error; err != nil {
+				return err
+			}
+			if stage == models.StageAccepted {
+				continue
+			}
+			if err := accept(ctx, tx, p.ApplicationID); err != nil {
+				return err
+			}
+		}
+		updates := map[string]any{}
+		utils.SetIf(updates, "status", in.Status)
+		utils.SetIf(updates, "rounds", in.Rounds)
+		var err error
+		draft, err = utils.UpdateReturning[models.Draft](tx, updates, "id = ?", id)
+		return err
+	})
+	return draft, err
+}
+
+func (d *DraftDB) SetPlacementsReleased(ctx context.Context, id string, released bool) (models.Draft, error) {
+	value := any(nil)
+	if released {
+		value = gorm.Expr("NOW()")
+	}
+	return utils.UpdateReturning[models.Draft](d.db.WithContext(ctx), map[string]any{"placements_released_at": value}, "id = ?", id)
 }
 
 // teamsInDraftCycle counts the lists that belong to the draft's own cycle, so
@@ -308,12 +349,12 @@ func (d *DraftDB) DraftBoard(ctx context.Context, draft models.Draft) (models.Dr
 }
 
 func assembleBoard(draft models.Draft, teams []models.DraftTeamDetail, picks []models.DraftPickDetail) models.DraftBoard {
-	board := models.DraftBoard{Draft: draft, Teams: teams, Picks: picks}
-	board.Slots = SlotOwners(teams, picks, draft.Rounds)
+	board := models.DraftBoard{Draft: draft, Teams: teams, Picks: picks, PlacementRounds: placementRounds(draft)}
+	board.Slots = SlotOwners(teams, picks, totalRounds(draft))
 	if draft.Status != models.DraftActive || len(teams) == 0 {
 		return board
 	}
-	slot := nextOpenSlot(pickNumbers(picks), draft.Rounds*len(teams))
+	slot := nextOpenSlot(pickNumbers(picks), totalRounds(draft)*len(teams))
 	if slot == 0 {
 		return board
 	}
@@ -408,7 +449,7 @@ func (d *DraftDB) MakeDraftPick(ctx context.Context, draft models.Draft, slot in
 		if err != nil {
 			return err
 		}
-		total := draft.Rounds * len(teams)
+		total := totalRounds(draft) * len(teams)
 		if slot == 0 {
 			slot = nextOpenSlot(pickNumbers(picks), total)
 		}
@@ -428,7 +469,7 @@ func (d *DraftDB) MakeDraftPick(ctx context.Context, draft models.Draft, slot in
 		pick = models.DraftPick{
 			DraftID:       draft.ID,
 			PickNumber:    slot,
-			DraftTeamID:   ownerOf(SlotOwners(teams, picks, draft.Rounds), slot),
+			DraftTeamID:   ownerOf(SlotOwners(teams, picks, totalRounds(draft)), slot),
 			ApplicationID: applicationID,
 			PreviousStage: previousStage,
 			PickedBy:      pickedBy,
@@ -436,6 +477,9 @@ func (d *DraftDB) MakeDraftPick(ctx context.Context, draft models.Draft, slot in
 		err = utils.Insert(tx, &pick, "draft_id", "pick_number", "draft_team_id", "application_id", "previous_stage", "picked_by")
 		if err != nil {
 			return err
+		}
+		if draft.Status == models.DraftSetup {
+			return nil
 		}
 		return accept(ctx, tx, applicationID)
 	})
@@ -501,6 +545,9 @@ func (d *DraftDB) ReplaceDraftPick(ctx context.Context, draft models.Draft, pick
 		if err != nil {
 			return err
 		}
+		if draft.Status == models.DraftSetup {
+			return nil
+		}
 		return accept(ctx, tx, applicationID)
 	})
 	return pick, err
@@ -555,7 +602,7 @@ func (d *DraftDB) ResetDraft(ctx context.Context, draftID string) error {
 		if err := tx.Where("draft_id = ?", draftID).Delete(&models.DraftPick{}).Error; err != nil {
 			return err
 		}
-		res := tx.Model(&models.Draft{}).Where("id = ?", draftID).UpdateColumn("status", models.DraftSetup)
+		res := tx.Model(&models.Draft{}).Where("id = ?", draftID).UpdateColumns(map[string]any{"status": models.DraftSetup, "placements_released_at": nil})
 		if res.Error != nil {
 			return res.Error
 		}
@@ -586,18 +633,21 @@ func (d *DraftDB) DeleteDraft(ctx context.Context, draftID string) error {
 
 // DraftedApplicationIDs maps every application claimed on any board in the
 // cycle to its team name, for greying them out on preference lists.
-func (d *DraftDB) DraftedApplicationIDs(ctx context.Context, cycleID string) (map[string]string, error) {
+func (d *DraftDB) DraftedApplicationIDs(ctx context.Context, cycleID string, includeUnreleased bool) (map[string]string, error) {
 	var rows []struct {
 		ApplicationID string
 		Name          string
 	}
-	err := d.db.WithContext(ctx).Table("draft_picks p").
+	q := d.db.WithContext(ctx).Table("draft_picks p").
 		Select("p.application_id, pl.name").
 		Joins("JOIN drafts d ON d.id = p.draft_id").
 		Joins("JOIN draft_teams t ON t.id = p.draft_team_id").
 		Joins("JOIN preference_lists pl ON pl.id = t.preference_list_id").
-		Where("d.cycle_id = ?", cycleID).
-		Scan(&rows).Error
+		Where("d.cycle_id = ?", cycleID)
+	if !includeUnreleased {
+		q = q.Where("(d.status <> ? OR d.placements_released_at IS NOT NULL)", models.DraftSetup)
+	}
+	err := q.Scan(&rows).Error
 	out := make(map[string]string, len(rows))
 	for _, r := range rows {
 		out[r.ApplicationID] = r.Name

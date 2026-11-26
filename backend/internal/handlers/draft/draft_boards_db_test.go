@@ -32,7 +32,7 @@ func TestDraftBoardsMatchEachBoard(t *testing.T) {
 	ctx := context.Background()
 	var want []string
 	for _, r := range roles[:2] {
-		d, err := store.CreateDraft(ctx, cycle, r, 2, chief)
+		d, err := store.CreateDraft(ctx, cycle, r, 2, false, chief)
 		if err != nil {
 			t.Fatal(err)
 		}

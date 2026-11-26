@@ -27,16 +27,18 @@ type DraftScopedInput struct {
 type OpenDraftInput struct {
 	ID   string `path:"id" doc:"Cycle ID"`
 	Body struct {
-		RoleID string `json:"role_id" doc:"Applicant role ID"`
-		Rounds int    `json:"rounds,omitempty" doc:"How many times around the board; defaults to 1" minimum:"0"`
+		RoleID            string `json:"role_id" doc:"Applicant role ID"`
+		Rounds            int    `json:"rounds,omitempty" doc:"How many times around the board; defaults to 1" minimum:"0"`
+		PlacementsEnabled bool   `json:"placements_enabled,omitempty" doc:"Chiefs place two applicants on every team before picking starts"`
 	}
 }
 
 type UpdateDraftInput struct {
 	ID   string `path:"id" doc:"Draft ID"`
 	Body struct {
-		Status *models.DraftStatus `json:"status,omitempty" doc:"setup, active, or complete"`
-		Rounds *int                `json:"rounds,omitempty" doc:"How many times around the board" minimum:"1"`
+		Status            *models.DraftStatus `json:"status,omitempty" doc:"setup, active, or complete"`
+		Rounds            *int                `json:"rounds,omitempty" doc:"How many times around the board" minimum:"1"`
+		PlacementsEnabled *bool               `json:"placements_enabled,omitempty" doc:"Chiefs place two applicants on every team before picking starts"`
 	}
 }
 
@@ -87,6 +89,7 @@ type DraftedApplicationsOutput struct {
 }
 
 type DraftUpdate struct {
-	Status *models.DraftStatus
-	Rounds *int
+	Status            *models.DraftStatus
+	Rounds            *int
+	PlacementsEnabled *bool
 }

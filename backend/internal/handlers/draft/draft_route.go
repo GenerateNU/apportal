@@ -129,6 +129,26 @@ func Route(api huma.API, db *gorm.DB) {
 	}, s.delete)
 
 	huma.Register(api, huma.Operation{
+		OperationID: "release-draft-placements",
+		Method:      http.MethodPost,
+		Path:        "/drafts/{id}/placements/release",
+		Summary:     "Show the placed applicants to every team",
+		Description: "Chief only. Every placement slot must be filled. Leads see placements only once they're released.",
+		Tags:        []string{"Draft"},
+		Errors:      []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound, http.StatusConflict},
+	}, s.releasePlacements)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "unrelease-draft-placements",
+		Method:      http.MethodDelete,
+		Path:        "/drafts/{id}/placements/release",
+		Summary:     "Hide the placed applicants again",
+		Description: "Chief only, before the draft starts, so placements can be changed.",
+		Tags:        []string{"Draft"},
+		Errors:      []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound, http.StatusConflict},
+	}, s.unreleasePlacements)
+
+	huma.Register(api, huma.Operation{
 		OperationID: "list-drafted-applications",
 		Method:      http.MethodGet,
 		Path:        "/cycles/{id}/drafted",
