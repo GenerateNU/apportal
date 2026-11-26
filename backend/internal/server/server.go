@@ -4,7 +4,6 @@ package server
 
 import (
 	"context"
-	"github.com/GenerateNU/apportal/backend/internal/realtime"
 	"time"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -48,6 +47,7 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/handlers/user"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/writtenreview"
 	"github.com/GenerateNU/apportal/backend/internal/middleware"
+	"github.com/GenerateNU/apportal/backend/internal/realtime"
 	"github.com/GenerateNU/apportal/backend/internal/storage"
 )
 

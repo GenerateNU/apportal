@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"github.com/GenerateNU/apportal/backend/internal/realtime"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -12,6 +11,7 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/config"
 	appdb "github.com/GenerateNU/apportal/backend/internal/db"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/applicant"
+	"github.com/GenerateNU/apportal/backend/internal/realtime"
 	"github.com/GenerateNU/apportal/backend/internal/server"
 	"github.com/GenerateNU/apportal/backend/internal/storage"
 )
