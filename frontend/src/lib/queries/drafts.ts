@@ -17,7 +17,7 @@ import type { RequestOptions } from '@/lib/api/orval-mutator'
 import type { DraftBoard, DraftPickDetail, DraftStatus } from '@/lib/api/types'
 import { queryKeys } from './keys'
 
-const DRAFT_POLL_MS = 8000
+const DRAFT_POLL_MS = 30_000
 
 function draftBoardQuery(
   cycleId: string,

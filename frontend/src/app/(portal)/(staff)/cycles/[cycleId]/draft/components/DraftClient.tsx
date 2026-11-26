@@ -83,6 +83,8 @@ import { DraftSetup } from './DraftSetup'
 import { OnTheClockPanel } from './OnTheClockPanel'
 import { ReorderTeamsDialog } from './ReorderTeamsDialog'
 import { useCycleHref } from '@/hooks/useCycleHref'
+import { useDraftRealtime } from '@/lib/realtime/useDraftRealtime'
+import { LiveIndicator } from '@/components/LiveIndicator'
 
 export function DraftClient() {
   const toCycle = useCycleHref()
@@ -98,6 +100,7 @@ export function DraftClient() {
     isLoading,
     isError,
   } = useDraftBoard(cycleId, role, { poll: true })
+  const realtime = useDraftRealtime(cycleId)
   const { data: groups = [] } = usePreferenceLists(cycleId)
   const { data: takenByApplicationId = {} } = useDraftedApplications(cycleId, {
     poll: true,
@@ -240,6 +243,7 @@ export function DraftClient() {
         title={
           <span className="inline-flex items-center gap-3">
             Draft
+            {board?.status === 'active' && <LiveIndicator status={realtime} />}
             {board && board.status !== 'setup' && (
               <Badge
                 className={cn(
@@ -450,33 +454,43 @@ export function DraftClient() {
     <>
       {header}
 
-      {board.status === 'active' && (
-        <OnTheClockPanel
-          board={board}
-          teamList={teamList}
-          teamListLoading={teamListLoading}
-          pool={pool}
-          takenByApplicationId={takenByApplicationId}
-          canPick={isChief}
-          onPick={pick}
-          picking={makePick.isPending}
-          error={pickError}
-        />
-      )}
-
-      <DraftBoardGrid
-        board={board}
-        canEdit={isChief && !finalized}
-        onChangePick={setChangingSlot}
-        removingPick={removingPick}
-        onRemovePick={(pickNumber) => {
-          setRemovingPick(pickNumber)
-          removePick.mutate(
-            { ...draftScope, pickNumber },
-            { onSettled: () => setRemovingPick(null) }
-          )
-        }}
-      />
+      <div
+        className={cn(
+          'grid items-start gap-6',
+          board.status === 'active' && 'xl:grid-cols-[minmax(0,1fr)_24rem]'
+        )}
+      >
+        <div className="min-w-0">
+          <DraftBoardGrid
+            board={board}
+            canEdit={isChief && !finalized}
+            onChangePick={setChangingSlot}
+            removingPick={removingPick}
+            onRemovePick={(pickNumber) => {
+              setRemovingPick(pickNumber)
+              removePick.mutate(
+                { ...draftScope, pickNumber },
+                { onSettled: () => setRemovingPick(null) }
+              )
+            }}
+          />
+        </div>
+        {board.status === 'active' && (
+          <div className="min-w-0 xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto">
+            <OnTheClockPanel
+              board={board}
+              teamList={teamList}
+              teamListLoading={teamListLoading}
+              pool={pool}
+              takenByApplicationId={takenByApplicationId}
+              canPick={isChief}
+              onPick={pick}
+              picking={makePick.isPending}
+              error={pickError}
+            />
+          </div>
+        )}
+      </div>
 
       {isChief && (
         <div className="flex flex-wrap items-center gap-2">

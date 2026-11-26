@@ -11,6 +11,7 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/config"
 	appdb "github.com/GenerateNU/apportal/backend/internal/db"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/applicant"
+	"github.com/GenerateNU/apportal/backend/internal/realtime"
 	"github.com/GenerateNU/apportal/backend/internal/server"
 	"github.com/GenerateNU/apportal/backend/internal/storage"
 )
@@ -50,6 +51,7 @@ func main() {
 		SupabaseAnonKey: cfg.SupabaseAnonKey,
 		Storage:         storageClient,
 		Challenge:       applicant.NewChallengeClient(cfg.ChallengeServerURL, cfg.ChallengeAdminToken),
+		Realtime:        realtime.NewBroadcaster(cfg.SupabaseURL, cfg.SupabaseServiceRoleKey),
 	})
 
 	serverErrors := make(chan error, 1)

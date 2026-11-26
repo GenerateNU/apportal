@@ -47,6 +47,7 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/handlers/user"
 	"github.com/GenerateNU/apportal/backend/internal/handlers/writtenreview"
 	"github.com/GenerateNU/apportal/backend/internal/middleware"
+	"github.com/GenerateNU/apportal/backend/internal/realtime"
 	"github.com/GenerateNU/apportal/backend/internal/storage"
 )
 
@@ -70,6 +71,7 @@ type Config struct {
 	SupabaseAnonKey string
 	Storage         *storage.Client
 	Challenge       *applicant.ChallengeClient
+	Realtime        *realtime.Broadcaster
 }
 
 // CreateApp builds the Fiber app with its middleware, the plain health checks,
@@ -96,7 +98,7 @@ func CreateApp(db *gorm.DB, cfg Config) *fiber.App {
 	app.Get("/readyz", ready(db))
 
 	api := humafiber.New(app, humaConfig())
-	CreateRoutes(api, db, cfg.Storage, cfg.Challenge)
+	CreateRoutes(api, db, cfg.Storage, cfg.Challenge, cfg.Realtime)
 	return app
 }
 
@@ -111,7 +113,7 @@ func humaConfig() huma.Config {
 	return config
 }
 
-func CreateRoutes(api huma.API, db *gorm.DB, storageClient *storage.Client, challengeClient *applicant.ChallengeClient) {
+func CreateRoutes(api huma.API, db *gorm.DB, storageClient *storage.Client, challengeClient *applicant.ChallengeClient, broadcaster *realtime.Broadcaster) {
 	branch.Route(api, db)
 	role.Route(api, db)
 	cycle.Route(api, db)
@@ -146,7 +148,7 @@ func CreateRoutes(api huma.API, db *gorm.DB, storageClient *storage.Client, chal
 	recordingreview.Route(api, db)
 	preferencelist.Route(api, db)
 	selection.Route(api, db)
-	draft.Route(api, db)
+	draft.Route(api, db, broadcaster)
 	decision.Route(api, db)
 }
 
@@ -158,7 +160,7 @@ func OpenAPIYAML() ([]byte, error) {
 		return nil, err
 	}
 	api := humafiber.New(fiber.New(), humaConfig())
-	CreateRoutes(api, db, storage.NewClient("", ""), applicant.NewChallengeClient("", ""))
+	CreateRoutes(api, db, storage.NewClient("", ""), applicant.NewChallengeClient("", ""), nil)
 	return api.OpenAPI().YAML()
 }
 
