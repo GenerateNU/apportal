@@ -1,6 +1,7 @@
 package draft
 
 import (
+	"github.com/GenerateNU/apportal/backend/internal/realtime"
 	"net/http"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -12,9 +13,9 @@ import (
 	"github.com/GenerateNU/apportal/backend/internal/workflow"
 )
 
-func Route(api huma.API, db *gorm.DB) {
+func Route(api huma.API, db *gorm.DB, broadcaster *realtime.Broadcaster) {
 	draftDB := NewDraftDB(db)
-	s := &draftService{access: access.NewChecker(db), draftDB: draftDB, roleDB: role.NewRoleDB(db), workflow: workflow.NewService(db)}
+	s := &draftService{access: access.NewChecker(db), draftDB: draftDB, roleDB: role.NewRoleDB(db), workflow: workflow.NewService(db), realtime: broadcaster}
 
 	huma.Register(api, huma.Operation{
 		OperationID: "get-draft-board",
@@ -44,7 +45,7 @@ func Route(api huma.API, db *gorm.DB) {
 		Description: "Chief only. Idempotent — opening an existing board returns it rather than failing.",
 		Tags:        []string{"Draft"},
 		Errors:      []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusUnprocessableEntity},
-	}, s.open)
+	}, s.openAndAnnounce)
 
 	huma.Register(api, huma.Operation{
 		OperationID: "update-draft",
@@ -54,7 +55,7 @@ func Route(api huma.API, db *gorm.DB) {
 		Description: "Chief only. Moving to active starts the picking; rounds may be raised mid-draft but never below the picks already made.",
 		Tags:        []string{"Draft"},
 		Errors:      []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound, http.StatusUnprocessableEntity},
-	}, s.update)
+	}, announceDraft(s, func(in *UpdateDraftInput) string { return in.ID }, s.update))
 
 	huma.Register(api, huma.Operation{
 		OperationID: "set-draft-teams",
@@ -64,7 +65,7 @@ func Route(api huma.API, db *gorm.DB) {
 		Description: "Chief only. In setup the given preference list groups become the seats, in the given order. While the draft is active the order may still be changed, but the set of teams may not: picks already made stay with the team that made them, and the rest of the round goes to the teams yet to pick in it.",
 		Tags:        []string{"Draft"},
 		Errors:      []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound, http.StatusConflict, http.StatusUnprocessableEntity},
-	}, s.setTeams)
+	}, announceDraft(s, func(in *SetDraftTeamsInput) string { return in.ID }, s.setTeams))
 
 	huma.Register(api, huma.Operation{
 		OperationID: "make-draft-pick",
@@ -74,7 +75,7 @@ func Route(api huma.API, db *gorm.DB) {
 		Description: "Chief only. Fills the lowest open slot unless pick_number names another, and moves the applicant to the accepted stage.",
 		Tags:        []string{"Draft"},
 		Errors:      []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound, http.StatusConflict, http.StatusUnprocessableEntity},
-	}, s.pick)
+	}, announceDraft(s, func(in *MakeDraftPickInput) string { return in.ID }, s.pick))
 
 	huma.Register(api, huma.Operation{
 		OperationID: "replace-draft-pick",
@@ -84,7 +85,7 @@ func Route(api huma.API, db *gorm.DB) {
 		Description: "Chief only. Done in place, so the slot never reopens and the team on the clock doesn't change. The outgoing applicant returns to their previous stage and the incoming one moves to accepted.",
 		Tags:        []string{"Draft"},
 		Errors:      []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound, http.StatusConflict, http.StatusUnprocessableEntity},
-	}, s.replacePick)
+	}, announceDraft(s, func(in *ReplaceDraftPickInput) string { return in.ID }, s.replacePick))
 
 	huma.Register(api, huma.Operation{
 		OperationID:   "remove-draft-pick",
@@ -95,7 +96,7 @@ func Route(api huma.API, db *gorm.DB) {
 		Tags:          []string{"Draft"},
 		DefaultStatus: http.StatusNoContent,
 		Errors:        []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound},
-	}, s.removePick)
+	}, announceDraft(s, func(in *RemoveDraftPickInput) string { return in.ID }, s.removePick))
 
 	huma.Register(api, huma.Operation{
 		OperationID: "finish-draft",
@@ -105,7 +106,7 @@ func Route(api huma.API, db *gorm.DB) {
 		Description: "Chief only, once the draft is complete. Drafted applicants are already accepted; everyone left in Decisions for the position is rejected, and Decisions closes once nobody's left.",
 		Tags:        []string{"Draft"},
 		Errors:      []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound, http.StatusConflict},
-	}, s.finish)
+	}, announceDraft(s, func(in *DraftIDInput) string { return in.ID }, s.finish))
 
 	huma.Register(api, huma.Operation{
 		OperationID: "reset-draft",
@@ -115,7 +116,7 @@ func Route(api huma.API, db *gorm.DB) {
 		Description: "Chief only. Each applicant goes back to the stage they were in before their pick; the team order is kept, so a rehearsal can be wiped without rebuilding it.",
 		Tags:        []string{"Draft"},
 		Errors:      []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound},
-	}, s.reset)
+	}, announceDraft(s, func(in *DraftIDInput) string { return in.ID }, s.reset))
 
 	huma.Register(api, huma.Operation{
 		OperationID:   "delete-draft",
@@ -126,7 +127,7 @@ func Route(api huma.API, db *gorm.DB) {
 		Tags:          []string{"Draft"},
 		DefaultStatus: http.StatusNoContent,
 		Errors:        []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound},
-	}, s.delete)
+	}, announceDraft(s, func(in *DraftIDInput) string { return in.ID }, s.delete))
 
 	huma.Register(api, huma.Operation{
 		OperationID: "list-drafted-applications",

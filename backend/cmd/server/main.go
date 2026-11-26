@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github.com/GenerateNU/apportal/backend/internal/realtime"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -50,6 +51,7 @@ func main() {
 		SupabaseAnonKey: cfg.SupabaseAnonKey,
 		Storage:         storageClient,
 		Challenge:       applicant.NewChallengeClient(cfg.ChallengeServerURL, cfg.ChallengeAdminToken),
+		Realtime:        realtime.NewBroadcaster(cfg.SupabaseURL, cfg.SupabaseServiceRoleKey),
 	})
 
 	serverErrors := make(chan error, 1)

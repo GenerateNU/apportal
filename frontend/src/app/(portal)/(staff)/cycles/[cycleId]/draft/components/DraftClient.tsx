@@ -83,6 +83,8 @@ import { DraftSetup } from './DraftSetup'
 import { OnTheClockPanel } from './OnTheClockPanel'
 import { ReorderTeamsDialog } from './ReorderTeamsDialog'
 import { useCycleHref } from '@/hooks/useCycleHref'
+import { useDraftRealtime } from '@/lib/realtime/useDraftRealtime'
+import { LiveIndicator } from '@/components/LiveIndicator'
 
 export function DraftClient() {
   const toCycle = useCycleHref()
@@ -98,6 +100,7 @@ export function DraftClient() {
     isLoading,
     isError,
   } = useDraftBoard(cycleId, role, { poll: true })
+  const realtime = useDraftRealtime(cycleId)
   const { data: groups = [] } = usePreferenceLists(cycleId)
   const { data: takenByApplicationId = {} } = useDraftedApplications(cycleId, {
     poll: true,
@@ -240,6 +243,7 @@ export function DraftClient() {
         title={
           <span className="inline-flex items-center gap-3">
             Draft
+            {board?.status === 'active' && <LiveIndicator status={realtime} />}
             {board && board.status !== 'setup' && (
               <Badge
                 className={cn(

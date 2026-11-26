@@ -3,6 +3,7 @@ package draft
 import (
 	"context"
 	"errors"
+	"github.com/GenerateNU/apportal/backend/internal/realtime"
 
 	"github.com/danielgtaylor/huma/v2"
 
@@ -23,6 +24,7 @@ type draftService struct {
 	draftDB  *DraftDB
 	roleDB   *role.RoleDB
 	workflow *workflow.Service
+	realtime *realtime.Broadcaster
 }
 
 func (s *draftService) requireDraftEditable(ctx context.Context, draftID string) error {

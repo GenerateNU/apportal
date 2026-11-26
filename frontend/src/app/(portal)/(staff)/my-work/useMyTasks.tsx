@@ -29,6 +29,7 @@ import { feedbackState } from '@/app/(portal)/(staff)/cycles/[cycleId]/feedback/
 import { Fact } from '@/components/ui/facts'
 import { CalendarClock } from 'lucide-react'
 import { cycleHref } from '@/lib/cycle-paths'
+import { useDraftRealtime } from '@/lib/realtime/useDraftRealtime'
 
 export type Task = {
   id: string
@@ -125,6 +126,7 @@ export function useMyTasks() {
   const { roleIds } = useCycleRoles(cycleId)
   const { data: decisions = [], isPending: decisionsPending } =
     useDecisions(cycleId)
+  useDraftRealtime(cycleId)
   const { data: boardsByRole } = useDraftBoards(cycleId, roleIds)
   const boards = useMemo(
     () => Object.values(boardsByRole ?? {}),

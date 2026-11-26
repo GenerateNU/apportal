@@ -32,6 +32,8 @@ import { useCycleRoles } from '@/lib/queries/roles'
 import { useCurrentUser } from '@/lib/queries/users'
 import { cn } from '@/lib/utils'
 import { Fact, Facts } from '@/components/ui/facts'
+import { useDraftRealtime } from '@/lib/realtime/useDraftRealtime'
+import { LiveIndicator } from '@/components/LiveIndicator'
 
 const CRUMBS = myWorkCrumbs('draft')
 
@@ -48,13 +50,18 @@ export function MyDraftClient() {
   const cycleId = cycle?.id ?? ''
 
   const { roleIds, roleLabel } = useCycleRoles(cycleId)
-  const { data: drafted = {} } = useDraftedApplications(cycleId)
+  const realtime = useDraftRealtime(cycleId)
+  const { data: drafted = {} } = useDraftedApplications(cycleId, {
+    poll: true,
+  })
   const { data: groups = [], isLoading: groupsLoading } =
     usePreferenceListDetails(cycleId)
   const myGroup = groups.find((g) =>
     (g.members ?? []).some((m) => m.lead_nuid === user?.nuid)
   )
-  const { data: boardsByRole, isPending } = useDraftBoards(cycleId, roleIds)
+  const { data: boardsByRole, isPending } = useDraftBoards(cycleId, roleIds, {
+    poll: true,
+  })
   const boardsPending = roleIds.length > 0 && isPending
   const boards = roleIds.map((roleId): RoleBoard => ({
     roleId,
@@ -76,7 +83,12 @@ export function MyDraftClient() {
       <div className="flex flex-col gap-3">
         <PageHeader
           back={<Breadcrumbs items={CRUMBS} />}
-          title="Draft"
+          title={
+            <span className="inline-flex items-center gap-3">
+              Draft
+              <LiveIndicator status={realtime} />
+            </span>
+          }
           subtitle={
             <Facts>
               {cycle?.name && <Fact icon={CalendarDays}>{cycle.name}</Fact>}
