@@ -454,33 +454,43 @@ export function DraftClient() {
     <>
       {header}
 
-      {board.status === 'active' && (
-        <OnTheClockPanel
-          board={board}
-          teamList={teamList}
-          teamListLoading={teamListLoading}
-          pool={pool}
-          takenByApplicationId={takenByApplicationId}
-          canPick={isChief}
-          onPick={pick}
-          picking={makePick.isPending}
-          error={pickError}
-        />
-      )}
-
-      <DraftBoardGrid
-        board={board}
-        canEdit={isChief && !finalized}
-        onChangePick={setChangingSlot}
-        removingPick={removingPick}
-        onRemovePick={(pickNumber) => {
-          setRemovingPick(pickNumber)
-          removePick.mutate(
-            { ...draftScope, pickNumber },
-            { onSettled: () => setRemovingPick(null) }
-          )
-        }}
-      />
+      <div
+        className={cn(
+          'grid items-start gap-6',
+          board.status === 'active' && 'xl:grid-cols-[minmax(0,1fr)_24rem]'
+        )}
+      >
+        <div className="min-w-0">
+          <DraftBoardGrid
+            board={board}
+            canEdit={isChief && !finalized}
+            onChangePick={setChangingSlot}
+            removingPick={removingPick}
+            onRemovePick={(pickNumber) => {
+              setRemovingPick(pickNumber)
+              removePick.mutate(
+                { ...draftScope, pickNumber },
+                { onSettled: () => setRemovingPick(null) }
+              )
+            }}
+          />
+        </div>
+        {board.status === 'active' && (
+          <div className="min-w-0 xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto">
+            <OnTheClockPanel
+              board={board}
+              teamList={teamList}
+              teamListLoading={teamListLoading}
+              pool={pool}
+              takenByApplicationId={takenByApplicationId}
+              canPick={isChief}
+              onPick={pick}
+              picking={makePick.isPending}
+              error={pickError}
+            />
+          </div>
+        )}
+      </div>
 
       {isChief && (
         <div className="flex flex-wrap items-center gap-2">
