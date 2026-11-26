@@ -22,7 +22,6 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import {
   GripVertical,
-  Lock,
   Columns2,
   ListOrdered,
   MessageSquare,
@@ -65,6 +64,7 @@ import {
 import { useRoleLookup } from '@/lib/queries/roles'
 import { CommentThread } from './CommentThread'
 import { deadlinePassed } from './deadline'
+import { PlacementsBlock, type TeamPlacements } from './PlacementsBlock'
 
 const RATING_CHIP: Record<InterviewRating, string> = {
   must_hire: 'bg-green-50 text-green-700',
@@ -120,6 +120,7 @@ export function LeadTeamTab({
   onOpenApplicant,
   roleTabs,
   renderExplorer,
+  placements = [],
 }: {
   list: PreferenceListDetail
   role: string
@@ -133,6 +134,7 @@ export function LeadTeamTab({
   onOpenApplicant: (applicationId: string) => void
   roleTabs?: React.ReactNode
   renderExplorer: (listAction: ListAction) => React.ReactNode
+  placements?: TeamPlacements[]
 }) {
   const { roleLabel } = useRoleLookup()
   const { data: cycleTags = [] } = useCycleTags(list.cycle_id)
@@ -317,13 +319,7 @@ export function LeadTeamTab({
         </Button>
       </div>
 
-      {roleLocked && (
-        <p className="text-text-muted flex items-center gap-2 border border-gray-200 px-4 py-3 text-sm">
-          <Lock size={14} className="shrink-0" />
-          The {roleLabel(role)} deadline has passed, so the team list is
-          read-only.
-        </p>
-      )}
+      {placements.length > 0 && <PlacementsBlock placements={placements} />}
 
       <div
         className={cn(

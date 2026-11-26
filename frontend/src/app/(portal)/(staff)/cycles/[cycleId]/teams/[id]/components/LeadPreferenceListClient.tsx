@@ -33,7 +33,7 @@ import { LeadTeamTab } from './LeadTeamTab'
 import { CandidateExplorer } from '../../components/CandidateExplorer'
 import { Fact, Facts } from '@/components/ui/facts'
 import { Badge } from '@/components/ui/badge'
-import { CalendarDays, Clock, Lock, Users } from 'lucide-react'
+import { CalendarDays, Clock, Users } from 'lucide-react'
 import { useCycleHref } from '@/hooks/useCycleHref'
 import { useDraftBoard } from '@/lib/queries/drafts'
 
@@ -68,15 +68,29 @@ export function LeadPreferenceListClient({
   const roleParam = searchParams.get('role') ?? ''
   const role = roleIds.includes(roleParam) ? roleParam : (roleIds[0] ?? '')
   const { data: draftBoard } = useDraftBoard(cycleId, role)
-  const myDraftTeam = draftBoard?.teams.find((t) => t.preference_list_id === id)
-  const placedOnUs =
-    draftBoard?.placements_released_at && myDraftTeam
-      ? draftBoard.picks.filter(
-          (p) =>
-            p.draft_team_id === myDraftTeam.id &&
-            p.pick_number <=
-              (draftBoard.placement_rounds ?? 0) * draftBoard.teams.length
-        )
+  const placementSlots = draftBoard
+    ? (draftBoard.placement_rounds ?? 0) * draftBoard.teams.length
+    : 0
+  const placements =
+    draftBoard?.placements_released_at && placementSlots > 0
+      ? [...draftBoard.teams]
+          .sort((a, b) =>
+            a.preference_list_id === id
+              ? -1
+              : b.preference_list_id === id
+                ? 1
+                : a.position - b.position
+          )
+          .map((team) => ({
+            team,
+            mine: team.preference_list_id === id,
+            picks: draftBoard.picks
+              .filter(
+                (p) =>
+                  p.draft_team_id === team.id && p.pick_number <= placementSlots
+              )
+              .sort((a, b) => a.pick_number - b.pick_number),
+          }))
       : []
 
   function setRole(next: string) {
@@ -195,14 +209,6 @@ export function LeadPreferenceListClient({
         />
       </div>
 
-      {placedOnUs.length > 0 && (
-        <p className="text-ink flex flex-wrap items-center gap-x-2 gap-y-1 border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm">
-          <Lock size={14} className="shrink-0 text-emerald-700" />
-          <span className="font-medium">Placed on your team by chiefs:</span>
-          {placedOnUs.map((p) => p.full_name).join(', ')}
-        </p>
-      )}
-
       {!role ? (
         <EmptyState
           title="No roles yet"
@@ -216,6 +222,7 @@ export function LeadPreferenceListClient({
             role={role}
             roleIds={roleIds}
             pool={pool}
+            placements={placements}
             renderExplorer={(listAction) => (
               <CandidateExplorer
                 cycleId={cycleId}
