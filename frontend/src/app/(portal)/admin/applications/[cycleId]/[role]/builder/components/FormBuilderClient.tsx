@@ -58,6 +58,7 @@ import { useRoleLookup } from '@/lib/queries/roles'
 import { useCycle } from '@/lib/queries/cycles'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { formatDeadline } from '@/lib/deadline'
+import { cycleHref } from '@/lib/cycle-paths'
 
 function FormBuilder({
   cycleId,
@@ -95,10 +96,13 @@ function FormBuilder({
       <Breadcrumbs
         items={[
           only === 'review'
-            ? { label: 'Review forms', href: '/reviewer/cycle/review-forms' }
+            ? {
+                label: 'Review forms',
+                href: cycleHref(cycleId, '/cycle/review-forms'),
+              }
             : {
                 label: 'Application forms',
-                href: '/reviewer/cycle/application',
+                href: cycleHref(cycleId, '/cycle/application-forms'),
               },
           { label: roleLabel(role) },
         ]}

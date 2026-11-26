@@ -8,13 +8,24 @@ import { Tooltip } from '@/components/Tooltip'
 import { useCycleScope } from '@/hooks/useCycleScope'
 import { useWorkflow } from '@/lib/queries/workflow'
 import { cn } from '@/lib/utils'
+import { cycleHref } from '@/lib/cycle-paths'
 import { type Phase, stepActive, toPhases } from './chief-stages'
 import { CycleSwitcher } from './CycleSwitcher'
 
 export function useChiefPhases() {
   const scope = useCycleScope('chief')
   const { data: workflow } = useWorkflow(scope.cycleId)
-  const phases = useMemo(() => toPhases(workflow), [workflow])
+  const phases = useMemo(
+    () =>
+      toPhases(workflow).map((p) => ({
+        ...p,
+        steps: p.steps.map((s) => ({
+          ...s,
+          href: cycleHref(scope.cycleId, s.href),
+        })),
+      })),
+    [workflow, scope.cycleId]
+  )
   return { scope, phases }
 }
 
@@ -52,9 +63,7 @@ export function ChiefCycleNav({ collapsed }: { collapsed?: boolean }) {
 
   useEffect(() => {
     if (!fallback || !scope.cycleId) return
-    router.replace(
-      `${fallback}?${new URLSearchParams({ cycle: scope.cycleId })}`
-    )
+    router.replace(fallback)
   }, [fallback, scope.cycleId, router])
 
   if (phases.length === 0) return null

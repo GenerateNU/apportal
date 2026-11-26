@@ -3,6 +3,7 @@
 import { useMemo, useState, useSyncExternalStore } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { scopeCycles } from '@/lib/cycle-scope'
+import { cycleIdFromPath } from '@/lib/cycle-paths'
 import { defaultPipelineCycleId } from '@/lib/cycles'
 import { useBranches } from '@/lib/queries/branches'
 import { useStaffAccess, useStaffCycles } from '@/lib/queries/cycle-staff'
@@ -52,13 +53,17 @@ export function useCycleScope(mode: 'chief' | 'lead' = 'chief') {
   )
   const isCycle = (id?: string | null): id is string =>
     !!id && cycles.some((c) => c.id === id)
+  const pathCycle = cycleIdFromPath(pathname)
   const urlCycle = params.get('cycle')
   const cycleId =
+    pathCycle ??
     (isCycle(urlCycle) ? urlCycle : null) ??
     (isCycle(stored) ? stored : null) ??
     defaultPipelineCycleId(cycles) ??
     ''
-  const cycle = cycles.find((c) => c.id === cycleId)
+  const cycle =
+    cycles.find((c) => c.id === cycleId) ??
+    allCycles.find((c) => c.id === cycleId)
   const branch = branches.find((b) => b.id === cycle?.branch_id)
 
   const roles = useCycleRoles(cycleId)
@@ -78,8 +83,17 @@ export function useCycleScope(mode: 'chief' | 'lead' = 'chief') {
     } catch {}
     listeners.forEach((l) => l())
     const next = new URLSearchParams(params)
-    next.set('cycle', id)
     next.delete('role')
+    if (pathCycle) {
+      next.delete('cycle')
+      const section = pathname.split('/')[3]
+      const query = next.toString()
+      router.push(
+        `/cycles/${id}${section ? `/${section}` : ''}${query ? `?${query}` : ''}`
+      )
+      return
+    }
+    next.set('cycle', id)
     replaceParams(next)
   }
 

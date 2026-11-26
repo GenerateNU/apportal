@@ -4,7 +4,7 @@ import { withApplyItems } from './nav-sections'
 const apply = [{ href: '/applicant/applications', label: 'My applications' }]
 const myWork = {
   id: 'my-work',
-  items: [{ href: '/reviewer/my-work', label: 'My work' }],
+  items: [{ href: '/my-work', label: 'My work' }],
 }
 const admin = {
   id: 'admin',

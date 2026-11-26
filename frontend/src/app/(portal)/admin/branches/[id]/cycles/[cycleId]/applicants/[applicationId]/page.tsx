@@ -1,4 +1,4 @@
-import { ApplicationFullPage } from '@/app/(portal)/reviewer/applications/[id]/components/ApplicationFullPage'
+import { ApplicationFullPage } from '@/app/(portal)/(staff)/cycles/[cycleId]/applicants/[id]/components/ApplicationFullPage'
 import { getServerRequestOptions } from '@/lib/api/server-request-options'
 import { fetchBranches } from '@/lib/queries/branches'
 import { fetchCycles } from '@/lib/queries/cycles'

@@ -13,16 +13,17 @@ import {
 import { cn } from '@/lib/utils'
 import { isNavItemActive } from './NavItem'
 import { CycleSwitcher } from './CycleSwitcher'
+import { cycleHref } from '@/lib/cycle-paths'
 
-const MY_WORK = '/reviewer/my-work'
+const MY_WORK = '/my-work'
 
 const ALSO: Record<MyWorkPhase['id'], string[]> = {
-  reviews: ['/reviewer/my-reviews'],
-  interviews: ['/reviewer/my-interviews', '/reviewer/interview-script'],
+  reviews: ['/my-reviews'],
+  interviews: ['/my-interviews', '/cycle/interview-script'],
   interviewReviews: [],
-  preference: ['/reviewer/preference-lists'],
-  draft: ['/reviewer/my-work/draft', '/reviewer/draft'],
-  feedback: ['/reviewer/decisions'],
+  preference: ['/cycle/teams'],
+  draft: ['/my-work/draft', '/cycle/draft'],
+  feedback: ['/cycle/feedback'],
 }
 
 export function LeadPhaseNav({ collapsed }: { collapsed?: boolean }) {
@@ -39,12 +40,12 @@ export function LeadPhaseNav({ collapsed }: { collapsed?: boolean }) {
     return ALSO[phase.id].some((h) => isNavItemActive(pathname, h))
   }
 
-  const applicantsActive = isNavItemActive(pathname, '/reviewer/applications')
+  const applicantsActive = isNavItemActive(pathname, '/cycle/applicants')
 
   // e.g. an admin when no chief cycle exists yet.
   if (!cycleId) return null
   // Open at every phase: applicants can be browsed before reviews start.
-  const applicantsHref = `/reviewer/applications?cycle=${cycleId}`
+  const applicantsHref = cycleHref(cycleId, '/cycle/applicants')
 
   if (collapsed) {
     return (

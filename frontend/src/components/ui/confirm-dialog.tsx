@@ -16,6 +16,7 @@ export function ConfirmDialog({
   title,
   description,
   confirmLabel = 'Delete',
+  confirmVariant = 'destructive',
   onConfirm,
   pending,
   children,
@@ -25,6 +26,7 @@ export function ConfirmDialog({
   title: React.ReactNode
   description?: React.ReactNode
   confirmLabel?: string
+  confirmVariant?: 'destructive' | 'default'
   onConfirm: () => void
   pending?: boolean
   children?: React.ReactNode
@@ -41,7 +43,11 @@ export function ConfirmDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button variant="destructive" disabled={pending} onClick={onConfirm}>
+          <Button
+            variant={confirmVariant}
+            disabled={pending}
+            onClick={onConfirm}
+          >
             {pending ? 'Working…' : confirmLabel}
           </Button>
         </DialogFooter>
