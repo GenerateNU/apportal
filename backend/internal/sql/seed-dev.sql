@@ -109,9 +109,9 @@ BEGIN
     (cur, sd, 'Software Designer, Spring 2027', 'Design end-to-end product experiences with our engineering teams.',
      'Share a portfolio and answer every question.');
 
-  INSERT INTO cycle_steps (cycle_id, step, enabled)
-  SELECT c, s, true FROM unnest(ARRAY[cur, past, leads_cycle, design_cycle]) c
-  CROSS JOIN unnest(ARRAY['applications', 'reviews', 'interviews', 'decisions', 'feedback']) s;
+  INSERT INTO cycle_steps (cycle_id, step, enabled, position)
+  SELECT c, s, true, p - 1 FROM unnest(ARRAY[cur, past, leads_cycle, design_cycle]) c
+  CROSS JOIN unnest(ARRAY['applications', 'reviews', 'interviews', 'decisions', 'feedback']) WITH ORDINALITY AS t(s, p);
   INSERT INTO step_assignments (cycle_id, step, kind, per_applicant) VALUES (cur, 'reviews', 'reviewer', 3);
   INSERT INTO opening_steps (cycle_id, role_id, step, released_at)
   SELECT cur, r, s, now() - interval '30 days' FROM unnest(ARRAY[swe, sd]) r CROSS JOIN unnest(ARRAY['applications', 'reviews', 'interviews', 'decisions']) s;

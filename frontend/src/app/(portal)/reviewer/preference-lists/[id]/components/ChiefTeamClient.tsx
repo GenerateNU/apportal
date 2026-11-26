@@ -201,6 +201,7 @@ export function ChiefTeamClient({ id }: { id: string }) {
             submittedAt: openApp.submitted_at,
             returner: openEntry.returner,
           }}
+          fullPageHref={`/reviewer/preference-lists/${id}/applicants/${openApp.id}`}
           onClose={() => setOpenId(null)}
         />
       )}

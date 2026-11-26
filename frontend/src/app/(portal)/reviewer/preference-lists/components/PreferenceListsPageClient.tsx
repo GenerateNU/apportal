@@ -31,7 +31,6 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import {
   useCreatePreferenceList,
   usePreferenceListDeadline,
-  usePreferenceListDetails,
   usePreferenceLists,
   useSetPreferenceListDeadline,
 } from '@/lib/queries/preference-lists'
@@ -40,16 +39,7 @@ import { useCycleRoles, useRoleLookup } from '@/lib/queries/roles'
 export function PreferenceListsPageClient({ isChief }: { isChief: boolean }) {
   const { cycleId } = useCycleScope(isChief ? 'chief' : 'lead')
 
-  const { roleIds, roleLabel } = useCycleRoles(cycleId)
-  const { data: details = [], isLoading: detailsLoading } =
-    usePreferenceListDetails(cycleId)
-  const countsFor = (listId: string) => {
-    const entries = details.find((d) => d.id === listId)?.entries ?? []
-    return roleIds.map((r) => ({
-      label: roleLabel(r),
-      count: entries.filter((e) => e.role_id === r).length,
-    }))
-  }
+  const { roleIds } = useCycleRoles(cycleId)
   const [dialogOpen, setDialogOpen] = useState(false)
   const { data: lists = [] } = usePreferenceLists(cycleId)
 
@@ -162,12 +152,7 @@ export function PreferenceListsPageClient({ isChief }: { isChief: boolean }) {
             ) : (
               <div className={CARD_GRID}>
                 {lists.map((list) => (
-                  <TeamCard
-                    key={list.id}
-                    list={list}
-                    counts={countsFor(list.id)}
-                    countsLoading={detailsLoading}
-                  />
+                  <TeamCard key={list.id} list={list} />
                 ))}
               </div>
             )}

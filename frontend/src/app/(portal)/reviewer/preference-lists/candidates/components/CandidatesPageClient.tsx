@@ -66,6 +66,9 @@ export function CandidatesPageClient() {
             cycleId={cycleId}
             roleId={activeRole}
             listAction={listAction}
+            fullPageHref={(applicationId) =>
+              `/reviewer/preference-lists/candidates/${applicationId}`
+            }
             filterable={false}
           />
         )

@@ -1,6 +1,5 @@
 import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
-import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import type { PreferenceListSummary } from '@/lib/api/types'
 import {
@@ -9,15 +8,7 @@ import {
 } from '@/lib/preference-list-status'
 import { MEETING_DAY_LABEL } from '@/app/(portal)/reviewer/applications/components/meetingAvailability'
 
-export function TeamCard({
-  list,
-  counts,
-  countsLoading,
-}: {
-  list: PreferenceListSummary
-  counts: { label: string; count: number }[]
-  countsLoading?: boolean
-}) {
+export function TeamCard({ list }: { list: PreferenceListSummary }) {
   const people =
     list.member_names.length > 0
       ? list.member_names.join(', ')
@@ -57,27 +48,6 @@ export function TeamCard({
           )}
         </div>
       </div>
-      {counts.length > 0 && (
-        <div
-          className="mt-auto grid divide-x divide-gray-100 border-t border-gray-100"
-          style={{ gridTemplateColumns: `repeat(${counts.length}, 1fr)` }}
-        >
-          {counts.map((c) => (
-            <div key={c.label} className="flex flex-col px-4 py-3">
-              {countsLoading ? (
-                <Skeleton className="my-1 h-5 w-6" />
-              ) : (
-                <span className="text-ink text-lg font-semibold tabular-nums">
-                  {c.count}
-                </span>
-              )}
-              <span className="text-text-subtle truncate text-xs">
-                {c.label}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   )
 }
