@@ -17,6 +17,7 @@ import {
   Tag as TagIcon,
   MessageSquare,
   ChevronRight,
+  Users,
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -49,7 +50,7 @@ export interface AnswerFilter {
 }
 
 export type SpecialFilter =
-  'rating' | 'stage' | 'availability' | 'role' | 'returner' | 'tag'
+  'rating' | 'stage' | 'availability' | 'role' | 'returner' | 'tag' | 'wanted'
 
 const SPECIAL_FILTER_ID: Record<SpecialFilter, string> = {
   tag: '__tag__',
@@ -58,11 +59,15 @@ const SPECIAL_FILTER_ID: Record<SpecialFilter, string> = {
   availability: '__availability__',
   role: '__role__',
   returner: '__returner__',
+  wanted: '__wanted__',
 }
 
 // The two sides of the returner flag, as the checkbox list shows them.
 export const RETURNER_OPTION = 'Returner'
 export const FIRST_TIME_OPTION = 'First-time'
+
+export const WANTED_BY_MANY = 'Two or more teams'
+export const WANTED_BY_NONE = 'No team'
 
 // Synthetic "questions", so the pickers below treat these exactly like a
 // dropdown question and render the same checkbox list.
@@ -123,6 +128,13 @@ const SPECIAL_QUESTIONS: { special: SpecialFilter; question: Question }[] = [
   },
   // Options are the cycle's tag names, filled in at render from tagNames.
   { special: 'tag', question: specialQuestion('tag', 'Tag', []) },
+  {
+    special: 'wanted',
+    question: specialQuestion('wanted', 'Ranked by', [
+      WANTED_BY_MANY,
+      WANTED_BY_NONE,
+    ]),
+  },
 ]
 
 // The tag chip's options depend on the cycle, so it carries them separately.
@@ -170,6 +182,9 @@ interface FilterChipsProps {
   roleOptions?: string[]
   // The cycle's tag names; the Tag filter is only offered when there are some.
   tagNames?: string[]
+  // h-9, to line up with the page's other toolbar controls.
+  size?: 'default' | 'lg'
+  wantedFilter?: boolean
 }
 
 export function FilterChips({
@@ -180,7 +195,10 @@ export function FilterChips({
   hiddenSpecials,
   roleOptions = [],
   tagNames = [],
+  size = 'default',
+  wantedFilter = false,
 }: FilterChipsProps) {
+  const lg = size === 'lg'
   const specials = withRoleOptions(roleOptions)
   const [isOpen, setIsOpen] = useState(false)
   const [filterValues, setFilterValues] = useState<Record<string, FilterValue>>(
@@ -212,6 +230,7 @@ export function FilterChips({
           (special !== 'availability' || hasAvailability) &&
           (special !== 'role' || roleOptions.length > 0) &&
           (special !== 'tag' || tagNames.length > 0) &&
+          (special !== 'wanted' || wantedFilter) &&
           !hiddenSpecials?.includes(special) &&
           !filters.some((f) => f.special === special)
       )
@@ -272,7 +291,11 @@ export function FilterChips({
               setSearchTerm('')
             }}
             className={`text-text-muted inline-flex items-center justify-center rounded-md border border-gray-200 bg-white transition-colors hover:bg-gray-50 ${
-              filters.length === 0 ? 'h-8 gap-1.5 px-2.5 text-xs' : 'size-6'
+              filters.length === 0
+                ? lg
+                  ? 'h-9 gap-1.5 px-3 text-sm'
+                  : 'h-8 gap-1.5 px-2.5 text-xs'
+                : 'size-6'
             }`}
             title="Add filter"
           >
@@ -606,6 +629,7 @@ function getFilterIcon(
   if (special === 'availability') return <Clock {...iconProps} />
   if (special === 'returner') return <Repeat {...iconProps} />
   if (special === 'tag') return <TagIcon {...iconProps} />
+  if (special === 'wanted') return <Users {...iconProps} />
 
   switch (questionType) {
     case 'short_answer':

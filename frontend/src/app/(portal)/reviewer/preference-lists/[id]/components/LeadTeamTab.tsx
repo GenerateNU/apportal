@@ -23,17 +23,22 @@ import { CSS } from '@dnd-kit/utilities'
 import {
   GripVertical,
   Lock,
+  Columns2,
+  ListOrdered,
   MessageSquare,
-  Plus,
+  Pencil,
   Send,
   Undo2,
+  Users,
   X,
 } from 'lucide-react'
 import { ReturnerBadge } from '@/components/ReturnerBadge'
+import { cn } from '@/lib/utils'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { ListActionChip, type ListAction } from '../../components/AddToMyList'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
-import { LoadingText } from '@/components/ui/loading-text'
 import { PanelHeading } from '@/components/ui/panel-heading'
 import {
   Select,
@@ -42,7 +47,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { SearchInput } from '@/components/ui/search-input'
 import type {
   ApplicationSummary,
   InterviewRating,
@@ -52,13 +56,10 @@ import type {
 import { RATING_LABEL } from '@/lib/interview-ratings'
 import {
   useCreatePreferenceListComment,
-  useDeletePersonalPreferenceListEntry,
   useDeletePreferenceListEntry,
-  useReorderPersonalPreferenceListEntries,
   useReorderPreferenceListEntries,
   useUpdatePreferenceList,
   useUpdatePreferenceListComment,
-  useUpsertPersonalPreferenceListEntry,
   useUpsertPreferenceListEntry,
 } from '@/lib/queries/preference-lists'
 import { useRoleLookup } from '@/lib/queries/roles'
@@ -88,9 +89,15 @@ export function RatingChip({ rating }: { rating?: InterviewRating }) {
   )
 }
 
-type Mode = 'team' | 'mine'
-
 const NO_TAGS: CycleTag[] = []
+
+type Layout = 'explore' | 'split' | 'list'
+
+const LAYOUTS: { id: Layout; label: string; Icon: typeof Users }[] = [
+  { id: 'explore', label: 'Explore applicants', Icon: Users },
+  { id: 'list', label: 'Our list', Icon: ListOrdered },
+  { id: 'split', label: 'Side by side', Icon: Columns2 },
+]
 
 type RankedEntry = {
   id: string
@@ -105,7 +112,6 @@ export function LeadTeamTab({
   role,
   roleIds,
   pool,
-  poolLoading,
   groups,
   ratings,
   closesAtByRole,
@@ -113,12 +119,12 @@ export function LeadTeamTab({
   initialTeamId,
   onOpenApplicant,
   roleTabs,
+  renderExplorer,
 }: {
   list: PreferenceListDetail
   role: string
   roleIds: string[]
   pool: ApplicationSummary[]
-  poolLoading?: boolean
   groups: PreferenceListDetail[]
   ratings: Record<string, InterviewRating | undefined>
   closesAtByRole: Record<string, string | undefined>
@@ -126,6 +132,7 @@ export function LeadTeamTab({
   initialTeamId?: string
   onOpenApplicant: (applicationId: string) => void
   roleTabs?: React.ReactNode
+  renderExplorer: (listAction: ListAction) => React.ReactNode
 }) {
   const { roleLabel } = useRoleLookup()
   const { data: cycleTags = [] } = useCycleTags(list.cycle_id)
@@ -141,7 +148,7 @@ export function LeadTeamTab({
   )
   const tagsFor = (applicationId: string) =>
     tagsByApp.get(applicationId) ?? NO_TAGS
-  const [mode, setMode] = useState<Mode>('team')
+  const [layout, setLayout] = useState<Layout>('split')
   const [viewingId, setViewingId] = useState(initialTeamId ?? list.id)
   const otherTeams = useMemo(
     () =>
@@ -164,15 +171,11 @@ export function LeadTeamTab({
   const viewingEntries = (viewing?.entries ?? [])
     .filter((e) => e.role_id === role)
     .sort((a, b) => a.rank - b.rank)
-  const [query, setQuery] = useState('')
 
   const updateList = useUpdatePreferenceList()
   const upsertEntry = useUpsertPreferenceListEntry()
   const deleteEntry = useDeletePreferenceListEntry()
   const reorderEntries = useReorderPreferenceListEntries()
-  const upsertPersonal = useUpsertPersonalPreferenceListEntry()
-  const deletePersonal = useDeletePersonalPreferenceListEntry()
-  const reorderPersonal = useReorderPersonalPreferenceListEntries()
   const createComment = useCreatePreferenceListComment()
   const updateComment = useUpdatePreferenceListComment()
 
@@ -185,23 +188,12 @@ export function LeadTeamTab({
   const groupLocked =
     roleIds.length > 0 &&
     roleIds.every((r) => deadlinePassed(closesAtByRole[r]))
-  const isTeam = mode === 'team'
-  const locked = isTeam ? roleLocked : false
+  const locked = roleLocked
 
   const entries: RankedEntry[] = useMemo(
-    () =>
-      isTeam
-        ? list.entries.filter((e) => e.role_id === role)
-        : list.personal_entries.filter(
-            (e) => e.role_id === role && e.owner_nuid === currentUserNuid
-          ),
-    [isTeam, list.entries, list.personal_entries, role, currentUserNuid]
+    () => list.entries.filter((e) => e.role_id === role),
+    [list.entries, role]
   )
-  const onList = useMemo(
-    () => new Set(entries.map((e) => e.application_id)),
-    [entries]
-  )
-
   const alsoOn = useMemo(() => {
     const out = new Map<string, { team: string; rank: number }[]>()
     for (const g of groups) {
@@ -219,39 +211,34 @@ export function LeadTeamTab({
     return out
   }, [groups, list.id, role])
 
-  const q = query.trim().toLowerCase()
-  const unlisted = useMemo(
-    () =>
-      pool
-        .filter((a) => !onList.has(a.id))
-        .sort((a, b) =>
-          (a.full_name || a.user_nuid).localeCompare(b.full_name || b.user_nuid)
-        ),
-    [pool, onList]
-  )
-  const available = q
-    ? unlisted.filter((a) =>
-        (a.full_name || a.user_nuid).toLowerCase().includes(q)
-      )
-    : unlisted
-  const poolRemaining = unlisted.length
-
   function add(applicationId: string) {
-    const vars = { listId: list.id, applicationId }
-    if (isTeam) upsertEntry.mutate(vars)
-    else upsertPersonal.mutate(vars)
+    upsertEntry.mutate({ listId: list.id, applicationId })
   }
 
   function remove(applicationId: string) {
-    const vars = { listId: list.id, applicationId }
-    if (isTeam) deleteEntry.mutate(vars)
-    else deletePersonal.mutate(vars)
+    deleteEntry.mutate({ listId: list.id, applicationId })
+  }
+
+  const rankOf = new Map(entries.map((e, i) => [e.application_id, i + 1]))
+  const pendingId = [upsertEntry, deleteEntry].find((m) => m.isPending)
+    ?.variables?.applicationId
+  const listAction: ListAction = {
+    listId: list.id,
+    render: (applicationId, variant) => (
+      <ListActionChip
+        variant={variant}
+        rank={rankOf.get(applicationId)}
+        listName={list.name}
+        locked={locked}
+        pending={pendingId === applicationId}
+        onAdd={() => add(applicationId)}
+        onRemove={() => remove(applicationId)}
+      />
+    ),
   }
 
   function saveReasoning(applicationId: string, reasoning: string) {
-    const vars = { listId: list.id, applicationId, reasoning }
-    if (isTeam) upsertEntry.mutate(vars)
-    else upsertPersonal.mutate(vars)
+    upsertEntry.mutate({ listId: list.id, applicationId, reasoning })
   }
 
   function handleDragEnd({ active, over }: DragEndEvent) {
@@ -263,28 +250,59 @@ export function LeadTeamTab({
     const next = [...ids]
     const [moved] = next.splice(from, 1)
     next.splice(to, 0, moved)
-    const vars = { listId: list.id, applicationIds: next }
-    if (isTeam) reorderEntries.mutate(vars)
-    else reorderPersonal.mutate(vars)
+    reorderEntries.mutate({ listId: list.id, applicationIds: next })
   }
 
   const submitted = list.status === 'submitted'
+  const [confirmingSubmit, setConfirmingSubmit] = useState(false)
+  function setStatus(status: 'draft' | 'submitted') {
+    updateList.mutate(
+      { id: list.id, cycleId: list.cycle_id, body: { status } },
+      { onSuccess: () => setConfirmingSubmit(false) }
+    )
+  }
+  const countsByRole = roleIds.map((r) => ({
+    id: r,
+    label: roleLabel(r),
+    count: list.entries.filter((e) => e.role_id === r).length,
+  }))
+  const emptyRoles = countsByRole.filter((r) => r.count === 0)
   return (
     <div className="flex flex-col gap-8">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-3 border-b border-gray-200 pb-4">
+      <div className="flex flex-wrap items-end gap-x-4 gap-y-3 border-b border-gray-200">
         {roleTabs}
         <span className="flex-1" />
+        <div
+          role="radiogroup"
+          aria-label="Layout"
+          className="mb-3 inline-flex h-9 border border-gray-200 bg-white"
+        >
+          {LAYOUTS.map(({ id, label, Icon }) => (
+            <button
+              key={id}
+              type="button"
+              role="radio"
+              aria-checked={layout === id}
+              onClick={() => setLayout(id)}
+              className={cn(
+                'flex items-center gap-1.5 px-3 text-sm whitespace-nowrap transition-colors not-last:border-r not-last:border-gray-200',
+                layout === id
+                  ? 'text-ink bg-gray-100 font-medium'
+                  : 'text-text-muted hover:text-ink'
+              )}
+            >
+              <Icon size={14} />
+              {label}
+            </button>
+          ))}
+        </div>
         <Button
           variant={submitted ? 'brutal' : 'brutal-ink'}
           size="lg"
-          className="px-4"
+          className="mb-3 px-4"
           disabled={groupLocked || updateList.isPending}
           onClick={() =>
-            updateList.mutate({
-              id: list.id,
-              cycleId: list.cycle_id,
-              body: { status: submitted ? 'draft' : 'submitted' },
-            })
+            submitted ? setStatus('draft') : setConfirmingSubmit(true)
           }
         >
           {submitted ? (
@@ -303,241 +321,207 @@ export function LeadTeamTab({
         <p className="text-text-muted flex items-center gap-2 border border-gray-200 px-4 py-3 text-sm">
           <Lock size={14} className="shrink-0" />
           The {roleLabel(role)} deadline has passed, so the team list is
-          read-only. Your own picks stay editable.
+          read-only.
         </p>
       )}
 
-      <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
-        <section className="flex min-w-0 flex-col gap-3">
-          <PanelHeading
-            aside={poolLoading ? undefined : `${poolRemaining} in selection`}
-          >
-            Pool
-          </PanelHeading>
-          <SearchInput
-            value={query}
-            onChange={setQuery}
-            placeholder="Search applicants"
-            className="sm:w-full"
-          />
-          {poolLoading ? (
-            <LoadingText />
-          ) : available.length === 0 ? (
-            <EmptyState
-              size="sm"
-              title={
-                q
-                  ? 'No applicants match that search.'
-                  : `Everyone in ${roleLabel(role)} selection is on this list.`
-              }
-            />
-          ) : (
-            <ul className="border border-gray-200">
-              {available.map((a) => {
-                const others = alsoOn.get(a.id)?.length ?? 0
-                return (
-                  <li
-                    key={a.id}
-                    className="flex min-w-0 items-center gap-3 px-4 py-3 not-first:border-t not-first:border-gray-200"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => onOpenApplicant(a.id)}
-                          className="text-ink min-w-0 text-left text-sm font-semibold wrap-anywhere underline-offset-2 hover:underline"
-                        >
-                          {a.full_name || a.user_nuid}
-                        </button>
-                        {a.returner && <ReturnerBadge />}
-                      </div>
-                      <div className="text-text-muted mt-1 flex flex-wrap items-center gap-1.5 text-xs">
-                        <RatingChip rating={ratings[a.id]} />
-                        {tagsFor(a.id).map((t) => (
-                          <TagPill key={t.id} tag={t} />
-                        ))}
-                        {others > 0 && (
-                          <Badge size="sm" className="bg-red-50 text-red-700">
-                            Ranked by {others} other team
-                            {others === 1 ? '' : 's'}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                    {!locked && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => add(a.id)}
-                        aria-label={`Add ${a.full_name || a.user_nuid}`}
-                      >
-                        <Plus />
-                        Add
-                      </Button>
-                    )}
-                  </li>
-                )
-              })}
-            </ul>
-          )}
+      <div
+        className={cn(
+          'grid items-start gap-6',
+          layout === 'split' && 'xl:grid-cols-[minmax(0,1fr)_26rem]'
+        )}
+      >
+        <section className={cn('min-w-0', layout === 'list' && 'hidden')}>
+          {renderExplorer(listAction)}
         </section>
-
-        <section className="flex min-w-0 flex-col gap-3">
-          <PanelHeading
-            action={
-              <>
-                {!viewing && (
-                  <button
-                    type="button"
-                    onClick={() => setMode(isTeam ? 'mine' : 'team')}
-                    className="text-text-muted hover:text-ink text-sm underline-offset-2 hover:underline"
-                  >
-                    {isTeam ? 'Open my picks' : 'Back to team list'}
-                  </button>
-                )}
-                {otherTeams.length > 0 && (
-                  <Select value={viewingId} onValueChange={setViewingId}>
-                    <SelectTrigger
-                      aria-label="Whose ranking to show"
-                      className="h-8 w-44 text-xs font-normal"
-                    >
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent align="end">
-                      <SelectItem value={list.id}>
-                        {list.name} (yours)
-                      </SelectItem>
-                      {otherTeams.map((g) => (
-                        <SelectItem key={g.id} value={g.id}>
-                          {g.name}
+        {layout !== 'explore' && (
+          <aside
+            className={cn(
+              'flex min-w-0 flex-col gap-3',
+              layout === 'split' &&
+                'xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:border-l xl:border-gray-200 xl:pl-6'
+            )}
+          >
+            <PanelHeading
+              action={
+                <>
+                  {otherTeams.length > 0 && (
+                    <Select value={viewingId} onValueChange={setViewingId}>
+                      <SelectTrigger
+                        aria-label="Whose ranking to show"
+                        className="h-8 w-44 text-xs font-normal"
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent align="end">
+                        <SelectItem value={list.id}>
+                          {list.name} (yours)
                         </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              </>
-            }
-          >
-            {viewing ? viewing.name : isTeam ? 'Our ranking' : 'My picks'}
-          </PanelHeading>
-          {viewing ? (
-            viewingEntries.length === 0 ? (
-              <EmptyState
-                size="sm"
-                title={`${viewing.name} hasn't ranked anyone for ${roleLabel(role)} yet.`}
-              />
-            ) : (
-              <ol className="border border-gray-200">
-                {viewingEntries.map((e, i) => (
-                  <li
-                    key={e.id}
-                    className="flex min-w-0 items-start gap-3 px-4 py-3 not-first:border-t not-first:border-gray-200"
-                  >
-                    <span className="font-display text-ink w-6 shrink-0 pt-0.5 text-center text-sm font-bold">
-                      {i + 1}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <button
-                        type="button"
-                        onClick={() => onOpenApplicant(e.application_id)}
-                        className="text-ink min-w-0 text-left text-sm font-semibold wrap-anywhere underline-offset-2 hover:underline"
-                      >
-                        {e.full_name}
-                      </button>
-                      <div className="text-text-muted mt-1 flex flex-wrap items-center gap-1.5 text-xs">
-                        <RatingChip rating={ratings[e.application_id]} />
-                        {tagsFor(e.application_id).map((t) => (
-                          <TagPill key={t.id} tag={t} />
+                        {otherTeams.map((g) => (
+                          <SelectItem key={g.id} value={g.id}>
+                            {g.name}
+                          </SelectItem>
                         ))}
-                        {ourRank.has(e.application_id) && (
-                          <Badge size="sm" className="bg-ink text-white">
-                            #{ourRank.get(e.application_id)} on yours
-                          </Badge>
-                        )}
-                      </div>
-                      {e.reasoning && (
-                        <p className="text-text-muted mt-1 text-sm wrap-anywhere">
-                          {e.reasoning}
-                        </p>
-                      )}
-                    </div>
-                  </li>
-                ))}
-              </ol>
-            )
-          ) : entries.length === 0 ? (
-            <EmptyState
-              size="sm"
-              title={
-                locked
-                  ? 'Nobody was ranked before the deadline.'
-                  : 'Add applicants from the pool to start ranking.'
+                      </SelectContent>
+                    </Select>
+                  )}
+                </>
               }
-            />
-          ) : (
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleDragEnd}
             >
-              <SortableContext
-                items={entries.map((e) => e.application_id)}
-                strategy={verticalListSortingStrategy}
-              >
-                <ol className="border border-gray-200">
-                  {entries.map((entry, i) => (
-                    <RankRow
-                      key={entry.id}
-                      entry={entry}
-                      index={i}
-                      locked={locked}
-                      rating={ratings[entry.application_id]}
-                      tags={tagsFor(entry.application_id)}
-                      alsoOn={alsoOn.get(entry.application_id) ?? []}
-                      comments={
-                        isTeam
-                          ? list.comments.filter(
-                              (c) => c.application_id === entry.application_id
-                            )
-                          : undefined
-                      }
-                      currentUserNuid={currentUserNuid}
-                      onOpen={() => onOpenApplicant(entry.application_id)}
-                      onRemove={() => remove(entry.application_id)}
-                      onSaveReasoning={(r) =>
-                        saveReasoning(entry.application_id, r)
-                      }
-                      onAddComment={(body) =>
-                        createComment.mutate({
-                          listId: list.id,
-                          applicationId: entry.application_id,
-                          body,
-                        })
-                      }
-                      onEditComment={(commentId, body) =>
-                        updateComment.mutate({
-                          listId: list.id,
-                          commentId,
-                          body,
-                        })
-                      }
-                      isAddingComment={createComment.isPending}
-                      isEditingComment={updateComment.isPending}
-                    />
-                  ))}
-                </ol>
-              </SortableContext>
-            </DndContext>
-          )}
-          {(viewing || !isTeam) && (
-            <p className="text-text-subtle text-sm">
-              {viewing
-                ? `View only. ${viewing.status === 'submitted' ? 'Submitted' : 'Still a draft'}.`
-                : 'Your scratchpad. Your team can see it, only you can edit it.'}
-            </p>
-          )}
-        </section>
+              {viewing ? viewing.name : 'Our ranking'}
+            </PanelHeading>
+            <div
+              className={cn(
+                'flex min-h-0 flex-col gap-3',
+                layout === 'split' &&
+                  'max-h-[70vh] overflow-y-auto xl:max-h-none xl:flex-1'
+              )}
+            >
+              {viewing ? (
+                viewingEntries.length === 0 ? (
+                  <EmptyState
+                    size="sm"
+                    title={`${viewing.name} hasn't ranked anyone for ${roleLabel(role)} yet.`}
+                  />
+                ) : (
+                  <ol className="border border-gray-200">
+                    {viewingEntries.map((e, i) => (
+                      <li
+                        key={e.id}
+                        className="flex min-w-0 items-start gap-3 px-4 py-3 not-first:border-t not-first:border-gray-200"
+                      >
+                        <span className="font-display text-ink w-6 shrink-0 pt-0.5 text-center text-sm font-bold">
+                          {i + 1}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <button
+                            type="button"
+                            onClick={() => onOpenApplicant(e.application_id)}
+                            className="text-ink min-w-0 text-left text-sm font-semibold wrap-anywhere underline-offset-2 hover:underline"
+                          >
+                            {e.full_name}
+                          </button>
+                          <div className="text-text-muted mt-1 flex flex-wrap items-center gap-1.5 text-xs">
+                            <RatingChip rating={ratings[e.application_id]} />
+                            {tagsFor(e.application_id).map((t) => (
+                              <TagPill key={t.id} tag={t} />
+                            ))}
+                            {ourRank.has(e.application_id) && (
+                              <Badge size="sm" className="bg-ink text-white">
+                                #{ourRank.get(e.application_id)} on yours
+                              </Badge>
+                            )}
+                          </div>
+                          {e.reasoning && (
+                            <p className="text-text-muted mt-1 text-sm wrap-anywhere">
+                              {e.reasoning}
+                            </p>
+                          )}
+                        </div>
+                      </li>
+                    ))}
+                  </ol>
+                )
+              ) : entries.length === 0 ? (
+                <EmptyState
+                  size="sm"
+                  title={
+                    locked
+                      ? 'Nobody was ranked before the deadline.'
+                      : 'Add applicants from the left to start ranking.'
+                  }
+                />
+              ) : (
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                >
+                  <SortableContext
+                    items={entries.map((e) => e.application_id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <ol className="border border-gray-200">
+                      {entries.map((entry, i) => (
+                        <RankRow
+                          key={entry.id}
+                          entry={entry}
+                          index={i}
+                          locked={locked}
+                          rating={ratings[entry.application_id]}
+                          tags={tagsFor(entry.application_id)}
+                          alsoOn={alsoOn.get(entry.application_id) ?? []}
+                          comments={list.comments.filter(
+                            (c) => c.application_id === entry.application_id
+                          )}
+                          currentUserNuid={currentUserNuid}
+                          onOpen={() => onOpenApplicant(entry.application_id)}
+                          onRemove={() => remove(entry.application_id)}
+                          onSaveReasoning={(r) =>
+                            saveReasoning(entry.application_id, r)
+                          }
+                          onAddComment={(body) =>
+                            createComment.mutate({
+                              listId: list.id,
+                              applicationId: entry.application_id,
+                              body,
+                            })
+                          }
+                          onEditComment={(commentId, body) =>
+                            updateComment.mutate({
+                              listId: list.id,
+                              commentId,
+                              body,
+                            })
+                          }
+                          isAddingComment={createComment.isPending}
+                          isEditingComment={updateComment.isPending}
+                        />
+                      ))}
+                    </ol>
+                  </SortableContext>
+                </DndContext>
+              )}
+            </div>
+          </aside>
+        )}
       </div>
+
+      <ConfirmDialog
+        open={confirmingSubmit}
+        onOpenChange={setConfirmingSubmit}
+        title={`Submit ${list.name}'s list?`}
+        description="Chiefs will use this ranking in the draft. You can move it back to draft until the deadline."
+        confirmLabel="Submit team list"
+        confirmVariant="default"
+        pending={updateList.isPending}
+        onConfirm={() => setStatus('submitted')}
+      >
+        <ul className="border border-gray-200 text-sm">
+          {countsByRole.map((r) => (
+            <li
+              key={r.id}
+              className="flex items-center justify-between px-3 py-2 not-first:border-t not-first:border-gray-200"
+            >
+              <span className="text-ink">{r.label}</span>
+              <span
+                className={cn(
+                  'tabular-nums',
+                  r.count === 0 ? 'font-medium text-red-700' : 'text-text-muted'
+                )}
+              >
+                {r.count === 0 ? 'No one ranked' : `${r.count} ranked`}
+              </span>
+            </li>
+          ))}
+        </ul>
+        {emptyRoles.length > 0 && (
+          <p className="text-sm text-red-700">
+            {emptyRoles.map((r) => r.label).join(' and ')}{' '}
+            {emptyRoles.length === 1 ? 'has' : 'have'} no one ranked yet.
+          </p>
+        )}
+      </ConfirmDialog>
     </div>
   )
 }
@@ -576,11 +560,11 @@ function RankRow({
   isEditingComment: boolean
 }) {
   const [reasoning, setReasoning] = useState(entry.reasoning ?? '')
-  const [focused, setFocused] = useState(false)
+  const [editing, setEditing] = useState(false)
   const [prevReasoning, setPrevReasoning] = useState(entry.reasoning)
   if (entry.reasoning !== prevReasoning) {
     setPrevReasoning(entry.reasoning)
-    if (!focused) setReasoning(entry.reasoning ?? '')
+    if (!editing) setReasoning(entry.reasoning ?? '')
   }
   const [threadOpen, setThreadOpen] = useState(false)
 
@@ -608,7 +592,7 @@ function RankRow({
           {index + 1}
         </span>
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-1.5">
+          <div className="flex items-center gap-1.5">
             <button
               type="button"
               onClick={onOpen}
@@ -617,6 +601,52 @@ function RankRow({
               {entry.full_name}
             </button>
             {entry.returner && <ReturnerBadge />}
+            <span className="flex-1" />
+            <div className="-my-1 -mr-1 flex shrink-0 items-center gap-0.5">
+              {comments && (
+                <button
+                  type="button"
+                  onClick={() => setThreadOpen((v) => !v)}
+                  aria-expanded={threadOpen}
+                  aria-label={
+                    comments.length === 0
+                      ? 'Comment'
+                      : `${comments.length} comment${comments.length === 1 ? '' : 's'}`
+                  }
+                  title="Comments"
+                  className={cn(
+                    'inline-flex items-center gap-1 p-1 text-xs tabular-nums transition-colors',
+                    threadOpen || comments.length > 0
+                      ? 'text-ink'
+                      : 'text-text-subtle hover:text-ink'
+                  )}
+                >
+                  <MessageSquare size={15} />
+                  {comments.length > 0 && comments.length}
+                </button>
+              )}
+              {!locked && (
+                <>
+                  <button
+                    type="button"
+                    aria-label={`Reorder ${entry.full_name}`}
+                    className="text-text-subtle hover:text-ink cursor-grab touch-none p-1 active:cursor-grabbing"
+                    {...attributes}
+                    {...listeners}
+                  >
+                    <GripVertical size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onRemove}
+                    aria-label={`Remove ${entry.full_name}`}
+                    className="text-text-subtle p-1 hover:text-red-700"
+                  >
+                    <X size={16} />
+                  </button>
+                </>
+              )}
+            </div>
           </div>
           <div className="text-text-muted mt-1 flex flex-wrap items-center gap-1.5 text-xs">
             <RatingChip rating={rating} />
@@ -624,64 +654,73 @@ function RankRow({
               <TagPill key={t.id} tag={t} />
             ))}
             {alsoOn.length > 0 && (
-              <Badge size="sm" className="bg-red-50 text-red-700">
-                Also on {alsoOn.map((o) => `${o.team} #${o.rank}`).join(', ')}
-              </Badge>
-            )}
-            {comments && (
-              <button
-                type="button"
-                onClick={() => setThreadOpen((v) => !v)}
-                aria-expanded={threadOpen}
-                className="hover:text-ink inline-flex items-center gap-1"
-              >
-                <MessageSquare size={12} />
-                {comments.length === 0
-                  ? 'Comment'
-                  : `${comments.length} comment${comments.length === 1 ? '' : 's'}`}
-              </button>
+              <span className="flex w-full items-start gap-1 text-xs text-red-700">
+                <Users size={12} className="mt-0.5 shrink-0" />
+                <span>
+                  Also on{' '}
+                  {alsoOn.map((o, i) => (
+                    <span key={o.team} className="whitespace-nowrap">
+                      {o.team} #{o.rank}
+                      {i < alsoOn.length - 1 && ', '}
+                    </span>
+                  ))}
+                </span>
+              </span>
             )}
           </div>
-          <input
-            value={reasoning}
-            onChange={(e) => setReasoning(e.target.value)}
-            onFocus={() => setFocused(true)}
-            onBlur={() => {
-              setFocused(false)
-              if (reasoning !== (entry.reasoning ?? '')) {
-                onSaveReasoning(reasoning)
-              }
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') e.currentTarget.blur()
-            }}
-            disabled={locked}
-            placeholder={locked ? '' : 'Why this spot?'}
-            aria-label={`Why ${entry.full_name} is ranked here`}
-            className="text-text-muted placeholder:text-text-subtle focus:border-ink focus:text-ink mt-2 w-full border-0 border-b border-dashed border-gray-300 bg-transparent px-0 py-0.5 text-sm outline-none disabled:border-transparent"
-          />
+          <div className="mt-2 text-sm">
+            <div className="min-w-0">
+              {editing ? (
+                <textarea
+                  autoFocus
+                  rows={2}
+                  value={reasoning}
+                  onChange={(e) => setReasoning(e.target.value)}
+                  onBlur={() => {
+                    setEditing(false)
+                    if (reasoning !== (entry.reasoning ?? '')) {
+                      onSaveReasoning(reasoning)
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault()
+                      e.currentTarget.blur()
+                    }
+                    if (e.key === 'Escape') {
+                      setReasoning(entry.reasoning ?? '')
+                      setEditing(false)
+                    }
+                  }}
+                  placeholder="Why are they at this spot?"
+                  aria-label={`Why ${entry.full_name} is ranked here`}
+                  className="text-ink placeholder:text-text-subtle focus:border-ink w-full resize-none border border-gray-200 bg-white px-2 py-1.5 text-sm outline-none"
+                />
+              ) : reasoning ? (
+                <button
+                  type="button"
+                  disabled={locked}
+                  onClick={() => setEditing(true)}
+                  title={locked ? undefined : 'Edit reason'}
+                  className="text-text-default enabled:hover:text-ink w-full border-l-2 border-gray-300 pl-2 text-left wrap-anywhere"
+                >
+                  {reasoning}
+                </button>
+              ) : (
+                !locked && (
+                  <button
+                    type="button"
+                    onClick={() => setEditing(true)}
+                    className="text-text-subtle hover:text-ink inline-flex items-center gap-1.5"
+                  >
+                    <Pencil size={12} />
+                    Add a reason
+                  </button>
+                )
+              )}
+            </div>
+          </div>
         </div>
-        {!locked && (
-          <div className="flex shrink-0 items-center gap-1">
-            <button
-              type="button"
-              aria-label={`Reorder ${entry.full_name}`}
-              className="text-text-subtle hover:text-ink cursor-grab touch-none p-1 active:cursor-grabbing"
-              {...attributes}
-              {...listeners}
-            >
-              <GripVertical size={16} />
-            </button>
-            <button
-              type="button"
-              onClick={onRemove}
-              aria-label={`Remove ${entry.full_name}`}
-              className="text-text-subtle p-1 hover:text-red-700"
-            >
-              <X size={16} />
-            </button>
-          </div>
-        )}
       </div>
       {comments && threadOpen && (
         <div className="border-t border-gray-200 pt-3 sm:pl-10">

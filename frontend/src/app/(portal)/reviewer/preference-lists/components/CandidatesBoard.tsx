@@ -8,12 +8,16 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { TagPill } from '@/components/ui/tag-select'
 import type { InterviewRating } from '@/lib/api/types'
 import { RATING_COLORS, RATING_OPTIONS } from '@/lib/interview-ratings'
-import { useApplications } from '@/lib/queries/applications'
+import {
+  useApplications,
+  type ApplicationListParams,
+} from '@/lib/queries/applications'
 import { useInterviewsByApplicationIds } from '@/lib/queries/interviews'
 import { usePreferenceListDetails } from '@/lib/queries/preference-lists'
 import { useCycleTags } from '@/lib/queries/tags'
 import { cn } from '@/lib/utils'
 import { ApplicationDetail } from '../../applications/components/ApplicationDetail'
+import { matchesWanted, type ListAction } from './AddToMyList'
 
 type Want = { team: string; rank: number }
 
@@ -26,16 +30,38 @@ const COLUMNS: { value: InterviewRating | 'unrated'; label: string }[] = [
 export function CandidatesBoard({
   cycleId,
   roleId,
+  filterParams,
+  filtered,
+  search = '',
+  listAction,
+  wanted = [],
+  fullPageHref,
 }: {
   cycleId: string
   roleId: string
+  filterParams: ApplicationListParams
+  filtered: boolean
+  search?: string
+  listAction?: ListAction
+  wanted?: string[]
+  fullPageHref?: (applicationId: string) => string
 }) {
-  const { data: apps = [], isLoading } = useApplications(
-    { cycle_id: cycleId, role_id: roleId, stages: 'selection' },
+  const { data: fetched = [], isLoading } = useApplications(
+    { cycle_id: cycleId, ...filterParams, stages: 'selection' },
     undefined,
     { enabled: !!cycleId && !!roleId }
   )
-  const ids = useMemo(() => apps.map((a) => a.id), [apps])
+  const ids = useMemo(() => fetched.map((a) => a.id), [fetched])
+  const q = search.trim().toLowerCase()
+  const apps = useMemo(
+    () =>
+      q
+        ? fetched.filter((a) =>
+            (a.full_name || a.user_nuid).toLowerCase().includes(q)
+          )
+        : fetched,
+    [fetched, q]
+  )
   const { data: interviews = {}, isLoading: interviewsLoading } =
     useInterviewsByApplicationIds(ids)
   const { data: lists = [] } = usePreferenceListDetails(cycleId)
@@ -59,24 +85,33 @@ export function CandidatesBoard({
 
   if (isLoading || interviewsLoading) {
     return (
-      <div
-        role="status"
-        aria-label="Loading"
-        className="grid grid-cols-[repeat(5,minmax(13rem,1fr))] gap-3 overflow-x-auto pb-2"
-      >
-        {Array.from({ length: 5 }, (_, i) => (
-          <div key={i} className="flex flex-col gap-2">
-            <Skeleton className="h-5 w-20" />
-            {Array.from({ length: 3 }, (_, j) => (
-              <Skeleton key={j} className="h-16 w-full" />
-            ))}
-          </div>
-        ))}
-      </div>
+      <>
+        <div
+          role="status"
+          aria-label="Loading"
+          className="grid grid-cols-[repeat(5,minmax(12rem,1fr))] gap-3 overflow-x-auto pb-2"
+        >
+          {Array.from({ length: 5 }, (_, i) => (
+            <div key={i} className="flex flex-col gap-2">
+              <Skeleton className="h-5 w-20" />
+              {Array.from({ length: 3 }, (_, j) => (
+                <Skeleton key={j} className="h-16 w-full" />
+              ))}
+            </div>
+          ))}
+        </div>
+      </>
     )
   }
 
   if (apps.length === 0) {
+    if (filtered || q) {
+      return (
+        <>
+          <EmptyState title="No one matches" />
+        </>
+      )
+    }
     return (
       <EmptyState
         title="No one is in Decisions for this position yet"
@@ -90,9 +125,13 @@ export function CandidatesBoard({
 
   return (
     <>
-      <div className="grid min-h-0 grid-cols-[repeat(6,minmax(13rem,1fr))] gap-3 overflow-x-auto pb-2">
+      <div className="grid min-h-0 grid-cols-[repeat(6,minmax(12rem,1fr))] gap-3 overflow-x-auto pb-2">
         {COLUMNS.map((col) => {
-          const cards = apps.filter((a) => ratingOf(a.id) === col.value)
+          const cards = apps.filter(
+            (a) =>
+              ratingOf(a.id) === col.value &&
+              matchesWanted(wants.get(a.id)?.length ?? 0, wanted)
+          )
           if (col.value === 'unrated' && cards.length === 0) return null
           const tone = col.value === 'unrated' ? null : RATING_COLORS[col.value]
           return (
@@ -118,50 +157,57 @@ export function CandidatesBoard({
                     (x, y) => x.rank - y.rank
                   )
                   return (
-                    <button
+                    <div
                       key={a.id}
-                      type="button"
-                      onClick={() => setOpen(a.id)}
-                      className="flex flex-col gap-1.5 border border-gray-200 bg-white p-3 text-left transition-colors hover:border-gray-300 hover:bg-gray-50"
+                      className="flex flex-col gap-2 border border-gray-200 bg-white p-3 transition-colors hover:border-gray-300 hover:bg-gray-50"
                     >
-                      <span className="flex items-center justify-between gap-2">
-                        <span className="text-ink truncate text-sm font-medium">
-                          {a.full_name}
+                      <button
+                        type="button"
+                        onClick={() => setOpen(a.id)}
+                        className="flex flex-col gap-1.5 text-left"
+                      >
+                        <span className="flex items-center justify-between gap-2">
+                          <span className="text-ink truncate text-sm font-medium">
+                            {a.full_name}
+                          </span>
+                          {w.length > 1 && (
+                            <Flame
+                              size={13}
+                              className="shrink-0 text-orange-500"
+                              aria-label="Wanted by more than one team"
+                            />
+                          )}
                         </span>
-                        {w.length > 1 && (
-                          <Flame
-                            size={13}
-                            className="shrink-0 text-orange-500"
-                            aria-label="Wanted by more than one team"
-                          />
-                        )}
-                      </span>
-                      <span className="text-text-muted text-xs">
-                        {w.length === 0 ? (
-                          'No team has ranked them'
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5">
-                            <Badge size="sm" className="tabular-nums">
-                              #{w[0].rank}
-                            </Badge>
-                            {w[0].team}
-                            {w.length > 1 && (
-                              <span className="text-text-faint">
-                                +{w.length - 1} more
-                              </span>
-                            )}
+                        <span className="text-text-muted text-xs">
+                          {w.length === 0 ? (
+                            'No team has ranked them'
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5">
+                              <Badge size="sm" className="tabular-nums">
+                                #{w[0].rank}
+                              </Badge>
+                              {w[0].team}
+                              {w.length > 1 && (
+                                <span className="text-text-faint">
+                                  +{w.length - 1} more
+                                </span>
+                              )}
+                            </span>
+                          )}
+                        </span>
+                        {(a.tag_ids ?? []).length > 0 && (
+                          <span className="flex flex-wrap gap-1">
+                            {(a.tag_ids ?? []).map((t) => {
+                              const tag = tagById.get(t)
+                              return tag ? <TagPill key={t} tag={tag} /> : null
+                            })}
                           </span>
                         )}
-                      </span>
-                      {(a.tag_ids ?? []).length > 0 && (
-                        <span className="flex flex-wrap gap-1">
-                          {(a.tag_ids ?? []).map((t) => {
-                            const tag = tagById.get(t)
-                            return tag ? <TagPill key={t} tag={tag} /> : null
-                          })}
-                        </span>
+                      </button>
+                      {listAction && (
+                        <span className="flex">{listAction.render(a.id)}</span>
                       )}
-                    </button>
+                    </div>
                   )
                 })}
               </div>
@@ -183,6 +229,7 @@ export function CandidatesBoard({
             submittedAt: opened.submitted_at,
             returner: !!opened.returner,
           }}
+          fullPageHref={fullPageHref?.(opened.id)}
           onClose={() => setOpen(null)}
         />
       )}

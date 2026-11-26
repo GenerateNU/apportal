@@ -4,38 +4,62 @@ import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Skeleton } from '@/components/ui/skeleton'
-import { SegmentedTabs } from '@/components/ui/segmented-tabs'
 import { TABLE_FRAME, TABLE_HEAD } from '@/components/ui/table-styles'
 import { RATING_COLORS, RATING_LABEL } from '@/lib/interview-ratings'
 import { useApplications } from '@/lib/queries/applications'
 import { useInterviewsByApplicationIds } from '@/lib/queries/interviews'
 import { usePreferenceListDetails } from '@/lib/queries/preference-lists'
+import { useCycleTags } from '@/lib/queries/tags'
+import { TagPill } from '@/components/ui/tag-select'
 import { cn } from '@/lib/utils'
 import { ApplicationDetail } from '../../applications/components/ApplicationDetail'
-
-type Filter = 'all' | 'contested' | 'unranked'
+import { matchesWanted, type ListAction } from './AddToMyList'
+import type { ApplicationListParams } from '@/lib/queries/applications'
 
 const RATING_ORDER = ['must_hire', 'great', 'good', 'neutral', 'do_not_hire']
 
 export function CompareTable({
   cycleId,
   roleId,
+  filterParams,
+  filtered,
+  search = '',
+  listAction,
+  wanted = [],
+  fullPageHref,
 }: {
   cycleId: string
   roleId: string
+  filterParams: ApplicationListParams
+  filtered: boolean
+  search?: string
+  listAction?: ListAction
+  wanted?: string[]
+  fullPageHref?: (applicationId: string) => string
 }) {
-  const { data: apps = [], isLoading } = useApplications(
-    { cycle_id: cycleId, role_id: roleId, stages: 'selection' },
+  const { data: fetched = [], isLoading } = useApplications(
+    { cycle_id: cycleId, ...filterParams, stages: 'selection' },
     undefined,
     { enabled: !!cycleId && !!roleId }
   )
-  const ids = useMemo(() => apps.map((a) => a.id), [apps])
+  const ids = useMemo(() => fetched.map((a) => a.id), [fetched])
+  const q = search.trim().toLowerCase()
+  const apps = useMemo(
+    () =>
+      q
+        ? fetched.filter((a) =>
+            (a.full_name || a.user_nuid).toLowerCase().includes(q)
+          )
+        : fetched,
+    [fetched, q]
+  )
   const { data: interviews = {}, isLoading: interviewsLoading } =
     useInterviewsByApplicationIds(ids)
   const { data: teams = [], isLoading: teamsLoading } =
     usePreferenceListDetails(cycleId)
-  const [filter, setFilter] = useState<Filter>('all')
   const [open, setOpen] = useState<string | null>(null)
+  const { data: tags = [] } = useCycleTags(cycleId)
+  const tagById = new Map(tags.map((t) => [t.id, t]))
 
   const rows = useMemo(() => {
     const rankOf = new Map<string, Map<string, number>>()
@@ -69,35 +93,40 @@ export function CompareTable({
       )
   }, [apps, teams, interviews, roleId])
 
-  const contested = rows.filter((r) => r.wanted > 1).length
-  const unranked = rows.filter((r) => r.wanted === 0).length
-  const visible = rows.filter((r) =>
-    filter === 'contested'
-      ? r.wanted > 1
-      : filter === 'unranked'
-        ? r.wanted === 0
-        : true
-  )
+  const visible = rows.filter((r) => matchesWanted(r.wanted, wanted))
+  const myListId = listAction?.listId
+  const columns = [
+    ...teams.filter((t) => t.id === myListId),
+    ...teams.filter((t) => t.id !== myListId),
+  ]
   const opened = apps.find((a) => a.id === open)
 
   if (isLoading || teamsLoading || interviewsLoading) {
     return (
-      <div role="status" aria-label="Loading" className={TABLE_FRAME}>
-        {Array.from({ length: 6 }, (_, i) => (
-          <div
-            key={i}
-            className="flex items-center gap-6 border-b border-gray-200 px-4 py-4 last:border-b-0"
-          >
-            <Skeleton className="h-4 flex-1" />
-            <Skeleton className="h-5 w-20" />
-            <Skeleton className="h-4 w-14" />
-          </div>
-        ))}
-      </div>
+      <>
+        <div role="status" aria-label="Loading" className={TABLE_FRAME}>
+          {Array.from({ length: 6 }, (_, i) => (
+            <div
+              key={i}
+              className="flex items-center gap-6 border-b border-gray-200 px-4 py-4 last:border-b-0"
+            >
+              <Skeleton className="h-4 flex-1" />
+              <Skeleton className="h-5 w-20" />
+              <Skeleton className="h-4 w-14" />
+            </div>
+          ))}
+        </div>
+      </>
     )
   }
   if (apps.length === 0) {
-    return <EmptyState title="No one is in Decisions for this position yet" />
+    return filtered || q ? (
+      <>
+        <EmptyState title="No one matches" />
+      </>
+    ) : (
+      <EmptyState title="No one is in Decisions for this position yet" />
+    )
   }
   if (teams.length === 0) {
     return <EmptyState title="No teams yet" />
@@ -105,42 +134,57 @@ export function CompareTable({
 
   return (
     <>
-      <SegmentedTabs<Filter>
-        className="h-9 w-fit"
-        tabs={[
-          { id: 'all', label: 'All', count: rows.length },
-          { id: 'contested', label: 'Wanted by 2+', count: contested },
-          { id: 'unranked', label: 'Not ranked', count: unranked },
-        ]}
-        value={filter}
-        onChange={setFilter}
-      />
-
-      <div className={TABLE_FRAME}>
-        <table className="w-full min-w-180 text-sm">
+      <div className={cn(TABLE_FRAME, 'overscroll-x-none')}>
+        <table className="w-full text-sm">
           <thead>
             <tr>
-              <th className={cn(TABLE_HEAD, 'text-left')}>Applicant</th>
-              <th className={cn(TABLE_HEAD, 'w-32 text-left')}>Interview</th>
-              {teams.map((t) => (
-                <th key={t.id} className={cn(TABLE_HEAD, 'w-28 text-center')}>
-                  <Link
-                    href={`/reviewer/preference-lists/${t.id}`}
-                    className="hover:text-ink block truncate"
-                    title={t.name}
+              <th
+                className={cn(
+                  TABLE_HEAD,
+                  'sticky left-0 z-10 min-w-72 text-left'
+                )}
+              >
+                Applicant
+              </th>
+              <th className={cn(TABLE_HEAD, 'min-w-32 text-left')}>
+                Interview
+              </th>
+              {columns.map((t) => {
+                const mine = t.id === myListId
+                return (
+                  <th
+                    key={t.id}
+                    className={cn(
+                      TABLE_HEAD,
+                      'max-w-36 min-w-28 text-center',
+                      mine && 'text-ink bg-gray-100'
+                    )}
                   >
-                    {t.name}
-                  </Link>
-                </th>
-              ))}
-              <th className={cn(TABLE_HEAD, 'w-24 text-right')}>Teams</th>
+                    <Link
+                      href={`/reviewer/preference-lists/${t.id}`}
+                      className="hover:text-ink block truncate"
+                      title={t.name}
+                    >
+                      {t.name}
+                    </Link>
+                    {mine && (
+                      <span className="text-text-muted block text-[10px] normal-case">
+                        your team
+                      </span>
+                    )}
+                  </th>
+                )
+              })}
+              <th className={cn(TABLE_HEAD, 'min-w-28 text-right')}>
+                Ranked by
+              </th>
             </tr>
           </thead>
           <tbody>
             {visible.length === 0 ? (
               <tr>
                 <td
-                  colSpan={teams.length + 3}
+                  colSpan={columns.length + 3}
                   className="text-text-subtle px-4 py-10 text-center"
                 >
                   No one here.
@@ -153,11 +197,17 @@ export function CompareTable({
                   <tr
                     key={r.app.id}
                     onClick={() => setOpen(r.app.id)}
-                    className="cursor-pointer border-b border-gray-100 last:border-b-0 hover:bg-gray-50"
+                    className="group cursor-pointer border-b border-gray-100 last:border-b-0 hover:bg-gray-50"
                   >
-                    <td className="px-4 py-2.5">
-                      <span className="text-ink font-medium">
-                        {r.app.full_name}
+                    <td className="sticky left-0 z-10 min-w-72 bg-white px-4 py-2.5 group-hover:bg-gray-50">
+                      <span className="flex min-w-0 flex-wrap items-center gap-1.5">
+                        <span className="text-ink font-medium">
+                          {r.app.full_name}
+                        </span>
+                        {(r.app.tag_ids ?? []).map((t) => {
+                          const tag = tagById.get(t)
+                          return tag ? <TagPill key={t} tag={tag} /> : null
+                        })}
                       </span>
                     </td>
                     <td className="px-4 py-2.5">
@@ -175,17 +225,25 @@ export function CompareTable({
                         <span className="text-text-faint text-xs">—</span>
                       )}
                     </td>
-                    {teams.map((t) => {
+                    {columns.map((t) => {
                       const rank = r.ranks.get(t.id)
                       return (
-                        <td key={t.id} className="px-2 py-2.5 text-center">
-                          {rank === undefined ? (
+                        <td
+                          key={t.id}
+                          className={cn(
+                            'px-2 py-2.5 text-center',
+                            t.id === myListId && 'bg-gray-50'
+                          )}
+                        >
+                          {t.id === myListId && listAction ? (
+                            listAction.render(r.app.id, 'cell')
+                          ) : rank === undefined ? (
                             <span className="text-gray-300">—</span>
                           ) : (
                             <span
                               className={cn(
                                 'inline-flex h-7 min-w-7 items-center justify-center px-1.5 text-xs tabular-nums',
-                                rank <= 3
+                                rank <= 2
                                   ? 'bg-ink font-semibold text-white'
                                   : 'text-ink bg-gray-100'
                               )}
@@ -206,7 +264,9 @@ export function CompareTable({
                             : 'text-text-muted'
                       )}
                     >
-                      {r.wanted}
+                      {r.wanted === 0
+                        ? 'No team'
+                        : `${r.wanted} team${r.wanted === 1 ? '' : 's'}`}
                     </td>
                   </tr>
                 )
@@ -215,9 +275,6 @@ export function CompareTable({
           </tbody>
         </table>
       </div>
-      <p className="text-text-subtle text-xs">
-        Numbers are each team&apos;s rank. Dark means top 3.
-      </p>
 
       {opened && (
         <ApplicationDetail
@@ -232,6 +289,7 @@ export function CompareTable({
             submittedAt: opened.submitted_at,
             returner: !!opened.returner,
           }}
+          fullPageHref={fullPageHref?.(opened.id)}
           onClose={() => setOpen(null)}
         />
       )}

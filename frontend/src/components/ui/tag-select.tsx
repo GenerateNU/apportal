@@ -31,16 +31,16 @@ export const TAG_COLORS = [
   'red',
 ] as const
 
-const TAG_COLOR_CLASS: Record<string, string> = {
-  gray: 'bg-gray-100 text-gray-700',
-  brown: 'bg-amber-100 text-amber-900',
-  orange: 'bg-orange-100 text-orange-800',
-  yellow: 'bg-yellow-100 text-yellow-800',
-  green: 'bg-green-100 text-green-800',
-  blue: 'bg-blue-100 text-blue-800',
-  purple: 'bg-purple-100 text-purple-800',
-  pink: 'bg-pink-100 text-pink-800',
-  red: 'bg-red-100 text-red-800',
+const TAG_DOT_CLASS: Record<string, string> = {
+  gray: 'bg-gray-400',
+  brown: 'bg-amber-700',
+  orange: 'bg-orange-500',
+  yellow: 'bg-yellow-500',
+  green: 'bg-green-500',
+  blue: 'bg-blue-500',
+  purple: 'bg-purple-500',
+  pink: 'bg-pink-500',
+  red: 'bg-red-500',
 }
 
 export function TagPill({
@@ -51,12 +51,14 @@ export function TagPill({
   onRemove?: () => void
 }) {
   return (
-    <span
-      className={cn(
-        'inline-flex max-w-40 items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium',
-        TAG_COLOR_CLASS[tag.color] ?? TAG_COLOR_CLASS.gray
-      )}
-    >
+    <span className="text-text-default inline-flex max-w-40 items-center gap-1 rounded-full border border-gray-200 bg-white py-0.5 pr-2 pl-1.5 text-xs font-medium">
+      <span
+        aria-hidden
+        className={cn(
+          'size-2 shrink-0 rounded-full',
+          TAG_DOT_CLASS[tag.color] ?? TAG_DOT_CLASS.gray
+        )}
+      />
       <span className="truncate">{tag.name}</span>
       {onRemove && (
         <button
@@ -342,7 +344,7 @@ function EditPanel({
             className="hover:bg-muted flex items-center gap-1.5 rounded-md px-1.5 py-1"
           >
             <span
-              className={cn('size-3 rounded-sm', TAG_COLOR_CLASS[c])}
+              className={cn('size-3 rounded-full', TAG_DOT_CLASS[c])}
               aria-hidden
             />
             <span className="text-xs capitalize">{c}</span>

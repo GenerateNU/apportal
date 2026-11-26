@@ -7,7 +7,13 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { LoadingText } from '@/components/ui/loading-text'
 import { PageHeader } from '@/components/ui/page-header'
 import { PAGE_SHELL } from '@/components/ui/page-shell'
-import { SegmentedTabs } from '@/components/ui/segmented-tabs'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { ApplicationDetail } from '@/app/(portal)/reviewer/applications/components/ApplicationDetail'
 import { myWorkCrumbs } from '@/app/(portal)/reviewer/my-work/crumbs'
 import { APIError } from '@/lib/api/client'
@@ -24,6 +30,7 @@ import { useCurrentUser, useReviewerNames } from '@/lib/queries/users'
 import { MEETING_DAY_LABEL } from '@/app/(portal)/reviewer/applications/components/meetingAvailability'
 import { formatDate } from '@/lib/utils'
 import { LeadTeamTab } from './LeadTeamTab'
+import { CandidateExplorer } from '../../components/CandidateExplorer'
 import { Fact, Facts } from '@/components/ui/facts'
 import { Badge } from '@/components/ui/badge'
 import { CalendarDays, Clock, Users } from 'lucide-react'
@@ -65,7 +72,7 @@ export function LeadPreferenceListClient({
     router.replace(`${pathname}?${params.toString()}`, { scroll: false })
   }
 
-  const { data: pool = [], isLoading: poolLoading } = useApplications(
+  const { data: pool = [] } = useApplications(
     { cycle_id: cycleId, role_id: role, stages: 'selection' },
     undefined,
     { enabled: !!cycleId && !!role }
@@ -160,9 +167,6 @@ export function LeadPreferenceListClient({
     </Facts>
   )
 
-  const roleCount = (r: string) =>
-    list.entries.filter((e) => e.role_id === r).length
-
   return (
     <div className={PAGE_SHELL}>
       <div className="flex flex-col gap-3">
@@ -190,7 +194,16 @@ export function LeadPreferenceListClient({
             role={role}
             roleIds={roleIds}
             pool={pool}
-            poolLoading={poolLoading}
+            renderExplorer={(listAction) => (
+              <CandidateExplorer
+                cycleId={cycleId}
+                roleId={role}
+                listAction={listAction}
+                fullPageHref={(applicationId) =>
+                  `/reviewer/preference-lists/${id}/applicants/${applicationId}`
+                }
+              />
+            )}
             groups={groups}
             ratings={ratings}
             closesAtByRole={closesAtByRole}
@@ -199,15 +212,21 @@ export function LeadPreferenceListClient({
             onOpenApplicant={setOpenApplicationId}
             roleTabs={
               roleIds.length > 1 && (
-                <SegmentedTabs<string>
-                  value={role}
-                  onChange={setRole}
-                  tabs={roleIds.map((r) => ({
-                    id: r,
-                    label: roleLabel(r),
-                    count: roleCount(r),
-                  }))}
-                />
+                <Select value={role} onValueChange={setRole}>
+                  <SelectTrigger
+                    aria-label="Position"
+                    className="mb-3 h-9 w-60"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {roleIds.map((r) => (
+                      <SelectItem key={r} value={r}>
+                        {roleLabel(r)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               )
             }
           />
@@ -227,6 +246,7 @@ export function LeadPreferenceListClient({
             email: openPerson.email,
             returner: openPerson.returner,
           }}
+          fullPageHref={`/reviewer/preference-lists/${id}/applicants/${openSummary.id}`}
           onClose={() => setOpenApplicationId(null)}
         />
       )}
