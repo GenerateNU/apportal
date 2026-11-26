@@ -6,6 +6,11 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import type { PreferenceListComment } from '@/lib/api/types'
 
+type ThreadComment = Pick<
+  PreferenceListComment,
+  'id' | 'body' | 'created_at' | 'updated_at' | 'author_nuid' | 'author_name'
+>
+
 export function CommentThread({
   comments,
   currentUserNuid,
@@ -15,7 +20,7 @@ export function CommentThread({
   isEditing,
   placeholder,
 }: {
-  comments: PreferenceListComment[]
+  comments: ThreadComment[]
   currentUserNuid?: string
   onAdd: (body: string) => void
   onEdit: (commentId: string, body: string) => void
@@ -27,7 +32,7 @@ export function CommentThread({
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
   const [editingBody, setEditingBody] = useState('')
 
-  function startEditing(comment: PreferenceListComment) {
+  function startEditing(comment: ThreadComment) {
     setEditingCommentId(comment.id)
     setEditingBody(comment.body)
   }
