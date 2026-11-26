@@ -136,7 +136,7 @@ export function DraftBoardGrid({
                               className="flex-1"
                               wrap
                             />
-                            {canEdit && (
+                            {canEdit && round > placed && (
                               <div className="flex shrink-0 items-center gap-1 transition-opacity [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-focus-within:opacity-100 [@media(hover:hover)]:group-hover:opacity-100">
                                 {/* Hover-reveal only where hover exists; touch has no other way to see these. */}
                                 <button

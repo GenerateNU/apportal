@@ -1,10 +1,18 @@
 'use client'
 
-import { useMemo } from 'react'
-import { Check, Loader2, Lock, Undo2, Users, X } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import {
+  Check,
+  Loader2,
+  Lock,
+  TriangleAlert,
+  Undo2,
+  Users,
+  X,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { Checkbox } from '@/components/ui/checkbox'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { SectionLabel } from '@/components/ui/section-label'
 import {
   Select,
@@ -27,27 +35,27 @@ const PLACED_PER_TEAM = 2
 type Ranked = { applicationId: string; name: string; rank: number }
 
 export function PlacementsPanel({
+  title = 'Place top picks first',
+  embedded = false,
   board,
   lists,
   pool,
   orderUnsaved,
-  onToggle,
   onPlace,
   onRemove,
   onRelease,
-  toggling,
   placing,
   releasing,
 }: {
+  title?: string
+  embedded?: boolean
   board: DraftBoard
   lists: PreferenceListDetail[]
   pool: ApplicationSummary[]
   orderUnsaved: boolean
-  onToggle: (enabled: boolean) => void
   onPlace: (slot: number, applicationId: string, name: string) => void
   onRemove: (slot: number) => void
   onRelease: (released: boolean) => void
-  toggling: boolean
   placing: boolean
   releasing: boolean
 }) {
@@ -76,18 +84,28 @@ export function PlacementsPanel({
     return out
   }, [lists, board.role_id])
 
-  const topTwoTeams = useMemo(() => {
-    const out = new Map<string, string[]>()
+  const topTwo = useMemo(() => {
+    const out = new Map<string, { teamId: string; rank: number }[]>()
     for (const team of board.teams) {
       for (const r of (rankedByList.get(team.preference_list_id) ?? []).slice(
         0,
         PLACED_PER_TEAM
       )) {
-        out.set(r.applicationId, [...(out.get(r.applicationId) ?? []), team.id])
+        out.set(r.applicationId, [
+          ...(out.get(r.applicationId) ?? []),
+          { teamId: team.id, rank: r.rank },
+        ])
       }
     }
     return out
   }, [board.teams, rankedByList])
+  const topTwoTeams = useMemo(
+    () =>
+      new Map(
+        [...topTwo].map(([id, wants]) => [id, wants.map((w) => w.teamId)])
+      ),
+    [topTwo]
+  )
 
   const takenBy = new Map(board.picks.map((p) => [p.application_id, p]))
   const teamName = new Map(board.teams.map((t) => [t.id, t.name]))
@@ -98,31 +116,22 @@ export function PlacementsPanel({
     )
 
   return (
-    <Card padding="none" className="flex flex-col gap-4 p-5">
+    <Card
+      padding="none"
+      className={cn(
+        'flex flex-col gap-4',
+        embedded ? 'border-0 bg-transparent p-0 shadow-none' : 'p-5'
+      )}
+    >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex flex-col gap-1">
-          <SectionLabel>Place top picks first</SectionLabel>
-          <label className="text-ink flex items-center gap-2 text-sm">
-            <Checkbox
-              checked={enabled}
-              disabled={
-                toggling || released || (enabled && placedPicks.length > 0)
-              }
-              onCheckedChange={(v) => onToggle(v === true)}
-            />
-            Chiefs place {PLACED_PER_TEAM} applicants on every team before
-            picking starts
-          </label>
-          {enabled && placedPicks.length > 0 && !released && (
-            <span className="text-text-subtle text-xs">
-              Remove the placements to turn this off.
-            </span>
-          )}
+          {!embedded && <SectionLabel>{title}</SectionLabel>}
         </div>
-        {enabled && (
-          <PlacementStatus
-            placed={placedPicks.length}
-            total={placementSlots}
+        {enabled && !embedded && (
+          <PlacementReleaseControl
+            teamCount={teamCount}
+            ready={placementSlots > 0 && placedPicks.length === placementSlots}
+            summary={`${board.teams.filter((t) => placedPicks.filter((p) => p.draft_team_id === t.id).length >= (board.placement_rounds ?? 0)).length}/${teamCount} teams`}
             released={released}
             releasing={releasing}
             onRelease={onRelease}
@@ -270,24 +279,52 @@ export function PlacementsPanel({
                     .filter(
                       (r) =>
                         !takenBy.has(r.applicationId) &&
-                        (topTwoTeams.get(r.applicationId) ?? []).length > 1
+                        (topTwo.get(r.applicationId) ?? []).length > 1
                     )
                   if (ties.length === 0) return null
                   return (
-                    <p className="text-xs text-amber-700">
-                      Tie:{' '}
-                      {ties
-                        .map(
-                          (r) =>
-                            `${r.name} is also top ${PLACED_PER_TEAM} for ${(
-                              topTwoTeams.get(r.applicationId) ?? []
-                            )
-                              .filter((id) => id !== team.id)
-                              .map((id) => teamName.get(id))
-                              .join(', ')}`
-                        )
-                        .join('; ')}
-                    </p>
+                    <div className="flex flex-col gap-1.5 border border-amber-200 bg-amber-50 px-2.5 py-2 text-xs">
+                      <span className="inline-flex items-center gap-1.5 font-medium text-amber-800">
+                        <TriangleAlert size={12} />
+                        Also in other teams&apos; top {PLACED_PER_TEAM}
+                      </span>
+                      <ul className="flex flex-col gap-1">
+                        {ties.map((r) => {
+                          const wants = [
+                            ...(topTwo.get(r.applicationId) ?? []),
+                          ].sort((x, y) =>
+                            x.teamId === team.id
+                              ? -1
+                              : y.teamId === team.id
+                                ? 1
+                                : x.rank - y.rank
+                          )
+                          return (
+                            <li
+                              key={r.applicationId}
+                              className="flex flex-wrap items-center gap-x-2 gap-y-0.5"
+                            >
+                              <span className="text-ink min-w-24 font-medium">
+                                {r.name}
+                              </span>
+                              {wants.map((w) => (
+                                <span
+                                  key={w.teamId}
+                                  className={cn(
+                                    'tabular-nums',
+                                    w.teamId === team.id
+                                      ? 'text-ink'
+                                      : 'text-amber-800'
+                                  )}
+                                >
+                                  {teamName.get(w.teamId)} #{w.rank}
+                                </span>
+                              ))}
+                            </li>
+                          )
+                        })}
+                      </ul>
+                    </div>
                   )
                 })()}
               </div>
@@ -299,26 +336,33 @@ export function PlacementsPanel({
   )
 }
 
-function PlacementStatus({
-  placed,
-  total,
+export function PlacementReleaseControl({
+  teamCount,
+  ready,
+  summary,
   released,
   releasing,
   onRelease,
+  compact = false,
 }: {
-  placed: number
-  total: number
+  compact?: boolean
+  teamCount: number
+  ready: boolean
+  summary?: string
   released: boolean
   releasing: boolean
   onRelease: (released: boolean) => void
 }) {
+  const [confirming, setConfirming] = useState(false)
   if (released) {
     return (
       <div className="flex items-center gap-2">
-        <span className="inline-flex items-center gap-1.5 text-sm text-emerald-700">
-          <Lock size={14} />
-          Released to teams
-        </span>
+        {!compact && (
+          <span className="inline-flex items-center gap-1.5 text-sm text-emerald-700">
+            <Lock size={14} />
+            Released to teams
+          </span>
+        )}
         <Button
           variant="outline"
           size="sm"
@@ -331,18 +375,35 @@ function PlacementStatus({
       </div>
     )
   }
-  const ready = total > 0 && placed === total
   return (
     <div className="flex items-center gap-3">
-      <span
-        className={cn(
-          'text-sm tabular-nums',
-          ready ? 'text-ink' : 'text-text-muted'
-        )}
+      <ConfirmDialog
+        open={confirming}
+        onOpenChange={setConfirming}
+        title="Release placements to all teams?"
+        description={`All ${teamCount} teams will see who was placed on them. Placements are locked until you take them back, and the draft can start once they're out.`}
+        confirmLabel="Release to teams"
+        confirmVariant="default"
+        pending={releasing}
+        onConfirm={() => {
+          onRelease(true)
+          setConfirming(false)
+        }}
+      />
+      {!compact && summary && (
+        <span
+          className={cn(
+            'text-sm tabular-nums',
+            ready ? 'text-ink' : 'text-text-muted'
+          )}
+        >
+          {summary}
+        </span>
+      )}
+      <Button
+        disabled={!ready || releasing}
+        onClick={() => setConfirming(true)}
       >
-        {placed} of {total} placed
-      </span>
-      <Button disabled={!ready || releasing} onClick={() => onRelease(true)}>
         {releasing && <Loader2 className="animate-spin" size={14} />}
         Release to teams
       </Button>

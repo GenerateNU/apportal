@@ -69,13 +69,11 @@ import {
   useReplaceDraftPick,
   useFinishDraft,
   useResetDraft,
-  useSetPlacementsReleased,
   useSetDraftTeams,
   useUpdateDraft,
 } from '@/lib/queries/drafts'
 import {
   usePreferenceList,
-  usePreferenceListDetails,
   usePreferenceLists,
 } from '@/lib/queries/preference-lists'
 import { useCycleRolePicker } from '@/hooks/useRoleSelection'
@@ -85,7 +83,7 @@ import { DraftSetup } from './DraftSetup'
 import { OnTheClockPanel } from './OnTheClockPanel'
 import { ReorderTeamsDialog } from './ReorderTeamsDialog'
 import { useCycleHref } from '@/hooks/useCycleHref'
-import { PlacementsPanel } from './PlacementsPanel'
+import { PlacementsNote } from './PlacementsNote'
 
 export function DraftClient() {
   const toCycle = useCycleHref()
@@ -130,8 +128,6 @@ export function DraftClient() {
   const replacePick = useReplaceDraftPick()
   const resetDraft = useResetDraft()
   const finishDraft = useFinishDraft()
-  const setPlacementsReleased = useSetPlacementsReleased()
-  const { data: listDetails = [] } = usePreferenceListDetails(cycleId)
   const router = useRouter()
   const [finishing, setFinishing] = useState(false)
   const [ending, setEnding] = useState(false)
@@ -445,53 +441,7 @@ export function DraftClient() {
                   : undefined
               }
               placements={
-                <PlacementsPanel
-                  board={board}
-                  lists={listDetails}
-                  pool={pool}
-                  orderUnsaved={
-                    effectiveOrder.join(',') !==
-                    board.teams.map((t) => t.preference_list_id).join(',')
-                  }
-                  onToggle={(enabled) =>
-                    updateDraft.mutate({
-                      ...draftScope,
-                      placementsEnabled: enabled,
-                    })
-                  }
-                  onPlace={(slot, applicationId, name) => {
-                    setPickError('')
-                    makePick.mutate(
-                      {
-                        ...draftScope,
-                        applicationId,
-                        pickNumber: slot,
-                        applicant: applicantFor(applicationId) ?? {
-                          fullName: name,
-                          email: '',
-                        },
-                      },
-                      {
-                        onError: () =>
-                          setPickError(
-                            'That placement didn’t go through. Someone may have filled the slot first.'
-                          ),
-                      }
-                    )
-                  }}
-                  onRemove={(slot) =>
-                    removePick.mutate({ ...draftScope, pickNumber: slot })
-                  }
-                  onRelease={(next) =>
-                    setPlacementsReleased.mutate({
-                      ...draftScope,
-                      released: next,
-                    })
-                  }
-                  toggling={updateDraft.isPending}
-                  placing={makePick.isPending || removePick.isPending}
-                  releasing={setPlacementsReleased.isPending}
-                />
+                <PlacementsNote board={board} href={toCycle('/cycle/teams')} />
               }
             />
             {pickError && <p className="text-sm text-red-700">{pickError}</p>}

@@ -115,6 +115,13 @@ func TestPlacementsStayHiddenAndUnacceptedUntilTheDraftStarts(t *testing.T) {
 	}
 	t.Logf("started: placements accepted, slot %d on the clock", board.OnTheClock)
 
+	svc := &draftService{draftDB: store}
+	testutil.WantStatus(t, svc.requireSlotChangeable(ctx, draft, 1), 409)
+	if err := svc.requireSlotChangeable(ctx, draft, PlacementRounds*2+1); err != nil {
+		t.Fatalf("a live draft slot should stay editable: %v", err)
+	}
+	t.Log("started: placement slots locked, draft slots editable")
+
 	if _, err := store.MakeDraftPick(ctx, draft, 0, apps[4], chief); err != nil {
 		t.Fatal(err)
 	}

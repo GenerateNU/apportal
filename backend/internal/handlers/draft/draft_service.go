@@ -306,10 +306,8 @@ func (s *draftService) replacePick(ctx context.Context, in *ReplaceDraftPickInpu
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
-	if draft.Status == models.DraftSetup {
-		if err := s.requirePlacementSlot(ctx, draft, in.PickNumber); err != nil {
-			return nil, err
-		}
+	if err := s.requireSlotChangeable(ctx, draft, in.PickNumber); err != nil {
+		return nil, err
 	}
 	pick, err := s.draftDB.ReplaceDraftPick(ctx, draft, in.PickNumber, in.Body.ApplicationID, utils.CurrentActor(ctx).NUID)
 	if err != nil {
@@ -346,10 +344,8 @@ func (s *draftService) removePick(ctx context.Context, in *RemoveDraftPickInput)
 	if err != nil {
 		return nil, utils.StoreErr(err)
 	}
-	if draft.Status == models.DraftSetup {
-		if err := s.requirePlacementSlot(ctx, draft, in.PickNumber); err != nil {
-			return nil, err
-		}
+	if err := s.requireSlotChangeable(ctx, draft, in.PickNumber); err != nil {
+		return nil, err
 	}
 	if err := s.draftDB.RemoveDraftPick(ctx, in.ID, in.PickNumber); err != nil {
 		return nil, utils.StoreErr(err)
@@ -479,4 +475,21 @@ func (s *draftService) releasePlacements(ctx context.Context, in *DraftIDInput) 
 
 func (s *draftService) unreleasePlacements(ctx context.Context, in *DraftIDInput) (*DraftBoardOutput, error) {
 	return s.setPlacementsReleased(ctx, in.ID, false)
+}
+
+func (s *draftService) requireSlotChangeable(ctx context.Context, draft models.Draft, slot int) error {
+	if draft.Status == models.DraftSetup {
+		return s.requirePlacementSlot(ctx, draft, slot)
+	}
+	if !draft.PlacementsEnabled {
+		return nil
+	}
+	teams, err := s.draftDB.ListDraftTeams(ctx, draft.ID)
+	if err != nil {
+		return utils.StoreErr(err)
+	}
+	if isPlacementSlot(draft, len(teams), slot) {
+		return huma.Error409Conflict("placements are locked once the draft starts")
+	}
+	return nil
 }

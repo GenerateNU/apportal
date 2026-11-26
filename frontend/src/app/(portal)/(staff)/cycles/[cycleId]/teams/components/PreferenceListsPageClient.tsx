@@ -31,17 +31,23 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import {
   useCreatePreferenceList,
   usePreferenceListDeadline,
+  usePreferenceListDeadlines,
   usePreferenceLists,
   useSetPreferenceListDeadline,
 } from '@/lib/queries/preference-lists'
 import { useCycleRoles, useRoleLookup } from '@/lib/queries/roles'
 import { useCycleHref } from '@/hooks/useCycleHref'
+import { PlacementRow } from './PlacementSection'
+import { TABLE_FRAME, TABLE_HEAD } from '@/components/ui/table-styles'
+import { deadlinePassed } from '../[id]/components/deadline'
 
 export function PreferenceListsPageClient({ isChief }: { isChief: boolean }) {
   const toCycle = useCycleHref()
   const { cycleId } = useCycleScope(isChief ? 'chief' : 'lead')
 
-  const { roleIds } = useCycleRoles(cycleId)
+  const { roleIds, roleLabel } = useCycleRoles(cycleId)
+  const closesAtByRole = usePreferenceListDeadlines(cycleId, roleIds)
+  const closedRoles = roleIds.filter((r) => deadlinePassed(closesAtByRole[r]))
   const [dialogOpen, setDialogOpen] = useState(false)
   const { data: lists = [] } = usePreferenceLists(cycleId)
 
@@ -157,6 +163,38 @@ export function PreferenceListsPageClient({ isChief }: { isChief: boolean }) {
               </div>
             )}
           </section>
+          {isChief && (closedRoles.length > 0 || allSubmitted) && (
+            <section className={SECTION}>
+              <Subheading
+                title="Place top picks"
+                hint="Optional. Place 2 applicants on each team from their lists, break any ties, then release them so every team sees theirs before the draft."
+              />
+              <div className={TABLE_FRAME}>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr>
+                      <th className={cn(TABLE_HEAD, 'text-left')}>Position</th>
+                      <th className={cn(TABLE_HEAD, 'w-28 text-left')}>
+                        Placed
+                      </th>
+                      <th className={cn(TABLE_HEAD, 'w-56')} />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {roleIds.map((r) => (
+                      <PlacementRow
+                        key={r}
+                        cycleId={cycleId}
+                        roleId={r}
+                        roleLabel={roleLabel(r)}
+                        listsClosed={deadlinePassed(closesAtByRole[r])}
+                      />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
         </>
       )}
 

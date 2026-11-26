@@ -218,11 +218,16 @@ export function useOpenDraft() {
       cycleId: string
       roleId: string
       rounds?: number
+      placementsEnabled?: boolean
       opts?: RequestOptions
     }) =>
       openDraft(
         vars.cycleId,
-        { role_id: vars.roleId, ...(vars.rounds && { rounds: vars.rounds }) },
+        {
+          role_id: vars.roleId,
+          ...(vars.rounds && { rounds: vars.rounds }),
+          ...(vars.placementsEnabled && { placements_enabled: true }),
+        },
         vars.opts
       )
   )
