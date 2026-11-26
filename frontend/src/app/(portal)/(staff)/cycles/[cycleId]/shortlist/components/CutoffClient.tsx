@@ -46,6 +46,11 @@ import { ApplicationDetail } from '@/app/(portal)/(staff)/cycles/[cycleId]/appli
 import { ADVANCEABLE_STAGES, type CutoffDraft, previewEntries } from './cutoff'
 import { Stats } from '@/components/ui/facts'
 import { useCycleHref } from '@/hooks/useCycleHref'
+import { useStoredFlag } from '@/hooks/useStoredFlag'
+import { isSplit } from '@/lib/chief-votes'
+import { useChiefReviewsByApplicationIds } from '@/lib/queries/chief-reviews'
+import { useCurrentUser } from '@/lib/queries/users'
+import { ChiefVoteSummary, useCycleChiefNuids } from './ChiefVotes'
 
 const STAGE_LABEL: Record<string, string> = {
   interview: 'Interview',
@@ -161,6 +166,27 @@ function Ranking({ cycleId, roleId }: { cycleId: string; roleId: string }) {
     [ranking, current]
   )
   const scored = questions.some((q) => q.question_type === 'score' && q.ranked)
+
+  const { data: me } = useCurrentUser()
+  const chiefNuids = useCycleChiefNuids(cycleId)
+  const [showVotes, setShowVotes] = useStoredFlag('shortlist-chief-votes', true)
+  const [splitsOnly, setSplitsOnly] = useState(false)
+  const entryIds = useMemo(
+    () => entries.map((e) => e.application_id),
+    [entries]
+  )
+  const { data: chiefReviews } = useChiefReviewsByApplicationIds(
+    showVotes ? entryIds : []
+  )
+  const splitIds = new Set(
+    entryIds.filter((id) =>
+      isSplit((chiefReviews[id] ?? []).map((r) => r.vote))
+    )
+  )
+  const filtering = showVotes && splitsOnly
+  const rows = filtering
+    ? entries.filter((e) => splitIds.has(e.application_id))
+    : entries
 
   const inReview = entries.filter((e) => ADVANCEABLE_STAGES.has(e.stage))
   const toAdvance = inReview.filter((e) => e.included)
@@ -310,6 +336,56 @@ function Ranking({ cycleId, roleId }: { cycleId: string; roleId: string }) {
         </Notice>
       ) : null}
 
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+        <label className="text-ink flex items-center gap-2 text-sm">
+          <Checkbox
+            checked={showVotes}
+            onCheckedChange={(v) => {
+              setShowVotes(v === true)
+              if (v !== true) setSplitsOnly(false)
+            }}
+          />
+          Show chief votes
+        </label>
+        {showVotes && (
+          <label
+            className={cn(
+              'flex items-center gap-2 text-sm',
+              splitIds.size === 0 ? 'text-text-subtle' : 'text-ink'
+            )}
+          >
+            <Checkbox
+              checked={splitsOnly}
+              disabled={splitIds.size === 0 && !splitsOnly}
+              onCheckedChange={(v) => setSplitsOnly(v === true)}
+            />
+            Splits only
+            <span className="text-text-muted tabular-nums">
+              {splitIds.size}
+            </span>
+          </label>
+        )}
+        <span className="flex-1" />
+        <Button asChild>
+          <Link href={toCycle(`/cycle/shortlist/vote?role=${roleId}`)}>
+            Vote
+            {showVotes && (
+              <span className="tabular-nums opacity-70">
+                {
+                  inReview.filter((e) =>
+                    (chiefReviews[e.application_id] ?? []).some(
+                      (r) => r.reviewer_nuid === me?.nuid && r.vote
+                    )
+                  ).length
+                }
+                /{inReview.length}
+              </span>
+            )}
+            <ArrowRight />
+          </Link>
+        </Button>
+      </div>
+
       <Card padding="none">
         <div className="flex flex-wrap items-center gap-3 border-b border-gray-100 px-4 py-3">
           <span className="text-ink text-sm">Advance</span>
@@ -378,11 +454,12 @@ function Ranking({ cycleId, roleId }: { cycleId: string; roleId: string }) {
                 <th className="px-3 py-2">Applicant</th>
                 <th className="px-3 py-2 text-right">Average</th>
                 <th className="px-3 py-2 text-right">Z-score</th>
+                {showVotes && <th className="px-3 py-2">Chief votes</th>}
                 <th className="w-40 px-3 py-2" />
               </tr>
             </thead>
             <tbody>
-              {entries.map((e, i) => {
+              {rows.map((e, i) => {
                 const app = byId.get(e.application_id)
                 const advanceable = ADVANCEABLE_STAGES.has(e.stage)
                 const incomplete = required > 0 && e.review_count < required
@@ -409,7 +486,8 @@ function Ranking({ cycleId, roleId }: { cycleId: string; roleId: string }) {
                       <td className="text-text-subtle px-2 py-2 tabular-nums">
                         {e.rank == null
                           ? '—'
-                          : i > 0 &&
+                          : !filtering &&
+                              i > 0 &&
                               entries[i - 1].normalized_score ===
                                 e.normalized_score
                             ? '='
@@ -446,6 +524,14 @@ function Ranking({ cycleId, roleId }: { cycleId: string; roleId: string }) {
                           ? e.normalized_score.toFixed(2)
                           : '—'}
                       </td>
+                      {showVotes && (
+                        <td className="px-3 py-2">
+                          <ChiefVoteSummary
+                            reviews={chiefReviews[e.application_id] ?? []}
+                            chiefNuids={chiefNuids}
+                          />
+                        </td>
+                      )}
                       <td
                         className="px-3 py-2 text-right"
                         onClick={(ev) => ev.stopPropagation()}
@@ -473,15 +559,17 @@ function Ranking({ cycleId, roleId }: { cycleId: string; roleId: string }) {
                         )}
                       </td>
                     </tr>
-                    {i === lastAbove && current.mode !== 'none' && (
-                      <tr>
-                        <td colSpan={6} className="p-0">
-                          <div className="border-ink text-ink flex items-center gap-3 border-t-2 border-dashed px-3 py-0.5 text-[10px] font-semibold tracking-wider uppercase">
-                            Cutoff
-                          </div>
-                        </td>
-                      </tr>
-                    )}
+                    {!filtering &&
+                      i === lastAbove &&
+                      current.mode !== 'none' && (
+                        <tr>
+                          <td colSpan={showVotes ? 7 : 6} className="p-0">
+                            <div className="border-ink text-ink flex items-center gap-3 border-t-2 border-dashed px-3 py-0.5 text-[10px] font-semibold tracking-wider uppercase">
+                              Cutoff
+                            </div>
+                          </td>
+                        </tr>
+                      )}
                   </Fragment>
                 )
               })}
@@ -490,9 +578,9 @@ function Ranking({ cycleId, roleId }: { cycleId: string; roleId: string }) {
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 px-4 py-3">
-          <span className="text-sm">
+          <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
             {toAdvance.length > 0 ? (
-              <>
+              <span>
                 <span className="text-ink font-semibold">
                   {toAdvance.length}
                 </span>{' '}
@@ -502,7 +590,7 @@ function Ranking({ cycleId, roleId }: { cycleId: string; roleId: string }) {
                     {handPicked} changed by hand
                   </span>
                 )}
-              </>
+              </span>
             ) : movedOn > 0 || rejected > 0 ? (
               <span className="text-ink inline-flex items-center gap-1.5">
                 {movedOn > 0 && (
@@ -520,7 +608,7 @@ function Ranking({ cycleId, roleId }: { cycleId: string; roleId: string }) {
                 )}
               </span>
             ) : null}
-            <span className="text-text-muted ml-3 text-xs">
+            <span className="text-text-muted text-xs">
               Z-scores adjust for reviewer bias.
             </span>
           </span>
