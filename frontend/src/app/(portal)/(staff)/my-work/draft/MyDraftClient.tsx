@@ -26,7 +26,11 @@ import type {
 import { useApplications } from '@/lib/queries/applications'
 import { useCycleScope } from '@/hooks/useCycleScope'
 import { useIsChief } from '@/lib/queries/cycle-staff'
-import { useDraftBoards, useDraftedApplications } from '@/lib/queries/drafts'
+import {
+  boardRounds,
+  useDraftBoards,
+  useDraftedApplications,
+} from '@/lib/queries/drafts'
 import { usePreferenceListDetails } from '@/lib/queries/preference-lists'
 import { useCycleRoles } from '@/lib/queries/roles'
 import { useCurrentUser } from '@/lib/queries/users'
@@ -70,6 +74,12 @@ export function MyDraftClient() {
   }
 
   const live = boards.filter((b) => isOpen(b.board))
+  const placed = boards.filter(
+    (b) =>
+      b.board?.status === 'setup' &&
+      !!b.board.placements_released_at &&
+      b.board.picks.length > 0
+  )
 
   return (
     <div className={PAGE_SHELL}>
@@ -94,10 +104,18 @@ export function MyDraftClient() {
       ) : boardsPending || groupsLoading ? (
         <LoadingText />
       ) : live.length === 0 ? (
-        <EmptyState
-          title="Draft not open"
-          description="It opens once preference lists lock and a chief starts the draft."
-        />
+        placed.length > 0 ? (
+          <PlacedByChiefs
+            boards={placed}
+            myGroup={myGroup}
+            roleLabel={roleLabel}
+          />
+        ) : (
+          <EmptyState
+            title="Draft not open"
+            description="It opens once preference lists lock and a chief starts the draft."
+          />
+        )
       ) : (
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_20rem]">
           <div className="flex min-w-0 flex-col gap-10">
@@ -157,7 +175,7 @@ function StatusRows({
         const next = ourEntries(myGroup, roleId).find(
           (e) => !drafted[e.application_id]
         )
-        const total = (board?.rounds ?? 0) * teams.length
+        const total = (board ? boardRounds(board) : 0) * teams.length
         return (
           <div
             key={roleId}
@@ -553,5 +571,72 @@ function PoolSidebar({
         />
       )}
     </aside>
+  )
+}
+
+function PlacedByChiefs({
+  boards,
+  myGroup,
+  roleLabel,
+}: {
+  boards: RoleBoard[]
+  myGroup?: PreferenceListDetail
+  roleLabel: (id: string) => string
+}) {
+  return (
+    <div className="flex flex-col gap-6">
+      <p className="text-text-muted text-sm">
+        Chiefs placed these applicants before the draft. Picking starts after
+        them.
+      </p>
+      {boards.map(({ roleId, board }) => {
+        if (!board) return null
+        const teams = [...board.teams].sort((a, b) =>
+          a.preference_list_id === myGroup?.id
+            ? -1
+            : b.preference_list_id === myGroup?.id
+              ? 1
+              : a.position - b.position
+        )
+        return (
+          <section key={roleId} className="flex flex-col gap-3">
+            <PanelHeading>Placed by chiefs · {roleLabel(roleId)}</PanelHeading>
+            <ul className="border border-gray-200 bg-white">
+              {teams.map((team) => {
+                const mine = team.preference_list_id === myGroup?.id
+                const picks = board.picks
+                  .filter((p) => p.draft_team_id === team.id)
+                  .sort((a, b) => a.pick_number - b.pick_number)
+                return (
+                  <li
+                    key={team.id}
+                    className={cn(
+                      'flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 not-first:border-t not-first:border-gray-200',
+                      mine && 'bg-gray-50'
+                    )}
+                  >
+                    <span className="text-ink w-40 shrink-0 text-sm font-semibold">
+                      {team.name}
+                      {mine && (
+                        <span className="text-text-muted ml-1.5 font-normal">
+                          (your team)
+                        </span>
+                      )}
+                    </span>
+                    <span className="text-ink flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                      {picks.length === 0
+                        ? '—'
+                        : picks.map((p) => (
+                            <span key={p.pick_number}>{p.full_name}</span>
+                          ))}
+                    </span>
+                  </li>
+                )
+              })}
+            </ul>
+          </section>
+        )
+      })}
+    </div>
   )
 }

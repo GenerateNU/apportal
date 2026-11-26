@@ -15,6 +15,8 @@ export interface Draft {
   created_by: string;
   cycle_id: string;
   id: string;
+  placements_enabled: boolean;
+  placements_released_at?: string;
   role_id: string;
   rounds: number;
   status: string;

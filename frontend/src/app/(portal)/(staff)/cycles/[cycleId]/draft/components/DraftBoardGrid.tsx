@@ -11,6 +11,7 @@ import {
   TABLE_ROW,
 } from '@/components/ui/table-styles'
 import { cn } from '@/lib/utils'
+import { boardRounds } from '@/lib/queries/drafts'
 
 const HEAD_CELL = cn(TABLE_HEAD, 'border-r border-r-gray-100 text-left')
 
@@ -42,7 +43,8 @@ export function DraftBoardGrid({
     )
   }
   const pickBySlot = new Map(board.picks.map((p) => [p.pick_number, p]))
-  const rounds = Array.from({ length: board.rounds }, (_, i) => i + 1)
+  const placed = board.placement_rounds ?? 0
+  const rounds = Array.from({ length: boardRounds(board) }, (_, i) => i + 1)
   const slotByTeamRound = new Map(
     (board.slots ?? []).map((slot) => [
       `${slot.draft_team_id}:${Math.floor((slot.pick_number - 1) / teams.length) + 1}`,
@@ -88,7 +90,11 @@ export function DraftBoardGrid({
                   )}
                 >
                   <span className="inline-flex items-center gap-1 font-medium">
-                    {round}
+                    {round <= placed ? (
+                      <span className="text-ink">Placed</span>
+                    ) : (
+                      round - placed
+                    )}
                     {round % 2 === 1 ? (
                       <ArrowRight size={11} />
                     ) : (

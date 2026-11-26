@@ -16,6 +16,7 @@ import type {
 } from '@/lib/api/types'
 import { roundOf } from './snake'
 import { Fact, Stats } from '@/components/ui/facts'
+import { boardRounds } from '@/lib/queries/drafts'
 
 // What the operator actually drives during the draft: whose turn it is, that
 // team's own ranked list to pick down, and a search over the rest of the pool
@@ -55,7 +56,7 @@ export function OnTheClockPanel({
         <p className="text-text-muted text-sm">
           {board.status === 'complete'
             ? 'This draft is complete.'
-            : board.picks.length >= board.rounds * board.teams.length
+            : board.picks.length >= boardRounds(board) * board.teams.length
               ? 'Every slot is filled. Add a round to keep going.'
               : 'Nothing is on the clock.'}
         </p>

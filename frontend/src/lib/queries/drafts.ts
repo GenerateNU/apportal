@@ -7,7 +7,9 @@ import {
   makeDraftPick,
   openDraft,
   removeDraftPick,
+  releaseDraftPlacements,
   replaceDraftPick,
+  unreleaseDraftPlacements,
   finishDraft,
   resetDraft,
   setDraftTeams,
@@ -107,10 +109,14 @@ export function ownerOfSlot(board: DraftBoard, slot: number) {
 // and DraftBoard in the backend's store/drafts.go — a predicted board that
 // disagrees would name the wrong team until the refetch corrects it. Exported
 // for the test that holds it to those two.
+export function boardRounds(board: DraftBoard) {
+  return board.rounds + (board.placement_rounds ?? 0)
+}
+
 export function withOnTheClock(board: DraftBoard): DraftBoard {
   const filled = new Set(board.picks.map((p) => p.pick_number))
   let slot = 0
-  for (let n = 1; n <= board.rounds * board.teams.length; n++) {
+  for (let n = 1; n <= boardRounds(board) * board.teams.length; n++) {
     if (!filled.has(n)) {
       slot = n
       break
@@ -230,6 +236,7 @@ export function useUpdateDraft() {
       draftId: string
       status?: DraftStatus
       rounds?: number
+      placementsEnabled?: boolean
       opts?: RequestOptions
     }) =>
       updateDraft(
@@ -237,9 +244,27 @@ export function useUpdateDraft() {
         {
           ...(vars.status && { status: vars.status }),
           ...(vars.rounds && { rounds: vars.rounds }),
+          ...(vars.placementsEnabled !== undefined && {
+            placements_enabled: vars.placementsEnabled,
+          }),
         },
         vars.opts
       )
+  )
+}
+
+export function useSetPlacementsReleased() {
+  return useDraftMutation(
+    (vars: {
+      cycleId: string
+      roleId: string
+      draftId: string
+      released: boolean
+      opts?: RequestOptions
+    }) =>
+      vars.released
+        ? releaseDraftPlacements(vars.draftId, vars.opts)
+        : unreleaseDraftPlacements(vars.draftId, vars.opts)
   )
 }
 

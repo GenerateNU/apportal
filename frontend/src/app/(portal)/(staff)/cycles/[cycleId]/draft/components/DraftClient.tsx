@@ -69,11 +69,13 @@ import {
   useReplaceDraftPick,
   useFinishDraft,
   useResetDraft,
+  useSetPlacementsReleased,
   useSetDraftTeams,
   useUpdateDraft,
 } from '@/lib/queries/drafts'
 import {
   usePreferenceList,
+  usePreferenceListDetails,
   usePreferenceLists,
 } from '@/lib/queries/preference-lists'
 import { useCycleRolePicker } from '@/hooks/useRoleSelection'
@@ -83,6 +85,7 @@ import { DraftSetup } from './DraftSetup'
 import { OnTheClockPanel } from './OnTheClockPanel'
 import { ReorderTeamsDialog } from './ReorderTeamsDialog'
 import { useCycleHref } from '@/hooks/useCycleHref'
+import { PlacementsPanel } from './PlacementsPanel'
 
 export function DraftClient() {
   const toCycle = useCycleHref()
@@ -127,6 +130,8 @@ export function DraftClient() {
   const replacePick = useReplaceDraftPick()
   const resetDraft = useResetDraft()
   const finishDraft = useFinishDraft()
+  const setPlacementsReleased = useSetPlacementsReleased()
+  const { data: listDetails = [] } = usePreferenceListDetails(cycleId)
   const router = useRouter()
   const [finishing, setFinishing] = useState(false)
   const [ending, setEnding] = useState(false)
@@ -398,41 +403,99 @@ export function DraftClient() {
       <>
         {header}
         {isChief ? (
-          <DraftSetup
-            board={board}
-            groups={groups}
-            order={effectiveOrder}
-            rounds={effectiveRounds}
-            onMove={(index, direction) =>
-              reorderSeats(index, index + direction)
-            }
-            onReorder={reorderSeats}
-            onRoundsChange={(n) => setRounds(Math.max(1, n))}
-            onSave={() =>
-              setTeams.mutate({
-                ...draftScope,
-                preferenceListIds: effectiveOrder,
-              })
-            }
-            onStart={() =>
-              setTeams.mutate(
-                { ...draftScope, preferenceListIds: effectiveOrder },
-                {
-                  onSuccess: () =>
-                    updateDraft.mutate(
+          <>
+            <DraftSetup
+              board={board}
+              groups={groups}
+              order={effectiveOrder}
+              rounds={effectiveRounds}
+              onMove={(index, direction) =>
+                reorderSeats(index, index + direction)
+              }
+              onReorder={reorderSeats}
+              onRoundsChange={(n) => setRounds(Math.max(1, n))}
+              onSave={() =>
+                setTeams.mutate({
+                  ...draftScope,
+                  preferenceListIds: effectiveOrder,
+                })
+              }
+              onStart={() =>
+                setTeams.mutate(
+                  { ...draftScope, preferenceListIds: effectiveOrder },
+                  {
+                    onSuccess: () =>
+                      updateDraft.mutate(
+                        {
+                          ...draftScope,
+                          status: 'active',
+                          rounds: effectiveRounds,
+                        },
+                        { onSuccess: () => setOrder(null) }
+                      ),
+                  }
+                )
+              }
+              saving={setTeams.isPending}
+              starting={updateDraft.isPending}
+              placementRounds={board.placement_rounds ?? 0}
+              startBlocked={
+                board.placements_enabled && !board.placements_released_at
+                  ? 'Release the placements to the teams first.'
+                  : undefined
+              }
+              placements={
+                <PlacementsPanel
+                  board={board}
+                  lists={listDetails}
+                  pool={pool}
+                  orderUnsaved={
+                    effectiveOrder.join(',') !==
+                    board.teams.map((t) => t.preference_list_id).join(',')
+                  }
+                  onToggle={(enabled) =>
+                    updateDraft.mutate({
+                      ...draftScope,
+                      placementsEnabled: enabled,
+                    })
+                  }
+                  onPlace={(slot, applicationId, name) => {
+                    setPickError('')
+                    makePick.mutate(
                       {
                         ...draftScope,
-                        status: 'active',
-                        rounds: effectiveRounds,
+                        applicationId,
+                        pickNumber: slot,
+                        applicant: applicantFor(applicationId) ?? {
+                          fullName: name,
+                          email: '',
+                        },
                       },
-                      { onSuccess: () => setOrder(null) }
-                    ),
-                }
-              )
-            }
-            saving={setTeams.isPending}
-            starting={updateDraft.isPending}
-          />
+                      {
+                        onError: () =>
+                          setPickError(
+                            'That placement didn’t go through. Someone may have filled the slot first.'
+                          ),
+                      }
+                    )
+                  }}
+                  onRemove={(slot) =>
+                    removePick.mutate({ ...draftScope, pickNumber: slot })
+                  }
+                  onRelease={(next) =>
+                    setPlacementsReleased.mutate({
+                      ...draftScope,
+                      released: next,
+                    })
+                  }
+                  toggling={updateDraft.isPending}
+                  placing={makePick.isPending || removePick.isPending}
+                  releasing={setPlacementsReleased.isPending}
+                />
+              }
+            />
+            {pickError && <p className="text-sm text-red-700">{pickError}</p>}
+          </>
         ) : (
           <Card padding="none" className="flex flex-col gap-3 p-5">
             <SectionLabel>Draft order</SectionLabel>

@@ -41,6 +41,9 @@ export function DraftSetup({
   onStart,
   saving,
   starting,
+  placements,
+  placementRounds = 0,
+  startBlocked,
 }: {
   board: DraftBoard
   groups: PreferenceListSummary[]
@@ -55,6 +58,9 @@ export function DraftSetup({
   onStart: () => void
   saving: boolean
   starting: boolean
+  placements?: React.ReactNode
+  placementRounds?: number
+  startBlocked?: string
 }) {
   const [roundsText, setRoundsText] = useState<string | null>(null)
   const sensors = useSensors(
@@ -86,6 +92,8 @@ export function DraftSetup({
           <span className="text-text-subtle text-xs">
             {order.length} teams × {rounds} rounds = {order.length * rounds}{' '}
             picks
+            {placementRounds > 0 &&
+              ` + ${order.length * placementRounds} placed`}
           </span>
         </div>
 
@@ -144,10 +152,12 @@ export function DraftSetup({
         </div>
       </Card>
 
+      {placements}
+
       <div className="flex flex-wrap items-center gap-2">
         <Button
           onClick={onStart}
-          disabled={starting || saving || order.length === 0}
+          disabled={starting || saving || order.length === 0 || !!startBlocked}
         >
           {(starting || saving) && (
             <Loader2 className="animate-spin" size={14} />
@@ -158,6 +168,9 @@ export function DraftSetup({
           <Button variant="outline" onClick={onSave} disabled={saving}>
             Save order
           </Button>
+        )}
+        {startBlocked && (
+          <span className="text-text-muted text-sm">{startBlocked}</span>
         )}
       </div>
     </>

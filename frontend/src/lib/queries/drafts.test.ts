@@ -4,7 +4,7 @@ import type {
   DraftPickDetail,
   DraftTeamDetail,
 } from '@/lib/api/types'
-import { patchDrafted, withOnTheClock } from './drafts'
+import { boardRounds, patchDrafted, withOnTheClock } from './drafts'
 
 function team(id: string, name: string, position: number): DraftTeamDetail {
   return {
@@ -138,5 +138,41 @@ describe('patchDrafted', () => {
       after
     )
     expect(patched['design-x']).toBe('Delta')
+  })
+})
+
+describe('placements', () => {
+  const teams = [
+    team('t1', 'Alpha', 0),
+    team('t2', 'Beta', 1),
+    team('t3', 'Gamma', 2),
+  ]
+  const placed = Array.from({ length: 6 }, (_, i) =>
+    pick(i + 1, `a${i + 1}`, teams[i % 3].id)
+  )
+
+  it('counts placement rounds on top of the draft rounds', () => {
+    expect(boardRounds(board([], { rounds: 2, placement_rounds: 2 }))).toBe(4)
+    expect(boardRounds(board([], { rounds: 2 }))).toBe(2)
+  })
+
+  it('puts the first draft slot on the clock once placements are in', () => {
+    const b = board(placed, {
+      rounds: 1,
+      placement_rounds: 2,
+      slots: snakeSlots(teams, 3),
+    })
+    const next = withOnTheClock(b)
+    expect(next.on_the_clock).toBe(7)
+    expect(next.on_the_clock_team_id).toBe('t1')
+  })
+
+  it('reaches the last draft slot, not just the placement ones', () => {
+    const b = board([...placed, pick(7, 'a7', 't1'), pick(8, 'a8', 't2')], {
+      rounds: 1,
+      placement_rounds: 2,
+      slots: snakeSlots(teams, 3),
+    })
+    expect(withOnTheClock(b).on_the_clock).toBe(9)
   })
 })

@@ -21,6 +21,9 @@ export interface DraftBoard {
   on_the_clock: number;
   on_the_clock_team_id?: string;
   picks: DraftBoardPicks;
+  placement_rounds: number;
+  placements_enabled: boolean;
+  placements_released_at?: string;
   role_id: string;
   rounds: number;
   slots: DraftBoardSlots;

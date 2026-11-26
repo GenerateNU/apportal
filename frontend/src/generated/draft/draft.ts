@@ -821,6 +821,131 @@ export const useReplaceDraftPick = <TError = ErrorModel | ErrorModel | ErrorMode
       return useMutation(mutationOptions, queryClient);
     }
     /**
+ * Chief only, before the draft starts, so placements can be changed.
+ * @summary Hide the placed applicants again
+ */
+export const unreleaseDraftPlacements = (
+    id: string,
+ options?: SecondParameter<typeof customInstance>,) => {
+      
+      
+      return customInstance<DraftBoard>(
+      {url: `/drafts/${id}/placements/release`, method: 'DELETE'
+    },
+      options);
+    }
+  
+
+
+export const getUnreleaseDraftPlacementsMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unreleaseDraftPlacements>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof unreleaseDraftPlacements>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['unreleaseDraftPlacements'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof unreleaseDraftPlacements>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  unreleaseDraftPlacements(id,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UnreleaseDraftPlacementsMutationResult = NonNullable<Awaited<ReturnType<typeof unreleaseDraftPlacements>>>
+    
+    export type UnreleaseDraftPlacementsMutationError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel
+
+    /**
+ * @summary Hide the placed applicants again
+ */
+export const useUnreleaseDraftPlacements = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unreleaseDraftPlacements>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof unreleaseDraftPlacements>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+
+      const mutationOptions = getUnreleaseDraftPlacementsMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * Chief only. Every placement slot must be filled. Leads see placements only once they're released.
+ * @summary Show the placed applicants to every team
+ */
+export const releaseDraftPlacements = (
+    id: string,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<DraftBoard>(
+      {url: `/drafts/${id}/placements/release`, method: 'POST', signal
+    },
+      options);
+    }
+  
+
+
+export const getReleaseDraftPlacementsMutationOptions = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof releaseDraftPlacements>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof releaseDraftPlacements>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['releaseDraftPlacements'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof releaseDraftPlacements>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  releaseDraftPlacements(id,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReleaseDraftPlacementsMutationResult = NonNullable<Awaited<ReturnType<typeof releaseDraftPlacements>>>
+    
+    export type ReleaseDraftPlacementsMutationError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel
+
+    /**
+ * @summary Show the placed applicants to every team
+ */
+export const useReleaseDraftPlacements = <TError = ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel | ErrorModel,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof releaseDraftPlacements>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof releaseDraftPlacements>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+
+      const mutationOptions = getReleaseDraftPlacementsMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
  * Chief only. Each applicant goes back to the stage they were in before their pick; the team order is kept, so a rehearsal can be wiped without rebuilding it.
  * @summary Clear every pick and return the board to setup
  */

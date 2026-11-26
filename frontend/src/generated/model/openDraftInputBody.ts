@@ -11,6 +11,8 @@ A write the workflow flags as an override or destructive answers 409 with an err
 export interface OpenDraftInputBody {
   /** A URL to the JSON Schema for this object. */
   readonly $schema?: string;
+  /** Chiefs place two applicants on every team before picking starts */
+  placements_enabled?: boolean;
   /** Applicant role ID */
   role_id: string;
   /**
