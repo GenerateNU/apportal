@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 import type { LucideIcon } from 'lucide-react'
 import { Tooltip } from '@/components/Tooltip'
+import { toCycleTemplate } from '@/lib/cycle-paths'
 
 interface NavItemProps {
   href: string
@@ -15,7 +16,9 @@ interface NavItemProps {
 }
 
 export function isNavItemActive(pathname: string, href: string) {
-  return pathname === href || pathname.startsWith(href + '/')
+  const path = toCycleTemplate(pathname)
+  const target = toCycleTemplate(href.split('?')[0])
+  return path === target || path.startsWith(target + '/')
 }
 
 export default function NavItem({

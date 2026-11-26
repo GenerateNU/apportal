@@ -75,22 +75,16 @@ const sectionsByRole: Record<Role, NavSection[]> = {
       id: 'my-work',
       items: [
         {
-          href: '/reviewer/my-work',
+          href: '/my-work',
           label: 'My work',
           icon: LayoutList,
           forLeads: true,
           also: [
-            '/reviewer/my-reviews',
-            '/reviewer/my-interviews',
-            '/reviewer/preference-lists',
-            '/reviewer/decisions',
+            '/my-reviews',
+            '/my-interviews',
+            '/cycle/teams',
+            '/cycle/feedback',
           ],
-        },
-        {
-          href: '/reviewer/applications',
-          label: 'Applicants',
-          icon: Users,
-          forLeads: true,
         },
       ],
     },

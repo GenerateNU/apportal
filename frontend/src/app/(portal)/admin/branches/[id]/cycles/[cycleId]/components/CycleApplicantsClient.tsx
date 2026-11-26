@@ -1,7 +1,7 @@
 'use client'
 
 import { useSearchParams } from 'next/navigation'
-import { ApplicationsClient } from '@/app/(portal)/reviewer/applications/components/ApplicationsClient'
+import { ApplicationsClient } from '@/app/(portal)/(staff)/cycles/[cycleId]/applicants/components/ApplicationsClient'
 import { PageContainer } from '@/components/PageContainer'
 import { PageSkeletonBody } from '@/components/ui/skeleton'
 import { useRoles } from '@/lib/queries/roles'

@@ -219,7 +219,7 @@ export type { QuestionAverageScore }
 export type PreferenceListStatus = 'draft' | 'submitted'
 
 // The day-of-week set the application's own "Meeting Availability" question
-// offers (see reviewer/applications/components/meetingAvailability.ts) — a
+// offers (see reviewer/applicants/components/meetingAvailability.ts) — a
 // preference list's members pick one of these to plan around.
 export type MeetingDay = 'monday' | 'tuesday' | 'wednesday' | 'thursday'
 

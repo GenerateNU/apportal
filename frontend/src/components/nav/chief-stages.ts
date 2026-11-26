@@ -1,3 +1,4 @@
+import { toCycleTemplate } from '@/lib/cycle-paths'
 import type { Overview, PageViewPage } from '@/generated/model'
 
 export type Step = {
@@ -22,54 +23,50 @@ type StepPage = Omit<Step, 'locked'>
 
 const PAGES: Record<PageViewPage, StepPage> = {
   positions: {
-    href: '/reviewer/cycle/workflow',
+    href: '/cycle/process',
     label: 'Openings & process',
-    also: ['/reviewer/cycle/positions'],
   },
-  team: { href: '/reviewer/cycle/team', label: 'Recruitment team' },
+  team: { href: '/cycle/team', label: 'Recruitment team' },
   application_forms: {
-    href: '/reviewer/cycle/application',
+    href: '/cycle/application-forms',
     label: 'Application forms',
-    also: [
-      '/reviewer/cycle/forms',
-      { path: '/admin/applications', when: 'from=forms' },
-    ],
+    also: [{ path: '/admin/applications', when: 'from=forms' }],
   },
   review_forms: {
-    href: '/reviewer/cycle/review-forms',
+    href: '/cycle/review-forms',
     label: 'Review forms',
     also: [{ path: '/admin/applications', when: 'from=review-forms' }],
   },
-  applicants: { href: '/reviewer/applications', label: 'Applicants' },
+  applicants: { href: '/cycle/applicants', label: 'Applicants' },
   assign_reviewers: {
-    href: '/reviewer/cycle/reviews',
+    href: '/cycle/assign-reviewers',
     label: 'Assign reviewers',
   },
   review_progress: {
-    href: '/reviewer/cycle/reviewing',
+    href: '/cycle/reviews',
     label: 'Reviews & progress',
-    also: ['/reviewer/my-reviews'],
+    also: ['/my-reviews'],
   },
-  shortlist: { href: '/reviewer/cycle/cutoff', label: 'Shortlist' },
+  shortlist: { href: '/cycle/shortlist', label: 'Shortlist' },
   interview_script: {
-    href: '/reviewer/interview-script',
+    href: '/cycle/interview-script',
     label: 'Interview script',
   },
   assign_interviewers: {
-    href: '/reviewer/cycle/interviewers',
+    href: '/cycle/assign-interviewers',
     label: 'Assign interviewers',
   },
   interview_progress: {
-    href: '/reviewer/cycle/interviewing',
+    href: '/cycle/interviews',
     label: 'Interviews & progress',
-    also: ['/reviewer/my-interviews'],
+    also: ['/my-interviews'],
   },
   preference_lists: {
-    href: '/reviewer/preference-lists',
+    href: '/cycle/teams',
     label: 'Teams & preference lists',
   },
-  draft: { href: '/reviewer/draft', label: 'Run the draft' },
-  feedback: { href: '/reviewer/decisions', label: 'Write & send feedback' },
+  draft: { href: '/cycle/draft', label: 'Run the draft' },
+  feedback: { href: '/cycle/feedback', label: 'Write & send feedback' },
 }
 
 // Which pages a phase has and what is locked come from the backend; this only names and links them.
@@ -87,8 +84,9 @@ export function toPhases(view: Overview | undefined): Phase[] {
   }))
 }
 
-export function stepActive(pathname: string, search: string, step: Step) {
-  const [path, query] = step.href.split('?')
+export function stepActive(rawPathname: string, search: string, step: Step) {
+  const pathname = toCycleTemplate(rawPathname)
+  const [path, query] = toCycleTemplate(step.href).split('?')
   const matches = (h: string) => pathname === h || pathname.startsWith(h + '/')
   const also = (step.also ?? []).some((a) =>
     typeof a === 'string'
