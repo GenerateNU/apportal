@@ -44,11 +44,8 @@ export function PlacementsPageClient({
     { enabled: !!board }
   )
   const { data: deadline } = usePreferenceListDeadline(cycleId, roleId)
-  const setup = usePlacementSetup(
-    cycleId,
-    roleId,
-    deadlinePassed(deadline?.closes_at)
-  )
+  const listsClosed = deadlinePassed(deadline?.closes_at)
+  const setup = usePlacementSetup(cycleId, roleId)
   const updateDraft = useUpdateDraft()
   const makePick = useMakeDraftPick()
   const removePick = useRemoveDraftPick()
@@ -78,6 +75,18 @@ export function PlacementsPageClient({
       <>
         {header}
         <LoadingText />
+      </>
+    )
+  }
+
+  if (!board && !listsClosed) {
+    return (
+      <>
+        {header}
+        <EmptyState
+          title="Placements open after the deadline"
+          description="Once this position's preference list deadline passes, you can place each team's top 2 here."
+        />
       </>
     )
   }

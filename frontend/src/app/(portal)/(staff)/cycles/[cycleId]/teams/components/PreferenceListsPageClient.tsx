@@ -163,7 +163,7 @@ export function PreferenceListsPageClient({ isChief }: { isChief: boolean }) {
               </div>
             )}
           </section>
-          {isChief && (closedRoles.length > 0 || allSubmitted) && (
+          {isChief && closedRoles.length > 0 && (
             <section className={SECTION}>
               <Subheading
                 title="Place top picks"
@@ -181,13 +181,12 @@ export function PreferenceListsPageClient({ isChief }: { isChief: boolean }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {roleIds.map((r) => (
+                    {closedRoles.map((r) => (
                       <PlacementRow
                         key={r}
                         cycleId={cycleId}
                         roleId={r}
                         roleLabel={roleLabel(r)}
-                        listsClosed={deadlinePassed(closesAtByRole[r])}
                       />
                     ))}
                   </tbody>

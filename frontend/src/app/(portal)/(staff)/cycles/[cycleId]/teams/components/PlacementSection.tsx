@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ArrowRight, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { useCycleHref } from '@/hooks/useCycleHref'
 import type { DraftBoard } from '@/lib/api/types'
 import {
@@ -13,7 +12,6 @@ import {
   useOpenDraft,
   useSetPlacementsReleased,
 } from '@/lib/queries/drafts'
-import { useSetPreferenceListDeadline } from '@/lib/queries/preference-lists'
 import { cn } from '@/lib/utils'
 import { PlacementReleaseControl } from '../../draft/components/PlacementsPanel'
 
@@ -33,44 +31,29 @@ export function placementProgress(board: DraftBoard) {
   }
 }
 
-export function usePlacementSetup(
-  cycleId: string,
-  roleId: string,
-  listsClosed: boolean
-) {
+export function usePlacementSetup(cycleId: string, roleId: string) {
   const openDraft = useOpenDraft()
-  const closeLists = useSetPreferenceListDeadline()
   async function setUp() {
-    if (!listsClosed) {
-      await closeLists.mutateAsync({
-        cycleId,
-        roleId,
-        closesAt: new Date().toISOString(),
-      })
-    }
     await openDraft.mutateAsync({ cycleId, roleId, placementsEnabled: true })
   }
-  return { setUp, pending: openDraft.isPending || closeLists.isPending }
+  return { setUp, pending: openDraft.isPending }
 }
 
 export function PlacementRow({
   cycleId,
   roleId,
   roleLabel,
-  listsClosed,
 }: {
   cycleId: string
   roleId: string
   roleLabel: string
-  listsClosed: boolean
 }) {
   const toCycle = useCycleHref()
   const router = useRouter()
-  const [closingLists, setClosingLists] = useState(false)
   const [error, setError] = useState('')
   const { data: board, isLoading } = useDraftBoard(cycleId, roleId)
   const setReleased = useSetPlacementsReleased()
-  const setup = usePlacementSetup(cycleId, roleId, listsClosed)
+  const setup = usePlacementSetup(cycleId, roleId)
   const pageHref = toCycle(`/cycle/teams/placements/${roleId}`)
 
   async function setUpAndOpen() {
@@ -80,8 +63,6 @@ export function PlacementRow({
       router.push(pageHref)
     } catch {
       setError('Couldn’t set up placements. Try again.')
-    } finally {
-      setClosingLists(false)
     }
   }
 
@@ -114,9 +95,7 @@ export function PlacementRow({
             variant="outline"
             size="sm"
             disabled={setup.pending}
-            onClick={() =>
-              listsClosed ? setUpAndOpen() : setClosingLists(true)
-            }
+            onClick={setUpAndOpen}
           >
             {setup.pending && <Loader2 className="animate-spin" size={14} />}
             Set up placements
@@ -149,16 +128,6 @@ export function PlacementRow({
             />
           </span>
         )}
-        <ConfirmDialog
-          open={closingLists}
-          onOpenChange={setClosingLists}
-          title={`Close ${roleLabel} lists and set up placements?`}
-          description="Every team has submitted, but the deadline hasn't passed. This closes the lists now, so teams can't edit them anymore."
-          confirmLabel="Close lists"
-          confirmVariant="default"
-          pending={setup.pending}
-          onConfirm={setUpAndOpen}
-        />
       </td>
     </tr>
   )
